@@ -2351,6 +2351,15 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
           - **The activity-api part** (the counts route, and the switch's create-only seed at 0) waits on a live lane landing lease on an activity-api gap, until 10:28Z at the latest. It pushes after that.
           - **DB1 is inert until its switch is flipped.** The seeded mode is 0, which keeps full traces as today. The flip to 1 is one recorded act, made after all four parts converge, with the shared package read from the running process. The database fork's before-and-after reading is taken around it.
           - **A push-guard refinement:** a lease whose gap has no edit site now finds its repository from the gap's summary. It still fails closed when the summary names none.
+          - **The activity-api part landed** after the lane's lease ended (activity-api 4e15bee). **DB1 converged on all four repositories by 10:46:12Z.** Its switch flips once the last walk-service consumer restarts on the new shared package. That restart is deferred while work is in flight.
+        - **USER RULING: "Move DB2 after R1"** (in qa's session at 2026-10-16T10:49:59Z, chosen over "Keep DB2 next"; relayed by qa; recorded 2026-10-16T10:50:30Z).
+          - **The evidence put to the user** (the database fork's read-only counts on one node, read before the ruling):
+            - after the trace-store drain and CHANGE-26, posterior-write conflicts are 0 per goal start (3.7 at 07:54Z);
+            - trace-write p95 is 312 ms (12.0 s before);
+            - context-score duplicates: 46 keys with 73 excess rows, all old. The latest new one was on 10-10, and 0 of today's 150 new rows landed on an existing key.
+          - So **DB2's race is real but now rare in production.** Its must-fail still shows it under 20 concurrent writers.
+          - **DB1 still matters:** 17.7 lifecycle writes per goal start before its flip.
+        - **DECIDED, the landing order:** DB1 (its flip pending), the CHANGE-35 set, CHANGE-30, R1 with R1b, DB2, CHANGE-34, DB3, 31, 32a, R9, R8, R6, R7, R4, then 29.
       - **CHANGE-04 and CHANGE-05, and the learning reading (recorded 2026-10-15T05:20:20Z; ruling times from the transcript):**
         - **CHANGE-04, culpability** (user ruling 03:45:44Z; pushed about 04:04Z; gate green).
           - **The history:** an earlier change reused success-credit's rule that "a receipt is not work" for failure-charging. So a step that claims a read deliverable but returns only a receipt escaped blame.
