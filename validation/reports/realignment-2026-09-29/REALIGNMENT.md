@@ -2623,6 +2623,13 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
             - **Learning evidence crosses authorities in neither direction, and there is no positive control:** even the spoke anchored at the hub does not replicate to it.
             - Two independent causes. The hub's replication finds zero peers (the cause is not yet read; a history pass is requested). The root has no credentials (roots anchoring, ruled at 23:12:36Z).
             - **§7 step 6 is not met in either direction.** The fix ranks after RUN 2 unless the user moves it.
+          - **CORRECTION, from the coordinator's read-only history pass** (recorded 2026-10-16T23:37:40Z). It supersedes the "neither direction" and "no positive control" lines above:
+            - The spoke role runs no local trace store, so its traces are written directly to the hub. **Spoke evidence does reach the hub,** by direct write rather than replication. The hub's "zero peers" is correct for a spoke.
+            - **The real gap is between the root and the hub.** The root's last successful pull from the hub was on 2026-08-22, about 8 weeks ago. There is no evidence the hub ever pulled from a foreign root.
+            - **Root cause: the credential across authorities.** A key the hub did not issue is refused at the hub's register and replication endpoints, so the root's row never reaches the hub. Since tonight its pulls are also refused under enforcement.
+            - **Why it went unnoticed for 8 weeks:** the silent zero is logged at info level with no shaped observation, so nothing in the system could see it.
+            - Two gaps are filed (the silent zero, and the credential across authorities, multi-site), ranked after RUN 2.
+            - **§7 step 6: NOT MET for roots** (root and hub, about 8 weeks). Spokes write directly.
         - **Builds approved since** (qa):
           - **J4:** failure memory feeds target selection, in observe mode only, because with learning on it would be counted twice.
           - **The light-dispatch budget (5 commits), before RUN 2 as ruled.** Building it surfaced two defects worth more than the fix. **(i)** The development vessel advertises the same 10 s budget for every shape. Using it would have cut model calls from 60 s to 10 s while the tests still passed. The budget now comes from the task's own timeout and is never below today's 60 s. The blanket advertisement is filed as its own gap. **(ii)** The vessel's request handler drops the cancellation signal, so passing cancellation through would have done nothing on its own.
