@@ -2158,6 +2158,13 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
             - a real-traffic goal goes to the node it was originally sent to (the earliest occurrence, if both);
             - an open-gap goal gets a drawn node (an even index goes to the first node, an odd one to the second);
             - readings are reported per node as well as overall, so a break on one node shows as that.
+        - **§7 STEP 4, the redispatch livelock: NOT MET** (a pre-registered reading by qa, recorded 2026-10-16T06:03:39Z, over 10-15 06:00Z → 10-16 06:00Z, both nodes; the exit is ≤24 dispatches per gap per 24 hours without a hold).
+          - **The counts:** 271 gaps were dispatched (median 1, p90 3, max 455). Three exceeded 24, and none was held: 455, 373 and 340 dispatches.
+          - **Two of the three are check-supply loops.** The record that a check goal was sent is refused, because the write gate reads a quoted placeholder in the goal's text as an unrendered template slot. So the goal is sent again every tick. The receiver's spend breaker refused 752 of them, but nothing tells the sender to stop.
+          - **The third** is the maintenance-family sampler that §2.6 already names.
+          - **The positive control:** one gap's sends reconcile exactly against the receiver's log.
+          - **Next:** proposed as CHANGE-32, right after CHANGE-30, because it is on the same write path.
+        - **CHANGE-15, a reading by effect** (relayed by qa; recorded 2026-10-16T06:03:39Z). The peer refusals behind amendment 1 were already fixed by CHANGE-15 (pushed about 00:05Z), in which a re-homed peer row dials its own endpoint. The 24-hour baseline of 105 refusals ended just before that landed. Since then, that node shows 0 refused peer resolves in 6 hours, and the shape that used to be refused is now produced (the positive control). **No gap is filed, and nothing is added to the order.** RUN 0's per-node reading confirms it, and amendment 1 stands regardless.
       - **CHANGE-04 and CHANGE-05, and the learning reading (recorded 2026-10-15T05:20:20Z; ruling times from the transcript):**
         - **CHANGE-04, culpability** (user ruling 03:45:44Z; pushed about 04:04Z; gate green).
           - **The history:** an earlier change reused success-credit's rule that "a receipt is not work" for failure-charging. So a step that claims a read deliverable but returns only a receipt escaped blame.
