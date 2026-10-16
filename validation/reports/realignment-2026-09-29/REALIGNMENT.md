@@ -2165,6 +2165,22 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
           - **The positive control:** one gap's sends reconcile exactly against the receiver's log.
           - **Next:** proposed as CHANGE-32, right after CHANGE-30, because it is on the same write path.
         - **CHANGE-15, a reading by effect** (relayed by qa; recorded 2026-10-16T06:03:39Z). The peer refusals behind amendment 1 were already fixed by CHANGE-15 (pushed about 00:05Z), in which a re-homed peer row dials its own endpoint. The 24-hour baseline of 105 refusals ended just before that landed. Since then, that node shows 0 refused peer resolves in 6 hours, and the shape that used to be refused is now produced (the positive control). **No gap is filed, and nothing is added to the order.** RUN 0's per-node reading confirms it, and amendment 1 stands regardless.
+        - **D1, why drafts fail verification: a per-compose tally** (the coordinator's, read-only; recorded 2026-10-16T06:07:07Z; 62 composes on both compose nodes, 10-15 21:27Z → 10-16 05:40Z, 0 landed).
+          - **The forms the audit named are mostly not what kills drafts.** A missing module was the cause in 1 compose, and an unparsed typecheck line in 1. Skipping the own-check after a typecheck failure is correct. "No test file" means the gap carried no check to resolve.
+          - **The dominant terminal class is a wrong draft (about 20).** Defects in the harness make those failures final, when a working repair loop could have fixed them.
+          - **The ranked causes:**
+            - **R1 (about 30 composes): repair is blind to failures at the test stage.** Verification appends the stage's reason after the raw output. The repair prompt always says the change "fails lint" and passes only the first 4,000 characters, whatever the stage, so the reason is cut off. Docs verified this on the development-vessel dev tip. This repair has never worked for a test-stage failure.
+            - **R2 (12):** new-resolver wiring was dropped by the file-scope gate. Already fixed by CHANGE-22.
+            - **R3 (9):** the check that tests are written refuses the draft.
+            - **R4 (5):** a refusal for "the region has no effect" bans the only correct region.
+            - **R5 (3):** the LLM plane was down.
+            - **R6 (2 or more):** the suite timeout is a constant.
+            - **R7 (3):** an own-check names a test that is still a placeholder.
+            - **R8 (2):** touched vessel names are not normalized.
+            - **R9 (every compose):** the lesson file sits at a constant path that test fixtures also write to. On one node, 33 of 3,794 rows are real. The file feeds the drafter's "recent rejections" and the class posterior. So what compose learns from its failures is mostly fixture noise.
+          - **Every cause but R5 is in the scope-excluded compose file,** so each is an operator bootstrap under this section's process.
+          - **The proposed order:** R1, R9, R8, R6, R7, R4, R3.
+          - **Under the 10-16 ruling, R1, R6 and R9 are (c) items.** A stage-blind repair prompt, a constant timeout and a constant lesson path are hard-wired decisions. The repair should receive the failing stage and its reason as shaped input; the timeout and the lesson store should be read at use time.
       - **CHANGE-04 and CHANGE-05, and the learning reading (recorded 2026-10-15T05:20:20Z; ruling times from the transcript):**
         - **CHANGE-04, culpability** (user ruling 03:45:44Z; pushed about 04:04Z; gate green).
           - **The history:** an earlier change reused success-credit's rule that "a receipt is not work" for failure-charging. So a step that claims a read deliverable but returns only a receipt escaped blame.
