@@ -2327,6 +2327,11 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
             - **E → R4 and R1.**
           - A prose "shape" name advertised by a substrate-authored resolver was found and filed as a gap.
           - **Pending a user answer:** qa has proposed moving CHANGE-35 and A2a to just after R1.
+        - **USER RULINGS on the RUN 0 levers** (in qa's session at 2026-10-16T09:51:41Z; relayed by qa; recorded 2026-10-16T09:52:18Z). They answer docs' proposal.
+          - **CHANGE-35 and A2a land "Right after DB1/DB2"**, before CHANGE-30. This was chosen over "after R1" and "keep the current order".
+          - **A2b-minimal: "Yes, with 35+A2a".** A retried goal whose last attempt failed with no artifact on target X must not choose X again. It reuses the existing failure-recall record, so it is a selection and nothing new is minted. **Its must-fail:** replay a class-B goal twice; attempt 2 picks a different target.
+        - **DECIDED, the landing order:** DB1, DB2, CHANGE-35 (with A2a and A2b-minimal), CHANGE-30, R1 with R1b, CHANGE-34, DB3, 31, 32a, R9, R8, R6, R7, R4, then 29.
+        - **DECIDED, RUN 1:** pre-registered now under RUN 0's rules (a freshly frozen frame, a fresh seed, both attempts, the trust check, the 4-hour hard close). It runs after the CHANGE-35 set converges, so that its effect on reach is read, not assumed.
       - **CHANGE-04 and CHANGE-05, and the learning reading (recorded 2026-10-15T05:20:20Z; ruling times from the transcript):**
         - **CHANGE-04, culpability** (user ruling 03:45:44Z; pushed about 04:04Z; gate green).
           - **The history:** an earlier change reused success-credit's rule that "a receipt is not work" for failure-charging. So a step that claims a read deliverable but returns only a receipt escaped blame.
