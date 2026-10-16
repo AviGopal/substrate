@@ -37,6 +37,12 @@ cross). Every topology in this document is judged against these expectations:
 - **A hub is a role, not a dependency.** Hubs emerge as the common producers of popular
   shapes. The one deliberate central point is the admission authority that ratifies
   members.
+- **A bootstrap routes; it does not lend its compute.** A public bootstrap admits any caller
+  that authenticates with its own credential, and serves it discovery, relay and routing.
+  Shapes that spend the bootstrap's own resources, such as its model-provider credits,
+  serve only the bootstrap's own organisation. An uncredentialed call is refused.
+- **A route is advertised only where it can be reached.** Discovery does not offer a
+  producer through a transport that the node keeps closed, or that nothing answers.
 
 Each expectation is falsifiable by taking something away:
 
