@@ -2181,6 +2181,16 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
           - **Every cause but R5 is in the scope-excluded compose file,** so each is an operator bootstrap under this section's process.
           - **The proposed order:** R1, R9, R8, R6, R7, R4, R3.
           - **Under the 10-16 ruling, R1, R6 and R9 are (c) items.** A stage-blind repair prompt, a constant timeout and a constant lesson path are hard-wired decisions. The repair should receive the failing stage and its reason as shaped input; the timeout and the lesson store should be read at use time.
+          - **DECIDED:** the D1 repair is CHANGE-33, one commit per root.
+        - **USER RULING on CHANGE-29's scope** (in qa's session at 2026-10-16T06:06:38Z; relayed by qa; recorded 2026-10-16T06:07:38Z). From three options, the user chose **"Own-substrate, any non-forbidden"**, over "read-only only" and "hold until §9.0".
+          - The floor may be offered its goal's advertised target shapes, read or executable, only when the producer is on our own substrate.
+          - A foreign row is refused both at the offer and at execution.
+          - A forbidden tool is never offered (no shell).
+          - The dead, hand-listed tool is dropped.
+        - **N14, an outcome not recorded before: NOT MET for the lane.** The need dispatched to the lane on 10-11, "the floor's read tools are built from discovery", was not delivered in its 72-hour window, which ended at about 10-14T18:58Z. Its system-born gap sits unarmed at a wrong site.
+          - Under the 10-15 ruling (the lane failed the lasting fix, so an operator may fix the root cause) and the 10-16 directive, the operator restore proceeds, reusing that gap.
+          - **The history** (a restatement, with a delta): the floor's offer was hand-written from the start. An earlier bridge from discovery to tools existed elsewhere and lost its caller in May.
+        - **DECIDED, the build sequence:** CHANGE-30, then 31, 32, 33 and 29. This keeps the agreed order: the gap-store read first, then why drafts fail verification, before the floor's read tools.
       - **CHANGE-04 and CHANGE-05, and the learning reading (recorded 2026-10-15T05:20:20Z; ruling times from the transcript):**
         - **CHANGE-04, culpability** (user ruling 03:45:44Z; pushed about 04:04Z; gate green).
           - **The history:** an earlier change reused success-credit's rule that "a receipt is not work" for failure-charging. So a step that claims a read deliverable but returns only a receipt escaped blame.
