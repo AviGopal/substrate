@@ -2194,7 +2194,21 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
         - **DECIDED, one outcome vocabulary** (by qa; recorded 2026-10-16T06:08:59Z):
           - CHANGE-30's deferred cutover reuses the walk service's existing non-attempt outcome, "retryable", which busy and capacity refusals already use. No new verdict is minted.
           - The check-supply sender classifies every result once, from structured fields and not from text: reached, failed, non-attempt, or refused by the receiver. Each outcome that is not a failure carries a shaped retry delay.
-          - So the sender's back-off on refusal (32b) folds into CHANGE-30, as one definition. CHANGE-32 keeps only the placeholder quoting. Each defect keeps its own must-fail.
+          - So the sender's back-off on refusal (32b) folds into CHANGE-30, as one definition. CHANGE-32 keeps only the placeholder quoting. Each defect keeps its own must-fail. The gate requires both must-fails to go red on the base and green on top independently, the refusal case under a failing bookkeeping write. If only one flips, the change does not push.
+        - **USER RULING on the walk service's protected main file** (in qa's session at 2026-10-16T06:20:10Z; relayed by qa; recorded 2026-10-16T06:21:33Z). The question had been carried since 10-15 05:53Z: gaps sited in that file can never be picked by the lane. From three options, the user chose **"Open index.ts to the lane"**, over "Factor out, then lane" (qa's recommendation) and "Keep protected".
+          - The file leaves the protected list on all three scope records. The landing gate (the judge tests and the whole suite) is the guard.
+          - It is CHANGE-34, prepared by the coordinator, with any pins updated in the same act. It is applied right after RUN 0's window closes (law 12: one change at a time).
+        - **RUN 0, pre-registration amendment 2** (written 2026-10-16T06:20:32Z, before the freeze and the draw; relayed by qa):
+          - **The S1 frame** is read from the walk service's own dispatch store, because no log line carries the goal text. The store keeps only the newest 2,000 dispatches per node, so the frame spans about 3 days on one node and 2 on the other, not 7. This is stated as a limit.
+          - **The frame is frozen now,** because the oldest human goals were about to fall out of the store. The draw still happens at RUN 0 time, from the frozen file.
+          - **Check-supply test-writing goals are excluded,** because a text-only replay cannot carry their structured inputs. This is a limit of the measurement: those goals are not tested by RUN 0.
+          - **The S2 goal form** is the live producers' own: "investigate and decompose gap <id>: <first sentence>".
+          - **Attempts:** a refusal at the front door (429, 503, or no answer) is not an attempt. An HTTP 400 is a failed attempt.
+          - **Duplicates** are removed on exact text.
+          - **A known confound:** one node has no human traffic in its window.
+        - **RUN 0 frame FROZEN** at 2026-10-16T06:20:52Z (sha256 231d5a2755c6ce8c…).
+          - **S1: 132 real-traffic goals,** 108 and 24 by node. By source: 56 from the human surface, 33 gap-closing, 15 gap-decompose, 23 gap asks, and 5 recovery.
+          - **S2: 3,203 open gaps.**
       - **CHANGE-04 and CHANGE-05, and the learning reading (recorded 2026-10-15T05:20:20Z; ruling times from the transcript):**
         - **CHANGE-04, culpability** (user ruling 03:45:44Z; pushed about 04:04Z; gate green).
           - **The history:** an earlier change reused success-credit's rule that "a receipt is not work" for failure-charging. So a step that claims a read deliverable but returns only a receipt escaped blame.
