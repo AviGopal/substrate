@@ -2394,6 +2394,26 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
             | CHANGE-29 | done | in the queue | 10-17 18:00Z |
 
             The history and design for A2b-proper and D2 started at about 11:37Z, in parallel with the queue: history first, then a design note with a must-fail, then a code-only build. The replay is being built and dry-run only.
+        - **USER RULING: "Push if file-disjoint"** (in qa's session at 2026-10-16T11:59:52Z, chosen over "keep refusing" and "pause the lane on that repository"; relayed by qa; recorded 2026-10-16T12:04:05Z).
+          - A live lane landing lease now blocks an operator push only if a pushed file is the leased gap's edit site. A disjoint push proceeds, and the lane's drift check re-stages its attempt if needed.
+          - **Why it was asked:** the lane leased development-vessel gaps back to back (a new 2-hour lease 3 seconds after the previous attempt ended), which would have stalled the whole development-vessel queue.
+        - **The headline candidate did NOT land.** The lane's attempt on the missing-producer gap ended not landed at 11:25:16Z. **The headline is still 0.**
+        - **DB1, by effect: TARGET MET** (the database fork's after-reading on one node, 10:52Z to 11:52Z).
+          - **Lifecycle writes per goal start:** 32.1 (07:54Z), then 17.7 (before the flip), then **1.1** (all nodes on DB1). That is about 95% fewer, and the residue is anomaly-only traces.
+          - Trace-write p50 and p95 are 41 ms and 205 ms; database p99 is 1.5 s; posterior-write conflicts are 0.
+          - Database CPU median is 137%, against a lifetime average of 265%. That is consistent with lower load, but **not proven**, because there is no clean before-series.
+        - **A DEFECT in the landed A2b-minimal** (found by the A2b-proper history pass, and verified). The failure record reads the target set from before the filter, so only the first failed target is ever avoided. One rare reach-gate fallback also sees the unfiltered set.
+          - With at most 2 attempts, RUN 1's reading (4) stays valid. This is recorded in RUN 1's pre-registration as **amendment R1-2**, before any draw.
+          - **The fix** (A2b-proper part 0) takes the earliest walk-service slot after CHANGE-30's part.
+        - **Designs approved by qa,** ahead of their dates:
+          - **A2b-proper:** the proposed target sets are re-ranked by an existing path posterior per goal class. The cold start is unchanged, and counterfactuals are logged.
+          - **D2, steps 1 and 2:** compose counts as reached only with independent landing evidence (today a favourable self-report can read "reached" with no git check), and compose stops grading itself.
+          - **D2, step 3** (compose as a walk step) touches edit-intent routing, which falls under the D-path surgery freeze. **It goes to the user before it is built.**
+        - **The structured replay is impossible by construction.** Only the system's own sender writes the check-supply ledger's admission checks, and each re-send gets a new id, so no replay can be faithful. **RUN 2 will instead observe the sender on a seeded random draw of eligible gaps.** The design was done by 12:03Z, ahead of its 13:00Z date.
+        - **A CORRECTION to RUN 0's disclosure (made after the run):** the excluded check-supply share was about **14.2%** of dispatched traffic, not 31.8%. The earlier count included front-door refusals, which the pre-registration treats as non-attempts. RUN 0's 1 of 20 is unchanged.
+        - **Gaps filed:**
+          - the check-supply sender dispatches gaps with no edit site, which admission refuses by construction;
+          - a guard on the check-supply ledger can be bypassed.
       - **CHANGE-04 and CHANGE-05, and the learning reading (recorded 2026-10-15T05:20:20Z; ruling times from the transcript):**
         - **CHANGE-04, culpability** (user ruling 03:45:44Z; pushed about 04:04Z; gate green).
           - **The history:** an earlier change reused success-credit's rule that "a receipt is not work" for failure-charging. So a step that claims a read deliverable but returns only a receipt escaped blame.
