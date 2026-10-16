@@ -2191,6 +2191,10 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
           - Under the 10-15 ruling (the lane failed the lasting fix, so an operator may fix the root cause) and the 10-16 directive, the operator restore proceeds, reusing that gap.
           - **The history** (a restatement, with a delta): the floor's offer was hand-written from the start. An earlier bridge from discovery to tools existed elsewhere and lost its caller in May.
         - **DECIDED, the build sequence:** CHANGE-30, then 31, 32, 33 and 29. This keeps the agreed order: the gap-store read first, then why drafts fail verification, before the floor's read tools.
+        - **DECIDED, one outcome vocabulary** (by qa; recorded 2026-10-16T06:08:59Z):
+          - CHANGE-30's deferred cutover reuses the walk service's existing non-attempt outcome, "retryable", which busy and capacity refusals already use. No new verdict is minted.
+          - The check-supply sender classifies every result once, from structured fields and not from text: reached, failed, non-attempt, or refused by the receiver. Each outcome that is not a failure carries a shaped retry delay.
+          - So the sender's back-off on refusal (32b) folds into CHANGE-30, as one definition. CHANGE-32 keeps only the placeholder quoting. Each defect keeps its own must-fail.
       - **CHANGE-04 and CHANGE-05, and the learning reading (recorded 2026-10-15T05:20:20Z; ruling times from the transcript):**
         - **CHANGE-04, culpability** (user ruling 03:45:44Z; pushed about 04:04Z; gate green).
           - **The history:** an earlier change reused success-credit's rule that "a receipt is not work" for failure-charging. So a step that claims a read deliverable but returns only a receipt escaped blame.
