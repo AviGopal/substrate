@@ -2143,7 +2143,11 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
           - **It was never retried, because two definitions of "deferred" contradict each other:** the cutover keeps the staged tree for a retry, while compose deletes it and charges a failed attempt.
           - **The change:** one definition of deferred, with the error detail logged. The holder stall is **measured before anything is built.**
         - **A recurrence (law 7, durability):** a pinned dispatch, sent by a hardcoded template id about every 3 minutes, was refused 92 times in 6 hours. The gap that named it was closed on 09-26 with no reason and no landing. It is reopened with the evidence, as a (c) item under the 10-16 ruling.
-        - **Parked for the user:** whether the scope-floor read may keep its last good scope for a bounded time. That is containment-adjacent. The safe variant uses a stale scope only to refuse, never to admit.
+        - **USER RULINGS on the scope-floor read** (it is containment-adjacent):
+          - in qa's session at 2026-10-16T05:56:53Z: **"Yes"** (the lane may fall back to its last good scope for a bounded time);
+          - in the docs session at about 05:57Z, choosing from three options: **"Full bounded reuse"**, meaning a stale scope may admit and refuse for a bounded time. The user chose this over refuse-only and over failing closed.
+          - qa's "Yes" accepted the bounded fallback in principle; the docs-session answer chose the variant. **CHANGE-31 implements the docs-session answer, after CHANGE-30.** qa withdrew its stricter draft, which still read the protected paths live before landing, because it would have overridden the user's trade-off.
+          - **CHANGE-31:** every scope reader reads live first, and a successful live read always wins. Only when the live read fails, and the last good scope is within the bound, does the stale scope both admit and refuse. Past the bound it fails closed. The bound is shaped, not a constant. Every stale use is logged and counted.
       - **CHANGE-04 and CHANGE-05, and the learning reading (recorded 2026-10-15T05:20:20Z; ruling times from the transcript):**
         - **CHANGE-04, culpability** (user ruling 03:45:44Z; pushed about 04:04Z; gate green).
           - **The history:** an earlier change reused success-credit's rule that "a receipt is not work" for failure-charging. So a step that claims a read deliverable but returns only a receipt escaped blame.
