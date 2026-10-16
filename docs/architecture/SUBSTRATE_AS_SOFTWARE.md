@@ -495,6 +495,28 @@ refused with cited evidence (`interventionRefused`) or absorbed without harm —
 condition, measured by active push-away, not intervention-absence (CLAUDE.md "Toward
 S3").
 
+### 5.2 What counts as a demonstration of self-development
+
+The self-development loop is three capabilities in sequence. Each one is shown only
+with information the system obtains for itself.
+
+- **Discovery.** The system files a gap from its own traces and observations. A gap
+  filed because an operator described the defect does not count.
+- **Closure.** The system closes a gap with only what discovery recorded on it, plus
+  what the walk can look up at the time of use. If a fix needs context that an
+  operator supplies, discovery has not recorded enough, and that shortfall is itself
+  a gap. Otherwise nothing would ever close on its own.
+- **Prioritisation.** The system chooses which gap to work on next from how
+  contingent each change is (what it unblocks and what it depends on) and from its
+  expected impact, cost and viability. The choice is a selection that traces grade,
+  not an operator's queue.
+
+A demonstration of autonomy counts only gaps that the system filed, chose and
+closed without operator-supplied context. An operator fix can repair its defect and
+still demonstrate nothing about the loop. Each operator fix should therefore also
+ask which detector would have filed the gap, and what that gap would have needed to
+carry for the system to close it.
+
 ## 6. Scorecard — decision vs. established vs. frontier
 
 Following the discipline of the companion charts.
