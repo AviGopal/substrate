@@ -128,6 +128,9 @@ criterion. So the reliability of a label SHALL be learned, per source and per sh
 of result judged, from its agreement with independent observations and with later outcomes.
 It SHALL NOT be a fixed confidence, and it SHALL NOT override another observation by rank.
 Every label SHALL therefore carry its source, the result it judged and that result's shape.
+A person is one more calibrated observer in the substrate's existing observer calibration
+(the learning-credit tables that already calibrate the close oracle and expectations), keyed
+per source and per shape or kind. No separate mechanism is added.
 
 An input is a person's only by provenance. It is a person's when the activity that produced it
 called the human resolver: this surface delivered the run's question and holds the answer, and
