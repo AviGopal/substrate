@@ -604,12 +604,49 @@ scrubbed_env() { # throwaway-workspace-root cmd... -> runs cmd under env -i with
     OBSIDIAN_ENDPOINT="$_se_nowhere" OBSIDIAN_LEARN_ENDPOINT="$_se_nowhere"
     OBSIDIAN_PLUGIN_ENDPOINT="$_se_nowhere" OBSIDIAN_PROBE_ENDPOINT="$_se_nowhere"
   )
-  mkdir -p "$_se_root/runtime" "$_se_root/parked-landings" 2>/dev/null || true
-  env -i PATH="$PATH" HOME="${HOME:-/root}" NODE_ENV=test TZ=UTC WORKSPACE_ROOT="$_se_root" \
+  # EVERY STATE DEFAULT THE CODE UNDER TEST NAMES (2026-10-17). Suites credited the LIVE learned state for weeks: the
+  # close-oracle calibration, the gap-class posteriors (fixture classes at alpha 1000+) and the expectation calibration.
+  # Vessel code reads each as `process.env.X ?? "/workspace/..."`, env -i drops every X, and the test's process then
+  # writes the live file. So every such default in the tree under test (the caller's cwd, non-test sources) is pointed
+  # at the same relative path under the throwaway root, with its parent created, so a write lands in temp instead of
+  # failing. It is DERIVED from the code at call time: a default a candidate adds is redirected with no edit here.
+  # Named exception (debt): /workspace/git/* (source trees and clones, which some suites read) and /workspace itself.
+  # The explicit runtime directories below come AFTER and win. A hard-coded /workspace path with no env name cannot be
+  # redirected; the watch below catches those.
+  local -a _se_state=() _se_watch=()
+  local _se_n _se_p _se_t _se_rc _se_m _se_live="${PULL_SYNC_LIVE_ROOT:-/workspace}"   # where /workspace is (tests point it at a fixture)
+  while IFS=$'\t' read -r _se_n _se_p; do
+    [ -n "$_se_n" ] && [ -n "$_se_p" ] || continue
+    case "$_se_p" in /workspace|/workspace/|/workspace/git|/workspace/git/*) continue ;; esac
+    _se_t="$_se_root/ws${_se_p#/workspace}"
+    _se_state+=("$_se_n=$_se_t")
+    case "${_se_p##*/}" in *.*) mkdir -p "$(dirname "$_se_t")" 2>/dev/null || true; [ -f "$_se_live${_se_p#/workspace}" ] && _se_watch+=("$_se_live${_se_p#/workspace}") ;; esac
+  done < <(grep -rhoE "process\.env(\.[A-Z0-9_]+|\[[\"'][A-Z0-9_]+[\"']\])[[:space:]]*(\?\?|\|\|)[[:space:]]*[\"'\`]/workspace[^\"'\`]*" \
+             --include='*.ts' --include='*.js' --exclude='*.test.ts' --exclude-dir=node_modules --exclude-dir=test --exclude-dir=tests src 2>/dev/null \
+           | sed -E "s/^process\.env(\.|\[[\"'])([A-Z0-9_]+)([\"']\])?[[:space:]]*(\?\?|\|\|)[[:space:]]*[\"'\`]/\2\t/" | sort -u)
+  # THE WATCH (law 6: the class's detector). Hard-coded live state files the code names with no env override are
+  # watched too. Each watched live file's mtime is taken before the run; any that moved during it is recorded in the
+  # ledger, one JSON line each. The live vessel writes some of these itself, so "quiet" cannot be established here: a
+  # move is FLAGGED for the reading, not a refusal.
+  while IFS= read -r _se_p; do [ -f "$_se_live${_se_p#/workspace}" ] && _se_watch+=("$_se_live${_se_p#/workspace}"); done < <(grep -rhoE "[\"'\`]/workspace/[A-Za-z0-9._/-]+\.(json|jsonl)[\"'\`]" \
+             --include='*.ts' --exclude='*.test.ts' --exclude-dir=node_modules --exclude-dir=test --exclude-dir=tests src 2>/dev/null | tr -d "\"'\`" | /usr/bin/grep -v '^/workspace/git/' | sort -u)
+  local -A _se_mt0=()
+  for _se_p in "${_se_watch[@]}"; do _se_mt0["$_se_p"]="$(stat -c %y "$_se_p" 2>/dev/null)"; done
+  mkdir -p "$_se_root/runtime" "$_se_root/parked-landings" "$_se_root/ws" 2>/dev/null || true
+  env -i PATH="$PATH" HOME="${HOME:-/root}" NODE_ENV=test TZ=UTC "${_se_state[@]}" WORKSPACE_ROOT="$_se_root" \
     MITOSIS_RUNTIME_DIR="$_se_root/runtime" PARKED_LANDINGS_DIR="$_se_root/parked-landings" \
     IAS_TRACE_SPOOL_DIR="$_se_root/trace-spool" SUBSTRATE_STATE_DIR="$_se_root/state" \
     LIGHT_DISPATCH_WORKDIR="$_se_root/light-dispatch" \
     "${_se_services[@]}" "$@"
+  _se_rc=$?
+  for _se_p in "${!_se_mt0[@]}"; do
+    _se_m="$(stat -c %y "$_se_p" 2>/dev/null)"
+    if [ "$_se_m" != "${_se_mt0[$_se_p]}" ]; then
+      echo "[pull-sync] LIVE STATE MOVED during a scrubbed run: $_se_p (cwd $PWD)" >&2
+      printf '{"at":"%s","path":"%s","cwd":"%s","mtime_before":"%s","mtime_after":"%s"}\n' "$(date -u +%FT%TZ)" "$_se_p" "$PWD" "${_se_mt0[$_se_p]}" "$_se_m" >> "${PULL_SYNC_LIVE_STATE_LEDGER:-/workspace/.pull-sync-live-state-moves.jsonl}" 2>/dev/null || true
+    fi
+  done
+  return $_se_rc
 }
 
 # AN OVERWRITE OF CONTENT PULL-SYNC DID NOT WRITE MUST BE RECOVERABLE AND LOUD.
@@ -797,6 +834,30 @@ owed_hold_bound() {
   return 0
 }
 trap 'pullsync_glue_cleanup; carry_pass_end; quiesce_release' EXIT
+
+# THE LEAK WATCH'S READER (2026-10-17; law 6). scrubbed_env records each live state file that moved during a scrubbed
+# run in PULL_SYNC_LIVE_STATE_LEDGER, and a ledger nothing reads is hollow. Once per tick (after the vessel loop), the
+# lines appended since the last report are grouped by (file, UTC day) and ONE gap is filed per group; the id carries the
+# day, so a day's repeats update one row. FLAG semantics: nothing is refused, and the summary says the live vessel's own
+# writes can move the same file. The byte offset reported so far is kept beside the markers, reset when the ledger shrinks.
+# Test: validation/scripts/pull-sync-scrubbed-env-state-defaults.test.sh.
+live_state_moves_report() {
+  local _lm_l="${PULL_SYNC_LIVE_STATE_LEDGER:-/workspace/.pull-sync-live-state-moves.jsonl}" _lm_of="$MARKER_DIR/live-state-moves.offset" _lm_off _lm_size _lm_g _lm_p _lm_d _lm_n _lm_id _lm_s
+  [ -s "$_lm_l" ] || return 0
+  command -v jq >/dev/null 2>&1 || { log "live-state watch: jq missing, $_lm_l not reported"; return 0; }
+  _lm_off="$(cat "$_lm_of" 2>/dev/null || echo 0)"; case "$_lm_off" in ''|*[!0-9]*) _lm_off=0 ;; esac
+  _lm_size="$(stat -c %s "$_lm_l" 2>/dev/null || echo 0)"; [ "$_lm_size" -lt "$_lm_off" ] && _lm_off=0
+  [ "$_lm_size" -gt "$_lm_off" ] || return 0
+  while IFS= read -r _lm_g; do
+    [ -n "$_lm_g" ] || continue
+    _lm_p="$(printf '%s' "$_lm_g" | jq -r .path)"; _lm_d="$(printf '%s' "$_lm_g" | jq -r .day)"; _lm_n="$(printf '%s' "$_lm_g" | jq -r .count)"
+    _lm_id="a-live-state-file-moved-during-a-scrubbed-suite-run-$(printf '%s' "${_lm_p#/workspace/}" | tr -c 'A-Za-z0-9' '-' | cut -c1-60)-${_lm_d//-/}"
+    _lm_s="A live state file, $_lm_p, changed while a scrubbed suite run was in progress ($_lm_n time(s) on $_lm_d; run directories: $(printf '%s' "$_lm_g" | jq -r '.cwds | join(", ")')). scrubbed_env redirects every env-named /workspace default of the code under test, so a move means either a hard-coded path that cannot be redirected, a name outside the redirected set (the /workspace/git/* exception), or the live vessel's own write in the same window. Find which before trusting the table's counts."
+    emit_gap "$(jq -n -c --arg id "$_lm_id" --arg s "$_lm_s" --arg at "$(printf '%s' "$_lm_g" | jq -r .first)" --argjson w "$_lm_g" '{impulse:{pointer:{type:"substrateGap_write",gap:{id:$id,category:"verification",source:"substrate_detected",status:"open",detected_at:$at,summary:$s,classification_metadata:{live_state_watch:$w}}}}}')"
+    log "live-state watch: $_lm_p moved $_lm_n time(s) on $_lm_d during scrubbed runs; gap $_lm_id filed"
+  done < <(tail -c +"$((_lm_off + 1))" "$_lm_l" | jq -s -c 'map(select(type == "object" and (.path | type) == "string")) | group_by([.path, (.at[0:10])]) | map({path: .[0].path, day: (.[0].at[0:10]), count: length, cwds: ([.[].cwd] | unique | .[0:5]), first: .[0].at, last: .[-1].at}) | .[]' 2>/dev/null)
+  echo "$_lm_size" > "$_lm_of" 2>/dev/null || true
+}
 
 glue_divergence_gap() { # super path what
   local id summary
@@ -4281,6 +4342,7 @@ done
 quiesce_release
 carry_pass_end   # the last pass, if it left before the owed path
 carry_sweep      # carries whose vessel this tick never reached
+live_state_moves_report   # the leak watch's reader: one gap per (live file, day) that moved during a scrubbed run
 
 # 4. Super-repo convergence — the glue layer the vessel loop can't see: the
 # federation transport server wrapper (federation-transport-vessel's ExecStart
