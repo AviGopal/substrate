@@ -53,6 +53,14 @@ governs every other activity.
 4. **Every write that steers presentation is checked, attributed and revertible.**
 5. **All input is one text box, read in a visible context,** echoed with how it was read.
 6. **The default view is threads, not runs:** one outcome, one learning mark, one fold.
+7. **Every observation carries its source and has a reader.** A person's verdict is kept and
+   weighed, never refused. A person's input is a person's by provenance, never by a shape's
+   name.
+8. **Teaching is a reading of the box with a named reader:** verdict, steer, correction,
+   lesson, answer, missing input. It is proven by the thread's later outcome.
+9. **The system's self-management is drawn as threads:** its gaps, commits, deployments and
+   configuration changes, graded like any run. The interface is how people observe the
+   system's health and capability.
 
 ## The ruling this reopens
 

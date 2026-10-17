@@ -16,6 +16,10 @@ Read with [`proposal.md`](proposal.md) and [`specs/human-surface/spec.md`](specs
 | A person asking for a change | a goal typed into the one box: walk, write a `uiView` or `renderPolicy` value, validate, reached or not |
 | The system observing its own interface | `human_surface:ui_view`, extended to name views, variants and policy revisions |
 | Interface defects | gaps, closed by view or policy writes, measured by the gap triple |
+| A person's verdict, use, re-ask | observations with their source, kept by the surface and weighed by their reader; never refused at the door |
+| Whether an input is a person's | provenance: the human resolver was called (a question delivered and answered here) and the run used the answer; never a shape's name |
+| A person teaching the system | a reading of the box with a named reader (verdict corpus, retry step, inference, concept lesson, waiting run) |
+| The system managing itself | threads of its gaps, commits, deployments and configuration changes, graded like any run |
 | Where it runs | primitives and drawing in the surface vessel, next to the person (law 11); views and authoring activities resolvable from any node |
 
 Two timescales, as in `SUBSTRATE_AS_DYNAMICS.md`: the fast arm reads the current view on
@@ -41,23 +45,28 @@ the interface declaratively and the host draws it with its own pre-approved comp
 - Adaptive Cards: Microsoft's declarative JSON UI, drawn natively by each host. Templating
   separates layout from data.
 
-Whether `uiView` adopts A2UI's format or a minimal format in its style is settled by one
-prototype (task 4). The shape name and routing stay the substrate's either way.
+The prototype (task 11) encoded the run outcome both ways, decoded both to one tree and drew
+identical markup. **Decision: `uiView` follows A2UI v0.9 `updateComponents`** (a flat list of
+`{ id, component, … }` linked by id, `{ path }` JSON Pointer bindings into a data model),
+with the surface's own catalog of primitives. A flat list is authored piece by piece, which
+suits activities revising one part of a view. The catalog is the closed set of primitives. The
+decoder is small and isolated, so a later A2UI revision changes one file. The shape name and
+routing stay the substrate's.
 
-## 3. The `uiView` shape (sketch, settled by task 4)
+## 3. The `uiView` shape (in A2UI's form, per task 11)
 
 ```
 uiView {
-  region:   "run.outcome" | "thread.list" | "run.fold" | …
-  variant:  id of this variant
-  root:     node
+  region:     "run.outcome" | "thread.list" | "run.fold" | …
+  variant:    id of this variant
+  catalogId:  the surface's primitive catalog
+  components: [ { id: "root", component: "Stack", children: ["goal", "answer"] },
+                { id: "goal", component: "Heading", text: { path: "/run/goal" } },
+                { id: "answer", component: "Text", text: { path: "/answer/text" } } ]
 }
-node = { primitive: "stack" | "row" | "prose" | "links" | "rows" | "record" | "scalar"
-                   | "badge" | "mark" | "fold" | "page" | …,
-         bind?:  pointer into the drawn context (e.g. "run.answerBody", "run.pool[webSearchResult].results")
-         props?: primitive-specific, validated against that primitive's declared props
-         children?: node[] }
 ```
+Each `component` is a primitive. Its props are validated against that primitive's declared
+props, and `{ path }` is an RFC 6901 pointer into the drawn context.
 
 Unknown primitives, unresolvable bindings and invalid props fail the whole view, which then
 falls back to the default for its region.
@@ -92,6 +101,15 @@ since, deleted).
 | an outcome | "that worked" | a verdict, with the note kept | system |
 | anywhere | "show this as a table" / "make the outcome one line" | a presentation change | surface (exact grammar) or system (a view goal) |
 | anywhere | "undo" | restore the last presentation write | surface |
+| an outcome | "try again, but read the result" | a steer for a retry | system: the retry step |
+| an outcome | "next time, GitHub means the website" | a lesson, with its source | system: a concept lesson, read when prompts are built |
+| a running run | (Provide, in the fold) | an input the walk is missing | the running walk, as a person's input by provenance |
+| a system thread (gap, commit, deploy, config change) | "that change broke X" | a verdict on the system's own work | system: the verdict corpus, and the gap's lane |
+
+Every reading carries its provenance (who, in which context, about which result) and is
+echoed with its reader. A reading is offered only once its reader exists. The proof that it
+took is the thread's next outcome: teaching is measured like a gap, by whether it took, how
+long it took, and whether it stayed.
 
 ## 6. Dependencies outside the surface
 
@@ -104,6 +122,12 @@ since, deleted).
 | "Changed since you last looked" from readable slow-arm effects | coordinator |
 | A validator for views: `ui_legibility_scan`'s rules pointed at `human_surface:ui_view` | development-vessel / coordinator |
 | A run's output readable by id after the walk | goal-host (filed gap) |
+| A person's verdict accepted by the learning corpus as an observation with its source (the verdict gate) | activity-api / coordinator |
+| A registry declaration of which shapes are resolved by asking a person | discovery / goal-host |
+| The use of a person's answer recorded as a step or shape, not only a log line | goal-host |
+| The retry step reading a person's steer; inference reading a correction | goal-host |
+| A concept lesson written from the surface, with its source | concept-db |
+| Gaps, the system's commits, deploy verdicts and configuration changes readable as shapes for the threads | development-vessel / deployment |
 
 The surface work in `tasks.md` does not wait on these. Each surface step is useful alone, and
 each dependent step is offered only when something reads it.

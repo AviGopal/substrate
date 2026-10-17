@@ -55,16 +55,48 @@ function. Display-only steps are batched; server steps deploy alone.
 16. The context chip and the "Read as" echo.
 17. Unambiguous readings on the surface: a new ask, adding context to a running run, an open
     question's answer, exact presentation phrases, and "undo".
+17a. A run waiting on the person (its question delivered here) is drawn as waiting, never as
+    running. An output is marked as a person's only by provenance: the question was answered
+    here and the run used the answer. A stand-in is shown with its producer, and is labelled
+    "without a person" only from a registry declaration.
+
+## Phase 5a — one path per kind of interaction
+16a. A run's question answered from the questions list goes through the same delivery as the run
+     page (to the waiting run, with its heartbeat), not only into the question's record.
+16b. "Add other context" is removed: its default shape has no reader. Missing inputs are
+     supplied through "Provide", which selects the target, and the text goes in the box.
+16c. Calibration grades are written as the same verdict observation as a run's grade, with the
+     purpose "calibration" and blind kept.
+16d. Presentation phrases are read in any context, and the echo names their scope. "Show as" on
+     one output and the typed phrase write the same kind of record.
+16e. Declining is one outcome on one path, from the run page and from the questions list.
+
+## Phase 5b — observations and teaching (surface side)
+17b. A person's verdict is kept on the run as an observation with its source, the judged result
+     and the judge's verdict, whatever the corpus does; it is drawn beside the judge's.
+17c. A grade carries the result it judged and that result's producer and provenance.
+17d. The thread mark counts people's observations: a run a person disputed is shown as disputed.
 
 ## Phase 6 — as the coordinator schedules the goal-host side
 18. The utterance shape: every other message goes to the system as text plus context.
 19. Follow-ups, corrections and verdicts, each offered only once something reads it.
 20. "Changed since you last looked", once the slow-arm effects are readable.
+21. Teaching readings in the box, each once its reader exists: steer (retry step), correction
+    (inference), lesson (concept lesson with its source). The echo names the reader.
+
+## Phase 7 — the system's self-management as threads
+22. Gap threads: detection, attempts, landed commit, verified, still closed; graded like runs.
+23. Deployment and configuration steps in those threads: the gate's verdict, the restart, the
+    author of a policy change and its undo.
 
 ## Pre-registered validation
 - Task 12: the encoded default produces the same output as today's renderer on every existing
   render test.
 - Task 15: a typed request ("make the outcome one line") reaches, takes effect without a
   deploy, is named by `human_surface:ui_view`, and is undone by typing "undo".
-- Throughout: interface gaps are measured by the gap triple; interface changes asked for in
-  text are measured by the share that took effect and the time each took.
+- Task 21: a lesson typed at an outcome is written with its source and named in the echo, and
+  a later run of that thread shows whether it held.
+- Task 22: a gap the system closes appears as a thread whose steps name the commit and the
+  gate's verdict, and a person's verdict on it is kept as an observation.
+- Throughout: interface gaps, and teaching, are measured by the gap triple; interface changes
+  asked for in text are measured by the share that took effect and the time each took.

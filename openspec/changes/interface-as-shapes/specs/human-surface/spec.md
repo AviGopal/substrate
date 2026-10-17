@@ -89,11 +89,97 @@ Every other message SHALL go to the system as text plus its context.
 **Check:** the same words typed in two contexts are read differently, and each reading is
 shown before or as it takes effect.
 
+## Requirement: one path per kind of interaction
+
+Each kind of interaction SHALL have exactly one write path and one reader, whichever place on
+screen it starts from:
+- answering a question (a run's or the system's), including declining it;
+- supplying an input a running run is missing;
+- a verdict on a result, calibration included;
+- a presentation change, with its scope (this output, or every output of a shape) named in the
+  echo;
+- a complaint about the interface.
+
+Text SHALL be entered only in the one box. Other controls (an option, a "Provide" on a missing
+input, "Show as") SHALL either select the context the box will use or send through the same
+path the box uses. They SHALL NOT be a second writer. A place that offers an interaction whose
+path does not reach its reader SHALL NOT offer it.
+
+**Check:** for each kind, every place it can be started from produces the same write to the
+same reader. A run's question answered from the questions list reaches the waiting run exactly
+as one answered on the run page does.
+
+## Requirement: every observation carries its source and has a reader
+
+A verdict is an observation, and it may come from any source: a person, the judge, an oracle,
+or use. The surface SHALL keep every verdict a person gives as an observation on the run,
+recording:
+- the source;
+- the result it judged and that result's producer;
+- what the judge said.
+
+It SHALL keep it whatever the learning corpus does with it. Weighing observations is the
+reader's job: independent agreement confirms a result, and a contrary observation from a
+person puts the result in question. The surface SHALL draw a person's verdict beside the
+judge's, disagreement included.
+
+An input is a person's only by provenance. It is a person's when the activity that produced it
+called the human resolver: this surface delivered the run's question and holds the answer, and
+the run records that the answer was used. A shape's name SHALL NOT decide it. A stand-in
+produced under the same shape SHALL be drawn with its producer, never hidden. It SHALL be
+labelled as produced without a person only from a registry declaration of which shapes need a
+person, never from a name.
+
+**Check:** a grade the learning corpus refuses is still kept on the run and drawn beside the
+judge's verdict. A person-shaped output a satisfier produced draws with its producer and no
+person mark. An output from the step a person's answer drove is marked as theirs.
+
+## Requirement: teaching is a reading of the box, with a named reader
+
+A person teaches the system through the one box, by what they type in a context. The surface
+SHALL offer each teaching reading only once its reader exists, and SHALL name the reader in
+the echo:
+- a verdict ("that worked", "wrong answer") is read by the verdict corpus;
+- a steer ("try again, but read the result") is read by the retry step;
+- a correction ("I was asking a question") is read by goal-target inference;
+- a lesson ("next time, GitHub means the website") is read as a concept lesson when prompts
+  are built;
+- an answer to its question is read by the waiting run or gap;
+- a missing input is read by the running walk.
+
+Every teaching message SHALL carry its provenance: who taught it, in which context, and about
+which result.
+
+Teaching is proven only by its effect. A later ask in the same thread, or a similar one,
+SHALL show whether the taught thing held. The measure is the gap triple: whether the teaching
+took, how long it took, and whether it stayed.
+
+**Check:** a reading with no reader is never offered. A lesson typed at an outcome is written
+with its source and context, and is named in the echo. The thread's mark changes when a later
+run of that thread reaches after the lesson.
+
+## Requirement: the system's self-management is visible as threads
+
+What the system does to itself SHALL be drawn as threads beside a person's, and graded the same
+way:
+- its gaps, from detection through attempts and a landed commit to verified and still closed;
+- its commits to its own code;
+- its deployments, with the gate's verdict and the restart;
+- its changes to its own configuration and policies, each with its author and an undo where
+  the write path keeps one.
+
+A person's verdict on any of these is an observation its reader weighs, as for any run.
+
+**Check:** a commit the system lands appears as a thread step naming the gap it addressed and
+the gate's verdict. A policy change appears with its author. A deploy appears with the units
+it restarted.
+
 ## Requirement: threads, not runs
 
 The default view SHALL group a person's asks into threads by goal. Each thread SHALL show its
-outcome, a learning mark derived from its reach history, and one fold holding attempts,
-outputs and provenance. When readable, it SHALL also show what changed since the person last
+outcome, a learning mark, and one fold holding attempts, outputs and provenance. The learning
+mark SHALL be derived from the thread's reach history together with the observations of
+people and use, so a disputed reach is shown as disputed. When readable, it SHALL also show what changed since the person last
 looked. A person's threads SHALL never be pushed out of view by the volume of system runs.
 
 **Check:** with any number of newer system runs, a person's thread remains listed with its
