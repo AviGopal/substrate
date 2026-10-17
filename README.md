@@ -196,7 +196,10 @@ Every sequence ends at a verdict level. `substrate-status` reports five ordered 
 
 #### A. Standalone (the default)
 
-One command, with your provider key in place of the placeholder:
+One command, with your provider key in place of the placeholder. Run it from an empty
+directory, never from inside a clone of this repository: once the clone holds a `.env`
+(sequence G reads its install inputs from one there), the installer takes the clone for
+an existing fleet and reuses that `.env`, anchor included.
 
 ```bash install:standalone
 # Install: writes the manifest and .env into ./substrate, launches, waits for a reached
