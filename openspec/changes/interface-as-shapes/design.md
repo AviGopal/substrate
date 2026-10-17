@@ -1,0 +1,109 @@
+# Design — the interface as shapes
+
+Read with [`proposal.md`](proposal.md) and [`specs/human-surface/spec.md`](specs/human-surface/spec.md).
+
+## 1. The mapping into the substrate's terms
+
+| Concern | Expressed as |
+|---|---|
+| A view of a run, thread or question | a shaped impulse `uiView`: a routing key, not a schema, read at render time (law 1) |
+| What a view draws | pointers to the run's impulses (pool, `answerBody`, gap rows); never copies |
+| Primitives | the surface's resolver-like layer: thin, in code, earned slowly. Today's forms (prose, text, rows, record, scalar, diff, terminal, page, stub, empty) are the first set |
+| Authoring a view | an activity: consumes the content's shape, its context, the render policy and the person's words; produces `uiView` (law 2) |
+| Choosing among views | the existing selection, per context; every choice is traced |
+| Judging a view | reach (the write persisted and an independent validator passed it, once one is verified to run; task 0) plus use (later verdicts and signals), as in `render-learning.md` §5 |
+| Keeping what works | ribosome extraction from reached, used views, as an aim with its own check (law 4); reuse before mint (law 3) |
+| A person asking for a change | a goal typed into the one box: walk, write a `uiView` or `renderPolicy` value, validate, reached or not |
+| The system observing its own interface | `human_surface:ui_view`, extended to name views, variants and policy revisions |
+| Interface defects | gaps, closed by view or policy writes, measured by the gap triple |
+| Where it runs | primitives and drawing in the surface vessel, next to the person (law 11); views and authoring activities resolvable from any node |
+
+Two timescales, as in `SUBSTRATE_AS_DYNAMICS.md`: the fast arm reads the current view on
+every draw; the slow arm moves view variants' standing with traces, verdicts and use. A
+person's request moves the slow arm on purpose.
+
+## 2. Implementation options considered
+
+| Option | Changes without a deploy | Safety | Keeps today's behaviour | Learnable | Theme and accessibility |
+|---|---|---|---|---|---|
+| 1. Declarative views from fixed primitives | yes | high: no code | yes: primitives and fallback | yes: variants are data | yes |
+| 2. System-written markup in a sandbox | yes | medium: hard to validate | partly: an isolated island | weakly | poor |
+| 3. System-written UI code, landed as commits | no: gate and restart per change | relies on the gate | risky | slowly | yes |
+| 4. Renderer activities emitting views | yes | depends on output | yes, with fallback | yes | depends |
+
+**Chosen:** 1 as the base, authored through 4, with 2 kept as the page primitive for content
+no primitive can draw, and 3 reserved for adding primitives.
+
+**External prior art.** Two established protocols take the same approach: the agent describes
+the interface declaratively and the host draws it with its own pre-approved components.
+- A2UI: an open protocol announced by Google in December 2025. Components are declarative
+  JSON with a separate data model they bind to; no executable code.
+- Adaptive Cards: Microsoft's declarative JSON UI, drawn natively by each host. Templating
+  separates layout from data.
+
+Whether `uiView` adopts A2UI's format or a minimal format in its style is settled by one
+prototype (task 4). The shape name and routing stay the substrate's either way.
+
+## 3. The `uiView` shape (sketch, settled by task 4)
+
+```
+uiView {
+  region:   "run.outcome" | "thread.list" | "run.fold" | …
+  variant:  id of this variant
+  root:     node
+}
+node = { primitive: "stack" | "row" | "prose" | "links" | "rows" | "record" | "scalar"
+                   | "badge" | "mark" | "fold" | "page" | …,
+         bind?:  pointer into the drawn context (e.g. "run.answerBody", "run.pool[webSearchResult].results")
+         props?: primitive-specific, validated against that primitive's declared props
+         children?: node[] }
+```
+
+Unknown primitives, unresolvable bindings and invalid props fail the whole view, which then
+falls back to the default for its region.
+
+## 4. Write checks
+
+Applied in the surface's write path to `uiView` and `renderPolicy` writes:
+- refuse unrendered template tokens (`{{…}}`) in any key or value;
+- refuse values outside each field's declared range (for example, importance weights above
+  a declared bound);
+- refuse kinds or ids of test or probe origin;
+- refuse fields the surface does not read, naming them;
+- record the author (activity or person, execution or dispatch) on every accepted write;
+- keep the previous value so that one "undo" restores it.
+
+Refusals name what they refused. A refused write leaves the current value in force.
+
+## 5. The interaction model
+
+All input is one text box, read in a visible context. The thread mock is the wireframe: the
+context chip, the "Read as" echo, threads with a learning mark, one outcome and one fold, and
+time states for each run (asking, running, waiting on you, judged, detail expired, changed
+since, deleted).
+
+| Where the person is | Typed | Read as | Read by |
+|---|---|---|---|
+| no context | a question | a new ask | surface |
+| a running run | "also check tomorrow" | context added to the run | surface |
+| a run waiting on them | "Seattle" | the answer to its question | surface |
+| an outcome | "and tomorrow?" | a follow-up carrying the run's results | system |
+| an outcome | "I was asking a question" | a correction to what it understood | system |
+| an outcome | "that worked" | a verdict, with the note kept | system |
+| anywhere | "show this as a table" / "make the outcome one line" | a presentation change | surface (exact grammar) or system (a view goal) |
+| anywhere | "undo" | restore the last presentation write | surface |
+
+## 6. Dependencies outside the surface
+
+| Need | Owner |
+|---|---|
+| A shape for "a person said this, in this context", read and routed by the system | goal-host / coordinator |
+| Follow-ups: the model step sees what is attached; a seed cannot satisfy completion | goal-host (filed gaps) |
+| Verdicts typed in the box are recorded | identity decision: who may record a human verdict |
+| Runs ask through the route the surface reads, with content | goal-host |
+| "Changed since you last looked" from readable slow-arm effects | coordinator |
+| A validator for views: `ui_legibility_scan`'s rules pointed at `human_surface:ui_view` | development-vessel / coordinator |
+| A run's output readable by id after the walk | goal-host (filed gap) |
+
+The surface work in `tasks.md` does not wait on these. Each surface step is useful alone, and
+each dependent step is offered only when something reads it.
