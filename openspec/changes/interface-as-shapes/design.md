@@ -17,6 +17,7 @@ Read with [`proposal.md`](proposal.md) and [`specs/human-surface/spec.md`](specs
 | The system observing its own interface | `human_surface:ui_view`, extended to name views, variants and policy revisions |
 | Interface defects | gaps, closed by view or policy writes, measured by the gap triple |
 | A person's verdict, use, re-ask | observations with their source, kept by the surface and weighed by their reader; never refused at the door |
+| How much a person's label counts | a reliability learned per source and per shape or kind, from agreement with independent observations and later outcomes; never a fixed confidence or an override |
 | Whether an input is a person's | provenance: the human resolver was called (a question delivered and answered here) and the run used the answer; never a shape's name |
 | A person teaching the system | a reading of the box with a named reader (verdict corpus, retry step, inference, concept lesson, waiting run) |
 | The system managing itself | threads of its gaps, commits, deployments and configuration changes, graded like any run |
@@ -122,7 +123,8 @@ long it took, and whether it stayed.
 | "Changed since you last looked" from readable slow-arm effects | coordinator |
 | A validator for views: `ui_legibility_scan`'s rules pointed at `human_surface:ui_view` | development-vessel / coordinator |
 | A run's output readable by id after the walk | goal-host (filed gap) |
-| A person's verdict accepted by the learning corpus as an observation with its source (the verdict gate) | activity-api / coordinator |
+| A person's verdict accepted by the learning corpus as an observation with its source, with its reliability learned per source and shape rather than fixed, and no override (the verdict gate) | activity-api, goal-host / coordinator |
+| People distinguishable as sources, so reliability is learned per person rather than per surface | identity / coordinator |
 | A registry declaration of which shapes are resolved by asking a person | discovery / goal-host |
 | The use of a person's answer recorded as a step or shape, not only a log line | goal-host |
 | The retry step reading a person's steer; inference reading a correction | goal-host |

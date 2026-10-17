@@ -123,6 +123,12 @@ reader's job: independent agreement confirms a result, and a contrary observatio
 person puts the result in question. The surface SHALL draw a person's verdict beside the
 judge's, disagreement included.
 
+A person's label is never authority. People can be mistaken, or judge a shape by a different
+criterion. So the reliability of a label SHALL be learned, per source and per shape or kind
+of result judged, from its agreement with independent observations and with later outcomes.
+It SHALL NOT be a fixed confidence, and it SHALL NOT override another observation by rank.
+Every label SHALL therefore carry its source, the result it judged and that result's shape.
+
 An input is a person's only by provenance. It is a person's when the activity that produced it
 called the human resolver: this surface delivered the run's question and holds the answer, and
 the run records that the answer was used. A shape's name SHALL NOT decide it. A stand-in
@@ -131,7 +137,7 @@ labelled as produced without a person only from a registry declaration of which 
 person, never from a name.
 
 **Check:** a grade the learning corpus refuses is still kept on the run and drawn beside the
-judge's verdict. A person-shaped output a satisfier produced draws with its producer and no
+judge's verdict. No label is written with a fixed confidence. A person-shaped output a satisfier produced draws with its producer and no
 person mark. An output from the step a person's answer drove is marked as theirs.
 
 ## Requirement: teaching is a reading of the box, with a named reader
