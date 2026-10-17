@@ -178,7 +178,7 @@ and goal-path learning (step 8e), the steps that define what "success" means.
 | **8b Credit propagation** | n-step TD/MC backup; `α_{s_{t−k}}←α+γ^k r`, γ=1 (§3) | heat flow `e^{−tL}`; mixes at `λ₁` (§3,§4.1) | transport along the slow flow; broken chain-credit ⇒ `λ₁→0` (§6) | credit diffusion across axes | `propagateCreditAlongChain`; cross-substrate = tree of singly-owned execs (§9) | ephemeral compute, writes learned-durable |
 | **8c Ribosome extraction** | active model expansion / open-world action growth (§5) | **active complex growth**: add cells at `Beta(1,1)` = uninformed `⋆` (§2) | a `ρ_grow` event; must satisfy `λ₁≳ρ_grow` (§3,§4) | **opening a new dimension** — minting a shape-axis (§0,§5); only for residual (§4) | new structure gossiped by reference (§0,§7) | **structural** learned-durable: mergeable by graph-union (§2) |
 | **8d Composition-edge write** | crediting composition lineage vs the executed arm (§3) | adds an incidence raising `λ₁`; reuse sharpens vs mint raises `ρ_grow` (§2,§4.4) | improves the spectral gap (§4) | a new measured shared mode/edge (§5.1) | content-addressed edge identity (frontier) (§2) | structural learned-durable (§2) |
-| **8e Goal-path record** | per-goal α/β keyed by `goal_hash`; path = attribution, success = *reached* (GOAL_EXECUTION_PATHS_SCHEMA) | a recorded curated 1-chain keyed by goal + `endpoint_output_shapes` | accumulates per-goal posterior across attempts | reuse of a reaching direction for a repeated goal-direction | recorded / folded | structural learned-durable (frontier: content-addressed identity) |
+| **8e Goal-path record** | per-goal α/β keyed by the goal's intent (§3.0), so a paraphrase finds the same record; path = attribution, success = *reached* (GOAL_EXECUTION_PATHS_SCHEMA) | a recorded curated 1-chain keyed by goal + `endpoint_output_shapes` | accumulates per-goal posterior across attempts | reuse of a reaching direction for a repeated goal-direction | recorded / folded | structural learned-durable (frontier: content-addressed identity) |
 
 *(Section pointers are to the owning chart, in the column header order MDP / DEC /
 DYNAMICS / REPRESENTATION / NETWORK / FLEET. `IMPULSE_ACTIVITY_FOUNDATION.md` "The
@@ -249,6 +249,12 @@ same learning sinks.
 - **Per-goal record & reuse** (step 8e). `recordGoalPath` writes to
   `goal_execution_paths` keyed by `goal_hash` (path = attribution, success = reached,
   per-goal α/β); `recommendReachingPath` reuses the reaching path for a repeated goal.
+  "Repeated" means the same intent, not the same sentence (§3.0): a paraphrase of a
+  reached goal must find its record, so its path can be reused or adapted at the first
+  or last mile. A key derived only from the goal's normalised text does not meet this,
+  because each new wording starts cold and learned pathways never compound across
+  phrasings. Where the record's key is text-derived, that is a gap against this
+  expectation, not the expectation itself.
   This is the unified goal-learning mechanism — goals from the MCP surface
   (`mcp__metabob__run_goal`) and from the human surface (human-surface-vessel, or an optional Obsidian vault) both dispatch through
   the same goal-host `/run-goal`+`/resolve`, both gated, both recorded. Canonical:
