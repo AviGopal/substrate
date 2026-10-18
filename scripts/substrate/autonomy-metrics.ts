@@ -21,6 +21,8 @@
  *   dec_limiters    — ρ_sample (traces/hr), κ (posterior-mean spread), λ₁ proxy (edges)
  *   push_away       — interventionRefused count (S3 readiness)
  */
+import { landingTally, readLandingCommits, type LandingCommit } from "./autonomy-landings.ts";
+
 const NS = process.env.SURREALDB_NAMESPACE || "activity-system";
 const DB = process.env.SURREALDB_DATABASE || "learning_loop";
 const PASS = process.env.SURREALDB_PASSWORD || process.env.SURREAL_PASS || "";
@@ -196,6 +198,10 @@ const backward_model = { composition_edges: comp_edges, orphan_parent_rate, rece
 
 // ── self-alteration funnel (filesystem) ──
 let self_alteration: any = { landed: null, open_proposals: null };
+// origin/dev landing commits, read here, tallied once the gap rows are read (below).
+const landingCommits: LandingCommit[] = [];
+const landingReposUnreadable: string[] = [];
+let landingReposRead = 0;
 try {
   const { readdirSync } = await import("node:fs");
   // Applied (landed) proposals are per-file reports under proposals/.applied/.
@@ -236,15 +242,34 @@ try {
   }
   self_alteration.landed_cutovers_total = total;
   self_alteration.landed_cutovers_24h = last24h;
+  // The two numbers above count COMMITS on every ref, so they are not landings: see
+  // autonomy-landings.ts. Kept for series continuity; `landings` (after the gap read
+  // below) is the per-gap-family tally over origin/dev.
+  self_alteration.landed_cutovers_basis = "commits --all (legacy)";
+  for (const v of VESSELS) {
+    const c = await readLandingCommits(`${repoRoot}/${v}`, v);
+    if (c) { landingCommits.push(...c); landingReposRead++; } else landingReposUnreadable.push(v);
+  }
 } catch { /* git unavailable */ }
 
 // ── gaps by category (does the loop close model-reality gaps autonomously?) ──
 let gaps: any = { total: null, by_category: {}, model_reality_open: null };
+let gapRows: Map<string, any> | null = null;
 try {
-  const g = await devResolve({ type: "substrateGap", limit: 200 });
+  // The WHOLE store, in one read. The resolver has no paging and its `total` is the length of
+  // the page it returns, so a `limit: 200` read reported 200 of a store that holds thousands.
+  // include_held keeps operator-held open rows in the set. Read-only, as everything here.
+  // The whole store is tens of MB; if that read fails, fall back to the old 200-row page so
+  // by_category still reads, with total null and basis saying so (a page is not a total).
+  let whole = true;
+  const g = await devResolve({ type: "substrateGap", limit: 1_000_000, include_held: true })
+    .catch(() => { whole = false; return devResolve({ type: "substrateGap", limit: 200 }); });
   const list = g?.body?.gaps ?? [];
+  if (whole && Array.isArray(g?.body?.gaps)) gapRows = new Map(list.map((x: any) => [String(x.id), x]));
+  // by_category and the *_open sums count OPEN rows: with the whole store read, counting every
+  // row would add the closed ones under names that say "open".
   const by: Record<string, number> = {};
-  for (const x of list) by[x.category ?? "unknown"] = (by[x.category ?? "unknown"] ?? 0) + 1;
+  for (const x of list) if (x.status === "open") by[x.category ?? "unknown"] = (by[x.category ?? "unknown"] ?? 0) + 1;
   const mrCats = ["forward_model_artifact", "reference_integrity", "detector_value_sanity_violation", "auto_draft_fallback_recommend", "posterior_consistency_drift", "composition_coverage"];
   // Meta-shape gap classes (learning-to-learn as a shape; plan
   // imperative-twirling-truffle.md). Pinned so the six surface as named rows in the
@@ -254,13 +279,47 @@ try {
   const meta_by_category: Record<string, number> = {};
   for (const c of metaCats) meta_by_category[c] = by[c] ?? 0;
   gaps = {
-    total: g?.body?.total ?? list.length,
+    total: whole ? (g?.body?.total ?? list.length) : null,
     by_category: by,
     model_reality_open: mrCats.reduce((s, c) => s + (by[c] ?? 0), 0),
     meta_by_category,
     meta_open: metaCats.reduce((s, c) => s + (by[c] ?? 0), 0),
+    basis: whole ? "whole store; by_category counts open rows" : "200-row page (whole-store read failed); by_category counts open rows",
   };
 } catch { /* */ }
+
+// ── landings: one per gap family whose fix is on origin/dev and whose own check closed it ──
+// Counts over all of origin/dev; `families` lists only those active in the last 14 days so
+// the line stays small (families_total says how many there are). gap_store_read false means
+// no row could be checked, so every fix reads fix_only_unverified: read it as unknown.
+// landed_system is the autonomous number; the basis names what the tally cannot see.
+const LANDINGS_BASIS = "origin/dev; one per gap family; landed = fix commit + gap closed landed_verified, not reverted on origin/dev"
+  + "; landed_system/landed_operator/landed_source_unknown split landed by the gap row's source (operator = human_reported on any row of the family's walk)"
+  + "; landed_directed = landed whose walk carries directed:true (operator-directed into the lane)"
+  + "; NOT SEEN: an operator fix-forward or a manual undo of the same lines without a revert message"
+  + "; an operator filing under a system source (source is what the filer wrote)"
+  + "; author identity (operator exact-edits commit under the substrate's identity, so author is not read)";
+if (landingReposRead > 0) {
+  const rows = gapRows;
+  const tally = landingTally(landingCommits, (id) => rows?.get(id) ?? null, Date.now());
+  const windowMs = 14 * 24 * 3600_000;
+  self_alteration.landings = {
+    basis: LANDINGS_BASIS,
+    gap_store_read: rows !== null,
+    repos_unreadable: landingReposUnreadable,
+    commits: tally.commits,
+    landed: tally.landed, landed_partial: tally.landed_partial, check_supplied: tally.check_supplied,
+    reopened: tally.reopened, reverted: tally.reverted, fix_only_unverified: tally.fix_only_unverified,
+    landed_system: tally.landed_system, landed_operator: tally.landed_operator,
+    landed_source_unknown: tally.landed_source_unknown, landed_directed: tally.landed_directed,
+    landed_24h: tally.landed_24h,
+    families_total: tally.families.length,
+    families_window_days: 14,
+    families: tally.families.filter((f) => Date.now() - f.last_ms <= windowMs).map((f) => ({ gap: f.gap, class: f.class, status: f.status, source: f.source })),
+  };
+} else {
+  self_alteration.landings = null;
+}
 
 // ── DEC rate-limiters ──
 // Filter on executed_at, NOT created_at: created_at is UNINDEXED on

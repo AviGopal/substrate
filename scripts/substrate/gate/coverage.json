@@ -24,6 +24,7 @@
       "/usr/local/libexec/substrate/gate-runner",
       "/usr/local/share/substrate/active-scripts/auto-describe-resolvers.d.ts",
       "/usr/local/share/substrate/active-scripts/auto-describe-resolvers.ts",
+      "/usr/local/share/substrate/active-scripts/autonomy-landings.ts",
       "/usr/local/share/substrate/active-scripts/autonomy-metrics.d.ts",
       "/usr/local/share/substrate/active-scripts/autonomy-metrics.ts",
       "/usr/local/share/substrate/active-scripts/autonomy-status.d.ts",
@@ -1714,6 +1715,13 @@
     "/usr/local/share/substrate/active-scripts/auto-describe-resolvers.ts": {
       "src": "scripts/substrate/auto-describe-resolvers.ts",
       "src_blob": "e151aa90492ad76877d9796f2facc1cf2342bbe2",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/autonomy-landings.ts": {
+      "src": "scripts/substrate/autonomy-landings.ts",
+      "src_blob": "4048bfe00244e67a2160d5f8234b7ee3d9ca7d0e",
       "level": "none",
       "reason": "converges-today-uncovered",
       "fixtures": []

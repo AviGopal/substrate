@@ -231,6 +231,7 @@ scripts/substrate/vessel-tree-hash.sh	/usr/local/bin/vessel-tree-hash	0755	A
 scripts/substrate/gate/gate-runner.sh	/usr/local/libexec/substrate/gate-runner	0755	A
 scripts/substrate/auto-describe-resolvers.d.ts	/usr/local/share/substrate/active-scripts/auto-describe-resolvers.d.ts	0644	A
 scripts/substrate/auto-describe-resolvers.ts	/usr/local/share/substrate/active-scripts/auto-describe-resolvers.ts	0644	A
+scripts/substrate/autonomy-landings.ts	/usr/local/share/substrate/active-scripts/autonomy-landings.ts	0644	A
 scripts/substrate/autonomy-metrics.d.ts	/usr/local/share/substrate/active-scripts/autonomy-metrics.d.ts	0644	A
 scripts/substrate/autonomy-metrics.ts	/usr/local/share/substrate/active-scripts/autonomy-metrics.ts	0644	A
 scripts/substrate/autonomy-status.d.ts	/usr/local/share/substrate/active-scripts/autonomy-status.d.ts	0644	A
@@ -338,6 +339,7 @@ scripts/substrate/auto-describe-resolvers.d.ts.map	/usr/local/share/substrate/su
 scripts/substrate/auto-describe-resolvers.js	/usr/local/share/substrate/super-repo/scripts/substrate/auto-describe-resolvers.js	0644	B
 scripts/substrate/auto-describe-resolvers.js.map	/usr/local/share/substrate/super-repo/scripts/substrate/auto-describe-resolvers.js.map	0644	B
 scripts/substrate/auto-describe-resolvers.ts	/usr/local/share/substrate/super-repo/scripts/substrate/auto-describe-resolvers.ts	0644	B
+scripts/substrate/autonomy-landings.ts	/usr/local/share/substrate/super-repo/scripts/substrate/autonomy-landings.ts	0644	B
 scripts/substrate/autonomy-metrics.d.ts	/usr/local/share/substrate/super-repo/scripts/substrate/autonomy-metrics.d.ts	0644	B
 scripts/substrate/autonomy-metrics.d.ts.map	/usr/local/share/substrate/super-repo/scripts/substrate/autonomy-metrics.d.ts.map	0644	B
 scripts/substrate/autonomy-metrics.js	/usr/local/share/substrate/super-repo/scripts/substrate/autonomy-metrics.js	0644	B
