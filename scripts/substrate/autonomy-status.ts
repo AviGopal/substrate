@@ -391,8 +391,15 @@ if (persistentlyNull("backward_model.composition_edges")) dark.push("λ₁/edges
 if (persistentlyNull("forward_model.selector_scored_fraction")) dark.push("selector");
 
 const g = (r: any, path: string) => path.split(".").reduce((o, k) => (o == null ? o : o[k]), r);
+// A change of gaps.basis (what the collector's gap read covered) is a step in the series, not a
+// trend: a gaps.* delta starts at the first snapshot in the window on the latest snapshot's basis.
+const firstFor = (path: string): any => {
+  if (!path.startsWith("gaps.")) return first;
+  const basis = last?.gaps?.basis;
+  return win.find((r) => r?.gaps?.basis === basis) ?? first;
+};
 const delta = (path: string): string => {
-  const a = g(first, path), b = g(last, path);
+  const a = g(firstFor(path), path), b = g(last, path);
   if (typeof a !== "number" || typeof b !== "number") return "·";
   const d = +(b - a).toFixed(2);
   return d === 0 ? "±0" : (d > 0 ? `+${d}` : `${d}`);
@@ -402,7 +409,7 @@ const kspread = (r: any) => {
   return (k && k.max != null && k.min != null) ? +(k.max - k.min).toFixed(2) : null;
 };
 const arrow = (path: string, good: "up" | "down"): string => {
-  const a = g(first, path), b = g(last, path);
+  const a = g(firstFor(path), path), b = g(last, path);
   if (typeof a !== "number" || typeof b !== "number") return " ";
   if (b === a) return "→";
   const rising = b > a;
