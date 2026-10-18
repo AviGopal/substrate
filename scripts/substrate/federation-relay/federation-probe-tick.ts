@@ -569,7 +569,7 @@ async function runPayloadMatrix(probe: VesselLibp2p, target: string, pathLabel: 
       const echoHash = sha256(String(c.echo ?? ''))
       const ok = echoHash === expectHash && c.sha256 === expectHash && c.len === expectLen
       record('I6_payload_integrity', ok ? 'pass' : 'fail', {
-        witness: 'probe', config: cfg, cls: ok ? undefined : 'payload_corrupted',
+        witness: 'probe', config: cfg, cls: ok ? undefined : 'payload_corrupted', clears: ok ? 'payload_corrupted' : undefined,
         evidence: {
           sent_len: expectLen, echoed_len: c.len,
           payload_sha256_sent: expectHash, payload_sha256_echoed: echoHash, server_sha256: c.sha256,
@@ -820,7 +820,7 @@ async function checkJoinLeave(probe: VesselLibp2p) {
     const found = await discoveryResolve({ type: 'vesselCapability', shape: nonceShape })
     const present = (found?.vessels ?? []).length > 0
     record('I3_find_after_join', present ? 'pass' : 'fail', {
-      witness: 'probe', cls: present ? undefined : 'join_not_findable',
+      witness: 'probe', cls: present ? undefined : 'join_not_findable', clears: present ? 'join_not_findable' : undefined,
       config: { operation: 'join' },
       evidence: { shape: nonceShape, rows: (found?.vessels ?? []).length },
     })
@@ -835,7 +835,7 @@ async function checkJoinLeave(probe: VesselLibp2p) {
     const after = await discoveryResolve({ type: 'vesselCapability', shape: nonceShape })
     const gone = (after?.vessels ?? []).length === 0
     record('I7_leave_propagates', gone ? 'pass' : 'fail', {
-      witness: 'probe', cls: gone ? undefined : 'leave_only_at_ttl',
+      witness: 'probe', cls: gone ? undefined : 'leave_only_at_ttl', clears: gone ? 'leave_only_at_ttl' : undefined,
       config: { operation: 'leave' },
       evidence: { deregister_http: del.status, cleared_ms: Date.now() - t0, rows_after: (after?.vessels ?? []).length, ttl_ms: 300_000 },
     })
