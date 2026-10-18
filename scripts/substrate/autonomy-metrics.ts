@@ -220,32 +220,44 @@ try {
 // undercounts: a cutover that lands without going through that resolver's
 // appendFile is a real landing the jsonl never records.
 try {
-  const repoRoot = `${import.meta.dir}/../../repos`;
+  // The vessel repos live under the super-repo clone (WORKSPACE_ROOT, as the heartbeat read
+  // above resolves it). The unit runs this file from the active-scripts run dir, so a path
+  // relative to import.meta.dir pointed at a /repos that does not exist: every git read failed
+  // and both counts below read 0. Relative to this file only when run from a checkout.
+  // An empty or blank WORKSPACE_ROOT is unset: it would otherwise name /repos.
+  const repoRoot = `${process.env["WORKSPACE_ROOT"]?.trim() || `${import.meta.dir}/../..`}/repos`;
   const VESSELS = [
     "development-vessel", "goal-host-vessel", "llm-resolver-vessel", "ribosome-vessel",
     "local-tools-vessel", "light-dispatch-vessel", "discovery-vessel", "boredom-vessel",
     "ias-executor-ts", "concept-db", "activity-api",
     "stateful-ui-vessel", "obsidian-vessel", "identity-vessel",
   ];
-  const gitCount = async (repo: string, sinceArgs: string[]): Promise<number> => {
+  // null when git fails (no repo, no git): a read that failed is not zero commits.
+  const gitCount = async (repo: string, sinceArgs: string[]): Promise<number | null> => {
     try {
       const p = Bun.spawn(["git", "-C", `${repoRoot}/${repo}`, "log", "--all", "--grep=substrate-authored: apply", "--oneline", ...sinceArgs], { stdout: "pipe", stderr: "pipe" });
       const out = (await new Response(p.stdout).text()).trim();
-      await p.exited;
+      if ((await p.exited) !== 0) return null;
       return out ? out.split("\n").length : 0;
-    } catch { return 0; }
+    } catch { return null; }
   };
   let total = 0, last24h = 0;
+  const legacyUnreadable: string[] = [];
   for (const v of VESSELS) {
-    total += await gitCount(v, []);
-    last24h += await gitCount(v, ["--since=24.hours.ago"]);
+    const t = await gitCount(v, []);
+    const d = await gitCount(v, ["--since=24.hours.ago"]);
+    if (t == null || d == null) { legacyUnreadable.push(v); continue; }
+    total += t; last24h += d;
   }
-  self_alteration.landed_cutovers_total = total;
-  self_alteration.landed_cutovers_24h = last24h;
+  const legacyRead = legacyUnreadable.length < VESSELS.length;
+  self_alteration.landed_cutovers_total = legacyRead ? total : null;
+  self_alteration.landed_cutovers_24h = legacyRead ? last24h : null;
   // The two numbers above count COMMITS on every ref, so they are not landings: see
   // autonomy-landings.ts. Kept for series continuity; `landings` (after the gap read
-  // below) is the per-gap-family tally over origin/dev.
+  // below) is the per-gap-family tally over origin/dev. The basis names the repos the
+  // read could not reach, so a dark read never hides behind the "legacy" label.
   self_alteration.landed_cutovers_basis = "commits --all (legacy)";
+  self_alteration.landed_cutovers_repos_unreadable = legacyUnreadable;
   for (const v of VESSELS) {
     const c = await readLandingCommits(`${repoRoot}/${v}`, v);
     if (c) { landingCommits.push(...c); landingReposRead++; } else landingReposUnreadable.push(v);
@@ -258,14 +270,22 @@ let gapRows: Map<string, any> | null = null;
 try {
   // The WHOLE store, in one read. The resolver has no paging and its `total` is the length of
   // the page it returns, so a `limit: 200` read reported 200 of a store that holds thousands.
-  // include_held keeps operator-held open rows in the set. Read-only, as everything here.
+  // (include_held only acts on a status:"open" read in the resolver; this read has no status
+  // filter, so held rows are in it either way.) Read-only, as everything here.
   // The whole store is tens of MB; if that read fails, fall back to the old 200-row page so
   // by_category still reads, with total null and basis saying so (a page is not a total).
+  // A failed read includes an HTTP 200 that is not a substrateGap answer: a forwarded read
+  // that timed out comes back as success:false or a structuredError, not as an empty store.
+  const gapRead = async (pointer: Record<string, unknown>): Promise<any> => {
+    const r = await devResolve(pointer);
+    if (!r || r.success === false || r.shape !== "substrateGap" || !Array.isArray(r.body?.gaps)) throw new Error("substrateGap read failed");
+    return r;
+  };
   let whole = true;
-  const g = await devResolve({ type: "substrateGap", limit: 1_000_000, include_held: true })
-    .catch(() => { whole = false; return devResolve({ type: "substrateGap", limit: 200 }); });
+  const g = await gapRead({ type: "substrateGap", limit: 1_000_000, include_held: true })
+    .catch(() => { whole = false; return gapRead({ type: "substrateGap", limit: 200 }); });
   const list = g?.body?.gaps ?? [];
-  if (whole && Array.isArray(g?.body?.gaps)) gapRows = new Map(list.map((x: any) => [String(x.id), x]));
+  if (whole) gapRows = new Map(list.map((x: any) => [String(x.id), x]));
   // by_category and the *_open sums count OPEN rows: with the whole store read, counting every
   // row would add the closed ones under names that say "open".
   const by: Record<string, number> = {};
@@ -291,34 +311,43 @@ try {
 // ── landings: one per gap family whose fix is on origin/dev and whose own check closed it ──
 // Counts over all of origin/dev; `families` lists only those active in the last 14 days so
 // the line stays small (families_total says how many there are). gap_store_read false means
-// no row could be checked, so every fix reads fix_only_unverified: read it as unknown.
+// no row could be checked: every fix would read fix_only_unverified and landed 0, so every count
+// that needs a gap row (landed and its splits, landed_partial, reopened, reverted,
+// fix_only_unverified, landed_24h, a fix family's status) reads null instead; commits,
+// check_supplied and families_total need only git. When no repo could be read every count is
+// null and repos_unreadable names them all.
 // landed_system is the autonomous number; the basis names what the tally cannot see.
 const LANDINGS_BASIS = "origin/dev; one per gap family; landed = fix commit + gap closed landed_verified, not reverted on origin/dev"
+  + "; landed_24h by that fix commit's commit time"
   + "; landed_system/landed_operator/landed_source_unknown split landed by the gap row's source (operator = human_reported on any row of the family's walk)"
   + "; landed_directed = landed whose walk carries directed:true (operator-directed into the lane)"
   + "; NOT SEEN: an operator fix-forward or a manual undo of the same lines without a revert message"
   + "; an operator filing under a system source (source is what the filer wrote)"
   + "; author identity (operator exact-edits commit under the substrate's identity, so author is not read)";
-if (landingReposRead > 0) {
+{
+  const read = landingReposRead > 0;
   const rows = gapRows;
-  const tally = landingTally(landingCommits, (id) => rows?.get(id) ?? null, Date.now());
+  const tally = read ? landingTally(landingCommits, (id) => rows?.get(id) ?? null, Date.now()) : null;
+  const byRow = rows !== null ? tally : null;
   const windowMs = 14 * 24 * 3600_000;
   self_alteration.landings = {
     basis: LANDINGS_BASIS,
     gap_store_read: rows !== null,
     repos_unreadable: landingReposUnreadable,
-    commits: tally.commits,
-    landed: tally.landed, landed_partial: tally.landed_partial, check_supplied: tally.check_supplied,
-    reopened: tally.reopened, reverted: tally.reverted, fix_only_unverified: tally.fix_only_unverified,
-    landed_system: tally.landed_system, landed_operator: tally.landed_operator,
-    landed_source_unknown: tally.landed_source_unknown, landed_directed: tally.landed_directed,
-    landed_24h: tally.landed_24h,
-    families_total: tally.families.length,
+    commits: tally?.commits ?? null,
+    landed: byRow?.landed ?? null, landed_partial: byRow?.landed_partial ?? null, check_supplied: tally?.check_supplied ?? null,
+    reopened: byRow?.reopened ?? null, reverted: byRow?.reverted ?? null, fix_only_unverified: byRow?.fix_only_unverified ?? null,
+    landed_system: byRow?.landed_system ?? null, landed_operator: byRow?.landed_operator ?? null,
+    landed_source_unknown: byRow?.landed_source_unknown ?? null, landed_directed: byRow?.landed_directed ?? null,
+    landed_24h: byRow?.landed_24h ?? null,
+    families_total: tally?.families.length ?? null,
     families_window_days: 14,
-    families: tally.families.filter((f) => Date.now() - f.last_ms <= windowMs).map((f) => ({ gap: f.gap, class: f.class, status: f.status, source: f.source })),
+    families: (tally?.families ?? []).filter((f) => Date.now() - f.last_ms <= windowMs).map((f) => ({
+      gap: f.gap, class: f.class,
+      status: byRow || f.status === "check_supplied" ? f.status : null,
+      source: byRow ? f.source : null,
+    })),
   };
-} else {
-  self_alteration.landings = null;
 }
 
 // ── DEC rate-limiters ──

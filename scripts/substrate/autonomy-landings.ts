@@ -135,18 +135,21 @@ export function trailer(body: string, key: string): string {
 }
 
 /**
- * A gap id's lineage stem, by id alone, modelled on development-vessel's gapLineageStem
- * (judge/gap-policy.ts, over gapLineageRoot in resolvers/staged-mitosis-gate.ts): each `recommit-`
- * layer drops the prefix and one trailing failure-class token, then -narrowed / -step-N / -cN
- * suffixes are stripped. Replicated, not imported: this script runs from the super-repo, not the
- * vessel. The family walk around it (familyKey) is this tally's own, not the vessel's.
+ * A gap id's lineage stem, by id alone: a `recommit-` layer drops the prefix and one trailing
+ * failure-class token, and -narrowed / -step-N / -cN suffixes are stripped, applied to a fixed
+ * point so a layer exposed by stripping another is stripped too (`recommit-x-cls-narrowed` →
+ * `recommit-x-cls` → `x`). Modelled on development-vessel's gapLineageStem (judge/gap-policy.ts,
+ * over gapLineageRoot in resolvers/staged-mitosis-gate.ts) but NOT the same rule: the vessel strips
+ * every recommit- layer and its class token first and the suffixes after, once, so it reads that
+ * id as `x-cls`. Replicated, not imported: this script runs from the super-repo, not the vessel.
  */
 export function gapLineageStem(id: string): string {
   let s = String(id ?? "").trim();
-  let n = 0;
-  while (s.startsWith("recommit-")) { s = s.slice("recommit-".length); n++; }
-  for (let i = 0; i < n; i++) s = s.replace(/-[a-z][a-z0-9_]*$/, "");
-  for (let prev = ""; prev !== s;) { prev = s; s = s.replace(/-(?:narrowed|step-\d+|c\d+)$/, ""); }
+  for (let prev = ""; prev !== s;) {
+    prev = s;
+    s = s.replace(/-(?:narrowed|step-\d+|c\d+)$/, "");
+    if (s.startsWith("recommit-")) s = s.slice("recommit-".length).replace(/-[a-z][a-z0-9_]*$/, "");
+  }
   return s;
 }
 
@@ -163,22 +166,23 @@ const field = (row: GapRow | null | undefined, k: string): string => {
  * The family a gap belongs to, and the rows read on the way. The gap store's own links come first:
  * root_gap_id, else parent_gap_id (narrowing), else source_gap_id (recommit), on the row or in its
  * metadata, walked up while rows exist. The id the walk ends on is then stemmed, which is a no-op for
- * a true root and the whole answer when the store holds no row or no link.
+ * a true root and the whole answer when the store holds no row or no link. A stem that differs
+ * is walked again: the stem's own row may carry a link of its own.
  */
 export function gapWalk(gapId: string, gapOf: (id: string) => GapRow | null): { key: string; rows: GapRow[] } {
   let id = gapId;
   const seen = new Set<string>();
   const rows: GapRow[] = [];
-  for (let depth = 0; depth < 8 && id && !seen.has(id); depth++) {
+  for (let depth = 0; depth < 16 && id && !seen.has(id); depth++) {
     seen.add(id);
     const row = gapOf(id);
-    if (!row) break;
-    rows.push(row);
-    const up = field(row, "root_gap_id") || field(row, "parent_gap_id") || field(row, "source_gap_id");
-    if (!up || up === id) break;
-    id = up;
+    if (row) rows.push(row);
+    const up = row ? (field(row, "root_gap_id") || field(row, "parent_gap_id") || field(row, "source_gap_id")) : "";
+    const next = up && up !== id ? up : gapLineageStem(id);
+    if (next === id) break;
+    id = next;
   }
-  return { key: gapLineageStem(id), rows };
+  return { key: id, rows };
 }
 export function familyKey(gapId: string, gapOf: (id: string) => GapRow | null): string {
   return gapWalk(gapId, gapOf).key;
@@ -218,6 +222,7 @@ function fixStatus(row: GapRow | null): Exclude<FamilyStatus, "check_supplied"> 
   if (status === "closed" && reason === "landed_verified") return "landed";
   if (status === "closed" && reason === "landed_partial") return "landed_partial";
   const reopens = Number(metaOf(row).reopen_count ?? row.reopen_count ?? 0);
+  if (status === "reopened") return "reopened";
   if (status === "open" && ((Number.isFinite(reopens) && reopens > 0) || field(row, "reopened_at"))) return "reopened";
   return "fix_only_unverified";
 }
@@ -235,6 +240,8 @@ export type LandingTally = {
 /**
  * One entry per gap family over the given origin/dev landing commits. Pure. A fix commit stamped
  * reverted_by reads reverted, never landed; a later fix of the same family can still land it.
+ * landed_24h counts the landed families whose landed_verified fix commit was COMMITTED in the 24h
+ * before nowMs (commit time, not the time the gap was closed).
  */
 export function landingTally(commits: LandingCommit[], gapOf: (id: string) => GapRow | null, nowMs: number): LandingTally {
   type Acc = { checks: number; fixes: number; status: Exclude<FamilyStatus, "check_supplied"> | null; landed_ms: number; commits: number; last_ms: number; rows: GapRow[] };

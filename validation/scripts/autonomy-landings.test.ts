@@ -1,10 +1,12 @@
 // The landing tally autonomy-metrics.ts reports (scripts/substrate/autonomy-landings.ts), against a
 // fixture git repo: one landing per gap family whose fix is on origin/dev and whose own gap closed
 // landed_verified. The legacy count (`git log --all --grep`, per commit, every ref) is the control.
+// The last block runs autonomy-metrics.ts itself, as its unit does (from a run dir that is not the
+// checkout, the repos under WORKSPACE_ROOT), against a stub server standing in for every endpoint.
 import { afterAll, describe, expect, it } from "bun:test";
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import {
   classifyCommit, familyKey, gapLineageStem, landingTally, readLandingCommits,
   type GapRow, type LandingCommit,
@@ -30,8 +32,9 @@ function landing(dir: string, gap: string, path: string): void {
 
 // origin/dev: a check-only commit (gap-beta), a fix (gap-alpha) and its recommit child.
 // A local branch one commit ahead carries a fix (gap-gamma) that never reached origin/dev.
-const REPO = join(ROOT, "vessel");
-mkdirSync(REPO);
+const WS = join(ROOT, "ws");
+const REPO = join(WS, "repos", "activity-api");
+mkdirSync(REPO, { recursive: true });
 git(REPO, "init", "-q", "-b", "dev");
 writeFileSync(join(REPO, "README"), "fixture\n");
 git(REPO, "add", "-A");
@@ -97,20 +100,32 @@ describe("landing tally rules", () => {
   it("folds children into their parent: the store's link first, the id rules only without one", () => {
     expect(gapLineageStem("recommit-g-narrowed-c3-compose_execution_failure")).toBe("g");
     expect(gapLineageStem("recommit-g-step-1-verify_failed")).toBe("g");
+    expect(gapLineageStem("recommit-g-verify_failed-narrowed")).toBe("g");
     const rows = new Map<string, GapRow>([["child-x", { id: "child-x", classification_metadata: { parent_gap_id: "root-y" } }]]);
     expect(familyKey("child-x", (id) => rows.get(id) ?? null)).toBe("root-y");
     expect(familyKey("root-y-narrowed", () => null)).toBe("root-y");
+    // the stem's own row is walked too
+    const stemRows = new Map<string, GapRow>([["mid-z", { id: "mid-z", classification_metadata: { source_gap_id: "top-z" } }]]);
+    expect(familyKey("mid-z-narrowed", (id) => stemRows.get(id) ?? null)).toBe("top-z");
   });
 
   it("landed_partial, reopened, other close reasons and check-only are not landed", () => {
     const rows = new Map<string, GapRow>([
       ["p", { id: "p", status: "closed", classification_metadata: { closed_reason: "landed_partial" } }],
       ["r", { id: "r", status: "open", classification_metadata: { reopen_count: 1 } }],
+      ["s", { id: "s", status: "reopened", classification_metadata: {} }],
       ["l", { id: "l", status: "closed", closed_reason: "landed_literal_only" }],
       ["k", { id: "k", status: "closed", classification_metadata: { closed_reason: "landed_verified" } }],
     ]);
-    const c = landingTally([commit("p", ["src/a.ts"]), commit("r", ["src/b.ts"]), commit("l", ["src/c.ts"]), commit("k", ["test/k.test.ts"])], (id) => rows.get(id) ?? null, Date.now());
-    expect([c.landed, c.landed_partial, c.reopened, c.fix_only_unverified, c.check_supplied]).toEqual([0, 1, 1, 1, 1]);
+    const c = landingTally([commit("p", ["src/a.ts"]), commit("r", ["src/b.ts"]), commit("s", ["src/s.ts"]), commit("l", ["src/c.ts"]), commit("k", ["test/k.test.ts"])], (id) => rows.get(id) ?? null, Date.now());
+    expect([c.landed, c.landed_partial, c.reopened, c.fix_only_unverified, c.check_supplied]).toEqual([0, 1, 2, 1, 1]);
+  });
+
+  it("landed_24h keys on the landed fix commit's commit time", () => {
+    const rows = new Map<string, GapRow>([["k", { id: "k", status: "closed", classification_metadata: { closed_reason: "landed_verified" } }]]);
+    const now = Date.now();
+    expect(landingTally([commit("k", ["src/k.ts"], now - 25 * 3600_000)], (id) => rows.get(id) ?? null, now).landed_24h).toBe(0);
+    expect(landingTally([commit("k", ["src/k.ts"], now - 23 * 3600_000)], (id) => rows.get(id) ?? null, now).landed_24h).toBe(1);
   });
 });
 
@@ -169,4 +184,102 @@ describe("reverts and who filed the gap", () => {
     const c = landingTally([commit("recommit-op-root-verify_failed", "src/a.ts"), commit("sys-g", "src/b.ts")], (id) => rows.get(id) ?? null, Date.now());
     expect([c.landed, c.landed_system, c.landed_operator, c.landed_source_unknown]).toEqual([2, 1, 1, 0]);
   });
+});
+
+// ── autonomy-metrics.ts end to end ──
+// The script is copied into a run dir with its sibling, as the unit's run dir holds every baked *.ts,
+// so a path relative to the script cannot find the repos. Every endpoint is one stub server: SQL
+// answers an error (those sections read null), and the gap resolver answers per `mode`.
+const SCRIPTS = resolve(import.meta.dir, "..", "..", "scripts", "substrate");
+const RUN = join(ROOT, "run");
+mkdirSync(RUN);
+cpSync(join(SCRIPTS, "autonomy-metrics.ts"), join(RUN, "autonomy-metrics.ts"));
+cpSync(join(SCRIPTS, "autonomy-landings.ts"), join(RUN, "autonomy-landings.ts"));
+let mode: "ok" | "whole-fails-200" = "ok";
+const ROWS = [...STORE.values()];
+const server = Bun.serve({
+  port: 0,
+  async fetch(req) {
+    const url = new URL(req.url);
+    if (url.pathname === "/sql") return Response.json([{ status: "ERR", result: "stub" }]);
+    if (url.pathname === "/v2/impulses/resolve") {
+      const p = ((await req.json()) as { impulse: Record<string, unknown> }).impulse;
+      if (p.type !== "substrateGap") return Response.json({ success: true, shape: String(p.type), body: {} });
+      // A forwarded read that timed out upstream: HTTP 200, success:false, no gaps.
+      if (mode === "whole-fails-200" && Number(p.limit) > 200) return Response.json({ success: false, error: "upstream timeout" });
+      return Response.json({ success: true, shape: "substrateGap", body: { gaps: ROWS, total: ROWS.length } });
+    }
+    return new Response("not found", { status: 404 });
+  },
+});
+afterAll(() => server.stop(true));
+
+async function runMetrics(workspaceRoot: string, runDir = RUN): Promise<any> {
+  const out = join(ROOT, `metrics-${Math.random().toString(36).slice(2)}`, "autonomy-metrics.jsonl");
+  const base = `http://127.0.0.1:${server.port}`;
+  const p = Bun.spawn([process.execPath, join(runDir, "autonomy-metrics.ts")], {
+    cwd: ROOT, stdout: "pipe", stderr: "pipe",
+    env: { ...ENV, WORKSPACE_ROOT: workspaceRoot, METRICS_OUT: out, SURREALDB_URL: base, METABOB_ENDPOINT: base, DEV_VESSEL_ENDPOINT: base },
+  });
+  const [code, err] = await Promise.all([p.exited, new Response(p.stderr).text()]);
+  if (code !== 0) throw new Error(`autonomy-metrics exited ${code}: ${err.slice(-400)}`);
+  const lines = readFileSync(out, "utf8").trim().split("\n");
+  return JSON.parse(lines[lines.length - 1]!);
+}
+
+describe("autonomy-metrics.ts, run from a run dir", () => {
+  it("reads the repos under WORKSPACE_ROOT: the tally and the legacy count are live", async () => {
+    mode = "ok";
+    const r = await runMetrics(WS);
+    const l = r.self_alteration.landings;
+    expect([l.landed, l.check_supplied, l.commits, l.gap_store_read]).toEqual([1, 1, 3, true]);
+    expect(l.repos_unreadable).not.toContain("activity-api");
+    expect(r.self_alteration.landed_cutovers_total).toBe(4);
+    expect(r.self_alteration.landed_cutovers_repos_unreadable).not.toContain("activity-api");
+    expect(r.gaps.total).toBe(ROWS.length);
+    expect(r.gaps.basis).toStartWith("whole store");
+  }, 60_000);
+
+  it("an HTTP 200 with success:false is a failed whole-store read: the page fallback, total null", async () => {
+    mode = "whole-fails-200";
+    const r = await runMetrics(WS);
+    expect(r.gaps.total).toBeNull();
+    expect(r.gaps.basis).toStartWith("200-row page");
+    expect(r.self_alteration.landings.gap_store_read).toBe(false);
+  }, 60_000);
+
+  it("must-fail: a failed gap read leaves every count that needs a gap row null, never 0", async () => {
+    // whole-fails-200 takes the page fallback, so no row map is built (gap_store_read false). Without rows
+    // every fix would read fix_only_unverified and landed 0: a false zero. The git-only counts stay live.
+    mode = "whole-fails-200";
+    const r = await runMetrics(WS);
+    const l = r.self_alteration.landings;
+    expect(l.gap_store_read).toBe(false);
+    expect([l.landed, l.landed_partial, l.reopened, l.reverted, l.fix_only_unverified, l.landed_24h]).toEqual([null, null, null, null, null, null]);
+    expect([l.landed_system, l.landed_operator, l.landed_source_unknown, l.landed_directed]).toEqual([null, null, null, null]);
+    expect([l.commits, l.check_supplied, l.families_total]).toEqual([3, 1, 2]);
+    // a fix family's status needs its row; a check-only family's does not
+    expect(l.families.map((f: any) => [f.gap, f.status]).sort()).toEqual([["gap-alpha", null], ["gap-beta", "check_supplied"]]);
+  }, 60_000);
+
+  it("a blank WORKSPACE_ROOT is unset: run from a checkout, the repos are read relative to the script", async () => {
+    const inTree = join(WS, "scripts", "substrate");
+    mkdirSync(inTree, { recursive: true });
+    for (const f of ["autonomy-metrics.ts", "autonomy-landings.ts"]) cpSync(join(SCRIPTS, f), join(inTree, f));
+    mode = "ok";
+    expect((await runMetrics(" ", inTree)).self_alteration.landings.landed).toBe(1);
+  }, 60_000);
+
+  it("no readable repo: every count is null and every repo is named, never zero", async () => {
+    mode = "ok";
+    const empty = join(ROOT, "empty-ws");
+    mkdirSync(empty);
+    const r = await runMetrics(empty);
+    const l = r.self_alteration.landings;
+    expect(l.landed).toBeNull();
+    expect(l.commits).toBeNull();
+    expect(l.repos_unreadable.length).toBe(14);
+    expect(r.self_alteration.landed_cutovers_total).toBeNull();
+    expect(r.self_alteration.landed_cutovers_repos_unreadable.length).toBe(14);
+  }, 60_000);
 });
