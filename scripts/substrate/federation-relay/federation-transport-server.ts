@@ -14,7 +14,7 @@ import { hostname } from 'node:os'
 import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { AsyncLocalStorage } from 'node:async_hooks'
-import { callerKeyFromHeader, decideIngress, makeValidator, pointerForDial, policyFromPoolResponse, resolveMode, stripCredentials, withoutFedAuth, type Decision, type Mode, type Policy } from './ingress-auth'
+import { callerKeyFromHeader, decideIngress, echoRefusal, makeEchoRateGate, makeValidator, pointerForDial, policyFromPoolResponse, resolveMode, stripCredentials, withoutFedAuth, type Decision, type Mode, type Policy } from './ingress-auth'
 import { multiaddr } from '@multiformats/multiaddr'
 
 // RESILIENCE: libp2p internals emit 'error' events on streams/sockets that have no
@@ -643,6 +643,8 @@ const resolveHandler = async (pointer: any): Promise<any> => {
     const hasObj = Object.prototype.hasOwnProperty.call(pointer ?? {}, 'payload_obj')
     const payload = hasObj ? JSON.stringify(pointer.payload_obj) : String(pointer?.payload ?? '')
     const bytes = Buffer.from(payload, 'utf8')
+    const tooLarge = echoRefusal(bytes.length)
+    if (tooLarge) return tooLarge
     return {
       shape: 'federation_echo',
       produced_by: VESSEL_ID,
@@ -705,6 +707,7 @@ function carriesCredential(v: any, depth = 0): boolean {
 const logSafe = (x: unknown) => String(x ?? '').replace(/[^A-Za-z0-9_.:@\/-]/g, '?').slice(0, 96) || '?'
 // outcome=error when the handler threw or answered with a top-level `error` (resolveHandler
 // reports its failures as values, so a throw alone would call nearly everything ok).
+const echoRateGate = makeEchoRateGate()
 const ingressHandler = async (raw: any, ctx?: { remotePeer?: string, transport?: string }): Promise<any> => {
   // FIRST STATEMENT: the credential leaves the pointer before anything can log, resolve, trace or echo it. Below this
   // line only presence flags and the validated principal (org, user, key hash) are ever written.
@@ -723,6 +726,11 @@ const ingressHandler = async (raw: any, ctx?: { remotePeer?: string, transport?:
     if (mode === 'enforce' && decision && !decision.allow) {
       outcome = 'refused'
       return { error: 'unauthorized', shape, reason: decision.reason, note: decision.reason === 'validator_unreachable' ? 'the identity validator could not be reached; refused (fail closed)' : 'this shape requires a caller credential identity validates' }
+    }
+    // The public echo is bounded per caller peer (it is unauthenticated by design).
+    if (shape === 'federation_echo') {
+      const limited = echoRateGate(String(ctx?.remotePeer ?? 'unknown'))
+      if (limited) { outcome = 'refused'; return limited }
     }
     // An ingress-originated onward hop never re-attaches a key: the context is explicitly empty.
     const res = await callerCtx.run({ key: null }, () => resolveHandler(pointer))

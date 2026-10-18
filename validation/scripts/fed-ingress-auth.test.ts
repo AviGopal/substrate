@@ -15,7 +15,7 @@ import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import {
-  PUBLIC_SHAPES, callerKeyFromHeader, decideIngress, destinationPeer, makeValidator, parsePolicy, pointerForDial, policyFromPoolResponse,
+  ECHO_MAX_BYTES, ECHO_RATE_MAX, ECHO_RATE_WINDOW_MS, PUBLIC_SHAPES, makeEchoRateGate, callerKeyFromHeader, decideIngress, destinationPeer, echoRefusal, makeValidator, parsePolicy, pointerForDial, policyFromPoolResponse,
   resolveMode, shouldAttachCredential, stripCredentials, withoutFedAuth, type Policy, type Validate,
 } from '../../scripts/substrate/federation-relay/ingress-auth'
 
@@ -46,12 +46,38 @@ describe('stripCredentials', () => {
 })
 
 describe('decideIngress', () => {
-  test('PUBLIC is exactly substrateBootstrap and needs no key', async () => {
-    expect([...PUBLIC_SHAPES]).toEqual(['substrateBootstrap'])
-    expect(await decideIngress('substrateBootstrap', null, okValidator)).toEqual({ allow: true, reason: 'public' })
+  test('PUBLIC is exactly substrateBootstrap + the two overlay control shapes, and needs no key', async () => {
+    expect([...PUBLIC_SHAPES].sort()).toEqual(['federation_echo', 'federation_probe', 'substrateBootstrap'])
+    for (const shape of ['substrateBootstrap', 'federation_probe', 'federation_echo']) {
+      expect(await decideIngress(shape, null, okValidator)).toEqual({ allow: true, reason: 'public' })
+    }
   })
-  test('MUST-FAIL: a non-public shape with no credential is refused (federation probes included)', async () => {
-    for (const shape of ['concept', 'resolver_schema', 'federation_probe', 'federation_echo', 'llm_completion']) {
+  test('MUST-FAIL: the probe-witnessed report stays credentialed (it names failing checks)', async () => {
+    expect(await decideIngress('federation_verification_report', null, okValidator)).toEqual({ allow: false, reason: 'absent' })
+  })
+  test('MUST-FAIL: a federation_echo payload over the bound is refused, naming the bound; at the bound it is not', () => {
+    expect(ECHO_MAX_BYTES).toBe(131072)
+    expect(echoRefusal(65536)).toBeNull()
+    expect(echoRefusal(ECHO_MAX_BYTES)).toBeNull()
+    const r = echoRefusal(ECHO_MAX_BYTES + 1)
+    expect(r?.reason).toBe('payload_too_large')
+    expect(r?.max_bytes).toBe(ECHO_MAX_BYTES)
+    expect(r?.error).toContain(String(ECHO_MAX_BYTES))
+  })
+  test('MUST-FAIL: a peer over the echo rate bound is refused, naming the bound; under it, and other peers, are allowed', () => {
+    let t = 1_000_000
+    const gate = makeEchoRateGate(ECHO_RATE_MAX, ECHO_RATE_WINDOW_MS, () => t)
+    for (let i = 0; i < ECHO_RATE_MAX; i++) expect(gate('peerA')).toBeNull()
+    const r = gate('peerA')
+    expect(r?.reason).toBe('rate_limited')
+    expect(r?.max).toBe(ECHO_RATE_MAX)
+    expect(r?.window_ms).toBe(ECHO_RATE_WINDOW_MS)
+    expect(gate('peerB')).toBeNull()
+    t += ECHO_RATE_WINDOW_MS
+    expect(gate('peerA')).toBeNull()
+  })
+  test('MUST-FAIL: a non-public shape with no credential is refused', async () => {
+    for (const shape of ['concept', 'resolver_schema', 'federation_verification_report', 'llm_completion']) {
       expect(await decideIngress(shape, null, okValidator)).toEqual({ allow: false, reason: 'absent' })
     }
   })

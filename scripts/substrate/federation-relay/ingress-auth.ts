@@ -19,7 +19,46 @@
 import { createHash } from 'node:crypto'
 
 export type Mode = 'off' | 'log' | 'enforce'
-export const PUBLIC_SHAPES: ReadonlySet<string> = new Set(['substrateBootstrap'])
+// PUBLIC needs no key. substrateBootstrap: a node joins knowing only a multiaddr. federation_probe and federation_echo:
+// the overlay's own control shapes, which the seed allowlist (federation-transport-server.ts) names because refusing
+// them "would break the overlay itself". The independent probe (federation-probe-tick) is a stranger peer by design,
+// so it carries no key. probe returns a constant and echo returns the caller's own payload, so neither exposes
+// substrate data. federation_verification_report stays credentialed: it names which checks fail.
+export const PUBLIC_SHAPES: ReadonlySet<string> = new Set(['substrateBootstrap', 'federation_probe', 'federation_echo'])
+// The largest payload federation_echo returns. Twice the probe's largest class (P5_64k, 65,536 bytes), so a sweep is
+// never refused while a public echo cannot be used to move bulk data.
+export const ECHO_MAX_BYTES = 131072
+// The per-peer rate bound on the public echo. It follows the transport's redial limiter (a time-window gate), but per
+// peer: a peer may echo ECHO_RATE_MAX times per ECHO_RATE_WINDOW_MS. One probe sweep sends about 30 echoes from a
+// fresh ephemeral peer id, so 60 per minute never refuses a sweep. Echo reflects only to its caller (amplification is
+// at most 1x), so the bound limits load from unauthenticated peers, not reflection. A peer that changes its id each
+// burst is not bounded by this; that would need a global cap.
+export const ECHO_RATE_MAX = 60
+export const ECHO_RATE_WINDOW_MS = 60_000
+export type EchoRateRefusal = { error: string; shape: 'federation_echo'; reason: 'rate_limited'; max: number; window_ms: number; retry_after_ms: number }
+/** A per-peer gate: returns null to allow, or the refusal naming the bound. `now` is injectable for tests. */
+export function makeEchoRateGate(max = ECHO_RATE_MAX, windowMs = ECHO_RATE_WINDOW_MS, now: () => number = Date.now, maxPeers = 1024) {
+  const seen = new Map<string, { start: number; count: number }>()
+  return (peer: string): EchoRateRefusal | null => {
+    const t = now()
+    let w = seen.get(peer)
+    if (!w || t - w.start >= windowMs) {
+      if (!w && seen.size >= maxPeers) { for (const [k, v] of seen) if (t - v.start >= windowMs) seen.delete(k) }
+      w = { start: t, count: 0 }
+      seen.set(peer, w)
+    }
+    w.count += 1
+    return w.count > max
+      ? { error: `federation_echo rate bound: at most ${max} per ${windowMs} ms per peer`, shape: 'federation_echo', reason: 'rate_limited', max, window_ms: windowMs, retry_after_ms: Math.max(0, w.start + windowMs - t) }
+      : null
+  }
+}
+/** null when an echo payload of `len` bytes is within the bound, else the refusal that names the bound. */
+export function echoRefusal(len: number): { error: string; shape: 'federation_echo'; reason: 'payload_too_large'; len: number; max_bytes: number } | null {
+  return len > ECHO_MAX_BYTES
+    ? { error: `federation_echo payload of ${len} bytes exceeds the ${ECHO_MAX_BYTES}-byte bound`, shape: 'federation_echo', reason: 'payload_too_large', len, max_bytes: ECHO_MAX_BYTES }
+    : null
+}
 export const CREDENTIAL_FIELDS = ['_fedAuth', '_auth'] as const
 
 export interface Principal { org_id: string; user_id: string; key_hash: string }
