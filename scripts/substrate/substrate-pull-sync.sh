@@ -2512,6 +2512,182 @@ mirror_quiesce_drain() {
   Q_HELD="$QDIR/$1"
 }
 
+# THE CONSUMER LINK AUDIT (every tick). The fan-out (2c) swaps a shared package's dist and relies on each
+# consumer's node_modules entry RESOLVING into it. bun lays a file: dependency out as real directories of
+# absolute per-file symlinks into $RUNTIME_DIR/<pkg>; a swap reaches a link by path. It does not reach a
+# regular-file COPY, and copies exist: the fan-out itself used to cp -a the build into any real-file consumer,
+# and its credit check compares dist/index.js alone. Measured: a consumer's dist/index.js matched the shared
+# build while its dist/engine.js was weeks old, so every landing since was inert there, health green and the
+# fan-out credited. Health cannot see this, and the fan-out only looks on a package landing, so this runs on
+# every tick, before the vessel loop, over the same discovery the fan-out uses (a top-level package with a
+# build step and no unit of its own; its consumers name it file: in package.json).
+#   ok        every file under the entry's dist resolves into the shared dist, and every shared file is there
+#   relinked  the entry's dist is rebuilt as the canonical per-file link layout; the old one is moved aside to
+#             node_modules/<scope>/.<pkg>.stale-<UTC> (never deleted). Bytes equal to the shared build: no
+#             restart (the process already runs them). Bytes that differ: the consumer is restarted through
+#             the same in-flight rules as a convergence restart, health-gated, and the old copy is restored if
+#             it comes up unhealthy.
+#   deferred  the bytes differ and the consumer has work in flight (or a probe window is open): NOTHING is
+#             touched this tick, so no running process sees its files change; after RESTART_DEFER_MAX deferrals
+#             admission is closed and drained (quiesce_drain); a drain that does not reach 0 defers again, it is
+#             never a restart into in-flight work. The relink is owed to the next tick by the state itself.
+#   refused   the relink cannot be made safely (shared build absent, entry not a directory, a stage/move
+#             failed, or a previous relink onto this same build left the consumer unhealthy): logged and filed
+#             as gap pull-sync-link-audit-refused-<consumer>-<pkg>, counted as failed.
+# One line per consumer checked ("link-audit: <consumer> <pkg> ok|relinked|deferred|refused|absent <why>"); the
+# counts go on the done line (link_audit=...) and into $MARKER_DIR/link-audit.json.
+# Test: validation/scripts/pull-sync-link-audit.test.sh.
+link_entry_state() { # pkg-vessel entry-dir -> LE_STATE ok|relink|refuse|absent, LE_WHY, LE_SAME=1 when the bytes equal the shared build
+  local _le_src="$RUNTIME_DIR/$1/dist" _le_e="${2%/}" _le_real _le_f _le_r _le_bad=""
+  LE_STATE=ok; LE_WHY=""; LE_SAME=0
+  if [ ! -e "$_le_e/dist" ] && [ ! -L "$_le_e/dist" ] && [ ! -L "$_le_e" ]; then
+    LE_STATE=absent; LE_WHY="no dist entry under node_modules (nothing installed to audit)"; return 0
+  fi
+  if [ ! -s "$_le_src/index.js" ] || ! _le_real="$(realpath -e "$_le_src" 2>/dev/null)"; then
+    LE_STATE=refuse; LE_WHY="the shared build $_le_src is absent or unbuilt (no index.js)"; return 0
+  fi
+  if [ ! -d "$_le_e" ]; then LE_STATE=refuse; LE_WHY="entry $_le_e is not a directory (dangling link or file)"; return 0; fi
+  if [ -L "$_le_e/dist" ] || [ -L "$_le_e" ]; then
+    _le_r="$(realpath -e "$_le_e/dist" 2>/dev/null || true)"
+    if [ "$_le_r" = "$_le_real" ]; then LE_SAME=1; return 0; fi
+  fi
+  if [ ! -d "$_le_e/dist" ] || [ ! -r "$_le_e/dist" ] || [ ! -x "$_le_e/dist" ]; then
+    LE_STATE=refuse; LE_WHY="entry $_le_e/dist is not a readable directory"; return 0
+  fi
+  # One realpath for the whole tree (-m: a dangling link still resolves to the path it names, and -e below tells).
+  while IFS= read -r -d '' _le_r; do
+    case "$_le_r" in
+      "$_le_real"/*) [ -e "$_le_r" ] || _le_bad="${_le_bad:-a dangling link to ${_le_r#"$_le_real"/}}" ;;
+      *) _le_bad="${_le_bad:-$_le_r is a copy, not a link into the shared build}" ;;
+    esac
+  done < <(cd "$_le_e/dist" && find . -mindepth 1 \( -type f -o -type l \) -print0 2>/dev/null | xargs -0 -r realpath -z -m -- 2>/dev/null)
+  if [ -z "$_le_bad" ]; then
+    while IFS= read -r -d '' _le_f; do
+      [ -e "$_le_e/dist/${_le_f#./}" ] || { _le_bad="${_le_f#./} is missing"; break; }
+    done < <(cd "$_le_real" && find . -type f -print0 2>/dev/null)
+  fi
+  [ "$(cd "$_le_e/dist" && find -L . -type f -print0 2>/dev/null | LC_ALL=C sort -z | xargs -0 -r md5sum | md5sum | cut -d' ' -f1)" = "$(tree_digest "$_le_real")" ] && LE_SAME=1
+  [ -z "$_le_bad" ] || { LE_STATE=relink; LE_WHY="$_le_bad"; }
+  return 0
+}
+shared_package_relink() { # pkg-vessel entry-dir -> 0 and SPR_STALE=<the moved-aside dir>, or 1 and SPR_WHY; never deletes the old copy
+  local _sr_src="$RUNTIME_DIR/$1/dist" _sr_e="${2%/}" _sr_stage _sr_f _sr_bad=""
+  SPR_STALE=""; SPR_WHY=""
+  _sr_stage="$_sr_e/.dist.relink"; rm -rf "$_sr_stage" 2>/dev/null
+  mkdir -p "$_sr_stage" 2>/dev/null || { SPR_WHY="cannot create $_sr_stage"; return 1; }
+  while IFS= read -r -d '' _sr_f; do
+    _sr_f="${_sr_f#./}"
+    if [ -d "$_sr_src/$_sr_f" ] && [ ! -L "$_sr_src/$_sr_f" ]; then mkdir -p "$_sr_stage/$_sr_f" 2>/dev/null || { _sr_bad="mkdir $_sr_f"; break; }
+    else ln -s "$_sr_src/$_sr_f" "$_sr_stage/$_sr_f" 2>/dev/null || { _sr_bad="ln $_sr_f"; break; }; fi
+  done < <(cd "$_sr_src" && find . -mindepth 1 -print0 2>/dev/null | LC_ALL=C sort -z)
+  if [ -n "$_sr_bad" ] || [ ! -L "$_sr_stage/index.js" ]; then
+    rm -rf "$_sr_stage" 2>/dev/null; SPR_WHY="staging the link layout failed (${_sr_bad:-no index.js})"; return 1
+  fi
+  SPR_STALE="$(dirname "$_sr_e")/.$(basename "$_sr_e").stale-$(date -u +%Y%m%dT%H%M%SZ)"
+  [ -e "$SPR_STALE" ] && SPR_STALE="$SPR_STALE-$$"
+  if ! { mkdir -p "$SPR_STALE" && mv "$_sr_e/dist" "$SPR_STALE/dist"; } 2>/dev/null; then
+    rm -rf "$_sr_stage" 2>/dev/null; rmdir "$SPR_STALE" 2>/dev/null; SPR_STALE=""; SPR_WHY="could not move the old dist aside"; return 1
+  fi
+  if ! mv "$_sr_stage" "$_sr_e/dist" 2>/dev/null; then
+    mv "$SPR_STALE/dist" "$_sr_e/dist" 2>/dev/null; rmdir "$SPR_STALE" 2>/dev/null; rm -rf "$_sr_stage" 2>/dev/null
+    SPR_STALE=""; SPR_WHY="could not move the link layout in (old dist put back)"; return 1
+  fi
+  return 0
+}
+LA_OK=0; LA_RELINKED=0; LA_DEFERRED=0; LA_REFUSED=0; LA_ABSENT=0; LA_REFUSED_LIST=""
+shared_package_link_audit() {
+  local GATE_T0="${GATE_T0:-${PULLSYNC_T0:-$(date +%s)}}"   # a drain here never moves the test gate's clock
+  local _la_v _la_d _la_c _la_cpkg _la_e _la_pb _la_cu _la_cp _la_n _la_nf _la_fail _la_dig _la_drain _la_ok _la_halt _la_why
+  LA_OK=0; LA_RELINKED=0; LA_DEFERRED=0; LA_REFUSED=0; LA_ABSENT=0; LA_REFUSED_LIST=""
+  for _la_d in "$RUNTIME_DIR"/*/; do
+    _la_v="$(basename "$_la_d")"
+    case "$_la_v" in *-mitosis-*|packages) continue ;; esac
+    grep -q '"build"[[:space:]]*:' "$_la_d/package.json" 2>/dev/null || continue
+    _la_cu="$(vessel_unit "$_la_v")"
+    [ -z "$_la_cu" ] || [ "${_la_cu%.service}" = "$_la_cu" ] || continue
+    _la_halt=""
+    for _la_c in $(grep -lE "file:[^\"]*/$_la_v\"" "$RUNTIME_DIR"/*/package.json 2>/dev/null | xargs -r -n1 dirname | xargs -r -n1 basename | grep -vx "$_la_v"); do
+      _la_cpkg="$(sed -nE 's/.*"([^"]+)"[[:space:]]*:[[:space:]]*"file:[^"]*\/'"$_la_v"'".*/\1/p' "$RUNTIME_DIR/$_la_c/package.json" 2>/dev/null | head -1)"
+      [ -n "$_la_cpkg" ] || continue
+      _la_e="$RUNTIME_DIR/$_la_c/node_modules/$_la_cpkg"; _la_pb="$(basename "$_la_cpkg")"
+      _la_nf="$MARKER_DIR/$_la_c.link-audit-$_la_pb.deferrals"; _la_fail="$MARKER_DIR/$_la_c.link-audit-$_la_pb.failed"
+      link_entry_state "$_la_v" "$_la_e"
+      case "$LE_STATE" in
+        ok) rm -f "$_la_nf" "$_la_fail" 2>/dev/null; LA_OK=$((LA_OK+1)); log "link-audit: $_la_c $_la_cpkg ok"; continue ;;
+        absent) LA_ABSENT=$((LA_ABSENT+1)); log "link-audit: $_la_c $_la_cpkg absent — $LE_WHY"; continue ;;
+      esac
+      _la_why="$LE_WHY"
+      _la_dig="$(tree_digest "$RUNTIME_DIR/$_la_v/dist")"
+      if [ "$LE_STATE" = relink ] && [ -n "$_la_halt" ]; then
+        LE_STATE=refuse; _la_why="$_la_why; another consumer of $_la_v came up unhealthy on this build this tick, so no further consumer is relinked"
+      elif [ "$LE_STATE" = relink ] && [ -s "$_la_fail" ] && [ "$(cat "$_la_fail" 2>/dev/null)" = "$_la_dig" ]; then
+        LE_STATE=refuse; _la_why="$_la_why; a relink onto this same build (${_la_dig:0:10}) left $_la_c unhealthy and was restored, so it is not retried until the build moves"
+      fi
+      if [ "$LE_STATE" = relink ] && [ "$LE_SAME" = 1 ]; then
+        if shared_package_relink "$_la_v" "$_la_e"; then
+          rm -f "$_la_nf" "$_la_fail" 2>/dev/null; LA_RELINKED=$((LA_RELINKED+1))
+          log "link-audit: $_la_c $_la_cpkg relinked ($_la_why; content identical to the shared build, no restart; old copy at $SPR_STALE)"; continue
+        fi
+        LE_STATE=refuse; _la_why="$_la_why; $SPR_WHY"
+      fi
+      if [ "$LE_STATE" = relink ]; then
+        _la_cu="$(vessel_unit "$_la_c")"; _la_cp="$(health_port "$_la_c")"
+        if [ -z "$_la_cu" ] || [ "${_la_cu%.service}" = "$_la_cu" ] || ! systemctl is-active "$_la_cu" >/dev/null 2>&1; then
+          if shared_package_relink "$_la_v" "$_la_e"; then
+            rm -f "$_la_nf" 2>/dev/null; LA_RELINKED=$((LA_RELINKED+1))
+            log "link-audit: $_la_c $_la_cpkg relinked ($_la_why; no active service unit, so nothing to restart; old copy at $SPR_STALE)"; continue
+          fi
+          LE_STATE=refuse; _la_why="$_la_why; $SPR_WHY"
+        fi
+      fi
+      if [ "$LE_STATE" = relink ]; then
+        _la_n="$(cat "$_la_nf" 2>/dev/null || echo 0)"; case "$_la_n" in ''|*[!0-9]*) _la_n=0 ;; esac
+        restart_age_defer "$_la_cp" "$_la_n"; _la_drain=""
+        if [ "$RA_PROBE" = 1 ]; then   # a probe window is not a busy consumer: it never counts toward the drain
+          LA_DEFERRED=$((LA_DEFERRED+1))
+          log "link-audit: $_la_c $_la_cpkg deferred — $_la_why; $RA_WHY; nothing touched"; continue
+        elif [ "$RA_DEFER" = 1 ] && [ "$_la_n" -lt "${RESTART_DEFER_MAX:-3}" ] 2>/dev/null; then
+          echo "$((_la_n + 1))" > "$_la_nf" 2>/dev/null || true; LA_DEFERRED=$((LA_DEFERRED+1))
+          log "link-audit: $_la_c $_la_cpkg deferred — $_la_why; the relink needs a restart and $RA_WHY; nothing touched, owed to a later tick ($((_la_n + 1))/${RESTART_DEFER_MAX:-3})"; continue
+        elif [ "$RA_DEFER" = 1 ] || { [ -n "$RA_INFLIGHT" ] && [ "$RA_INFLIGHT" -gt 0 ] 2>/dev/null; }; then
+          _la_drain=1
+        fi
+        if [ -n "$_la_drain" ] && ! quiesce_drain "$_la_c" "$_la_cp"; then
+          echo "$((_la_n + 1))" > "$_la_nf" 2>/dev/null || true; LA_DEFERRED=$((LA_DEFERRED+1))
+          log "link-audit: $_la_c $_la_cpkg deferred — $_la_why; the drain did not reach 0 ($QD_WHY), so the link audit does NOT restart it; admission reopened, owed to a later tick"; continue
+        fi
+        if ! shared_package_relink "$_la_v" "$_la_e"; then
+          LE_STATE=refuse; _la_why="$_la_why; $SPR_WHY"
+        else
+          restart_breadcrumb "$_la_c" "link audit relinked $_la_cpkg to the shared build" "${RA_INFLIGHT:-0}"
+          systemctl restart "$_la_cu" 2>/dev/null || true; sleep "$STAGGER_SECONDS"
+          _la_ok=1
+          if [ -n "$_la_cp" ]; then _la_ok=0; for _ in 1 2 3 4 5; do healthy "$_la_cp" && { _la_ok=1; break; }; sleep 4; done; fi
+          rm -f "$_la_nf" 2>/dev/null
+          if [ "$_la_ok" = 1 ]; then
+            rm -f "$_la_fail" 2>/dev/null; restart_siblings "$_la_c" "$_la_cu"; LA_RELINKED=$((LA_RELINKED+1))
+            log "link-audit: $_la_c $_la_cpkg relinked ($_la_why; restarted onto the shared build, healthy; old copy at $SPR_STALE)"; continue
+          fi
+          rm -rf "$_la_e/dist" 2>/dev/null; mv "$SPR_STALE/dist" "$_la_e/dist" 2>/dev/null && rmdir "$SPR_STALE" 2>/dev/null
+          systemctl restart "$_la_cu" 2>/dev/null || true
+          echo "$_la_dig" > "$_la_fail" 2>/dev/null || true; _la_halt=1
+          LE_STATE=refuse; _la_why="$_la_why; relinked and restarted, but $_la_c came up UNHEALTHY, so its old copy was restored and it was restarted again"
+        fi
+      fi
+      LA_REFUSED=$((LA_REFUSED+1)); LA_REFUSED_LIST="${LA_REFUSED_LIST:+$LA_REFUSED_LIST }$_la_c:$_la_pb"
+      log "link-audit: $_la_c $_la_cpkg refused — $_la_why"
+      emit_gap "$(jq -n -c --arg id "pull-sync-link-audit-refused-$_la_c-$_la_pb" --arg c "$_la_c" --arg p "$_la_cpkg" --arg v "$_la_v" --arg w "$_la_why" \
+        '{impulse:{pointer:{type:"substrateGap_write",gap:{id:$id,category:"service_failure",source:"substrate_detected",status:"open",
+          summary:("pull-sync link audit: the node_modules entry of " + $c + " for " + $p + " does not resolve into the shared build of " + $v + ", and it could not be relinked safely: " + $w + ". Until it is, " + $c + " runs (and its landings typecheck against) a copy that the fan-out cannot update."),
+          classification_metadata:{consumer:$c,package:$p,package_vessel:$v,why:$w}}}}}' 2>/dev/null)"
+    done
+  done
+  jq -n -c --arg at "$(date -Iseconds)" --argjson ok "$LA_OK" --argjson re "$LA_RELINKED" --argjson de "$LA_DEFERRED" --argjson rf "$LA_REFUSED" --argjson ab "$LA_ABSENT" --arg l "$LA_REFUSED_LIST" \
+    '{at:$at, ok:$ok, relinked:$re, deferred:$de, refused:$rf, absent:$ab, refused_entries:($l | split(" ") | map(select(. != "")))}' \
+    > "$MARKER_DIR/link-audit.json.new" 2>/dev/null && mv -f "$MARKER_DIR/link-audit.json.new" "$MARKER_DIR/link-audit.json" 2>/dev/null || rm -f "$MARKER_DIR/link-audit.json.new" 2>/dev/null
+  return 0
+}
+
 # pass_order — the clone dirs in this tick's vessel-pass order: every candidate the previous tick
 # DEFERRED for want of test-gate budget (<v>.testgate-budget-defers) first, so it gates with a fresh
 # budget instead of starving behind the same vessels again; then every other clone, in glob order.
@@ -2537,6 +2713,7 @@ pass_order() {
 }
 
 synced=0; skipped=0; deferred=0; failed=0
+shared_package_link_audit; failed=$((failed + LA_REFUSED))   # every tick, before any vessel pass (see THE CONSUMER LINK AUDIT)
 mapfile -t PASS_ORDER < <(pass_order)
 for d in "${PASS_ORDER[@]}"; do
   quiesce_release
@@ -4076,20 +4253,29 @@ EOF
       # templates; a rule added to ribosome-extract.json never reached a single mint.
       #
       # Health cannot witness this: a consumer running stale code is perfectly
-      # healthy. So copy dist into any consumer that does not resolve to it, and
-      # verify by content below before crediting the fan-out.
+      # healthy. So relink any consumer that does not resolve to it, and verify by
+      # content below before crediting the fan-out.
+      #
+      # RELINK, NOT COPY. This used to copy the build into a real-file consumer,
+      # "matching the layout it already has". A copy is current only until the next
+      # build that reaches it some other way, and the credit check below compares
+      # dist/index.js alone: measured later, a consumer whose index.js matched still
+      # held a weeks-old dist/engine.js. The canonical layout is bun's own, per-file
+      # links into $RUNTIME_DIR/$v/dist, which every later swap reaches by path; the
+      # old copy is moved aside, never deleted (shared_package_relink). The bounce
+      # below restarts the consumer, so no restart is taken here. Every tick also
+      # audits these entries outside a landing (shared_package_link_audit).
       for c in $CONSUMERS; do
         CPKG="$(grep -lE "file:[^\"]*/$v\"" "$RUNTIME_DIR/$c/package.json" 2>/dev/null >/dev/null \
                 && sed -nE 's/.*"([^"]+)"[[:space:]]*:[[:space:]]*"file:[^"]*\/'"$v"'".*/\1/p' "$RUNTIME_DIR/$c/package.json" | head -1)"
         [ -n "$CPKG" ] || continue
         CDIST="$RUNTIME_DIR/$c/node_modules/$CPKG/dist"
         [ -d "$CDIST" ] || continue
-        # A symlinked consumer already sees the new dist by reference; leave its
-        # layout alone. A real-file consumer gets the new bytes copied in, matching
-        # the layout it already has rather than converting it.
-        if [ ! -L "$CDIST/index.js" ]; then
-          log "$v: consumer $c holds a REAL-FILE dist — copying new build in (swap alone is invisible to it)"
-          rm -rf "$CDIST" && cp -a "$RUNTIME_DIR/$v/dist" "$CDIST" || { bad="$c"; break; }
+        link_entry_state "$v" "$RUNTIME_DIR/$c/node_modules/$CPKG"
+        if [ "$LE_STATE" = relink ]; then
+          log "$v: consumer $c does not resolve the shared dist ($LE_WHY) — relinking it (swap alone is invisible to it)"
+          shared_package_relink "$v" "$RUNTIME_DIR/$c/node_modules/$CPKG" || { log "$v: consumer $c relink failed: $SPR_WHY"; bad="$c"; break; }
+          log "link-audit: $c $CPKG relinked (fan-out of $v; old copy at $SPR_STALE)"
         fi
       done
 
@@ -4666,7 +4852,7 @@ while IFS='|' read -r gv gq gh gd; do
   rm -rf "$gq"
 done <<< "$GEN_QUEUE"
 
-log "done — synced=$synced skipped=$skipped deferred=$deferred failed=$failed"
+log "done — synced=$synced skipped=$skipped deferred=$deferred failed=$failed link_audit=ok:$LA_OK/relinked:$LA_RELINKED/deferred:$LA_DEFERRED/refused:$LA_REFUSED/absent:$LA_ABSENT"
 
 # EXIT NON-ZERO WHEN SOMETHING FAILED.
 #
