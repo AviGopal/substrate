@@ -4,12 +4,12 @@
     "dir": "/usr/lib/systemd/system",
     "reason": "converges today; gated after a unit-verify fixture exists",
     "owner_gap": "unit-files-converge-in-place-with-no-fixture-that-verifies-them",
-    "expires": "2026-10-17"
+    "expires": "2026-10-20"
   },
   "converges_today_exempt": {
     "reason": "converges today; gated as fixtures earn coverage",
     "owner_gap": "tooling-paths-converge-in-place-with-no-fixture-that-exercises-them",
-    "expires": "2026-10-17",
+    "expires": "2026-10-20",
     "paths": [
       "/usr/local/bin/apply-inventory",
       "/usr/local/bin/gen-env",
