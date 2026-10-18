@@ -20,7 +20,9 @@ Read with [`proposal.md`](proposal.md) and [`specs/human-surface/spec.md`](specs
 | How much a person's label counts | a reliability learned per source and per shape or kind, from agreement with independent observations and later outcomes; never a fixed confidence or an override. The mechanism is development-vessel's observer calibration (the learning-credit tables beside the close-oracle and expectation calibration), with a person as one more observer |
 | Whether an input is a person's | provenance: the human resolver was called (a question delivered and answered here) and the run used the answer; never a shape's name |
 | A person teaching the system | a reading of the box with a named reader (verdict corpus, retry step, inference, concept lesson, waiting run) |
-| The system managing itself | threads of its gaps, commits, deployments and configuration changes, graded like any run |
+| The system managing itself | threads of its gaps, commits, deployments and configuration changes, graded like any run; a gap thread joined by the attempt records' own fields |
+| A thread | runs held together by an explicit link carried with each dispatch; grouping by wording is a display fallback, and a re-run is not a link |
+| A time-displaced ask | a commitment in the pool (a rhythm or a dated item) that the rhythm conductor honours, judged at commitment and at fulfilment, kept or decayed by use |
 | Where it runs | primitives and drawing in the surface vessel, next to the person (law 11); views and authoring activities resolvable from any node |
 
 Two timescales, as in `SUBSTRATE_AS_DYNAMICS.md`: the fast arm reads the current view on
@@ -87,7 +89,9 @@ Refusals name what they refused. A refused write leaves the current value in for
 
 ## 5. The interaction model
 
-All input is one text box, read in a visible context. The thread mock is the wireframe: the
+There is one input: the box. Every other control only chooses what the box is about, or
+changes only what is shown. The interface does not explain itself: labels are a few words,
+state is shown by marks, and mechanism lives in these documents. The thread mock is the wireframe: the
 context chip, the "Read as" echo, threads with a learning mark, one outcome and one fold, and
 time states for each run (asking, running, waiting on you, judged, detail expired, changed
 since, deleted).
@@ -108,7 +112,8 @@ since, deleted).
 | a system thread (gap, commit, deploy, config change) | "that change broke X" | a verdict on the system's own work | system: the verdict corpus, and the gap's lane |
 
 Every reading carries its provenance (who, in which context, about which result) and is
-echoed with its reader. A reading is offered only once its reader exists. The proof that it
+echoed with its reading, in a word or two; the reader is named here, not on screen. A reading
+is offered only once its reader exists. The proof that it
 took is the thread's next outcome: teaching is measured like a gap, by whether it took, how
 long it took, and whether it stayed.
 
@@ -130,6 +135,10 @@ long it took, and whether it stayed.
 | The retry step reading a person's steer; inference reading a correction | goal-host |
 | A concept lesson written from the surface, with its source | concept-db |
 | Gaps, the system's commits, deploy verdicts and configuration changes readable as shapes for the threads | development-vessel / deployment |
+| A link field from a run to the thread or run it continues, carried with the dispatch and distinct from re-running | goal-host |
+| Shapes that declare what they take, so inference can choose the shape that answers (a run's record for a question about a run; a commitment for a time-displaced ask) | discovery / goal-host |
+| Commitments a person owns: a rhythm or dated item carrying who asked and which thread; admission of "schedule this" as a change; a dated variant the conductor fires on time; an overdue detector; a notification to the person | development-vessel / goal-host |
+| What a run was given from other goals' recall, recorded on the run | goal-host |
 
 The surface work in `tasks.md` does not wait on these. Each surface step is useful alone, and
 each dependent step is offered only when something reads it.

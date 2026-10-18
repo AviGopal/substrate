@@ -32,10 +32,10 @@ without executing or fetching any of them.
 A `uiView` SHALL be a declarative tree of primitives with bindings by pointer to the impulses
 of the run, thread or question it draws. It SHALL NOT copy their content. The surface SHALL
 draw an unknown, invalid or unresolvable view by falling back to the current default view, and
-SHALL say that it fell back. A view SHALL never cause a region to fail to draw.
+SHALL mark that it fell back. A view SHALL never cause a region to fail to draw.
 
 **Check:** an invalid view written to the live policy leaves the region drawn by the default,
-with a visible fallback note, and nothing else on the page changes.
+with a fallback mark, and nothing else on the page changes.
 
 ## Requirement: views and policy variants are produced by activities
 
@@ -75,39 +75,59 @@ the value before the last accepted write.
 
 ## Requirement: one input, read in a visible context
 
-All input SHALL arrive through one text box. The context the box will use (the selected
-thread or run, any open question, the visible outcome) SHALL be shown next to the box, and
-clearing it SHALL make the next message a new ask. Every message SHALL be echoed with how it
-was read and by whom, and a wrong reading SHALL be correctable in the same box. The surface
-SHALL decide only unambiguous cases:
+There SHALL be one input: the box. It SHALL be the only control that sends anything. Choosing
+what the person is looking at (a thread, a run, a question, an output, a missing input) and
+changing only what is shown (folding, filtering, switching tabs) are not input: they choose
+the context the box will use. A suggestion MAY fill the box; it SHALL NOT send.
+
+The context the box will use SHALL be shown next to it, and clearing it SHALL make the next
+message a new ask. Every message SHALL be echoed with how it was read, in a word or two
+("Answer", "Verdict", "New ask"), and a wrong reading SHALL be correctable in the same box.
+The surface SHALL decide only unambiguous cases:
 - no context: a new ask;
 - an open question: its answer;
 - an exact presentation phrase.
 
 Every other message SHALL go to the system as text plus its context.
 
+Every interaction meets the current state of the whole system. Continuity with a specific
+earlier exchange (a thread, a run, a question) is explicit and visible, as the box's context
+and a link carried with what is sent; it is never inferred from wording.
+
 **Check:** the same words typed in two contexts are read differently, and each reading is
-shown before or as it takes effect.
+shown before or as it takes effect. No control other than the box sends anything.
 
 ## Requirement: one path per kind of interaction
 
-Each kind of interaction SHALL have exactly one write path and one reader, whichever place on
-screen it starts from:
+Each kind of interaction SHALL have exactly one write path and one reader, and SHALL be a
+reading of the box in its context:
 - answering a question (a run's or the system's), including declining it;
 - supplying an input a running run is missing;
 - a verdict on a result, calibration included;
-- a presentation change, with its scope (this output, or every output of a shape) named in the
-  echo;
+- a presentation change, with its scope (this output, or every output of a shape) shown in
+  the echo;
 - a complaint about the interface.
 
-Text SHALL be entered only in the one box. Other controls (an option, a "Provide" on a missing
-input, "Show as") SHALL either select the context the box will use or send through the same
-path the box uses. They SHALL NOT be a second writer. A place that offers an interaction whose
-path does not reach its reader SHALL NOT offer it.
+A control that sends anything other than the box (an option button, a form, "Show as", a
+complaint button) SHALL be retired once its reading of the box is proven, and never added. An
+interaction whose path does not reach its reader SHALL NOT be offered.
 
-**Check:** for each kind, every place it can be started from produces the same write to the
-same reader. A run's question answered from the questions list reaches the waiting run exactly
-as one answered on the run page does.
+**Check:** for each kind, the box in that context produces the write to its reader. A run's
+question answered while the question is selected from the questions list reaches the waiting
+run exactly as one answered on the run page does.
+
+## Requirement: the interface does not explain itself
+
+Visible text SHALL be the content, plus labels of a few words. State SHALL be shown by marks
+(badges, dots, rings), not sentences. How the system works, which part reads an input, and what
+is not yet possible SHALL be described in the documentation, not on screen; at most a hover may
+say it. Visible text SHALL NOT use the system's vocabulary (shape names, field names, internal
+step names) unless the content itself is about the system. The echo names the reading, not
+the reader.
+
+**Check:** no label or echo exceeds a few words; no visible text names an internal mechanism
+when the content is not about the system; a limitation of the system appears in the docs, not
+as a repeated line on screen.
 
 ## Requirement: every observation carries its source and has a reader
 
@@ -146,8 +166,8 @@ person mark. An output from the step a person's answer drove is marked as theirs
 ## Requirement: teaching is a reading of the box, with a named reader
 
 A person teaches the system through the one box, by what they type in a context. The surface
-SHALL offer each teaching reading only once its reader exists, and SHALL name the reader in
-the echo:
+SHALL offer each teaching reading only once its reader exists, and SHALL name the reading in
+the echo. Each reading's reader:
 - a verdict ("that worked", "wrong answer") is read by the verdict corpus;
 - a steer ("try again, but read the result") is read by the retry step;
 - a correction ("I was asking a question") is read by goal-target inference;
@@ -164,7 +184,7 @@ SHALL show whether the taught thing held. The measure is the gap triple: whether
 took, how long it took, and whether it stayed.
 
 **Check:** a reading with no reader is never offered. A lesson typed at an outcome is written
-with its source and context, and is named in the echo. The thread's mark changes when a later
+with its source and context, and its reading is echoed. The thread's mark changes when a later
 run of that thread reaches after the lesson.
 
 ## Requirement: the system's self-management is visible as threads
@@ -179,9 +199,18 @@ way:
 
 A person's verdict on any of these is an observation its reader weighs, as for any run.
 
+A gap thread SHALL be joined by the fields the system records about its own attempts (the
+gap, each attempt, the attempt's run, its outcome and commit), never by matching text. It
+SHALL show a node's own work, with that scope in its label. Its mark SHALL count attempts and landings
+separately, and how often the gap reopened, because the share of attempts that land is the
+system's own measure of whether it is closing what it detects. An attempt with no run on
+record SHALL be shown as one, not hidden. A step the system does not record in a readable form
+(a deploy, a configuration change, today) SHALL NOT be drawn, and SHALL NOT be inferred.
+
 **Check:** a commit the system lands appears as a thread step naming the gap it addressed and
 the gate's verdict. A policy change appears with its author. A deploy appears with the units
-it restarted.
+it restarted. A run that belongs to a gap's attempt appears inside that gap's thread and in no
+other thread.
 
 ## Requirement: threads, not runs
 
@@ -191,8 +220,52 @@ mark SHALL be derived from the thread's reach history together with the observat
 people and use, so a disputed reach is shown as disputed. When readable, it SHALL also show what changed since the person last
 looked. A person's threads SHALL never be pushed out of view by the volume of system runs.
 
+A thread SHALL be held together by an explicit link from each run to the thread or run it
+continues, carried with the dispatch. Grouping by the words of the ask is a display fallback:
+it separates the same ask in two wordings and joins different asks that share words. A
+re-run mechanism SHALL NOT stand in for the link: a re-run reuses the earlier run's identity,
+and a new ask that continues a thread is a new run.
+
 **Check:** with any number of newer system runs, a person's thread remains listed with its
-latest outcome.
+latest outcome. A reworded ask that continues a thread lands in that thread once the link is
+carried.
+
+## Requirement: time-displaced threads
+
+An ask whose intent is displaced in time ("remind me in an hour", "every couple of hours
+check…", "send a follow-up next week", "tell me when it's done"), in any wording, SHALL be a
+thread with a future. The thread SHALL show what is coming ("next due" for a one-off,
+"every ~N · next due" for a rhythm). The runs that fire later SHALL land in that thread by link,
+and a result that arrives after the person left SHALL be shown as changed since they looked.
+The box, with the thread as context, SHALL read "stop", a new rhythm and a new due time as
+changes to that commitment, each offered only once its reader exists.
+
+The commitment is the system's own mechanism, not a scheduler in the surface:
+- the ask is understood as time-displaced by inference over shapes that declare what they take;
+- the walk commits it as a rhythm or a dated item in the pool, carrying who asked and which
+  thread, through the write path rhythms already use, and only on a goal admitted as a change;
+- the rhythm conductor fires it when due, within what the system can afford, and a one-off
+  dated item fires at its time;
+- the run it fires delivers to the thread; a reminder is a notice to the person;
+- it is judged twice: at commitment (the item exists with the right due time) and at
+  fulfilment (it fired on time, was delivered, and was used);
+- a commitment fulfilled and used is extracted into an activity like any reached work;
+- a rhythm whose results nobody uses decays out by the conductor's own economics;
+- a commitment that comes due and does not fire or is not delivered is a gap.
+
+**Check:** a time-displaced ask shows "next due" on its thread; the run it fires lands in the
+same thread; "stop" in that context ends it; an overdue commitment appears as a gap.
+
+## Requirement: a run judged against another ask is marked
+
+When a run's outputs or its verdict refer to a different ask than the run's own (the system
+fed it material recalled from other goals, and that material, not the ask, shaped what ran or
+what was judged), the surface SHALL mark the run "judged against another ask" and show which,
+from what the run records about the recall it was given. It SHALL NOT infer the mismatch from
+wording.
+
+**Check:** a run whose search ran another goal's query, from recalled material it records, is
+marked, and the mark names the recalled ask.
 
 ## Requirement: honesty about what is known
 

@@ -51,7 +51,9 @@ governs every other activity.
 3. **Primitives are the only presentation code,** added rarely and on evidence, the way
    resolvers are. Today's renderers become the first primitives and the fallback.
 4. **Every write that steers presentation is checked, attributed and revertible.**
-5. **All input is one text box, read in a visible context,** echoed with how it was read.
+5. **There is one input, the box, read in a visible context,** echoed with how it was read.
+   Every other control only chooses what the box is about. The interface does not explain
+   itself: labels are a few words, state is shown by marks.
 6. **The default view is threads, not runs:** one outcome, one learning mark, one fold.
 7. **Every observation carries its source and has a reader.** A person's verdict is kept and
    weighed, never refused. A person's input is a person's by provenance, never by a shape's
@@ -61,6 +63,8 @@ governs every other activity.
 9. **The system's self-management is drawn as threads:** its gaps, commits, deployments and
    configuration changes, graded like any run. The interface is how people observe the
    system's health and capability.
+10. **A time-displaced ask is a thread with a future:** a commitment the system's own rhythm
+    machinery honours, shown as "next due", judged at commitment and fulfilment.
 
 ## The ruling this reopens
 

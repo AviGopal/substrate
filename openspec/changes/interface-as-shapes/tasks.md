@@ -70,6 +70,11 @@ function. Display-only steps are batched; server steps deploy alone.
 16d. Presentation phrases are read in any context, and the echo names their scope. "Show as" on
      one output and the typed phrase write the same kind of record.
 16e. Declining is one outcome on one path, from the run page and from the questions list.
+16f. One input: each control that sends (option buttons, the question card's buttons, the
+     question page's forms, "Show as", complain, calibration grades) is replaced by its reading
+     of the box in context, one at a time, and retired once the reading is proven.
+16g. Wording: labels of a few words, marks for state, no system vocabulary on screen; the
+     echo names the reading.
 
 ## Phase 5b — observations and teaching (surface side)
 17b. A person's verdict is kept on the run as an observation with its source, the judged result
@@ -86,17 +91,26 @@ function. Display-only steps are batched; server steps deploy alone.
 
 ## Phase 7 — the system's self-management as threads
 22. Gap threads: detection, attempts, landed commit, verified, still closed; graded like runs.
+    Joined by the attempt records' own fields, a node's own work, attempts and landings counted
+    apart, attempts with no run shown as such.
 23. Deployment and configuration steps in those threads: the gate's verdict, the restart, the
     author of a policy change and its undo.
+
+## Phase 8 — time-displaced threads (as the system's commitments become readable)
+24. "Next due" on a thread from its commitment (rhythm or dated item), and the runs it fires
+    landing in that thread by link.
+25. Box readings in a commitment's context: stop, a new rhythm, a new due time.
+26. "Judged against another ask" on a run, from the recall it records.
 
 ## Pre-registered validation
 - Task 12: the encoded default produces the same output as today's renderer on every existing
   render test.
 - Task 15: a typed request ("make the outcome one line") reaches, takes effect without a
   deploy, is named by `human_surface:ui_view`, and is undone by typing "undo".
-- Task 21: a lesson typed at an outcome is written with its source and named in the echo, and
+- Task 21: a lesson typed at an outcome is written with its source and its reading echoed, and
   a later run of that thread shows whether it held.
 - Task 22: a gap the system closes appears as a thread whose steps name the commit and the
   gate's verdict, and a person's verdict on it is kept as an observation.
+- Task 24: a time-displaced ask shows "next due", and the run it fires lands in its thread.
 - Throughout: interface gaps, and teaching, are measured by the gap triple; interface changes
   asked for in text are measured by the share that took effect and the time each took.
