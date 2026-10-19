@@ -1837,6 +1837,19 @@ revert_target_hashes() {
   return 0
 }
 
+# A FEDERATION UNIT RUNS ITS TREE FROM WHERE ITS WorkingDirectory SAYS, and that is usually the IMAGE BAKE
+# (/usr/local/share/substrate/super-repo/...), not this clone. Restarting it after a clone change to
+# scripts/substrate/federation-relay/ then reloads the OLD baked file: the restart reports success while the old
+# code keeps running, and it drops every peer's circuit for nothing. Measured on the hub 2026-10-18T02:39:35Z: a
+# pull-sync restart put the transport back on the 10-13 baked ingress-auth.ts after the change had landed in the
+# clone. So the transport and relay restart only when they actually run this clone's tree. Otherwise the change is
+# said to be NOT live (it reaches the node with an image and a recreate), and nothing is bounced.
+# fed_unit_runs_clone <unit>: 0 when the unit's WorkingDirectory is $SUPER_DIR or below it.
+fed_unit_runs_clone() {
+  local wd; wd="$(systemctl show -p WorkingDirectory --value "$1" 2>/dev/null)"
+  case "$wd" in "$SUPER_DIR"|"$SUPER_DIR"/*) return 0 ;; *) FED_UNIT_WD="${wd:-<unset>}"; return 1 ;; esac
+}
+
 # A unit's last start as epoch seconds, or NOTHING when systemd reports no timestamp or one that does not parse.
 # `date -d ""` reads as today's midnight, so an empty timestamp must never reach date: an unknown start is unknown.
 unit_start_epoch() {
@@ -4742,11 +4755,22 @@ if [ "$SUPER_FETCH_OK" = 1 ]; then
 
       # The relay is restarted ONLY on a real relay.ts change (never on first
       # convergence): bouncing it drops every peer's reservation at once.
-      if [ "$CHANGED" != "all" ] && echo "$CHANGED" | grep -q '^scripts/substrate/federation-relay/relay\.ts$' \
+      if [ "$CHANGED" != "all" ] && grep -q '^scripts/substrate/federation-relay/relay\.ts$' <<<"$CHANGED" \
          && systemctl is-active federation-relay.service >/dev/null 2>&1; then
-        systemctl restart federation-relay.service 2>/dev/null || true
+        if fed_unit_runs_clone federation-relay.service; then
+          systemctl restart federation-relay.service 2>/dev/null || true
+        else
+          log "super-repo: relay.ts changed in the clone but is NOT live: federation-relay runs ${FED_UNIT_WD} (the image bake), so a restart would reload the old file; not restarting (an image and a recreate deliver it)"
+        fi
       fi
-      if { [ "$CHANGED" = "all" ] || echo "$CHANGED" | grep -q '^scripts/substrate/federation-relay/'; } \
+      _fed_changed=0; { [ "$CHANGED" = "all" ] || grep -q '^scripts/substrate/federation-relay/' <<<"$CHANGED"; } && _fed_changed=1
+      _fed_clone=1
+      if [ "$_fed_changed" = 1 ] && systemctl is-active federation-transport-vessel.service >/dev/null 2>&1 \
+         && ! fed_unit_runs_clone federation-transport-vessel.service; then
+        _fed_clone=0
+        log "super-repo: scripts/substrate/federation-relay/ changed in the clone but is NOT live: federation-transport-vessel runs ${FED_UNIT_WD} (the image bake), so a restart would reload the old files and drop every circuit; not restarting (an image and a recreate deliver it)"
+      fi
+      if [ "$_fed_changed" = 1 ] && [ "$_fed_clone" = 1 ] \
          && systemctl is-active federation-transport-vessel.service >/dev/null 2>&1; then
         systemctl restart federation-transport-vessel.service 2>/dev/null || true
         sleep "$STAGGER_SECONDS"
