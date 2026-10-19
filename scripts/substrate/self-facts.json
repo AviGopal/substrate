@@ -540,10 +540,10 @@
             "repos/goal-host-vessel/test/named-unadvertised-target.test.ts",
             "repos/development-vessel/src/resolvers/source-code.ts",
             "repos/concept-db/tests/write-shapes.test.ts",
-            "repos/development-vessel/src/resolvers/composer-interruption-sweep.ts",
             "repos/goal-host-vessel/test/negated-edit-routing.test.ts",
             "repos/development-vessel/test/resolvers/landing-admissible.test.ts",
-            "repos/goal-host-vessel/test/judge-consistency/"
+            "repos/goal-host-vessel/test/judge-consistency/",
+            "repos/development-vessel/src/resolvers/gap-to-feature.ts"
           ],
           "require_falsifier_classes": [
             "class2"
