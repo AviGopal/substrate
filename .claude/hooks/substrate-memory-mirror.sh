@@ -33,6 +33,14 @@ case "$fp" in
 esac
 [ -f "$fp" ] || exit 0
 
-DEV_VESSEL_ENDPOINT="${DEV_VESSEL_ENDPOINT:-http://localhost:18090}" \
-  bun "$MIRROR" "$fp" >>"$LOG" 2>&1 || echo "$(date -u) mirror failed for $fp" >>"$LOG"
+out="$(DEV_VESSEL_ENDPOINT="${DEV_VESSEL_ENDPOINT:-http://localhost:18090}" bun "$MIRROR" "$fp" 2>&1)"; rc=$?
+[ -n "$out" ] && printf '%s\n' "$out" >>"$LOG"
+# A refused write (the mirror exits non-zero on a non-2xx answer, 401 for a missing or revoked key)
+# is a lost note. Name the status and the vessel's reason, in the log and in one stderr line, so the
+# refusal is seen where the session runs, not only in a log nobody tails. Still exit 0: fail open.
+if [ "$rc" -ne 0 ]; then
+  why="$(printf '%s\n' "$out" | sed -n 's/.*\(HTTP [0-9][0-9][0-9].*\)/\1/p' | tail -n 1 | cut -c1-300)"
+  echo "$(date -u) mirror REFUSED for $fp: ${why:-exit $rc, no HTTP status in the output above}" >>"$LOG"
+  echo "[substrate-memory-mirror] memoryNote_write refused: ${why:-exit $rc} (note not mirrored; see $LOG)" >&2
+fi
 exit 0
