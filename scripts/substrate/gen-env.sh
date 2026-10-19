@@ -999,8 +999,35 @@ case "$_disc_host" in
         echo "[gen-env] not using the anchor's advertised trace store ${_bs_act}: ${_bs_why}; deriving instead" >&2
       fi
     fi
+    # ★ THE CONVENTIONAL BLOCK ONLY WHEN IT IS THIS ANCHOR'S OWN FLEET.
+    #
+    # The fallback to the conventional 18xxx block used to take whichever fleet answered identity /health on 18101.
+    # /health names no authority, so on a host running two fleets a spoke of a 25xxx hub whose hub was down bound
+    # to the OTHER fleet's identity and trace store and presented its key to them (measured on a shared host: 330
+    # foreign-identity 401s, no write ever landed). The rule now, non-secret checks only, before any key is sent:
+    #   1. a discovery port inside the offset block (18100..47534) IS the block: the port-relative siblings are
+    #      the anchor's own, and 18101 at any other offset belongs to a different fleet, so it is never tried;
+    #   2. outside the block (a TLS front on 443/8443, a container-internal port) the conventional block is tried
+    #      only when the anchor answered /bootstrap, and only when that block's own discovery /bootstrap
+    #      advertises the same discovery_endpoint as the token's endpoint or the anchor's own advertisement.
+    #      A foreign fleet's discovery advertises itself, so it is refused before its identity is contacted.
+    # With the anchor down nothing passes 2, which is right: guessing another block is how the wrong fleet won.
+    _norm_url() { printf '%s' "$1" | tr 'A-Z' 'a-z' | sed -E 's#/+$##'; }
+    _conv_is_ours() { # 0 when the conventional 18xxx block on this host is the anchor's fleet; sets _conv_why
+      local cb adv
+      if [ "$_disc_port" -ge 18100 ] && [ "$_disc_port" -le 47534 ]; then
+        _conv_why="discovery port ${_disc_port} is in the offset block, so 18101 belongs to another fleet"; return 1; fi
+      [ -n "$_bs" ] || { _conv_why="the anchor did not answer /bootstrap, so no block can be shown to be its own"; return 1; }
+      cb="$(curl -sf --max-time 4 "${_disc_scheme}://${_disc_host}:18100/bootstrap" 2>/dev/null || true)"
+      adv="$(printf '%s' "$cb" | jq -r '.discovery_endpoint // empty' 2>/dev/null || true)"
+      [ -n "$adv" ] || { _conv_why="its discovery (${_disc_host}:18100) advertises no discovery_endpoint"; return 1; }
+      if [ "$(_norm_url "$adv")" = "$(_norm_url "$DISCOVERY_ENDPOINT")" ] \
+         || { [ -n "$(_bs_field discovery_endpoint)" ] && [ "$(_norm_url "$adv")" = "$(_norm_url "$(_bs_field discovery_endpoint)")" ]; }; then
+        return 0; fi
+      _conv_why="its discovery advertises ${adv}, not this anchor (${DISCOVERY_ENDPOINT})"; return 1
+    }
     _off_relative=$(( _disc_port - 18100 ))
-    _port_off=""
+    _port_off=""; _conv_why=""; _anchor_down=0
     if [ -n "${IDENTITY_VESSEL_URL:-}" ] && [ -n "${ACTIVITY_API_ENDPOINT:-}" ]; then
       # Both siblings known (explicit, or advertised by the anchor and reachable): nothing to derive, so probing
       # would only add boot latency to a decision already made.
@@ -1010,9 +1037,11 @@ case "$_disc_host" in
       if _probe_port "$_disc_host" "$(( 18101 + _off_relative ))"; then
         _port_off=$_off_relative
         echo "[gen-env] sibling derivation: port-relative offset ${_off_relative} (identity answered on $(( 18101 + _off_relative )))" >&2
-      elif _probe_port "$_disc_host" 18101; then
+      elif [ "$_off_relative" != 0 ] && _conv_is_ours && _probe_port "$_disc_host" 18101; then
         _port_off=0
-        echo "[gen-env] sibling derivation: conventional 18xxx block (identity answered on 18101)" >&2
+        echo "[gen-env] sibling derivation: conventional 18xxx block (its discovery names this anchor; identity answered on 18101)" >&2
+      elif [ -n "$_conv_why" ]; then
+        echo "[gen-env] sibling derivation: not using the conventional 18xxx block: ${_conv_why}" >&2
       fi
     fi
     if [ -z "$_port_off" ]; then
@@ -1021,20 +1050,27 @@ case "$_disc_host" in
       # restarting would trade a silent wrong value for an outage, which is not a trade.
       if _probe_port "$_disc_host" "$_disc_port"; then
         echo "[gen-env] FATAL: hub discovery at ${_disc_host}:${_disc_port} is reachable, but its identity-vessel is not," >&2
-        echo "[gen-env]        on either candidate port $(( 18101 + _off_relative )) or 18101." >&2
+        echo "[gen-env]        on its port-relative $(( 18101 + _off_relative ))${_conv_why:+ (conventional block not used: ${_conv_why})}." >&2
         echo "[gen-env]        A spoke masks its local identity-vessel, so it would boot healthy and then 401 on every" >&2
         echo "[gen-env]        registration with nothing naming the cause. Refusing instead." >&2
         echo "[gen-env]        Fix: pass IDENTITY_VESSEL_URL and ACTIVITY_API_ENDPOINT explicitly for this hub." >&2
         exit 1
       fi
-      _port_off=$_off_relative
+      _port_off=$_off_relative; _anchor_down=1
       echo "[gen-env] WARN: hub discovery at ${_disc_host}:${_disc_port} did not answer; assuming port-relative offset ${_off_relative}." >&2
       echo "[gen-env] WARN: if this spoke 401s on registration, the hub was not merely slow to start — re-check the endpoint." >&2
+      echo "[gen-env] WARN: these endpoints are fixed until the next boot; the boot is NOT refused for an anchor that is down." >&2
     fi
     HUB_DISCOVERY_URL="${HUB_DISCOVERY_URL:-${_disc_scheme}://${_disc_host}:${_disc_port}}"
     ACTIVITY_API_ENDPOINT="${ACTIVITY_API_ENDPOINT:-${_disc_scheme}://${_disc_host}:$(( 18080 + _port_off ))}"
     IDENTITY_VESSEL_URL="${IDENTITY_VESSEL_URL:-${_disc_scheme}://${_disc_host}:$(( 18101 + _port_off ))}"
-    probe_url "$IDENTITY_VESSEL_URL" "IDENTITY_VESSEL_URL"
+    # An anchor that is down is a transient (above), so its identity cannot answer either: probing it here would
+    # refuse the boot after all, the outage-bricks-every-spoke trade the branch above exists to avoid.
+    if [ "$_anchor_down" = 1 ]; then
+      echo "[gen-env] WARN: IDENTITY_VESSEL_URL ${IDENTITY_VESSEL_URL} not verified: the anchor is down" >&2
+    else
+      probe_url "$IDENTITY_VESSEL_URL" "IDENTITY_VESSEL_URL"
+    fi
     IDENTITY_ENDPOINT="${IDENTITY_ENDPOINT:-$IDENTITY_VESSEL_URL}"
     ENABLED_ROLES="${ENABLED_ROLES:-spoke}"
     # the spoke's own vessels register into its LOCAL discovery, not the hub
