@@ -4057,6 +4057,34 @@ EOF
     done
   fi
   PROTECTED_SCOPE_FILE="${PROTECTED_SCOPE_FILE:-${PULLSYNC_SELF_DIR:-.}/autonomy-scope.json}"
+  # PROTECTED RETRY AFTER A TIMEOUT UNDER CONTENTION (user ruling 2026-10-19, option B: "retry once if timeout").
+  # bun's per-test timeout (5 s by default) is a load sensor: on 10-17 and 10-19 one node refused two unrelated candidates
+  # on the same protected positive control, red alone ONLY because its case outlived 5 s on a loaded host. A protected
+  # run that is red, whose EVERY failure is a bun per-test timeout ("(fail) <name>" followed by "^ this test timed out
+  # after <n>ms", no unhandled error, rc 1, the summary's fail count equal to the timeouts), and that ended on a
+  # contended host (host_contended: its start is the admission check, so in practice the end), is run ONCE more, only
+  # on an uncontended host: at once when the host is quiet again and the budget holds a second run (PROT_COST_S), or
+  # else the candidate is DEFERRED through the counted path with the retry owed ($PT_FILE, keyed by head and file), and
+  # the next tick's run of that file is the retry. The retry's result counts, red or green. Any assertion failure, a
+  # timeout on a quiet host, a whole-file kill, or a second timeout is refused exactly as before. Both runs are logged
+  # with load and PSI, and the deferral log records protected_retry_after_timeout_under_contention.
+  PT_FILE="$MARKER_DIR/$v.testgate-protected-retry"
+  prot_alone_run() { # <file> -> _pa_out, _pa_rc, _pa_pass, _pa_fail
+    _pa_out="$( (cd "$d" && _rs_root="$(mktemp -d "${TMPDIR:-/tmp}/pullsync-root-XXXXXX")" && _rs_o="$(mktemp "${TMPDIR:-/tmp}/pullsync-out-XXXXXX")" && scrubbed_env "$_rs_root" timeout --kill-after="${TEST_KILL_GRACE_SECONDS:-30}" "${PROTECTED_TEST_TIMEOUT_SECONDS:-120}" "$BUN_BIN" test "./$1" > "$_rs_o" 2>&1; echo "__PROT_RC=$?" >> "$_rs_o"; cat "$_rs_o"; rm -rf "$_rs_root" "$_rs_o" 2>/dev/null) || true )"
+    _pa_rc="$(printf '%s' "$_pa_out" | sed -n 's/^__PROT_RC=//p' | tail -1)"
+    _pa_pass="$(count_pf "$_pa_out" pass)"; _pa_fail="$(count_pf "$_pa_out" fail)"
+  }
+  prot_alone_green() { [ "${_pa_rc:-x}" = 0 ] && [ -n "$_pa_pass" ] && [ "$_pa_pass" -gt 0 ] && [ "${_pa_fail:-0}" = 0 ]; }
+  prot_timeout_only() { # <output> <rc> <summary fail count> -> 0 when red and every failure is a bun per-test timeout
+    [ "$2" = 1 ] || return 1
+    case "$3" in ''|*[!0-9]*) return 1 ;; esac
+    [ "$3" -gt 0 ] || return 1
+    local _pto; _pto="$(printf '%s\n' "$1" | sed 's/\x1b\[[0-9;]*m//g')"
+    printf '%s\n' "$_pto" | grep -q '^# Unhandled error between tests' && return 1
+    printf '%s\n' "$_pto" | awk -v n="$3" '/^\(fail\) /{f++; prev=1; next} { if (prev && $0 ~ /^[[:space:]]*\^ this test timed out after [0-9]+ms/) t++; prev=0 } END{exit !(f > 0 && f == t && f == n)}'
+  }
+  prot_retry_settle() { [ -f "$PT_FILE" ] && { grep -vxF "$HEAD $1" "$PT_FILE" > "$PT_FILE.tmp" 2>/dev/null; mv -f "$PT_FILE.tmp" "$PT_FILE" 2>/dev/null; } || true; }
+  prot_pressure() { echo "load $(cut -d' ' -f1-3 /proc/loadavg 2>/dev/null || echo '?'); psi $(grep '^some' "${PSI_CPU_FILE:-/proc/pressure/cpu}" 2>/dev/null | head -1 || echo '?')"; }
   if [ -z "$REG" ] && [ -n "$BUN_BIN" ]; then
     PROT_RED=""; PROT_DEFER=""; PROT_DEFER_WHY=""
     if ! PROT_FILES="$(jq -er --arg p "repos/$v/" '[.autonomyScope.excluded_paths[]? | select(type == "string" and startswith($p) and test("\\.test\\.(ts|tsx|js|mjs)$")) | ltrimstr($p)] | .[]' "$PROTECTED_SCOPE_FILE" 2>/dev/null)" \
@@ -4071,10 +4099,40 @@ EOF
       if [ "$(gate_left)" -lt "$PROT_COST_S" ]; then [ -z "$PROT_RED" ] && PROT_DEFER="$_pf"; break; fi
       # Nor on a contended host: a protected test's own per-test timeouts are what contention breaks (see host_contended).
       if declare -F host_contended >/dev/null 2>&1 && host_contended; then [ -z "$PROT_RED" ] && { PROT_DEFER="$_pf"; PROT_DEFER_WHY="$HC_WHY"; }; break; fi
-      _pa_out="$( (cd "$d" && _rs_root="$(mktemp -d "${TMPDIR:-/tmp}/pullsync-root-XXXXXX")" && _rs_o="$(mktemp "${TMPDIR:-/tmp}/pullsync-out-XXXXXX")" && scrubbed_env "$_rs_root" timeout --kill-after="${TEST_KILL_GRACE_SECONDS:-30}" "${PROTECTED_TEST_TIMEOUT_SECONDS:-120}" "$BUN_BIN" test "./$_pf" > "$_rs_o" 2>&1; echo "__PROT_RC=$?" >> "$_rs_o"; cat "$_rs_o"; rm -rf "$_rs_root" "$_rs_o" 2>/dev/null) || true )"
-      _pa_rc="$(printf '%s' "$_pa_out" | sed -n 's/^__PROT_RC=//p' | tail -1)"
-      _pa_pass="$(count_pf "$_pa_out" pass)"; _pa_fail="$(count_pf "$_pa_out" fail)"
-      if [ "${_pa_rc:-x}" = 0 ] && [ -n "$_pa_pass" ] && [ "$_pa_pass" -gt 0 ] && [ "${_pa_fail:-0}" = 0 ]; then continue; fi
+      prot_alone_run "$_pf"
+      # This run is the retry owed by an earlier tick (see PROTECTED RETRY AFTER A TIMEOUT UNDER CONTENTION): it counts.
+      _pt_owed=0; grep -qxF "$HEAD $_pf" "$PT_FILE" 2>/dev/null && _pt_owed=1
+      if prot_alone_green; then
+        [ "$_pt_owed" = 1 ] && { prot_retry_settle "$_pf"; log "$v: protected retry of $_pf at ${HEAD:0:10} (owed after a timeout under contention) is GREEN alone ($(prot_pressure)): it counts"; }
+        continue
+      fi
+      if [ "$_pt_owed" = 0 ] && [ -z "$PROT_RED" ] && prot_timeout_only "$_pa_out" "$_pa_rc" "$_pa_fail"; then
+        # The run's start is the admission check just above (uncontended, or it would not have started): what
+        # can have changed is the END.
+        _pt_why=""; if declare -F host_contended >/dev/null 2>&1 && host_contended; then _pt_why="$HC_WHY"; fi
+        if [ -n "$_pt_why" ]; then
+          log "$v: protected judge test $_pf at ${HEAD:0:10}: run 1 red alone ONLY on bun per-test timeouts (${_pa_fail:-?} timed out, ${_pa_pass:-?} pass) and the host was contended at its end ($_pt_why; $(prot_pressure)) — protected retry after timeout under contention, once, on a quiet host"
+          printf '{"at":"%s","actor":"pull-sync","action":"protected_retry_after_timeout_under_contention","vessel":"%s","head":"%s","file":"%s","why":"%s"}\n' \
+            "$(date -Iseconds)" "$v" "$HEAD" "$_pf" "$(printf '%s' "$_pt_why" | tr -d '"\\')" >> "$DEFERRAL_LOG" 2>/dev/null || true
+          echo "$HEAD $_pf" >> "$PT_FILE" 2>/dev/null || true
+          if declare -F host_contended >/dev/null 2>&1 && host_contended; then
+            # Never retried hot: the candidate is DEFERRED through the counted path, and the next tick's run of this
+            # file (admitted only on an uncontended host) is the retry.
+            PROT_DEFER="$_pf"; PROT_DEFER_WHY="protected retry after timeout under contention owed for $_pf, and the host is still contended ($HC_WHY)"; break
+          fi
+          # The retry is a second run: admitted only if the budget still holds one (PROT_COST_S), else owed to the next tick.
+          if [ "$(gate_left)" -lt "$PROT_COST_S" ]; then PROT_DEFER="$_pf"; break; fi
+          prot_alone_run "$_pf"
+          prot_retry_settle "$_pf"
+          if prot_alone_green; then log "$v: protected retry of $_pf at ${HEAD:0:10} (run 2, quiet host) is GREEN alone ($(prot_pressure)): it counts"; continue; fi
+          log "$v: protected retry of $_pf at ${HEAD:0:10} (run 2, quiet host) is RED alone (rc ${_pa_rc:-?}, ${_pa_pass:-?} pass / ${_pa_fail:-?} fail; $(prot_pressure)): it counts"
+        else
+          log "$v: protected judge test $_pf at ${HEAD:0:10} red alone only on bun per-test timeouts on an uncontended host ($(prot_pressure)): not retried, a timeout on a quiet host counts"
+        fi
+      elif [ "$_pt_owed" = 0 ] && [ -z "$PROT_RED" ]; then
+        log "$v: protected judge test $_pf at ${HEAD:0:10} red alone on a failure that is not only bun per-test timeouts: not retried"
+      fi
+      if [ "$_pt_owed" = 1 ]; then prot_retry_settle "$_pf"; log "$v: protected retry of $_pf at ${HEAD:0:10} (owed after a timeout under contention) is RED alone ($(prot_pressure)): it counts"; fi
       PROT_RED="${PROT_RED:+$PROT_RED; }$_pf red alone (rc ${_pa_rc:-?}, ${_pa_pass:-?} pass / ${_pa_fail:-?} fail$( [ -z "$_pa_pass" ] && echo ', no countable result'))"
     done <<< "${PROT_FILES:-}"
     if [ -n "$PROT_DEFER" ]; then testgate_budget_defer "the protected judge test $PROT_DEFER alone" "$PROT_COST_S" "$PROT_DEFER_WHY"; skipped=$((skipped + 1)); continue; fi
@@ -4084,7 +4142,7 @@ EOF
       log "$v: protected judge tests at ${HEAD:0:10} — $PROT_RED"
     fi
   fi
-  rm -f "$BD_FILE" "$TG_NEED_FILE" 2>/dev/null || true
+  rm -f "$BD_FILE" "$TG_NEED_FILE" "${PT_FILE:-}" 2>/dev/null || true
   [ -n "${U_GAP_JSON:-}" ] && emit_gap "$U_GAP_JSON"
   # A NON-MEASUREMENT IS NOT A RED (2026-10-11). When the parent/candidate overlay could not measure because a run
   # was killed at the per-run wall, the remaining verdict is the stored-baseline one, which on a node behind its
