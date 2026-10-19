@@ -143,6 +143,7 @@
       "unit": "discovery-vessel.service",
       "role": "registry",
       "repo": "discovery-vessel",
+      "registers": false,
       "health_port": 8100,
       "core": true
     },
@@ -199,6 +200,7 @@
       "unit": "ribosome-vessel.service",
       "role": "compute",
       "repo": "ribosome-vessel",
+      "registers": false,
       "health_port": 8240
     },
     {
