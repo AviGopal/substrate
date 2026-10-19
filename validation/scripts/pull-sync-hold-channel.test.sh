@@ -25,6 +25,7 @@ FAILS=0
 ok()  { echo "ok   - $*"; }
 bad() { echo "FAIL - $*"; FAILS=$((FAILS+1)); }
 g() { git -C "$1" -c user.name=t -c user.email=t@t "${@:2}" >/dev/null 2>&1; }
+. "$(cd "$(dirname "$0")" && pwd)/lib/coverage-all-behaviour.sh"
 
 # ── the script under test, its fixed paths moved into the temp tree ─────────────
 sed -e "s#/usr/local/share/substrate#$T/share#g" -e "s#/usr/local/bin#$T/bin#g" \
@@ -74,7 +75,7 @@ setup() {
   git init -q --bare "$T/o/super.git"; git -C "$T/o/super.git" symbolic-ref HEAD refs/heads/dev
   mkdir -p "$T/seed/super/scripts/substrate/units"
   printf '#!/usr/bin/env bash\necho base pull-sync\n' > "$T/seed/super/scripts/substrate/substrate-pull-sync.sh"
-  git -C "$T/seed/super" init -q -b dev; g "$T/seed/super" add -A; g "$T/seed/super" commit -m base
+  cov_all "$T/seed/super"; git -C "$T/seed/super" init -q -b dev; g "$T/seed/super" add -A; g "$T/seed/super" commit -m base
   g "$T/seed/super" remote add origin "$T/o/super.git"; g "$T/seed/super" push origin dev
   SBASE="$(git -C "$T/seed/super" rev-parse HEAD)"
   git clone -q --branch dev "$T/o/super.git" "$T/ws/git/super-repo"
@@ -82,7 +83,7 @@ setup() {
   # that pulls it re-executes on it (SELF-CONVERGE FIRST), so a stub here would stop the run.
   { cat "$T/pull-sync.sh"; echo '# NEW pull-sync from dev'; } > "$T/seed/super/scripts/substrate/substrate-pull-sync.sh"
   printf '[Unit]\nDescription=new\n' > "$T/seed/super/scripts/substrate/units/new.service"
-  g "$T/seed/super" add -A; g "$T/seed/super" commit -m advance; g "$T/seed/super" push origin dev
+  cov_all "$T/seed/super"; g "$T/seed/super" add -A; g "$T/seed/super" commit -m advance; g "$T/seed/super" push origin dev
   # the image: its revision, its baked vessel revisions, the pull-sync it installed
   echo imagerev0001 > "$T/etc/image-revision"
   printf 'baked-vessel=bakedsha0002\n%s=imagesha0003\n' "$V" > "$T/share/vessel-revisions"

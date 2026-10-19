@@ -721,6 +721,70 @@ drift_quarantine() { # vessel -> 0 and DQ_PATH=<copy of $RUNTIME_DIR/<v>>, or 1 
   return 0
 }
 
+# INSTALL ONLY WHAT IS COVERED (in-place-image-convergence 1.3; user ruling 2026-10-19 "Build 1.3 by 10-20T18:00Z").
+#
+# scripts/substrate/gate/coverage.json says, per baked path, whether an accepted gate fixture exercises it. Until now
+# it was a statement only: this script installed units, tooling and the active-scripts run-dir whatever it said, so a
+# change nothing exercises reached systemd and /usr/local/bin on every node once the corpus (which could not notice
+# it) passed. Now every glue install below asks the map first. A path converges in place only when its entry is
+# level BEHAVIOUR and its proof was earned on this exact blob (src_blob = git hash-object of the staged file);
+# anything else (parse, none, unmapped, or a behaviour proof older than the code) is LEFT AS BAKED and named in one
+# counted log line. A map that cannot be read REFUSES every glue install this tick and files a gap; vessel code
+# convergence (mirror-to-live) does not depend on it and carries on. The map is read from the STAGE, whose gate paths
+# are the ACCEPTED copies on a gated node, so a candidate cannot vouch for its own paths.
+# Consequence the user accepted: once the dated converges_today_exempt record expires, parse-level paths (the unit
+# files) and the uncovered gate paths (the tick scripts among them) converge by image only until a behaviour fixture
+# covers them, and a change to a covered path converges only if the same commit re-earns its proof.
+COV_STATE=unloaded; COV_FROM=""; COV_SKIPPED=0; COV_WHY=""; COV_REFUSED_LOGGED=0
+declare -A COV_LVL=() COV_BLOB=() COV_EXEMPT=()
+cov_ready() { # <stage scripts/substrate dir>: 0 when the map there is loaded and valid; otherwise refuse (once a tick)
+  local m="$1/gate/coverage.json" rows s l b
+  if [ "$COV_FROM" != "$m" ]; then
+    COV_LVL=(); COV_BLOB=(); COV_EXEMPT=(); COV_STATE=invalid; COV_FROM="$m"
+    if rows="$(jq -er '.paths | if type == "object" and length > 0 then to_entries[] | [.value.src, .value.level, (.value.src_blob // "")] | @tsv else error("no paths") end' "$m" 2>/dev/null)" \
+       && [ -n "$rows" ]; then
+      while IFS=$'\t' read -r s l b; do [ -n "$s" ] && { COV_LVL[$s]="$l"; COV_BLOB[$s]="$b"; }; done <<< "$rows"
+      COV_STATE=ok
+      # A DATED EXEMPTION KEEPS ITS PATHS CONVERGING UNTIL ITS OWN DATE. converges_today_exempt lists the paths that
+      # converged in place before this gate existed (by destination); they keep installing as before through the
+      # expires day (UTC) and stay baked from 00:00Z the day after, so the freeze lands at the ruled date and not at
+      # whatever moment this commit deploys. A malformed date counts as expired: an exemption fails closed.
+      local exp; exp="$(jq -r '.converges_today_exempt.expires // empty' "$m" 2>/dev/null)"
+      if [ -n "$exp" ]; then
+        if [[ "$exp" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] && ! [[ "$(date -u +%F)" > "$exp" ]]; then
+          while IFS= read -r s; do [ -n "$s" ] && COV_EXEMPT[$s]=1; done \
+            < <(jq -r '.paths as $p | (.converges_today_exempt.paths // [])[] | ($p[.].src // empty)' "$m" 2>/dev/null)
+          log "coverage: converges_today_exempt is in force through $exp: its ${#COV_EXEMPT[@]} path(s) converge without a behaviour proof until then"
+        else
+          log "coverage: converges_today_exempt expired ($exp): its paths stay as baked until a fixture covers them"
+        fi
+      fi
+    fi
+  fi
+  [ "$COV_STATE" = ok ] && return 0
+  if [ "$COV_REFUSED_LOGGED" = 0 ]; then
+    COV_REFUSED_LOGGED=1
+    log "coverage: !!! REFUSED: $m is missing, unreadable or has no paths; NO glue path is installed this tick (vessel code still converges)"
+    emit_gap "$(jq -n -c --arg m "$m" \
+      --arg s "pull-sync refused every glue install (units, tooling, active-scripts) because the coverage map $m is missing, unreadable or has no paths. Installs are gated on it (in-place-image-convergence 1.3), so nothing is installed until a readable map is staged; vessel code convergence is unaffected." \
+      '{impulse:{pointer:{type:"substrateGap_write",gap:{id:"pull-sync-coverage-map-unreadable",category:"service_failure",source:"substrate_detected",summary:$s,classification_metadata:{map:$m},status:"open"}}}}' 2>/dev/null)"
+  fi
+  return 1
+}
+cov_allows() { # <src relative to the stage root, e.g. scripts/substrate/x.sh> <staged file>: 0 when behaviour-proven on this blob
+  local s="$1" f="$2" b
+  [ "$COV_STATE" = ok ] || { COV_WHY="coverage map not loaded"; return 1; }
+  [ -n "${COV_EXEMPT[$s]:-}" ] && return 0   # listed in an unexpired converges_today_exempt (see cov_ready)
+  [ "${COV_LVL[$s]:-}" = behaviour ] || { COV_WHY="level ${COV_LVL[$s]:-unmapped}"; return 1; }
+  b="$(git hash-object "$f" 2>/dev/null)"
+  if [ -z "$b" ] || [ "$b" != "${COV_BLOB[$s]:-}" ]; then
+    COV_WHY="its behaviour proof is for blob ${COV_BLOB[$s]:0:12}, the staged file is ${b:0:12}; re-earn it with image-coverage-map.check.sh"
+    return 1
+  fi
+  return 0
+}
+cov_skip() { COV_SKIPPED=$((COV_SKIPPED + 1)); log "coverage: NOT converged $1 ($COV_WHY): it stays as baked"; }
+
 # INSTALL ONLY WHAT IS COMMITTED.
 #
 # Every glue install below (units, the bootstrap-tier scripts, this script itself,
@@ -1204,12 +1268,14 @@ if [ "${PULLSYNC_REEXECED:-}" != 1 ] && [ "$SUPER_FETCH_OK" = 1 ]; then
   _se_self="$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || true)"
   if [ -n "$_se_self" ] && [ -r "$_se_self" ] && stage_committed_glue "$SUPER_DIR"; then
     _se_src="$PULLSYNC_GLUE_STAGE/scripts/substrate"
+    cov_ready "$_se_src" || _se_src=""   # no readable map: nothing self-converges this tick
     # The shared tracked-red predicate this script sources (see the gap-tracked-red loader). The
     # /usr/local/bin copy reads it from $SHARE_DIR/lib, which the image may predate: converge it
     # every ungated tick, before any re-exec, so the exec'd tick and a lib-only commit both reach
     # it. A copy that fails `bash -n` is not installed (the old one, or none, keeps the gate strict).
     _se_lib_from="$_se_src/lib/gap-tracked-red.sh"; _se_lib_to="$SHARE_DIR/lib/gap-tracked-red.sh"
-    if [ -z "$PULLSYNC_ACCEPTED_DIR" ] && [ -f "$_se_lib_from" ] && ! cmp -s "$_se_lib_from" "$_se_lib_to" 2>/dev/null; then
+    if [ -n "$_se_src" ] && [ -z "$PULLSYNC_ACCEPTED_DIR" ] && [ -f "$_se_lib_from" ] && ! cmp -s "$_se_lib_from" "$_se_lib_to" 2>/dev/null \
+       && { cov_allows scripts/substrate/lib/gap-tracked-red.sh "$_se_lib_from" || { cov_skip scripts/substrate/lib/gap-tracked-red.sh; false; }; }; then
       if bash -n "$_se_lib_from" 2>/dev/null && mkdir -p "$SHARE_DIR/lib" 2>/dev/null \
          && install -m 0644 "$_se_lib_from" "$_se_lib_to.new" 2>/dev/null && mv -f "$_se_lib_to.new" "$_se_lib_to" 2>/dev/null; then
         log "self: converged $_se_lib_to (the shared tracked-red predicate)"
@@ -1224,11 +1290,13 @@ if [ "${PULLSYNC_REEXECED:-}" != 1 ] && [ "$SUPER_FETCH_OK" = 1 ]; then
         _se_from="$_se_src/${_se_pair%%:*}"; _se_to="$BIN_DIR/${_se_pair#*:}"
         [ -f "$_se_from" ] && [ -e "$_se_to" ] || continue
         cmp -s "$_se_from" "$_se_to" && continue
+        cov_allows "scripts/substrate/${_se_pair%%:*}" "$_se_from" || { cov_skip "scripts/substrate/${_se_pair%%:*}"; continue; }
         install -m 0755 "$_se_from" "$_se_to.new" 2>/dev/null && mv -f "$_se_to.new" "$_se_to" 2>/dev/null \
           && log "self: converged $(basename "$_se_to")"
       done
       gate_candidate "${PULLSYNC_GLUE_KEY##*@}"
-    elif [ -f "$_se_src/substrate-pull-sync.sh" ] && ! cmp -s "$_se_src/substrate-pull-sync.sh" "$_se_self"; then
+    elif [ -n "$_se_src" ] && [ -f "$_se_src/substrate-pull-sync.sh" ] && ! cmp -s "$_se_src/substrate-pull-sync.sh" "$_se_self" \
+         && { cov_allows scripts/substrate/substrate-pull-sync.sh "$_se_src/substrate-pull-sync.sh" || { cov_skip scripts/substrate/substrate-pull-sync.sh; false; }; }; then
       if ! _se_syn="$(bash -n "$_se_src/substrate-pull-sync.sh" 2>&1)"; then
         log "self: !!! the committed substrate-pull-sync.sh does not parse — NOT installed; this tick finishes on the running code: $(printf '%s' "$_se_syn" | tr '\n' ' ' | cut -c1-300)"
         emit_gap "$(jq -n -c --arg s "pull-sync refused to install the committed scripts/substrate/substrate-pull-sync.sh because bash -n rejects it: $(printf '%s' "$_se_syn" | tr '\n' ' ' | cut -c1-300). The node keeps converging on its installed copy until a parsing commit lands." \
@@ -1240,6 +1308,7 @@ if [ "${PULLSYNC_REEXECED:-}" != 1 ] && [ "$SUPER_FETCH_OK" = 1 ]; then
           _se_from="$_se_src/${_se_pair%%:*}"; _se_to="$BIN_DIR/${_se_pair#*:}"
           [ -f "$_se_from" ] && [ -e "$_se_to" ] || continue
           cmp -s "$_se_from" "$_se_to" && continue
+          cov_allows "scripts/substrate/${_se_pair%%:*}" "$_se_from" || { cov_skip "scripts/substrate/${_se_pair%%:*}"; continue; }
           install -m 0755 "$_se_from" "$_se_to.new" 2>/dev/null && mv -f "$_se_to.new" "$_se_to" 2>/dev/null \
             && log "self: converged $(basename "$_se_to")"
         done
@@ -1477,6 +1546,7 @@ converge_units() {
     fi
   }
   UNITS_CHANGED=0
+  cov_ready "$_cu_root/scripts/substrate" || return 0
   for uf in "$_cu_root"/scripts/substrate/units/*; do
     [ -e "$uf" ] || continue
     ubase="$(basename "$uf")"
@@ -1487,6 +1557,7 @@ converge_units() {
         [ -f "$cf" ] || continue
         dst="$UNIT_DIR/$ubase/$(basename "$cf")"
         if ! cmp -s "$cf" "$dst" 2>/dev/null; then
+          cov_allows "${cf#"$_cu_root"/}" "$cf" || { cov_skip "${cf#"$_cu_root"/}"; continue; }
           if _cu_miss="$(_cu_envfile_missing "$cf")"; then _cu_refuse "${ubase%.d}" "$ubase/$(basename "$cf")" "$_cu_miss"; continue; fi
           install -m 0644 "$cf" "$dst" 2>/dev/null && { log "units: converged $ubase/$(basename "$cf")"; UNITS_CHANGED=1; }
         fi
@@ -1494,6 +1565,7 @@ converge_units() {
     else
       dst="$UNIT_DIR/$ubase"
       if ! cmp -s "$uf" "$dst" 2>/dev/null; then
+        cov_allows "${uf#"$_cu_root"/}" "$uf" || { cov_skip "${uf#"$_cu_root"/}"; continue; }
         if _cu_miss="$(_cu_envfile_missing "$uf")"; then _cu_refuse "$ubase" "$ubase" "$_cu_miss"; continue; fi
         install -m 0644 "$uf" "$dst" 2>/dev/null && { log "units: converged $ubase"; UNITS_CHANGED=1; }
         # A REAL file in /etc outranks /usr/lib, so the convergence above is
@@ -1605,6 +1677,7 @@ converge_fleet_defs() {
   stage_committed_glue "$_cf_super" || return 0
   _cf_src="$PULLSYNC_GLUE_STAGE/scripts/substrate"
   [ -d "$_cf_src" ] || return 0
+  cov_ready "$_cf_src" || return 0
 
   # Bootstrap-tier scripts entrypoint.sh runs BEFORE systemd. All of them are
   # image copies, so a repo-side fix reached nothing until now.
@@ -1639,6 +1712,7 @@ converge_fleet_defs() {
     IFS=: read -r _cf_from _cf_to _cf_mode <<< "$_cf_pair"
     [ -f "$_cf_src/$_cf_from" ] || continue
     cmp -s "$_cf_src/$_cf_from" "$_cf_to" 2>/dev/null && continue
+    cov_allows "scripts/substrate/$_cf_from" "$_cf_src/$_cf_from" || { cov_skip "scripts/substrate/$_cf_from"; continue; }
     install -m "$_cf_mode" "$_cf_src/$_cf_from" "$_cf_to.new" 2>/dev/null \
       && mv -f "$_cf_to.new" "$_cf_to" 2>/dev/null \
       && log "fleet: converged $(basename "$_cf_to") (gen-env dependency; read at the next boot and by unit convergence)"
@@ -1657,6 +1731,7 @@ converge_fleet_defs() {
     [ -f "$_cf_src/$_cf_from" ] || continue
     [ -e "$_cf_to" ] || continue   # not installed on this image; do not invent it
     cmp -s "$_cf_src/$_cf_from" "$_cf_to" 2>/dev/null && continue
+    cov_allows "scripts/substrate/$_cf_from" "$_cf_src/$_cf_from" || { cov_skip "scripts/substrate/$_cf_from"; continue; }
     # SAY WHEN IT ACTUALLY TAKES EFFECT, and that differs per script.
     #
     # This message read "takes effect at next container start — this runs
@@ -1704,7 +1779,8 @@ converge_fleet_defs() {
   # keeps this function self-sufficient for callers that run it alone.
   _ps_src="$_cf_src/substrate-pull-sync.sh"
   _ps_dst="$BIN_DIR/substrate-pull-sync"
-  if [ -f "$_ps_src" ] && [ -e "$_ps_dst" ] && ! cmp -s "$_ps_src" "$_ps_dst" 2>/dev/null; then
+  if [ -f "$_ps_src" ] && [ -e "$_ps_dst" ] && ! cmp -s "$_ps_src" "$_ps_dst" 2>/dev/null \
+     && { cov_allows scripts/substrate/substrate-pull-sync.sh "$_ps_src" || { cov_skip scripts/substrate/substrate-pull-sync.sh; false; }; }; then
     install -m 0755 "$_ps_src" "$_ps_dst.new" 2>/dev/null \
       && mv -f "$_ps_dst.new" "$_ps_dst" 2>/dev/null \
       && log "fleet: converged substrate-pull-sync itself (takes effect on the NEXT tick — this run finishes on the old code)"
@@ -1730,6 +1806,7 @@ converge_fleet_defs() {
   do
     [ -f "$_cf_src/secrets.env.sh" ] && [ -f "$_cf_img" ] || continue
     cmp -s "$_cf_src/secrets.env.sh" "$_cf_img" 2>/dev/null && continue
+    cov_allows scripts/substrate/secrets.env.sh "$_cf_src/secrets.env.sh" || { cov_skip scripts/substrate/secrets.env.sh; continue; }
     install -m 0755 "$_cf_src/secrets.env.sh" "$_cf_img.new" 2>/dev/null \
       && mv -f "$_cf_img.new" "$_cf_img" 2>/dev/null \
       && log "fleet: converged $_cf_img (persisted-secret writer)"
@@ -1742,6 +1819,9 @@ converge_fleet_defs() {
     _cf_live="$_cf_dir/$f"
     _cf_mark="$_cf_dir/.$f.converged"
     [ -f "$_cf_git" ] || continue
+    # An absent copy is seeded by entrypoint from the image at boot; only a covered definition converges from git.
+    if ! cmp -s "$_cf_git" "$_cf_live" 2>/dev/null && ! cov_allows "scripts/substrate/$f" "$_cf_git"; then
+      cov_skip "scripts/substrate/$f (fleet definition in $_cf_dir)"; continue; fi
     if [ ! -f "$_cf_live" ]; then
       install -m 0644 "$_cf_git" "$_cf_live" 2>/dev/null && cp -f "$_cf_git" "$_cf_mark" 2>/dev/null \
         && log "fleet: installed $f from git (was absent)"
@@ -4804,12 +4884,21 @@ if [ "$SUPER_FETCH_OK" = 1 ]; then
       # Reseed the active-scripts run-dir from the STAGE, whose gate paths are the accepted copies: units run
       # their tick scripts from here, never from the clone (whose HEAD is an unjudged candidate). Besides the
       # .ts, the one shell script a unit runs from here and what it reads beside itself.
-      [ "$_sg_ok" = 1 ] && { cp -f "$_sg_src"/*.ts /workspace/active-scripts/ 2>/dev/null
-        for _rd_x in memory-budget-check.sh vessels.inventory.json; do
-          [ -f "$_sg_src/$_rd_x" ] && cp -f "$_sg_src/$_rd_x" /workspace/active-scripts/ 2>/dev/null; done
-        # units/ beside it too: memory-budget-check enumerates the substrate's units from $(dirname "$0")/units,
-        # and without it falls back to every unit in /usr/lib/systemd/system. Swapped whole, so a removed unit goes.
-        [ -d "$_sg_src/units" ] && rm -rf /workspace/active-scripts/units.new \
+      # Each file only if the coverage map says behaviour on this blob (1.3); an uncovered file keeps the copy the
+      # boot seed took from the image. units/ (a listing memory-budget-check reads) follows the unit files: it is
+      # reseeded only when every unit file there is covered, so it never runs ahead of /usr/lib/systemd/system.
+      [ "$_sg_ok" = 1 ] && cov_ready "$_sg_src" && {
+        for _rd_f in "$_sg_src"/*.ts "$_sg_src/memory-budget-check.sh" "$_sg_src/vessels.inventory.json"; do
+          [ -f "$_rd_f" ] || continue
+          cmp -s "$_rd_f" "/workspace/active-scripts/$(basename "$_rd_f")" 2>/dev/null && continue
+          cov_allows "scripts/substrate/$(basename "$_rd_f")" "$_rd_f" || { cov_skip "scripts/substrate/$(basename "$_rd_f") (active-scripts)"; continue; }
+          cp -f "$_rd_f" /workspace/active-scripts/ 2>/dev/null
+        done
+        _rd_all=1
+        for _rd_u in $(find "$_sg_src/units" -type f 2>/dev/null); do
+          cov_allows "scripts/substrate/${_rd_u#"$_sg_src"/}" "$_rd_u" || { _rd_all=0; break; }
+        done
+        [ "$_rd_all" = 1 ] && [ -d "$_sg_src/units" ] && rm -rf /workspace/active-scripts/units.new \
           && cp -r "$_sg_src/units" /workspace/active-scripts/units.new \
           && rm -rf /workspace/active-scripts/units && mv /workspace/active-scripts/units.new /workspace/active-scripts/units; } || true
       # SUPER-REPO-HOSTED VESSELS — the last thing a convergence changes on disk
@@ -4910,7 +4999,9 @@ fi
 # runner is bootstrap tier: image, or this path on a node not yet bootstrapped.
 if [ -z "$PULLSYNC_ACCEPTED_DIR" ] && [ "$SUPER_FETCH_OK" = 1 ] && stage_committed_glue "${SUPER_REPO_DIR:-/workspace/git/super-repo}"; then
   _gr_src="$PULLSYNC_GLUE_STAGE/scripts/substrate/gate/gate-runner.sh"
-  if [ -f "$_gr_src" ] && ! cmp -s "$_gr_src" "$GATE_LIBEXEC_DIR/gate-runner" 2>/dev/null; then
+  if [ -f "$_gr_src" ] && ! cmp -s "$_gr_src" "$GATE_LIBEXEC_DIR/gate-runner" 2>/dev/null \
+     && cov_ready "$PULLSYNC_GLUE_STAGE/scripts/substrate" \
+     && { cov_allows scripts/substrate/gate/gate-runner.sh "$_gr_src" || { cov_skip scripts/substrate/gate/gate-runner.sh; false; }; }; then
     if _gr_syn="$(sh -n "$_gr_src" 2>&1)" && mkdir -p "$GATE_LIBEXEC_DIR" 2>/dev/null \
        && install -m 0755 "$_gr_src" "$GATE_LIBEXEC_DIR/.gate-runner.new" 2>/dev/null \
        && mv -f "$GATE_LIBEXEC_DIR/.gate-runner.new" "$GATE_LIBEXEC_DIR/gate-runner" 2>/dev/null; then
@@ -4985,7 +5076,7 @@ while IFS='|' read -r gv gq gh gd; do
   rm -rf "$gq"
 done <<< "$GEN_QUEUE"
 
-log "done — synced=$synced skipped=$skipped deferred=$deferred failed=$failed link_audit=ok:$LA_OK/relinked:$LA_RELINKED/deferred:$LA_DEFERRED/refused:$LA_REFUSED/absent:$LA_ABSENT"
+log "done — synced=$synced skipped=$skipped deferred=$deferred failed=$failed coverage_skipped=$COV_SKIPPED coverage_map=$COV_STATE link_audit=ok:$LA_OK/relinked:$LA_RELINKED/deferred:$LA_DEFERRED/refused:$LA_REFUSED/absent:$LA_ABSENT"
 
 # EXIT NON-ZERO WHEN SOMETHING FAILED.
 #

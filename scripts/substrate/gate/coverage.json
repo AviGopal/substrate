@@ -1,5 +1,5 @@
 {
-  "_doc": "Tier A coverage map (in-place-image-convergence 1.2). One entry per tier A destination of image-files.manifest. level behaviour: committing the evidence mutation of src makes the named accepted fixture(s) FAIL in gate/shadow-eval.sh; parse: only a syntax mutation does; none: no fixture fails. A tooling path converges in place only at level behaviour with src inside gate_paths; everything else is converged by the image. reason for none: outside-gate-paths (src is not a gate path), converges-today-uncovered (pull-sync installs it today with no fixture; listed in converges_today_exempt), unreached (baked only). src_blob is the git blob the proof ran on; a live src blob that differs means the proof is older than the code and must be re-earned. Kept consistent by validation/scripts/image-coverage-map.test.sh; proofs re-run by image-coverage-map.check.sh. A parse entry under the units dir converges in place today without a behaviour proof, so it is listed in converges_today_exempt too (debt, dated): for a unit file the exit-99 mutation is a syntax mutation, and only a semantic mutant failing a fixture earns behaviour.",
+  "_doc": "Tier A coverage map (in-place-image-convergence 1.2). One entry per tier A destination of image-files.manifest. level behaviour: committing the evidence mutation of src makes the named accepted fixture(s) FAIL in gate/shadow-eval.sh; parse: only a syntax mutation does; none: no fixture fails. pull-sync (in-place-image-convergence 1.3) installs a tooling path in place only at level behaviour and only when the staged blob equals src_blob, or while it is listed in an unexpired converges_today_exempt (through its expires day, UTC); everything else stays as baked and is converged by the image. reason for none: outside-gate-paths (src is not a gate path), converges-today-uncovered (pull-sync installs it today with no fixture; listed in converges_today_exempt), unreached (baked only). src_blob is the git blob the proof ran on; a live src blob that differs means the proof is older than the code: for a behaviour entry that freezes the path, so image-coverage-map.test.sh fails on it; refresh the hashes with validation/scripts/coverage-refresh-behaviour-blobs.sh --write and re-earn the proof with image-coverage-map.check.sh in the same commit. Kept consistent by validation/scripts/image-coverage-map.test.sh; proofs re-run by image-coverage-map.check.sh. A parse entry under the units dir converges in place today without a behaviour proof, so it is listed in converges_today_exempt too (debt, dated): for a unit file the exit-99 mutation is a syntax mutation, and only a semantic mutant failing a fixture earns behaviour.",
   "converges_today_exempt": {
     "reason": "converges today; gated as fixtures earn coverage",
     "owner_gap": "tooling-paths-converge-in-place-with-no-fixture-that-exercises-them",
@@ -3196,7 +3196,7 @@
     },
     "/usr/local/bin/substrate-pull-sync": {
       "src": "scripts/substrate/substrate-pull-sync.sh",
-      "src_blob": "9fd7958cf572a64b5aaa9ea7f30ffd7d7d344ab3",
+      "src_blob": "43cb36c9c9635d7e7565c2d6afb1815fa6ad5a79",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -3205,7 +3205,7 @@
       "evidence": {
         "accepted": "ac413feeaa16e68dde1a169a9d7748fd28d95ce8",
         "mutation": "insert `exit 99` after line 1",
-        "mutated_blob": "3f0c6383dcb1475fa07972f6ab73fa20b2ac4042"
+        "mutated_blob": "e9b4ceb69fd364a75e316d83b79fe6260354e1d3"
       }
     },
     "/usr/local/bin/substrate-ready": {
@@ -3896,7 +3896,7 @@
     },
     "/usr/local/share/substrate/lib/gap-tracked-red.sh": {
       "src": "scripts/substrate/lib/gap-tracked-red.sh",
-      "src_blob": "6181a325969e3e504491d01991b96622a6a47378",
+      "src_blob": "32e323df4ef7189484fe2d8ff19928ab68a8a91f",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -3905,7 +3905,7 @@
       "evidence": {
         "accepted": "ac413feeaa16e68dde1a169a9d7748fd28d95ce8",
         "mutation": "insert `exit 99` after line 1",
-        "mutated_blob": "5b082685cfdb15aedcc47898d741dc840e2dcba3"
+        "mutated_blob": "7b527461cc3ce6bd85ef5c0cef80e6ef5ddfac32"
       }
     },
     "/usr/local/share/substrate/secrets.env.sh": {

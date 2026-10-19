@@ -100,7 +100,7 @@ done
 for rec in units_exempt converges_today_exempt; do
   exp=$(jq -r --arg k "$rec" '.[$k].expires // empty' "$CM")
   if [ -z "$exp" ]; then ok "no $rec record to expire"
-  elif [[ "$(date -u +%F)" > "$exp" ]]; then bad "$rec has not expired ($exp; owner $(jq -r --arg k "$rec" '.[$k].owner_gap' "$CM"))"
+  elif [[ "$(date -u +%F)" > "$exp" ]]; then bad "$rec expired on $exp (owner $(jq -r --arg k "$rec" '.[$k].owner_gap' "$CM"))"
   else ok "$rec has not expired ($exp)"; fi
 done
 done_tests

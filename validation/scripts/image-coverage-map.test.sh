@@ -99,9 +99,16 @@ while IFS=$'\t' read -r dst level reason _ _; do
 done < "$T/rows"
 [ "$rs_bad" = 0 ] && ok "every reason matches gate_paths and the installer set" || bad "every reason matches gate_paths and the installer set"
 
-# 4. Report (not fail) proofs older than the code they were earned on.
-jq -r '.paths|to_entries[]|select(.value.level!="none")|"\(.value.src)\t\(.value.src_blob)"' "$CM" | while IFS=$'\t' read -r src blob; do
-  [ -f "$ROOT/$src" ] && [ "$(git hash-object "$ROOT/$src")" != "$blob" ] && echo "  coverage evidence older than src: $src (re-run image-coverage-map.check.sh)"
-done
+# 4. A BEHAVIOUR proof older than its code freezes that path (pull-sync installs it only on the blob its proof ran
+#    on, in-place-image-convergence 1.3), so it fails here: refresh the hashes with coverage-refresh-behaviour-blobs.sh
+#    --write and re-earn the claim with image-coverage-map.check.sh in the same commit. A stale parse proof is reported.
+stale_b=0
+while IFS=$'\t' read -r src blob level; do
+  [ -f "$ROOT/$src" ] || continue
+  [ "$(git hash-object "$ROOT/$src")" = "$blob" ] && continue
+  if [ "$level" = behaviour ]; then echo "  behaviour proof older than src: $src (pull-sync will not install it; re-earn it)"; stale_b=1
+  else echo "  coverage evidence older than src: $src (re-run image-coverage-map.check.sh)"; fi
+done < <(jq -r '.paths|to_entries[]|select(.value.level!="none")|"\(.value.src)\t\(.value.src_blob)\t\(.value.level)"' "$CM")
+[ "$stale_b" = 0 ] && ok "every behaviour proof was earned on the current src blob" || bad "a behaviour proof is older than its src (1.3 leaves that path baked)"
 echo "tier A: $(wc -l < "$T/rows") paths; $(jq '[.paths[]|select(.level=="behaviour")]|length' "$CM") behaviour, $(jq '[.paths[]|select(.level=="parse")]|length' "$CM") parse, $(jq '[.paths[]|select(.level=="none")]|length' "$CM") none"
 done_tests

@@ -70,7 +70,10 @@ if [ "${1:-}" = --print-manifest ]; then manifest_lines; exit 0; fi
   # units converge from scripts/substrate/units into $UNIT_DIR (whole tree)
   lsf scripts/substrate/units | sed "s#^#$UNITS/#"
   # active-scripts: the image copy is the boot seed of /workspace/active-scripts, which pull-sync refreshes
-  grep -q 'cp -f "\$_sg_src"/\*.ts /workspace/active-scripts/' "$PS" && grep "^$SHARE/active-scripts/" "$T/baked"
+  # (since 1.3 a per-file loop over the stage's .ts and the two files beside them, each one coverage-gated)
+  { grep -q 'cp -f "\$_sg_src"/\*.ts /workspace/active-scripts/' "$PS" \
+    || grep -qF 'for _rd_f in "$_sg_src"/*.ts "$_sg_src/memory-budget-check.sh" "$_sg_src/vessels.inventory.json"; do' "$PS"; } \
+    && grep "^$SHARE/active-scripts/" "$T/baked"
   # the fleet definition converges into the volume (FLEET_DIR); the image copy is its fallback
   if grep -q '_cf_dir="\${FLEET_DIR:-/workspace/substrate/fleet}"' "$PS"; then
     echo "$SHARE/vessels.inventory.json"; echo "$SHARE/vessels.manifest.json"

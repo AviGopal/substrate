@@ -28,6 +28,7 @@ FAILS=0
 ok()  { echo "ok   - $*"; }
 bad() { echo "FAIL - $*"; FAILS=$((FAILS+1)); }
 g() { git -C "$1" -c user.name=t -c user.email=t@t "${@:2}" >/dev/null 2>&1; }
+. "$(cd "$(dirname "$0")" && pwd)/lib/coverage-all-behaviour.sh"
 show() { sed 's/^/    /' "$T/out.txt" | tail -20; }
 
 # The script under test, fixed paths moved into the temp tree. It runs from $T/ps/, so the
@@ -81,7 +82,7 @@ EOF
   mkdir -p "$T/seed/super/scripts/substrate"
   cp "$T/ps/substrate-pull-sync.sh" "$T/seed/super/scripts/substrate/substrate-pull-sync.sh"
   [ "$2" = 1 ] && { mkdir -p "$T/seed/super/scripts/substrate/lib"; cp "$LIB" "$T/seed/super/scripts/substrate/lib/"; }
-  git -C "$T/seed/super" init -q -b dev; g "$T/seed/super" add -A; g "$T/seed/super" commit -m base
+  cov_all "$T/seed/super"; git -C "$T/seed/super" init -q -b dev; g "$T/seed/super" add -A; g "$T/seed/super" commit -m base
   g "$T/seed/super" remote add origin "$T/o/super.git"; g "$T/seed/super" push origin dev
   git clone -q --branch dev "$T/o/super.git" "$T/ws/git/super-repo"
   git -C "$T/ws/git/super-repo" rev-parse HEAD > "$T/ws/.pull-sync/super-repo.sha"

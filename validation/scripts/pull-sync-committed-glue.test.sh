@@ -21,6 +21,7 @@ same() { cmp -s "$1" "$2" && ok "$3" || bad "$3"; }
 export PULLSYNC_UNIT_DIR="$T/dst/unit" PULLSYNC_BIN_DIR="$T/dst/bin" PULLSYNC_SHARE_DIR="$T/dst/share" FLEET_DIR="$T/dst/fleet"
 mkdir -p "$PULLSYNC_UNIT_DIR" "$PULLSYNC_BIN_DIR" "$PULLSYNC_SHARE_DIR"
 {
+  sed -n '/^COV_STATE=unloaded;/,/^cov_skip() {.*}$/p' "$SCRIPT"   # the coverage gate the installs ask (1.3)
   awk '/^# INSTALL ONLY WHAT IS COMMITTED\./{on=1} on{print} on && /^stage_committed_glue\(\) \{/{f=1} f && /^}/{exit}' "$SCRIPT"
   sed -n '/^converge_units() {/,/^}/p' "$SCRIPT"
   sed -n '/^converge_fleet_defs() {/,/^}/p' "$SCRIPT"
@@ -35,6 +36,7 @@ source "$T/fns.sh"
 trap 'rm -rf "$T"' EXIT   # the sourced block may install its own EXIT trap
 
 g() { git -C "$1" -c user.name=t -c user.email=t@t "${@:2}" >/dev/null 2>&1; }
+. "$(cd "$(dirname "$0")" && pwd)/lib/coverage-all-behaviour.sh"
 COMMITTED_PS='#!/usr/bin/env bash
 echo committed pull-sync'
 mk_super() { # dir
@@ -42,7 +44,7 @@ mk_super() { # dir
   printf '%s\n' "$COMMITTED_PS" > "$1/scripts/substrate/substrate-pull-sync.sh"
   printf 'echo committed gen-env\n' > "$1/scripts/substrate/gen-env.sh"
   printf '[Unit]\nDescription=committed\n' > "$1/scripts/substrate/units/foo.service"
-  git -C "$1" init -q -b dev; g "$1" add -A; g "$1" commit -m base
+  cov_all "$1"; git -C "$1" init -q -b dev; g "$1" add -A; g "$1" commit -m base
 }
 reset_dst() { rm -rf "$T/dst"; mkdir -p "$PULLSYNC_UNIT_DIR" "$PULLSYNC_BIN_DIR" "$PULLSYNC_SHARE_DIR"; echo old > "$PULLSYNC_BIN_DIR/substrate-pull-sync"; echo old > "$PULLSYNC_BIN_DIR/gen-env"; : > "$GAPS"; : > "$LOG"; }
 
@@ -64,7 +66,7 @@ grep -q 'UNCOMMITTED' "$S/scripts/substrate/substrate-pull-sync.sh" && ok "the w
 # ── 2. a local commit origin does not have is not a landing ─────────────────────
 O="$T/origin.git"; git init -q --bare "$O"; S2="$T/super2"; mk_super "$S2"
 g "$S2" remote add origin "$O"; g "$S2" push origin dev; g "$S2" fetch origin; reset_dst
-printf 'echo LOCAL-COMMIT gen-env\n' > "$S2/scripts/substrate/gen-env.sh"; g "$S2" commit -am local
+printf 'echo LOCAL-COMMIT gen-env\n' > "$S2/scripts/substrate/gen-env.sh"; cov_all "$S2"; g "$S2" commit -am local
 converge_fleet_defs "$S2"
 grep -q 'LOCAL-COMMIT' "$PULLSYNC_BIN_DIR/gen-env" && bad "an unpushed local commit was installed" || ok "an unpushed local commit is not installed"
 grep -q 'committed gen-env' "$PULLSYNC_BIN_DIR/gen-env" && ok "origin/dev's copy is installed instead" || bad "origin/dev's copy was not installed"

@@ -30,6 +30,7 @@ FAILS=0
 ok()  { echo "ok   - $*"; }
 bad() { echo "FAIL - $*"; FAILS=$((FAILS+1)); }
 g() { git -C "$1" -c user.name=t -c user.email=t@t "${@:2}" >/dev/null 2>&1; }
+. "$(cd "$(dirname "$0")" && pwd)/lib/coverage-all-behaviour.sh"
 show() { sed 's/^/    /' "$T/out.txt" | tail -25; }
 
 # ── NEW = the script under test with its fixed paths moved into the temp tree ──
@@ -74,7 +75,7 @@ setup() {
   git init -q --bare "$T/o/super.git"; git -C "$T/o/super.git" symbolic-ref HEAD refs/heads/dev
   mkdir -p "$T/seed/super/scripts/substrate/units"
   cp "$T/old.sh" "$T/seed/super/scripts/substrate/substrate-pull-sync.sh"
-  git -C "$T/seed/super" init -q -b dev; g "$T/seed/super" add -A; g "$T/seed/super" commit -m base
+  cov_all "$T/seed/super"; git -C "$T/seed/super" init -q -b dev; g "$T/seed/super" add -A; g "$T/seed/super" commit -m base
   g "$T/seed/super" remote add origin "$T/o/super.git"; g "$T/seed/super" push origin dev
   SBASE="$(git -C "$T/seed/super" rev-parse HEAD)"
   git clone -q --branch dev "$T/o/super.git" "$T/ws/git/super-repo"
@@ -91,7 +92,7 @@ EOF
     "$T/etc/env" "$T/etc/env.d/new.env" > "$T/seed/super/scripts/substrate/units/new.service"
   printf '[Unit]\nDescription=optional\n[Service]\nEnvironmentFile=-%s\nExecStart=/bin/true\n' \
     "$T/etc/env.d/optional.env" > "$T/seed/super/scripts/substrate/units/optional.service"
-  g "$T/seed/super" add -A; g "$T/seed/super" commit -m advance; g "$T/seed/super" push origin dev
+  cov_all "$T/seed/super"; g "$T/seed/super" add -A; g "$T/seed/super" commit -m advance; g "$T/seed/super" push origin dev
   SNEW="$(git -C "$T/seed/super" rev-parse HEAD)"
   # the node runs the OLD pull-sync, installed where systemd's ExecStart names it
   install -m 0755 "$T/old.sh" "$T/bin/substrate-pull-sync"

@@ -11,9 +11,12 @@
 #                     pre-gate pull-sync only while the gate was never bootstrapped
 # usage: validation/scripts/gate-j9-no-self-exec.test.sh   (bash, git, jq, flock; no root)
 source "$(dirname "$0")/lib/gate-test-lib.sh"
+# pull-sync installs a unit only when the coverage map proves it (in-place-image-convergence 1.3); this test is about
+# which copy is installed, so every seed file is stated covered right before each commit.
+source "$(dirname "$0")/lib/coverage-all-behaviour.sh"
 gt_live
 mkdir -p "$T/seed/scripts/substrate/units/vessel.d"; printf '[Service]\n# accepted\n' > "$T/seed/scripts/substrate/units/vessel.d/10-x.conf"
-A0="$(gt_push "the accepted pull-sync")"
+cov_all "$T/seed"; A0="$(gt_push "the accepted pull-sync")"
 gt_live_converged
 tick() { gt_live_tick; }
 tick
@@ -24,7 +27,7 @@ PUSHED="$T/pushed.sh"
 cp "$PUSHED" "$T/seed/scripts/substrate/substrate-pull-sync.sh"
 printf '[Service]\n# candidate loosening\n' > "$T/seed/scripts/substrate/units/vessel.d/10-x.conf"
 printf '[Service]\nExecStart=/bin/true\n' > "$T/seed/scripts/substrate/units/plain.service"
-g "$T/seed" add -A; g "$T/seed" commit -am "lane-pushed pull-sync"; g "$T/seed" push origin dev; C="$(git -C "$T/seed" rev-parse HEAD)"
+cov_all "$T/seed"; g "$T/seed" add -A; g "$T/seed" commit -am "lane-pushed pull-sync"; g "$T/seed" push origin dev; C="$(git -C "$T/seed" rev-parse HEAD)"
 tick
 [ "$RC" = 0 ] && ok "tick with a pushed pull-sync exits 0" || { bad "exit $RC"; show; }
 [ "$(git -C "$T/super" rev-parse HEAD)" = "$C" ] && ok "the clone fetched and fast-forwarded to the pushed commit" || bad "the clone did not advance (fixture does not replay)"
