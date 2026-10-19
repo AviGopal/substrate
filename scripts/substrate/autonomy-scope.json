@@ -110,7 +110,10 @@
       "repos/goal-host-vessel/src/operator-credential.ts",
       "repos/goal-host-vessel/test/oracle-label-principal.test.ts",
       "repos/goal-host-vessel/test/operator-credential-forwarding.test.ts",
-      "repos/relevance-sink-vessel/src/index.ts"
+      "repos/relevance-sink-vessel/src/index.ts",
+      ".claude/",
+      "repos/goal-host-vessel/test/judge-consistency/verdict-consistency.test.ts",
+      "repos/goal-host-vessel/test/judge-consistency/heldout.test.ts"
     ],
     "require_falsifier_classes": [
       "class2"
@@ -125,7 +128,7 @@
       "node": "c951b44f4a99",
       "id": "autonomy-scope",
       "updated_at": "2026-10-01T11:11:30.475Z",
-      "edited": "2026-10-16: repos/goal-host-vessel/src/index.ts removed from excluded_paths under the user ruling of 2026-10-16T06:20:10Z (fleet-wide: the lane may land on goal-host src/index.ts; the landing gate is its guard). Otherwise as copied from the record above."
+      "edited": "2026-10-16: repos/goal-host-vessel/src/index.ts removed from excluded_paths under the user ruling of 2026-10-16T06:20:10Z (fleet-wide: the lane may land on goal-host src/index.ts; the landing gate is its guard). Otherwise as copied from the record above. 2026-10-19: \".claude/\", \"repos/goal-host-vessel/test/judge-consistency/verdict-consistency.test.ts\" and \"repos/goal-host-vessel/test/judge-consistency/heldout.test.ts\" added under the user ruling \"Contain .claude/ first\" (DIRECT, 2026-10-19 ~20:0xZ): hook bodies run from origin/dev, so .claude/ must be outside the lane; the two judge-consistency tests were protected only by the directory entry repos/goal-host-vessel/test/judge-consistency/ in the node records and become exact entries so protected-alone runs measure them (JC tighten); the same act corrects one node's pinned value in self-facts.json to its live record (drops composer-interruption-sweep.ts, an expired 2026-10-18 hold; user ruling 2026-10-19 ~20:3xZ, \"Drop it from the pin\")."
     },
     "spendEnvelope": {
       "node": "c951b44f4a99",
