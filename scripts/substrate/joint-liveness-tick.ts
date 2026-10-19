@@ -21,6 +21,8 @@
  * new reader→table dependency is wired; the binding list IS the shaped dependency
  * graph the walk cannot yet see.
  */
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 const NS = process.env.SURREALDB_NAMESPACE || "activity-system";
 const DB = process.env.SURREALDB_DATABASE || "learning_loop";
@@ -30,6 +32,8 @@ const SQL_URL = (process.env.SURREALDB_URL || "http://127.0.0.1:8000").replace(/
 const DEV = process.env.DEV_VESSEL_ENDPOINT || process.env.DEVELOPMENT_VESSEL_URL || "http://127.0.0.1:8090";
 const KEY = process.env.SUBSTRATE_ADMIN_KEY || process.env.METABOB_API_KEY || "";
 const sqlAuth = "Basic " + Buffer.from(`${USER}:${PASS}`).toString("base64");
+// The running vessel tree the gap evaluator reads an edit site on (development-vessel lib/evaluator-tree.ts default).
+const VESSEL_TREE = "/vessels";
 
 // Fleet-idle guard: if the newest execution is older than this, the fleet is
 // simply idle and a stale reader-table is not evidence of a severed joint.
@@ -69,9 +73,9 @@ async function newestOf(table: string, timeCol: string): Promise<number | null> 
   return Number.isNaN(t) ? null : t;
 }
 
-async function emitGap(id: string, category: string, summary: string): Promise<void> {
+async function emitGap(id: string, category: string, summary: string, meta?: Record<string, unknown>): Promise<void> {
   const body = JSON.stringify({
-    impulse: { pointer: { type: "substrateGap_write", gap: { id, category, source: "joint_liveness_detector", summary, status: "open" } } },
+    impulse: { pointer: { type: "substrateGap_write", gap: { id, category, source: "joint_liveness_detector", summary, status: "open", ...(meta ? { classification_metadata: meta } : {}) } } },
   });
   const r = await fetch(`${DEV}/v2/impulses/resolve`, {
     method: "POST",
@@ -94,11 +98,12 @@ async function emitGap(id: string, category: string, summary: string): Promise<v
 //   discovery_registered { vesselIds }            — each named vessel must be in the discovery registry
 //   discovery_health     {}                       — every registered endpoint must answer /health
 type Cond = { path: string; op: "exists" | "missing" | "older_than_sec"; value?: number };
-type JointBinding =
+// Every kind may declare `severity` (the joint's weight); the filed row carries it as declared, or says it is unset.
+type JointBinding = { severity?: string } & (
   | { name: string; kind: "sql_newest"; sql: string; maxLagSec: number; reader: string }
   | { name: string; kind: "gap_count"; where: Cond[]; min?: number; max?: number; reader: string }
   | { name: string; kind: "discovery_registered"; vesselIds: string[]; reader: string }
-  | { name: string; kind: "discovery_health"; reader: string };
+  | { name: string; kind: "discovery_health"; reader: string });
 
 async function resolveShape(pointer: Record<string, unknown>): Promise<any> {
   const r = await fetch(`${DEV}/v2/impulses/resolve`, {
@@ -147,8 +152,78 @@ async function registry(): Promise<Array<{ vesselId?: string; endpoint?: string 
   return registryCache;
 }
 
+/** The named vessels with no registry row of that exact id, sorted. Pure. */
+export function missingRegistrations(vesselIds: readonly string[], registryIds: readonly string[]): string[] {
+  const ids = new Set(registryIds);
+  return [...new Set(vesselIds)].filter((id) => !ids.has(id)).sort();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ARMING (2026-10-19). Every severed row used to be filed with no check, no edit site and no severity, so under
+// containment admission returned needs_information for all of them (it admits only a class-2 falsifier that names a
+// measured field): the ribosome's registration failure was seen early and correctly, and stayed inadmissible for
+// weeks. A detector-filed row now carries the check the detector measured. For a registration joint that is the
+// arming development-vessel's substrate_health_tick already gives its unregistered-vessel rows (unregisteredGapWrite):
+// a class-2 evidence_resolve over discovery_vessel_registry_observer with vessel_ids, whose top-level missing_count
+// the judge reads as a zero_field (the observer's declared response contract), re-measured on every read. It is
+// armed only when that live read just returned a number > 0, so the check is born present; otherwise the row says why
+// in `arming_skipped`. No instrument returns the reading of the other kinds as a top-level field yet, so their rows
+// carry the reading and say so (the class rule's needs_information fallback).
+// ─────────────────────────────────────────────────────────────────────────────
+export const REGISTRY_OBSERVER = "discovery_vessel_registry_observer";
+export const REGISTRATION_LOOP_LITERAL = "new DiscoveryRegistrationLoop(";
+
+/**
+ * The file that builds the registration a vessel sends, where that is derivable: repos/<repo>/src/index.ts when it
+ * constructs the shared DiscoveryRegistrationLoop there, read on the running vessel tree under `root` (the rule
+ * development-vessel's registrationEditSite applies). Otherwise the reason it is not. Pure but for the file read.
+ */
+export function registrationEditSite(repo: string, root: string): { edit_site: string } | { edit_site_unset_reason: string } {
+  const site = `repos/${repo}/src/index.ts`;
+  let text: string;
+  try { text = readFileSync(join(root, repo, "src", "index.ts"), "utf8"); } catch {
+    return { edit_site_unset_reason: `${site} is not on the vessel tree (${root})` };
+  }
+  return text.includes(REGISTRATION_LOOP_LITERAL) ? { edit_site: site } : { edit_site_unset_reason: `${site} does not construct the shared DiscoveryRegistrationLoop` };
+}
+
+/**
+ * The classification_metadata a severed joint's row is filed with. `missing` is the registration joint's unregistered
+ * vessels (null for every other kind); `armRead` the observer's live missing_count for exactly those vessels. Pure.
+ */
+export function severedJointMeta(a: {
+  name: string; kind: string; reader: string; reading: string; severity?: unknown;
+  missing: string[] | null; armRead: number | null;
+  editSite: { edit_site: string } | { edit_site_unset_reason: string } | null;
+}): Record<string, unknown> {
+  const armed = a.missing !== null && a.missing.length > 0 && typeof a.armRead === "number" && a.armRead > 0;
+  return {
+    detector: "joint_liveness_detector",
+    joint: a.name,
+    joint_kind: a.kind,
+    reader: a.reader,
+    reading: a.reading,
+    ...(armed
+      ? { evidence_resolve: { shape: REGISTRY_OBSERVER, input: { vessel_ids: a.missing }, zero_field: "missing_count" } }
+      : {
+        arming_skipped: a.missing !== null
+          ? `the live ${REGISTRY_OBSERVER} read for ${a.missing.join(", ") || "(none)"} returned missing_count ${a.armRead === null ? "unmeasured" : a.armRead}, not > 0, so the check would not be born present`
+          : `no instrument returns a ${a.kind} joint's reading as a top-level field, so no check can be armed; the reading is attached`,
+      }),
+    ...(a.editSite ?? { edit_site_unset_reason: a.missing !== null ? `${a.missing.length} vessels unregistered, not one` : `a ${a.kind} joint names no registration call site` }),
+    ...(typeof a.severity === "string" && a.severity.trim() !== "" ? { severity: a.severity } : { severity_unset_reason: "the joint binding declares no severity" }),
+  };
+}
+
+/** The arming instrument read live: the observer's missing_count for `vessels`, null when it is not a number. */
+async function armRead(vessels: string[]): Promise<number | null> {
+  const j = await resolveShape({ type: REGISTRY_OBSERVER, vessel_ids: vessels });
+  const n = (j?.body ?? j?.content)?.missing_count;
+  return typeof n === "number" && Number.isFinite(n) ? n : null;
+}
+
 /** Evaluate one registered joint. Returns null when healthy, else the severed detail. Throws if unreadable. */
-async function evaluate(b: JointBinding, newestExec: number, nowMs: number): Promise<string | null> {
+export async function evaluate(b: JointBinding, newestExec: number, nowMs: number, reg: typeof registry = registry): Promise<string | null> {
   if (b.kind === "sql_newest") {
     const rows = await sql<{ t?: number }>(b.sql);
     const t = typeof rows?.[0]?.t === "number" ? (rows[0]!.t as number) * 1000 : null;
@@ -169,8 +244,7 @@ async function evaluate(b: JointBinding, newestExec: number, nowMs: number): Pro
     return null;
   }
   if (b.kind === "discovery_registered") {
-    const ids = new Set((await registry()).map((v) => String(v.vesselId ?? "")));
-    const missing = b.vesselIds.filter((id) => !ids.has(id));
+    const missing = missingRegistrations(b.vesselIds, (await reg()).map((v) => String(v.vesselId ?? "")));
     return missing.length ? `not registered in discovery: ${missing.join(", ")}` : null;
   }
   if (b.kind === "discovery_health") {
@@ -226,10 +300,12 @@ async function main() {
     const lagSec = newestX == null ? Infinity : (newestExec - newestX) / 1000;
     if (lagSec > b.maxLagSec) {
       severed++;
+      const reading = `newest ${b.table}.${b.timeCol} lags live execution by ${newestX == null ? "∞ (empty)" : Math.round(lagSec) + "s"} (allowed ${b.maxLagSec}s)`;
       await emitGap(
         `severed-joint-${b.table}`,
         "systematic_failure",
         `Write->read joint SEVERED: \`${b.table}\` (read by ${b.reader}) has no write within ${b.maxLagSec}s of the newest \`execution\` row, while the fleet is active (last execution ${Math.round(fleetIdleSec)}s ago). Newest ${b.table}.${b.timeCol} lags live execution by ${newestX == null ? "∞ (empty)" : Math.round(lagSec) + "s"}. This is the frozen-table class (cf. activity_execution_traces frozen 42d). Repair: find the writer that stopped, or the reader pointed at a dead table, and reconnect it.`,
+        severedJointMeta({ name: b.table, kind: "table_newest", reader: b.reader, reading, missing: null, armRead: null, editSite: null }),
       );
     } else {
       console.log(`[joint-liveness] ok: ${b.table} lag=${Math.round(lagSec)}s (<= ${b.maxLagSec}s)`);
@@ -252,11 +328,17 @@ async function main() {
     checked++;
     if (detail) {
       severed++;
+      // A registration joint is armed from the vessels it found missing, re-read live through the arming instrument.
+      const missing = b.kind === "discovery_registered" ? missingRegistrations(b.vesselIds, (await registry()).map((v) => String(v.vesselId ?? ""))) : null;
+      const read = missing && missing.length > 0 ? await armRead(missing).catch(() => null) : null;
+      const site = missing && missing.length === 1 ? registrationEditSite(missing[0]!, VESSEL_TREE) : null;
       await emitGap(
         `severed-joint-${b.name}`,
         "systematic_failure",
         `Registered joint SEVERED: ${b.name} (${b.kind}; read by ${b.reader}) — ${detail}. Fleet active (last execution ${Math.round(fleetIdleSec)}s ago). Repair the writer that stopped or the reader that lost its input, then this joint reads healthy on the next tick.`,
+        severedJointMeta({ name: b.name, kind: b.kind, reader: b.reader, reading: detail, severity: b.severity, missing, armRead: read, editSite: site }),
       );
+      console.log(`[joint-liveness] severed: ${b.name} (${b.kind}) ${read !== null && read > 0 ? `armed ${REGISTRY_OBSERVER} missing_count=${read}` : "unarmed"}`);
     } else {
       console.log(`[joint-liveness] ok: ${b.name} (${b.kind})`);
     }
@@ -276,7 +358,10 @@ async function main() {
   console.log(`[joint-liveness] done: fleet_active newest_exec_lag=${Math.round(fleetIdleSec)}s bindings=${expected} (seed ${BINDINGS.length} + registered ${registered.length}) checked=${checked} severed=${severed}`);
 }
 
-main().catch((e) => {
-  console.error(`[joint-liveness] fatal: ${(e as Error)?.stack ?? e}`);
-  process.exit(1);
-});
+// The unit runs this file directly; a test imports the pure parts above without running a tick.
+if (import.meta.main) {
+  main().catch((e) => {
+    console.error(`[joint-liveness] fatal: ${(e as Error)?.stack ?? e}`);
+    process.exit(1);
+  });
+}
