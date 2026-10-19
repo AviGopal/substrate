@@ -237,7 +237,7 @@ interface Result {
 async function dispatch(goal: string) {
   try {
     const r = await fetch(`${GOAL_HOST}/run-goal`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", ...(process.env.METABOB_API_KEY ? { Authorization: `ApiKey ${process.env.METABOB_API_KEY}` } : {}) },
       body: JSON.stringify({ goal, operator: "complexity-ladder-harness", async: true }),
       signal: AbortSignal.timeout(60_000),
     });

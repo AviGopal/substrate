@@ -54,7 +54,7 @@ interface DispatchOutcome { dispatchId: string; status: string; reached: boolean
 async function dispatch(goal: string): Promise<string> {
   const r = await fetch(`${GOAL_HOST}/run-goal`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...(process.env.METABOB_API_KEY ? { Authorization: `ApiKey ${process.env.METABOB_API_KEY}` } : {}) },
     body: JSON.stringify({ goal, tags: ["harness:goal-expectation"] }),
   });
   const j = (await r.json()) as { dispatchId?: string };
