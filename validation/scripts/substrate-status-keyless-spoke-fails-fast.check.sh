@@ -14,22 +14,23 @@
 # `--wait` to 20, and the status script exits 1 (`fail`) both on a terminal stop and on a timeout, so neither exit code
 # tells the two apart. The stop is the stderr line `[status] stopped waiting for usable: ... (<reason>)` and the time it
 # took. The must-fail asserts that line, a reason naming both "no provider key" and "no federated arm" (so the fix words
-# the spoke's reason to say both; the non-spoke reason it has today names only the first), and a stop within 60 s of a
-# 90 s --timeout, so a red run ends in bounded time.
+# the spoke's reason to say both; the non-spoke reason it has today names only the first), and a stop within 15 s of a
+# 30 s --timeout, so a red run ends in about 30 s. A terminal stop comes from the first evaluation (the 60 s hold before
+# the LLM probe re-probes carries a terminal reason with it), so 15 s separates a stop from the timeout with room.
 #
 # Must-fail: a keyless spoke (HUB_DISCOVERY_URL set, no provider key, no peer) whose hub answers llm_completion the way
 # discovery does when no producer is registered (404 {"error":"Not found"}) and advertises no llm arm in its registry
-# stops as terminal, exit 1, within 60 s, with that reason.
+# stops as terminal, exit 1, within 15 s, with that reason.
 # Controls: in that run live, seeded and served pass and usable is `fail`, not `unknown` (only a fail can stop a wait, so
 # a red is the missing terminal and nothing else); a keyless spoke whose hub DOES answer llm_completion passes usable,
 # exit 0, through discovery (the federated arm is a spoke's arm and must stay one); a keyless non-spoke with no peer
-# already stops as terminal within 60 s naming no provider key (the harness can see a terminal stop at all).
+# already stops as terminal within 15 s naming no provider key (the harness can see a terminal stop at all).
 #
 # The whole script runs, unmodified, under env -i, so a fix anywhere in it is what is judged. Nothing here reaches a
 # container or a port of the fleet:
 #   - its env file (SUBSTRATE_ENV_FILE) is a throwaway file; envval falls back to the process env, which env -i empties,
 #     so no provider key the caller holds can reach it;
-#   - discovery, the hub's discovery and identity are one stub on an ephemeral loopback port: /resolve answers
+#   - discovery, the hub's discovery and identity are one bun stub on an ephemeral loopback port: /resolve answers
 #     llm_completion, vesselCapability, vesselRegistry, goalDispatchAsync and goalWalkState, plus /health,
 #     /registry/shapes and /v1/keys/validate, with or without an llm arm (a mode file it reads per request);
 #   - curl is shimmed first on PATH and refuses every URL but the stub's, so the probe's fallback local-arm ports and
@@ -51,69 +52,57 @@ T="$(mktemp -d "${TMPDIR:-/tmp}/status-keyless-spoke.XXXXXX")"
 STUB_PID=""
 trap '[ -n "$STUB_PID" ] && kill "$STUB_PID" 2>/dev/null; rm -rf "$T"' EXIT
 FAILS=0; ok() { echo "ok   - $*"; }; bad() { echo "FAIL - $*"; FAILS=$((FAILS+1)); }
-REAL_CURL="$(command -v curl)"; PY="$(command -v python3)"
-[ -n "$REAL_CURL" ] && [ -n "$PY" ] && command -v jq >/dev/null 2>&1 || { echo "needs curl, jq and python3"; exit 2; }
+REAL_CURL="$(command -v curl)"; BUN="$(command -v bun || true)"
+[ -n "$BUN" ] || { [ -x /root/.bun/bin/bun ] && BUN=/root/.bun/bin/bun; }
+[ -n "$REAL_CURL" ] && [ -n "$BUN" ] && command -v jq >/dev/null 2>&1 || { echo "needs curl, jq and bun"; exit 2; }
 mkdir -p "$T/bin" "$T/home" "$T/tmp" "$T/install"
 
 # ── the stub: discovery, hub discovery and identity on one ephemeral port ────
-cat > "$T/stub.py" <<'PY'
-import json, os, sys
-from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
-ROOT = sys.argv[1]
-def mode():
-    try: return open(os.path.join(ROOT, "mode")).read().strip()
-    except OSError: return "noarm"
-class H(BaseHTTPRequestHandler):
-    def log_message(self, *a): pass
-    def note(self, what):
-        with open(os.path.join(ROOT, "requests.log"), "a") as f: f.write(f"{mode()} {self.command} {self.path} {what}\n")
-    def send(self, code, obj):
-        b = json.dumps(obj).encode()
-        self.send_response(code); self.send_header("Content-Type", "application/json")
-        self.send_header("Content-Length", str(len(b))); self.end_headers(); self.wfile.write(b)
-    def base(self): return "http://%s:%d" % self.server.server_address[:2]
-    def vessels(self):
-        v = [{"vesselId": "goal-host-stub", "vesselName": "goal-host", "shapes": ["goalDispatchAsync", "goalWalkState"],
-              "endpoint": self.base(), "status": "healthy"}]
-        if mode() == "arm":
-            v.append({"vesselId": "llm-stub", "vesselName": "llm-resolver", "shapes": ["llm_completion"],
-                      "endpoint": self.base(), "status": "healthy"})
-        return v
-    def do_GET(self):
-        p = self.path.split("?")[0]; self.note("-")
-        if p == "/health": return self.send(200, {"status": "ok", "vessel": "discovery", "registeredVessels": len(self.vessels())})
-        if p == "/registry/shapes": return self.send(200, {"shapes": sorted({s for v in self.vessels() for s in v["shapes"]})})
-        if p == "/registry/shape-descriptions": return self.send(200, {"shape_descriptions": {}})
-        return self.send(404, {"error": "Not found"})
-    def do_POST(self):
-        n = int(self.headers.get("Content-Length") or 0)
-        try: body = json.loads(self.rfile.read(n) or b"{}")
-        except ValueError: body = {}
-        p = self.path.split("?")[0]
-        if p == "/v1/keys/validate":
-            self.note("validate"); return self.send(200, {"data": {"valid": True, "key_id": "check", "org_id": "check"}})
-        if p != "/resolve": self.note("-"); return self.send(404, {"error": "Not found"})
-        ptr = body.get("pointer") or (body.get("impulse") or {}).get("pointer") or {}
-        t = ptr.get("type", ""); self.note(t); arm = mode() == "arm"
-        if t == "llm_completion":
-            if arm: return self.send(200, {"resolved": True, "content": "ok"})
-            return self.send(404, {"error": "Not found", "shape": t})   # discovery's answer when no producer is registered
-        if t == "vesselCapability":
-            vs = [v for v in self.vessels() if ptr.get("shape") in v["shapes"]]
-            return self.send(200, {"content": {"shape": ptr.get("shape"), "vessels": vs, "found": bool(vs)}, "metadata": {"shape": t}})
-        if t == "vesselRegistry": return self.send(200, {"content": {"vessels": self.vessels()}, "metadata": {"shape": t}})
-        if t == "goalDispatchAsync": return self.send(200, {"dispatchId": "status-check-dispatch"})
-        if t == "goalWalkState":
-            return self.send(200, {"body": {"dispatchId": ptr.get("dispatchId"), "status": "completed", "reached": True,
-                                            "goalReachReason": "stub registry oracle", "executionId": "status-check-exec"}})
-        return self.send(404, {"error": "Not found", "shape": t})
-s = ThreadingHTTPServer(("127.0.0.1", 0), H)
-open(os.path.join(ROOT, "port.tmp"), "w").write(str(s.server_address[1])); os.rename(os.path.join(ROOT, "port.tmp"), os.path.join(ROOT, "port"))
-s.serve_forever()
-PY
+cat > "$T/stub.ts" <<'TS'
+import { appendFileSync, readFileSync, renameSync, writeFileSync } from "node:fs"
+const ROOT = process.argv[2]!
+const mode = () => { try { return readFileSync(`${ROOT}/mode`, "utf8").trim() } catch { return "noarm" } }
+const note = (m: string, method: string, path: string, what: string) => appendFileSync(`${ROOT}/requests.log`, `${m} ${method} ${path} ${what}\n`)
+const json = (code: number, obj: unknown) => new Response(JSON.stringify(obj), { status: code, headers: { "Content-Type": "application/json" } })
+let base = ""
+const vessels = (m: string) => {
+  const v: Array<Record<string, unknown> & { shapes: string[] }> = [
+    { vesselId: "goal-host-stub", vesselName: "goal-host", shapes: ["goalDispatchAsync", "goalWalkState"], endpoint: base, status: "healthy" }]
+  if (m === "arm") v.push({ vesselId: "llm-stub", vesselName: "llm-resolver", shapes: ["llm_completion"], endpoint: base, status: "healthy" })
+  return v
+}
+const server = Bun.serve({ hostname: "127.0.0.1", port: 0, async fetch(req) {
+  const u = new URL(req.url); const p = u.pathname; const m = mode(); const arm = m === "arm"
+  if (req.method === "GET") {
+    note(m, "GET", u.pathname + u.search, "-")
+    if (p === "/health") return json(200, { status: "ok", vessel: "discovery", registeredVessels: vessels(m).length })
+    if (p === "/registry/shapes") return json(200, { shapes: [...new Set(vessels(m).flatMap((v) => v.shapes))].sort() })
+    if (p === "/registry/shape-descriptions") return json(200, { shape_descriptions: {} })
+    return json(404, { error: "Not found" })
+  }
+  let body: any = {}; try { body = await req.json() } catch { body = {} }
+  if (p === "/v1/keys/validate") { note(m, "POST", p, "validate"); return json(200, { data: { valid: true, key_id: "check", org_id: "check" } }) }
+  if (p !== "/resolve") { note(m, "POST", p, "-"); return json(404, { error: "Not found" }) }
+  const ptr = body?.pointer ?? body?.impulse?.pointer ?? {}; const t = String(ptr.type ?? ""); note(m, "POST", p, t)
+  if (t === "llm_completion") return arm ? json(200, { resolved: true, content: "ok" })
+    : json(404, { error: "Not found", shape: t })   // discovery's answer when no producer is registered
+  if (t === "vesselCapability") {
+    const vs = vessels(m).filter((v) => v.shapes.includes(String(ptr.shape)))
+    return json(200, { content: { shape: ptr.shape, vessels: vs, found: vs.length > 0 }, metadata: { shape: t } })
+  }
+  if (t === "vesselRegistry") return json(200, { content: { vessels: vessels(m) }, metadata: { shape: t } })
+  if (t === "goalDispatchAsync") return json(200, { dispatchId: "status-check-dispatch" })
+  if (t === "goalWalkState") return json(200, { body: { dispatchId: ptr.dispatchId, status: "completed", reached: true,
+    goalReachReason: "stub registry oracle", executionId: "status-check-exec" } })
+  return json(404, { error: "Not found", shape: t })
+} })
+base = `http://127.0.0.1:${server.port}`
+writeFileSync(`${ROOT}/port.tmp`, String(server.port)); renameSync(`${ROOT}/port.tmp`, `${ROOT}/port`)
+TS
 echo noarm > "$T/mode"
-"$PY" "$T/stub.py" "$T" >/dev/null 2>&1 & STUB_PID=$!
-for _ in $(seq 1 50); do [ -s "$T/port" ] && break; sleep 0.1; done
+# Its own cwd and HOME, so bun reads no project config and writes nothing outside the temp root.
+( cd "$T" && HOME="$T/home" exec "$BUN" "$T/stub.ts" "$T" >/dev/null 2>&1 ) & STUB_PID=$!
+for _ in $(seq 1 100); do [ -s "$T/port" ] && break; sleep 0.1; done
 STUB="http://127.0.0.1:$(cat "$T/port" 2>/dev/null)"
 if [ "$("$REAL_CURL" -s -o /dev/null -w '%{http_code}' --max-time 3 "$STUB/health" 2>/dev/null)" = 200 ]; then
   ok "harness: the stub answers on an ephemeral loopback port"
@@ -149,7 +138,7 @@ chmod +x "$T/bin/curl" "$T/bin/systemctl" "$T/bin/substrate-ready"
 echo '{"vessels":[]}' > "$T/inventory.json"
 printf 'services:\n  substrate:\n    image: placeholder\n' > "$T/manifest.yml"
 
-# run_case NAME MODE [ENV-LINE...]: --wait usable --timeout 90 under env -i; sets RC, SECS, OUT, ERR.
+# run_case NAME MODE [ENV-LINE...]: --wait usable --timeout 30 under env -i; sets RC, SECS, OUT, ERR.
 run_case() {
   local name="$1" t0; echo "$2" > "$T/mode"; shift 2
   { echo "METABOB_API_KEY=status-check-placeholder"; echo "IDENTITY_VESSEL_URL=$STUB"; echo "DISCOVERY_ENDPOINT=$STUB"
@@ -160,7 +149,7 @@ run_case() {
     SUBSTRATE_MANIFEST="$T/manifest.yml" SUBSTRATE_INSTALL_DIR="$T/install" SUBSTRATE_PORT_PREFIX=0 \
     ACTIVITY_API_PORT=0 DEV_VESSEL_PORT=0 DISCOVERY_PORT=0 IDENTITY_PORT=0 GOAL_HOST_PORT=0 CONCEPT_DB_PORT=0 \
     STATEFUL_UI_PORT=0 HUMAN_SURFACE_PORT=0 RELAY_PORT=0 \
-    timeout 150 bash "$SCRIPT" --wait usable --timeout 90 --quick --json > "$OUT" 2> "$ERR"
+    timeout 60 bash "$SCRIPT" --wait usable --timeout 30 --quick --json > "$OUT" 2> "$ERR"
   RC=$?; SECS=$(( $(date +%s) - t0 ))
 }
 lvl() { jq -r --arg l "$1" '.levels[]? | select(.level == $l) | .value' "$OUT" 2>/dev/null | head -1; }
@@ -172,7 +161,7 @@ run_case spoke-noarm noarm "HUB_DISCOVERY_URL=$STUB" PROFILE_EFFECTIVE=spoke
 S="$(stopline)"
 [ -n "$S" ] && ok "keyless spoke, no arm: the wait stops as terminal" \
   || bad "keyless spoke, no arm: the wait stops as terminal (no stop line; ran ${SECS}s to the --timeout)"
-[ "$SECS" -lt 60 ] && ok "keyless spoke, no arm: it stops within 60 s (${SECS}s)" || bad "keyless spoke, no arm: it stops within 60 s (took ${SECS}s)"
+[ "$SECS" -le 15 ] && ok "keyless spoke, no arm: it stops within 15 s (${SECS}s)" || bad "keyless spoke, no arm: it stops within 15 s (took ${SECS}s)"
 case "$S" in *"no provider key"*"no federated arm"*|*"no federated arm"*"no provider key"*)
   ok "keyless spoke, no arm: the reason names no provider key and no federated arm";;
   *) bad "keyless spoke, no arm: the reason names no provider key and no federated arm (got: ${S:-no stop line})";; esac
@@ -197,8 +186,8 @@ run_case standalone-noarm noarm PROFILE_EFFECTIVE=standalone
 S="$(stopline)"
 case "$S" in *"no provider key"*) ok "keyless non-spoke, no peer: stops as terminal naming no provider key";;
   *) bad "keyless non-spoke, no peer: stops as terminal naming no provider key (got: ${S:-no stop line})";; esac
-[ "$SECS" -lt 60 ] && [ "$RC" = 1 ] && ok "keyless non-spoke, no peer: exit 1 within 60 s (${SECS}s)" \
-  || bad "keyless non-spoke, no peer: exit 1 within 60 s (exit $RC after ${SECS}s)"
+[ "$SECS" -le 15 ] && [ "$RC" = 1 ] && ok "keyless non-spoke, no peer: exit 1 within 15 s (${SECS}s)" \
+  || bad "keyless non-spoke, no peer: exit 1 within 15 s (exit $RC after ${SECS}s)"
 
 [ -s "$T/refused.log" ] && echo "#   refused (not the stub): $(sort -u "$T/refused.log" | tr '\n' ' ')"
 echo "---"; [ "$FAILS" -eq 0 ] && { echo "PASS"; exit 0; } || { echo "$FAILS failing"; exit 1; }
