@@ -39,15 +39,61 @@ if [ "$(id -u)" = 0 ]; then
 else
   echo "note: not root — fixtures run as uid $(id -u), not nobody"
 fi
+# EACH FIXTURE RUNS IN ITS OWN SESSION, and whatever it leaves behind is killed when it returns. A fixture that
+# backgrounds a child (the relay fixture runs `timeout 220 bun relay.ts &`, and SIGKILL of timeout never reaches its
+# child; GNU timeout also moves the child into a new process group) otherwise leaks it into every later corpus run.
+# Measured 2026-10-19 in an accepted-image container: one more live bun after each run, 10 after 10, and a long
+# image-coverage-map.check.sh session then read false FAILs late.
+# The session id is the leader's pid, taken from $! by THIS root process. setsid run in the background is not a
+# group leader, so it calls setsid() and execs without forking: sid = $!. Nothing the fixture can write is read
+# back, because a fixture runs as nobody and must not be able to choose what root kills.
+# OUTPUT goes to a root-owned 0700 directory outside $S ($S is chowned to nobody).
+O="$(mktemp -d "${TMPDIR:-/tmp}/gate-shadow-out.XXXXXX")"; chmod 700 "$O"; trap 'rm -rf "$S" "$O"' EXIT
+proc_sid() { # <pid> -> its session id (field 6 of /proc/<pid>/stat, read after the comm's closing paren)
+  local st a; st="$(cat "/proc/$1/stat" 2>/dev/null)" || return 1; st="${st##*) }"; read -r -a a <<< "$st"; printf '%s' "${a[3]:-}"; }
+OWN_SID="$(proc_sid $$)"; PARENT_SID="$(proc_sid "$PPID")"
+reap_session() { # <sid>: SIGKILL every process still in that session; refuse a sid that is not a fixture's own
+  local sid="$1" d n=0
+  case "$sid" in ''|*[!0-9]*) echo "note: reap refused: session id '$sid' is not a number"; return 1 ;; esac
+  if [ "$sid" -le 1 ] || [ "$sid" = "$OWN_SID" ] || [ "$sid" = "$PARENT_SID" ] || [ "$sid" = "$$" ]; then
+    echo "note: reap refused: session $sid is init, this evaluator's or its caller's"; return 1; fi
+  # Repeat until a pass finds nothing: a process can fork after a scan has passed it (timeout forking its child).
+  local pass hit
+  for pass in 1 2 3 4 5 6 7 8 9 10; do
+    hit=0
+    for d in /proc/[0-9]*; do [ "$(proc_sid "${d#/proc/}")" = "$sid" ] && kill -KILL "${d#/proc/}" 2>/dev/null && { n=$((n + 1)); hit=1; }; done
+    [ "$hit" = 0 ] && break; sleep 0.1
+  done
+  [ "$hit" = 1 ] && echo "note: process(es) still in session $sid after 10 reap passes"
+  [ "$n" -gt 0 ] && echo "note: reaped $n leftover process(es) of a fixture's session $sid"
+  return 0; }
 fail=0
 for f in "$S"/fixtures/*.sh; do
   b="$(basename "$f")"; w="$S/ws-$b"; mkdir -p "$w"; [ "${#DROP[@]}" -gt 0 ] && chown nobody "$w"
-  out="$("${DROP[@]}" env -i PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" HOME="$S/home" \
+  # HANDSHAKE, not a poll: the session leader (root, before privileges drop) writes its own pid to a root-owned
+  # fifo after setsid() has run, closes the fd, then execs the fixture. The parent opens the fifo read-write (never
+  # blocks), waits for that line bounded by the fixture timeout, and checks it is $!. Load cannot cause a false
+  # refusal; the fixture never holds the fd, and nothing it can write is read back.
+  fifo="$O/sid-$b"; rm -f "$fifo"; mkfifo -m 600 "$fifo"; exec 4<>"$fifo"
+  setsid bash -c 'echo "$$" >&3; exec 3>&-; exec "$@"' _ "${DROP[@]}" env -i PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" HOME="$S/home" \
       TMPDIR="$S/tmp" LANG=C.UTF-8 WORKSPACE_ROOT="$w" PULLSYNC_BIN="$S/cand/scripts/substrate/substrate-pull-sync.sh" \
       CANDIDATE_DIR="$S/cand" GIT_AUTHOR_NAME=shadow GIT_AUTHOR_EMAIL=shadow@localhost \
       GIT_COMMITTER_NAME=shadow GIT_COMMITTER_EMAIL=shadow@localhost \
-      timeout --kill-after=10 "${SHADOW_FIXTURE_TIMEOUT:-300}" bash "$f" 2>&1)"
-  rc=$?
+      timeout --kill-after=10 "${SHADOW_FIXTURE_TIMEOUT:-300}" bash "$f" > "$O/out" 2>&1 < /dev/null 3>"$fifo" 4<&- &
+  lead=$!
+  # ISOLATED? The leader's handshake line must be $! itself. If setsid forked (it found itself a group leader), the
+  # line is another pid and `wait $!` would return before the fixture ends: refuse, and reap whatever started.
+  hs=""; read -r -t "${SHADOW_FIXTURE_TIMEOUT:-300}" hs <&4; exec 4<&-; rm -f "$fifo"
+  if [ "$hs" != "$lead" ]; then
+    kill -KILL "$lead" 2>/dev/null
+    case "$hs" in ''|*[!0-9]*) ;; *) reap_session "$hs" >&2 ;; esac
+    reap_session "$lead" >&2; wait "$lead" 2>/dev/null
+    echo "REFUSE - $b: could not isolate the fixture in its own session (handshake '${hs:-none}', expected $lead)"
+    fail=$((fail+1)); continue
+  fi
+  wait "$lead"; rc=$?
+  reap_session "$lead" >&2
+  out="$(cat "$O/out")"
   if [ "$rc" = 0 ]; then echo "PASS - $b"; else echo "FAIL - $b (exit $rc): $(printf '%s' "$out" | grep -E 'FAIL' | head -3 | tr '\n' ' ')"; fail=$((fail+1)); fi
 done
 [ "$fail" = 0 ] && { echo "shadow: ${#CORPUS[@]} fixture(s) pass for ${CAND:0:12}"; exit 0; }
