@@ -1,16 +1,203 @@
 {
-  "_doc": "Tier A coverage map (in-place-image-convergence 1.2). One entry per tier A destination of image-files.manifest. level behaviour: committing the evidence mutation of src makes the named accepted fixture(s) FAIL in gate/shadow-eval.sh; parse: only a syntax mutation does; none: no fixture fails. A tooling path converges in place only at level behaviour with src inside gate_paths; everything else is converged by the image. reason for none: outside-gate-paths (src is not a gate path), units-exempt (see units_exempt), converges-today-uncovered (pull-sync installs it today with no fixture; listed in converges_today_exempt), unreached (baked only). src_blob is the git blob the proof ran on; a live src blob that differs means the proof is older than the code and must be re-earned. Kept consistent by validation/scripts/image-coverage-map.test.sh; proofs re-run by image-coverage-map.check.sh.",
-  "units_exempt": {
-    "dir": "/usr/lib/systemd/system",
-    "reason": "converges today; gated after a unit-verify fixture exists",
-    "owner_gap": "unit-files-converge-in-place-with-no-fixture-that-verifies-them",
-    "expires": "2026-10-20"
-  },
+  "_doc": "Tier A coverage map (in-place-image-convergence 1.2). One entry per tier A destination of image-files.manifest. level behaviour: committing the evidence mutation of src makes the named accepted fixture(s) FAIL in gate/shadow-eval.sh; parse: only a syntax mutation does; none: no fixture fails. A tooling path converges in place only at level behaviour with src inside gate_paths; everything else is converged by the image. reason for none: outside-gate-paths (src is not a gate path), converges-today-uncovered (pull-sync installs it today with no fixture; listed in converges_today_exempt), unreached (baked only). src_blob is the git blob the proof ran on; a live src blob that differs means the proof is older than the code and must be re-earned. Kept consistent by validation/scripts/image-coverage-map.test.sh; proofs re-run by image-coverage-map.check.sh. A parse entry under the units dir converges in place today without a behaviour proof, so it is listed in converges_today_exempt too (debt, dated): for a unit file the exit-99 mutation is a syntax mutation, and only a semantic mutant failing a fixture earns behaviour.",
   "converges_today_exempt": {
     "reason": "converges today; gated as fixtures earn coverage",
     "owner_gap": "tooling-paths-converge-in-place-with-no-fixture-that-exercises-them",
     "expires": "2026-10-20",
     "paths": [
+      "/usr/lib/systemd/system/activity-api.service",
+      "/usr/lib/systemd/system/activity-api.service.d/10-secrets-out-of-reach.conf",
+      "/usr/lib/systemd/system/analysis-vessel.service",
+      "/usr/lib/systemd/system/analysis-vessel.service.d/10-secrets-out-of-reach.conf",
+      "/usr/lib/systemd/system/auto-describe-resolvers.service",
+      "/usr/lib/systemd/system/auto-describe-resolvers.service.d/run-dir.conf",
+      "/usr/lib/systemd/system/auto-describe-resolvers.timer",
+      "/usr/lib/systemd/system/auto-describe-resolvers.timer.d/ready-gate.conf",
+      "/usr/lib/systemd/system/autonomy-metrics.service",
+      "/usr/lib/systemd/system/autonomy-metrics.service.d/run-dir.conf",
+      "/usr/lib/systemd/system/autonomy-metrics.timer",
+      "/usr/lib/systemd/system/autonomy-metrics.timer.d/ready-gate.conf",
+      "/usr/lib/systemd/system/bootstrap-seeder.service",
+      "/usr/lib/systemd/system/boredom-vessel.service",
+      "/usr/lib/systemd/system/boredom-vessel.service.d/10-secrets-out-of-reach.conf",
+      "/usr/lib/systemd/system/boredom-vessel.service.d/watchdog.conf",
+      "/usr/lib/systemd/system/boredom-vessel.timer",
+      "/usr/lib/systemd/system/boredom-vessel.timer.d/ready-gate.conf",
+      "/usr/lib/systemd/system/coherence-metric.service",
+      "/usr/lib/systemd/system/coherence-metric.service.d/run-dir.conf",
+      "/usr/lib/systemd/system/coherence-metric.timer",
+      "/usr/lib/systemd/system/coherence-recover.service",
+      "/usr/lib/systemd/system/coherence-recover.service.d/run-dir.conf",
+      "/usr/lib/systemd/system/coherence-recover.timer",
+      "/usr/lib/systemd/system/compose-drift.service",
+      "/usr/lib/systemd/system/compose-drift.timer",
+      "/usr/lib/systemd/system/compose-teacher.service",
+      "/usr/lib/systemd/system/compose-teacher.service.d/run-dir.conf",
+      "/usr/lib/systemd/system/compose-teacher.service.d/watchdog.conf",
+      "/usr/lib/systemd/system/compose-teacher.timer",
+      "/usr/lib/systemd/system/composition-edge-reconcile.service",
+      "/usr/lib/systemd/system/composition-edge-reconcile.service.d/run-dir.conf",
+      "/usr/lib/systemd/system/composition-edge-reconcile.timer",
+      "/usr/lib/systemd/system/composition-edge-reconcile.timer.d/ready-gate.conf",
+      "/usr/lib/systemd/system/concept-db-seeder.service",
+      "/usr/lib/systemd/system/concept-db.service",
+      "/usr/lib/systemd/system/concept-db.service.d/10-secrets-out-of-reach.conf",
+      "/usr/lib/systemd/system/db-contention-check.service",
+      "/usr/lib/systemd/system/db-contention-check.service.d/run-dir.conf",
+      "/usr/lib/systemd/system/db-contention-check.timer",
+      "/usr/lib/systemd/system/db-maintenance.service",
+      "/usr/lib/systemd/system/db-maintenance.timer",
+      "/usr/lib/systemd/system/development-vessel-seed.service",
+      "/usr/lib/systemd/system/development-vessel-seed.service.d/10-secrets-out-of-reach.conf",
+      "/usr/lib/systemd/system/development-vessel.service",
+      "/usr/lib/systemd/system/development-vessel.service.d/10-secrets-out-of-reach.conf",
+      "/usr/lib/systemd/system/development-vessel.service.d/drain-timeout.conf",
+      "/usr/lib/systemd/system/discovery-vessel.service",
+      "/usr/lib/systemd/system/discovery-vessel.service.d/10-secrets-out-of-reach.conf",
+      "/usr/lib/systemd/system/discovery-vessel.service.d/federation-peering.conf",
+      "/usr/lib/systemd/system/efficiency-failure-tick.service",
+      "/usr/lib/systemd/system/efficiency-failure-tick.service.d/run-dir.conf",
+      "/usr/lib/systemd/system/efficiency-failure-tick.timer",
+      "/usr/lib/systemd/system/federation-relay.service.d/10-secrets-out-of-reach.conf",
+      "/usr/lib/systemd/system/federation-transport-vessel.service",
+      "/usr/lib/systemd/system/federation-transport-vessel.service.d/10-secrets-out-of-reach.conf",
+      "/usr/lib/systemd/system/federation-transport-vessel.service.d/lib-refresh.conf",
+      "/usr/lib/systemd/system/funnel-drain.service",
+      "/usr/lib/systemd/system/funnel-drain.service.d/run-dir.conf",
+      "/usr/lib/systemd/system/funnel-drain.service.d/watchdog.conf",
+      "/usr/lib/systemd/system/funnel-drain.timer",
+      "/usr/lib/systemd/system/funnel-drain.timer.d/ready-gate.conf",
+      "/usr/lib/systemd/system/gap-compose.service",
+      "/usr/lib/systemd/system/gap-compose.service.d/run-dir.conf",
+      "/usr/lib/systemd/system/gap-compose.service.d/watchdog.conf",
+      "/usr/lib/systemd/system/gap-compose.timer",
+      "/usr/lib/systemd/system/gap-store-census.service",
+      "/usr/lib/systemd/system/gap-store-census.timer",
+      "/usr/lib/systemd/system/git-push-setup.service",
+      "/usr/lib/systemd/system/git-push-setup.service.d/05-secret-dir-out-of-reach.conf",
+      "/usr/lib/systemd/system/goal-host-behavior.service",
+      "/usr/lib/systemd/system/goal-host-behavior.timer",
+      "/usr/lib/systemd/system/goal-host-vessel.service",
+      "/usr/lib/systemd/system/goal-host-vessel.service.d/10-secrets-out-of-reach.conf",
+      "/usr/lib/systemd/system/goal-host-vessel.service.d/drain-timeout.conf",
+      "/usr/lib/systemd/system/goal-host-vessel.service.d/federation-route-preference.conf",
+      "/usr/lib/systemd/system/human-surface-vessel.service",
+      "/usr/lib/systemd/system/human-surface-vessel.service.d/10-secrets-out-of-reach.conf",
+      "/usr/lib/systemd/system/identity-seeder.service",
+      "/usr/lib/systemd/system/identity-seeder.service.d/05-secret-dir-out-of-reach.conf",
+      "/usr/lib/systemd/system/identity-vessel.service",
+      "/usr/lib/systemd/system/identity-vessel.service.d/10-secrets-out-of-reach.conf",
+      "/usr/lib/systemd/system/ingest-docs.service",
+      "/usr/lib/systemd/system/ingest-docs.service.d/run-dir.conf",
+      "/usr/lib/systemd/system/ingest-docs.timer",
+      "/usr/lib/systemd/system/ingest-docs.timer.d/ready-gate.conf",
+      "/usr/lib/systemd/system/joint-liveness.service",
+      "/usr/lib/systemd/system/joint-liveness.timer",
+      "/usr/lib/systemd/system/journald-stdout-forwarder.service",
+      "/usr/lib/systemd/system/learning-liveness-probe.service",
+      "/usr/lib/systemd/system/learning-liveness-probe.timer",
+      "/usr/lib/systemd/system/learning-loop-selftest.service",
+      "/usr/lib/systemd/system/learning-loop-selftest.timer",
+      "/usr/lib/systemd/system/light-dispatch-healthcheck.service",
+      "/usr/lib/systemd/system/light-dispatch-healthcheck.timer",
+      "/usr/lib/systemd/system/light-dispatch-healthcheck.timer.d/ready-gate.conf",
+      "/usr/lib/systemd/system/light-dispatch-vessel.service",
+      "/usr/lib/systemd/system/light-dispatch-vessel.service.d/10-secrets-out-of-reach.conf",
+      "/usr/lib/systemd/system/llm-resolver-vessel.service",
+      "/usr/lib/systemd/system/llm-resolver-vessel.service.d/10-secrets-out-of-reach.conf",
+      "/usr/lib/systemd/system/llm-resolver-vessel.service.d/stop-timeout.conf",
+      "/usr/lib/systemd/system/local-tools-vessel.service",
+      "/usr/lib/systemd/system/local-tools-vessel.service.d/10-secrets-out-of-reach.conf",
+      "/usr/lib/systemd/system/m1-trainer.service",
+      "/usr/lib/systemd/system/m1-trainer.timer",
+      "/usr/lib/systemd/system/m1-trainer.timer.d/ready-gate.conf",
+      "/usr/lib/systemd/system/memory-budget-check.service",
+      "/usr/lib/systemd/system/memory-budget-check.timer",
+      "/usr/lib/systemd/system/metric-collector-vessel.service",
+      "/usr/lib/systemd/system/metric-collector-vessel.service.d/10-secrets-out-of-reach.conf",
+      "/usr/lib/systemd/system/model-reality-audit.service",
+      "/usr/lib/systemd/system/model-reality-audit.service.d/run-dir.conf",
+      "/usr/lib/systemd/system/model-reality-audit.timer",
+      "/usr/lib/systemd/system/model-reality-audit.timer.d/ready-gate.conf",
+      "/usr/lib/systemd/system/novnc.service",
+      "/usr/lib/systemd/system/observe-orthogonal-refresh.service",
+      "/usr/lib/systemd/system/observe-orthogonal-refresh.service.d/run-dir.conf",
+      "/usr/lib/systemd/system/observe-orthogonal-refresh.timer",
+      "/usr/lib/systemd/system/observe-orthogonal-refresh.timer.d/ready-gate.conf",
+      "/usr/lib/systemd/system/obsidian-collaborate.service",
+      "/usr/lib/systemd/system/obsidian-collaborate.service.d/10-secrets-out-of-reach.conf",
+      "/usr/lib/systemd/system/obsidian-collaborate.timer",
+      "/usr/lib/systemd/system/obsidian-desktop.service",
+      "/usr/lib/systemd/system/obsidian-desktop.service.d/10-secrets-out-of-reach.conf",
+      "/usr/lib/systemd/system/obsidian-intake.service",
+      "/usr/lib/systemd/system/obsidian-intake.service.d/10-secrets-out-of-reach.conf",
+      "/usr/lib/systemd/system/obsidian-intake.timer",
+      "/usr/lib/systemd/system/obsidian-learn.service",
+      "/usr/lib/systemd/system/obsidian-learn.service.d/10-secrets-out-of-reach.conf",
+      "/usr/lib/systemd/system/obsidian-learn.timer",
+      "/usr/lib/systemd/system/obsidian-xorg.service",
+      "/usr/lib/systemd/system/obsidian-xorg.service.d/10-secrets-out-of-reach.conf",
+      "/usr/lib/systemd/system/operator-goal-generator.service",
+      "/usr/lib/systemd/system/operator-goal-generator.service.d/run-dir.conf",
+      "/usr/lib/systemd/system/operator-goal-generator.service.d/watchdog.conf",
+      "/usr/lib/systemd/system/operator-goal-generator.timer",
+      "/usr/lib/systemd/system/operator-goal-generator.timer.d/ready-gate.conf",
+      "/usr/lib/systemd/system/relevance-sink-vessel.service",
+      "/usr/lib/systemd/system/relevance-sink-vessel.service.d/10-secrets-out-of-reach.conf",
+      "/usr/lib/systemd/system/rhythm-cadence.service",
+      "/usr/lib/systemd/system/rhythm-cadence.timer",
+      "/usr/lib/systemd/system/ribosome-vessel.service",
+      "/usr/lib/systemd/system/ribosome-vessel.service.d/10-secrets-out-of-reach.conf",
+      "/usr/lib/systemd/system/runtime-drift.service",
+      "/usr/lib/systemd/system/runtime-drift.timer",
+      "/usr/lib/systemd/system/self-development-trend.service",
+      "/usr/lib/systemd/system/self-development-trend.timer",
+      "/usr/lib/systemd/system/self-operational-health.service",
+      "/usr/lib/systemd/system/self-operational-health.service.d/run-dir.conf",
+      "/usr/lib/systemd/system/self-operational-health.timer",
+      "/usr/lib/systemd/system/self-operational-health.timer.d/ready-gate.conf",
+      "/usr/lib/systemd/system/self-recovery.service",
+      "/usr/lib/systemd/system/self-recovery.timer",
+      "/usr/lib/systemd/system/self-recovery.timer.d/ready-gate.conf",
+      "/usr/lib/systemd/system/self-repair-operational.service",
+      "/usr/lib/systemd/system/self-repair-operational.service.d/run-dir.conf",
+      "/usr/lib/systemd/system/self-repair-operational.timer",
+      "/usr/lib/systemd/system/self-repair-operational.timer.d/ready-gate.conf",
+      "/usr/lib/systemd/system/service.d/05-secret-dir-out-of-reach.conf",
+      "/usr/lib/systemd/system/service.d/06-gate-public-read-only.conf",
+      "/usr/lib/systemd/system/service.d/07-run-dir-read-only.conf",
+      "/usr/lib/systemd/system/service.d/EXEMPT",
+      "/usr/lib/systemd/system/service.d/WRITERS",
+      "/usr/lib/systemd/system/spectral-gap.service",
+      "/usr/lib/systemd/system/spectral-gap.service.d/run-dir.conf",
+      "/usr/lib/systemd/system/spectral-gap.timer",
+      "/usr/lib/systemd/system/spectral-gap.timer.d/ready-gate.conf",
+      "/usr/lib/systemd/system/stateful-ui-vessel.service",
+      "/usr/lib/systemd/system/stateful-ui-vessel.service.d/10-secrets-out-of-reach.conf",
+      "/usr/lib/systemd/system/substrate-active-scripts-seed.service",
+      "/usr/lib/systemd/system/substrate-active-scripts-seed.service.d/07-run-dir-read-only.conf",
+      "/usr/lib/systemd/system/substrate-pull-sync.service",
+      "/usr/lib/systemd/system/substrate-pull-sync.service.d/05-secret-dir-out-of-reach.conf",
+      "/usr/lib/systemd/system/substrate-pull-sync.service.d/06-gate-public-read-only.conf",
+      "/usr/lib/systemd/system/substrate-pull-sync.service.d/07-run-dir-read-only.conf",
+      "/usr/lib/systemd/system/substrate-pull-sync.timer",
+      "/usr/lib/systemd/system/substrate-pull-sync.timer.d/ready-gate.conf",
+      "/usr/lib/systemd/system/substrate-ready.service",
+      "/usr/lib/systemd/system/surgical-gap-scan.service",
+      "/usr/lib/systemd/system/surgical-gap-scan.service.d/run-dir.conf",
+      "/usr/lib/systemd/system/surgical-gap-scan.timer",
+      "/usr/lib/systemd/system/surgical-gap-scan.timer.d/ready-gate.conf",
+      "/usr/lib/systemd/system/surrealdb.service",
+      "/usr/lib/systemd/system/trace-store-health-check.service",
+      "/usr/lib/systemd/system/trace-store-health-check.timer",
+      "/usr/lib/systemd/system/typecheck-scenario-gen.service",
+      "/usr/lib/systemd/system/typecheck-scenario-gen.service.d/run-dir.conf",
+      "/usr/lib/systemd/system/typecheck-scenario-gen.timer",
+      "/usr/lib/systemd/system/validator-liveness.service",
+      "/usr/lib/systemd/system/validator-liveness.timer",
+      "/usr/lib/systemd/system/valkey.service",
+      "/usr/lib/systemd/system/vessel.d/10-secrets-out-of-reach.conf",
+      "/usr/lib/systemd/system/vessel.d/EXCEPTIONS",
       "/usr/local/bin/apply-inventory",
       "/usr/local/bin/gen-env",
       "/usr/local/bin/mirror-to-live",
@@ -126,1353 +313,2704 @@
     "/usr/lib/systemd/system/activity-api.service": {
       "src": "scripts/substrate/units/activity-api.service",
       "src_blob": "b2819be35c5967abdfc1239f4cd0b07b3af1589e",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "3c83b3aedf4e8ed21da635544c53c8909f174028"
+      }
     },
     "/usr/lib/systemd/system/activity-api.service.d/10-secrets-out-of-reach.conf": {
       "src": "scripts/substrate/units/activity-api.service.d/10-secrets-out-of-reach.conf",
       "src_blob": "5edc729deb06af74f476c92c81b6638c355c4f97",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "8a9dfe1f0cfab12417bdc9f877c8342c6485d640"
+      }
     },
     "/usr/lib/systemd/system/analysis-vessel.service": {
       "src": "scripts/substrate/units/analysis-vessel.service",
       "src_blob": "9766f2262cc45acb6372dca8bc04007bf45b4848",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "44ef80e954f06f51afc43684ad7802e0a6da63b9"
+      }
     },
     "/usr/lib/systemd/system/analysis-vessel.service.d/10-secrets-out-of-reach.conf": {
       "src": "scripts/substrate/units/analysis-vessel.service.d/10-secrets-out-of-reach.conf",
       "src_blob": "5edc729deb06af74f476c92c81b6638c355c4f97",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "8a9dfe1f0cfab12417bdc9f877c8342c6485d640"
+      }
     },
     "/usr/lib/systemd/system/auto-describe-resolvers.service": {
       "src": "scripts/substrate/units/auto-describe-resolvers.service",
       "src_blob": "31f7e6490a23c83e11015643ac425123280ff1d7",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "0c7262cd1654afc07c1627afebd093f0b59ec3c0"
+      }
     },
     "/usr/lib/systemd/system/auto-describe-resolvers.service.d/run-dir.conf": {
       "src": "scripts/substrate/units/auto-describe-resolvers.service.d/run-dir.conf",
-      "src_blob": "1bbfd1e867bc6d13a9d1f818b85f761d44694de5",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "src_blob": "10a788ab971317c583968bcf6ca6b3f646ff9af6",
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "1312bf918a55022765aa827bdc56a7a1c02e132a"
+      }
     },
     "/usr/lib/systemd/system/auto-describe-resolvers.timer": {
       "src": "scripts/substrate/units/auto-describe-resolvers.timer",
       "src_blob": "72d1afbd74a9d35c63483f903c734188426d564d",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "18e385e4294bc11efa572c26b26a341ac1ffd000"
+      }
     },
     "/usr/lib/systemd/system/auto-describe-resolvers.timer.d/ready-gate.conf": {
       "src": "scripts/substrate/units/auto-describe-resolvers.timer.d/ready-gate.conf",
       "src_blob": "ffbdc6bcf87b904fb813dc6246f4bc6ef3a324a8",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "12378342ed9ddf05dfc3936b4dd673c9b6a28513"
+      }
     },
     "/usr/lib/systemd/system/autonomy-metrics.service": {
       "src": "scripts/substrate/units/autonomy-metrics.service",
       "src_blob": "a06859f1e3cb07acd61c87ba27c51a0211ad66ae",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "64d893b369097179c8191d608fc808b767b3dc6d"
+      }
     },
     "/usr/lib/systemd/system/autonomy-metrics.service.d/run-dir.conf": {
       "src": "scripts/substrate/units/autonomy-metrics.service.d/run-dir.conf",
-      "src_blob": "ac9f03869a93677176f9fb0da2664a631c333d60",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "src_blob": "28d8607ac3baf2bff677269b2dc26c7609145412",
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "6a68329c49dfc76bf2196268df03a42caf729d3f"
+      }
     },
     "/usr/lib/systemd/system/autonomy-metrics.timer": {
       "src": "scripts/substrate/units/autonomy-metrics.timer",
       "src_blob": "c39aa42a33841d833bddfcf83216c1244b05521b",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "d095643fa9dd96071fcb23d5c79828e2c3cadfe6"
+      }
     },
     "/usr/lib/systemd/system/autonomy-metrics.timer.d/ready-gate.conf": {
       "src": "scripts/substrate/units/autonomy-metrics.timer.d/ready-gate.conf",
       "src_blob": "ffbdc6bcf87b904fb813dc6246f4bc6ef3a324a8",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "12378342ed9ddf05dfc3936b4dd673c9b6a28513"
+      }
     },
     "/usr/lib/systemd/system/bootstrap-seeder.service": {
       "src": "scripts/substrate/units/bootstrap-seeder.service",
       "src_blob": "fa4361a57943ed750f1c544b5f5ed8a5c7046710",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "a8aad5e012269326ca37fcc09e6053a00667e6fc"
+      }
     },
     "/usr/lib/systemd/system/boredom-vessel.service": {
       "src": "scripts/substrate/units/boredom-vessel.service",
       "src_blob": "3bb2dfbe87faf0923d3354a79866e46cf496a199",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "1af9176c9248523821964f77c187bf07354e35b3"
+      }
     },
     "/usr/lib/systemd/system/boredom-vessel.service.d/10-secrets-out-of-reach.conf": {
       "src": "scripts/substrate/units/boredom-vessel.service.d/10-secrets-out-of-reach.conf",
       "src_blob": "5edc729deb06af74f476c92c81b6638c355c4f97",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "8a9dfe1f0cfab12417bdc9f877c8342c6485d640"
+      }
     },
     "/usr/lib/systemd/system/boredom-vessel.service.d/watchdog.conf": {
       "src": "scripts/substrate/units/boredom-vessel.service.d/watchdog.conf",
       "src_blob": "3b31b3ae8cfe533133c72032202aafe998684696",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "e660f75d9d5743b2f3c58faa32e2a89e074b8304"
+      }
     },
     "/usr/lib/systemd/system/boredom-vessel.timer": {
       "src": "scripts/substrate/units/boredom-vessel.timer",
       "src_blob": "3cb8a220e527cd53b27a08bbfb72393a1754a610",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "b1f5d38f16731da3677a70d24b18b82c9c2cbe0b"
+      }
     },
     "/usr/lib/systemd/system/boredom-vessel.timer.d/ready-gate.conf": {
       "src": "scripts/substrate/units/boredom-vessel.timer.d/ready-gate.conf",
       "src_blob": "ffbdc6bcf87b904fb813dc6246f4bc6ef3a324a8",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "12378342ed9ddf05dfc3936b4dd673c9b6a28513"
+      }
     },
     "/usr/lib/systemd/system/coherence-metric.service": {
       "src": "scripts/substrate/units/coherence-metric.service",
       "src_blob": "3f2e1411e02d97241f13404f815337cfaa5c5eac",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "f8470f36cee44d804fb802291056fef79a729ae7"
+      }
     },
     "/usr/lib/systemd/system/coherence-metric.service.d/run-dir.conf": {
       "src": "scripts/substrate/units/coherence-metric.service.d/run-dir.conf",
-      "src_blob": "350c7242a8a569ce4dbbd02ae31d6a9a0b0e7699",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "src_blob": "c867a9b7aec419266d353b69e587ac342af36520",
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "ec1b62da0739e2a383f9befe82111b257a7a84b8"
+      }
     },
     "/usr/lib/systemd/system/coherence-metric.timer": {
       "src": "scripts/substrate/units/coherence-metric.timer",
       "src_blob": "c49f1d93c6ef49cd17fd5e95d44939c950922142",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "51a1ef8e89832468497de89259a312f16317b3ed"
+      }
     },
     "/usr/lib/systemd/system/coherence-recover.service": {
       "src": "scripts/substrate/units/coherence-recover.service",
       "src_blob": "32ec1056fae3607d2aa96919f5da79f460fb95e8",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "ba258bc3d9d5dd2d3ad27733dc86799df6ff7b51"
+      }
     },
     "/usr/lib/systemd/system/coherence-recover.service.d/run-dir.conf": {
       "src": "scripts/substrate/units/coherence-recover.service.d/run-dir.conf",
-      "src_blob": "1884a08ed10796d7fbdfa180f4a5a848b0d1a68d",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "src_blob": "881774d491996fac4008189254dfbb2c532e2399",
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "2fe11929fc0010a218d9a751b7f80991f71fa2b7"
+      }
     },
     "/usr/lib/systemd/system/coherence-recover.timer": {
       "src": "scripts/substrate/units/coherence-recover.timer",
       "src_blob": "62b37ee5073226748b5848282ed37d30261e7a18",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "9b5eb4992e29d6c96b8db4b5e16c98d205d14eee"
+      }
     },
     "/usr/lib/systemd/system/compose-drift.service": {
       "src": "scripts/substrate/units/compose-drift.service",
-      "src_blob": "e933edecd3639d0dd8fc3086104962bdf3f6ac5d",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "src_blob": "110220c12d0665d932eb57aeecb0b38b4b959333",
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "010e0a731d23a3f5a050b443540d8d9c5006e2d6"
+      }
     },
     "/usr/lib/systemd/system/compose-drift.timer": {
       "src": "scripts/substrate/units/compose-drift.timer",
       "src_blob": "d00c0f9f12fd9e81ce20534ab1c84e34569f5681",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "019bc2852588d3def76e068b00ef8e416d9696d2"
+      }
     },
     "/usr/lib/systemd/system/compose-teacher.service": {
       "src": "scripts/substrate/units/compose-teacher.service",
       "src_blob": "82d38caae206b76793934612050855f5deabd770",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "1d6a2f25fc2164447b76d5726ce044a7a1ce2faa"
+      }
     },
     "/usr/lib/systemd/system/compose-teacher.service.d/run-dir.conf": {
       "src": "scripts/substrate/units/compose-teacher.service.d/run-dir.conf",
-      "src_blob": "d3bb2d91f9f8c349c196ed5ec964ce3ed176945b",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "src_blob": "a49475852c4cb5a6bff5fc624ea974abefcf9366",
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "7104fa24045bb6147bdd42f1799ce5185e8e693f"
+      }
     },
     "/usr/lib/systemd/system/compose-teacher.service.d/watchdog.conf": {
       "src": "scripts/substrate/units/compose-teacher.service.d/watchdog.conf",
       "src_blob": "6e6fd9c9d704411bf7c3cd41aa592b7ce6af7d61",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "810323e846005a65902c2e776f3e85cb8636ff52"
+      }
     },
     "/usr/lib/systemd/system/compose-teacher.timer": {
       "src": "scripts/substrate/units/compose-teacher.timer",
       "src_blob": "c8ad1a288b7102fbd39d031c8ae16c1c0ed88c3a",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "fe8dbb8f9e6235f05575f61a7f9ce6f63c596245"
+      }
     },
     "/usr/lib/systemd/system/composition-edge-reconcile.service": {
       "src": "scripts/substrate/units/composition-edge-reconcile.service",
       "src_blob": "c9efa34a235c22747c23ba4233b60e6fd20a0310",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "eaf256116d50b249c9c7cf4d3f131a015dba474e"
+      }
     },
     "/usr/lib/systemd/system/composition-edge-reconcile.service.d/run-dir.conf": {
       "src": "scripts/substrate/units/composition-edge-reconcile.service.d/run-dir.conf",
-      "src_blob": "18c566aaefbcee1ac1ab697b4b26e91ba633358b",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "src_blob": "8b20ea2f0ba0e1b6337484f00912837e81caa295",
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "1fccc2a7ee5c393d9763dc8a1f8cde6c4861aa89"
+      }
     },
     "/usr/lib/systemd/system/composition-edge-reconcile.timer": {
       "src": "scripts/substrate/units/composition-edge-reconcile.timer",
       "src_blob": "2e3e20484e4f638644f2827b2a85fe2b08b2a126",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "8faeb59247ad1106f1f15a5eea3c5e8dcf337c77"
+      }
     },
     "/usr/lib/systemd/system/composition-edge-reconcile.timer.d/ready-gate.conf": {
       "src": "scripts/substrate/units/composition-edge-reconcile.timer.d/ready-gate.conf",
       "src_blob": "ffbdc6bcf87b904fb813dc6246f4bc6ef3a324a8",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "12378342ed9ddf05dfc3936b4dd673c9b6a28513"
+      }
     },
     "/usr/lib/systemd/system/concept-db-seeder.service": {
       "src": "scripts/substrate/units/concept-db-seeder.service",
       "src_blob": "0a8d870e673d405ed1f769f437968a85fa7e6b92",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "ac928775c68b393e016f20cb342e6fe926813db4"
+      }
     },
     "/usr/lib/systemd/system/concept-db.service": {
       "src": "scripts/substrate/units/concept-db.service",
       "src_blob": "30304aa2dd0bca3e882881ccaab23fe5db2ee61b",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "4816642804131431c8f4b13b80977826fd2fc819"
+      }
     },
     "/usr/lib/systemd/system/concept-db.service.d/10-secrets-out-of-reach.conf": {
       "src": "scripts/substrate/units/concept-db.service.d/10-secrets-out-of-reach.conf",
       "src_blob": "5edc729deb06af74f476c92c81b6638c355c4f97",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "8a9dfe1f0cfab12417bdc9f877c8342c6485d640"
+      }
     },
     "/usr/lib/systemd/system/db-contention-check.service": {
       "src": "scripts/substrate/units/db-contention-check.service",
       "src_blob": "dcccd17c7be6a742d9e397af282aedbbcc92076b",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "4c08c3552a256acb91969bde5bcd4a2534541bbe"
+      }
     },
     "/usr/lib/systemd/system/db-contention-check.service.d/run-dir.conf": {
       "src": "scripts/substrate/units/db-contention-check.service.d/run-dir.conf",
-      "src_blob": "e1446a332cbcc3ee9675798aa52e38e17345aa27",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "src_blob": "8ed7c229845f5250e6b1cd30cff16e3af06a3af9",
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "16d8b2098107399526a63fe1c030245aa2684119"
+      }
     },
     "/usr/lib/systemd/system/db-contention-check.timer": {
       "src": "scripts/substrate/units/db-contention-check.timer",
       "src_blob": "697623b1010f218356036a80b49548001d94bd8b",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "f5263e7150fd1f73bb35e2a1a5368a7390d0950b"
+      }
     },
     "/usr/lib/systemd/system/db-maintenance.service": {
       "src": "scripts/substrate/units/db-maintenance.service",
       "src_blob": "bb7417a9684df64f214674740ec030036c27e8bf",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "16e06d8512a0ac50c64efbdb147ed2808eebaa9f"
+      }
     },
     "/usr/lib/systemd/system/db-maintenance.timer": {
       "src": "scripts/substrate/units/db-maintenance.timer",
       "src_blob": "f6497daf9ad3250debd78193cadeeba344089007",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "348de8f15ba552f7c778310cc3bb7d1106252baf"
+      }
     },
     "/usr/lib/systemd/system/development-vessel-seed.service": {
       "src": "scripts/substrate/units/development-vessel-seed.service",
-      "src_blob": "413d05747c7e6882be3c5c6f4a36202b06a01b82",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "src_blob": "3235a3c6736e33976407db4e0369dfe785bf45ec",
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "c2f7275048faa41b73b61d651581f5c7d804bb2c"
+      }
     },
     "/usr/lib/systemd/system/development-vessel-seed.service.d/10-secrets-out-of-reach.conf": {
       "src": "scripts/substrate/units/development-vessel-seed.service.d/10-secrets-out-of-reach.conf",
       "src_blob": "5edc729deb06af74f476c92c81b6638c355c4f97",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "8a9dfe1f0cfab12417bdc9f877c8342c6485d640"
+      }
     },
     "/usr/lib/systemd/system/development-vessel.service": {
       "src": "scripts/substrate/units/development-vessel.service",
       "src_blob": "36f83c2b286435d5ec7f9e32ed55521e29948049",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "eb5fb5af8cc5f4bb1d012372e424a9723b916add"
+      }
     },
     "/usr/lib/systemd/system/development-vessel.service.d/10-secrets-out-of-reach.conf": {
       "src": "scripts/substrate/units/development-vessel.service.d/10-secrets-out-of-reach.conf",
       "src_blob": "5edc729deb06af74f476c92c81b6638c355c4f97",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "8a9dfe1f0cfab12417bdc9f877c8342c6485d640"
+      }
     },
     "/usr/lib/systemd/system/development-vessel.service.d/drain-timeout.conf": {
       "src": "scripts/substrate/units/development-vessel.service.d/drain-timeout.conf",
       "src_blob": "479813495bb53f098f7f0aeb32ad5fb3a3f52838",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "e6ab2e565aa004a2f77b96db64be765a981fdad4"
+      }
     },
     "/usr/lib/systemd/system/discovery-vessel.service": {
       "src": "scripts/substrate/units/discovery-vessel.service",
       "src_blob": "66116c625837ffc4e2595579c47fba7de6544666",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "4a25677a16ec86711b860b69b80628f97fad4e48"
+      }
     },
     "/usr/lib/systemd/system/discovery-vessel.service.d/10-secrets-out-of-reach.conf": {
       "src": "scripts/substrate/units/discovery-vessel.service.d/10-secrets-out-of-reach.conf",
       "src_blob": "5edc729deb06af74f476c92c81b6638c355c4f97",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "8a9dfe1f0cfab12417bdc9f877c8342c6485d640"
+      }
     },
     "/usr/lib/systemd/system/discovery-vessel.service.d/federation-peering.conf": {
       "src": "scripts/substrate/units/discovery-vessel.service.d/federation-peering.conf",
       "src_blob": "79d12e7e31d7ddc89ec298b4b2694d303a5f9649",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "5ec33587f85174624e1c0fc48a2e60f54a3a97a1"
+      }
     },
     "/usr/lib/systemd/system/efficiency-failure-tick.service": {
       "src": "scripts/substrate/units/efficiency-failure-tick.service",
       "src_blob": "92d0f1f5d29a5979f5751fef5c0c075c6fecf336",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "50cebf38e3c8df3c17441df795b444cdf09659af"
+      }
     },
     "/usr/lib/systemd/system/efficiency-failure-tick.service.d/run-dir.conf": {
       "src": "scripts/substrate/units/efficiency-failure-tick.service.d/run-dir.conf",
-      "src_blob": "70f06968c54ad2a0e8683694a56ca24d79d6738f",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "src_blob": "70ff8ab0012d945cde68bba22a0a57dce817429f",
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "8aeb82432a1c3fda734249d215a30c8258b08b9d"
+      }
     },
     "/usr/lib/systemd/system/efficiency-failure-tick.timer": {
       "src": "scripts/substrate/units/efficiency-failure-tick.timer",
       "src_blob": "eb8f88ebfc4a344372c794472c8e02fde014e186",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "8d79ec905f352abe2ae22e340ea5425f185aaf81"
+      }
     },
     "/usr/lib/systemd/system/federation-relay.service.d/10-secrets-out-of-reach.conf": {
       "src": "scripts/substrate/units/federation-relay.service.d/10-secrets-out-of-reach.conf",
       "src_blob": "5edc729deb06af74f476c92c81b6638c355c4f97",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "8a9dfe1f0cfab12417bdc9f877c8342c6485d640"
+      }
     },
     "/usr/lib/systemd/system/federation-transport-vessel.service": {
       "src": "scripts/substrate/units/federation-transport-vessel.service",
       "src_blob": "48e2fc805f96d27cd94d7112f2463f01904647c0",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "7cdc22197a95f2cbe1f20e20ee7bf2322e23a3a0"
+      }
     },
     "/usr/lib/systemd/system/federation-transport-vessel.service.d/10-secrets-out-of-reach.conf": {
       "src": "scripts/substrate/units/federation-transport-vessel.service.d/10-secrets-out-of-reach.conf",
       "src_blob": "5edc729deb06af74f476c92c81b6638c355c4f97",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "8a9dfe1f0cfab12417bdc9f877c8342c6485d640"
+      }
     },
     "/usr/lib/systemd/system/federation-transport-vessel.service.d/lib-refresh.conf": {
       "src": "scripts/substrate/units/federation-transport-vessel.service.d/lib-refresh.conf",
       "src_blob": "47d9229b1ab1f0054fa19837886c893fbba51f27",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "7708ce8fd2d2afc0aebddef3208b55798fd7700e"
+      }
     },
     "/usr/lib/systemd/system/funnel-drain.service": {
       "src": "scripts/substrate/units/funnel-drain.service",
       "src_blob": "ddcef45c9d853564618a80e04ad60264a2fe51d4",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "9ce9b610ea93baedb03f3d9f7578817b434153bb"
+      }
     },
     "/usr/lib/systemd/system/funnel-drain.service.d/run-dir.conf": {
       "src": "scripts/substrate/units/funnel-drain.service.d/run-dir.conf",
-      "src_blob": "4e142f6b92dec8f2cf89885431bdcc8d342bb4a6",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "src_blob": "f0ac117a4b85c0a292f193c6aaf4d1bdf9ebbdff",
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "44b9dcc0148ae84184267e1d7d61193ac620e52c"
+      }
     },
     "/usr/lib/systemd/system/funnel-drain.service.d/watchdog.conf": {
       "src": "scripts/substrate/units/funnel-drain.service.d/watchdog.conf",
       "src_blob": "d9c11b0685adeb191e77a9e81581cb7c19d134af",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "4e6607e7a28ced0ed058fefaa5fb05cfc1cb73a2"
+      }
     },
     "/usr/lib/systemd/system/funnel-drain.timer": {
       "src": "scripts/substrate/units/funnel-drain.timer",
       "src_blob": "332aa7a346f3c0cf17426c8f415198dc4d54b11a",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "1ed87791970a982d0baa0f07ec406146abcde6ed"
+      }
     },
     "/usr/lib/systemd/system/funnel-drain.timer.d/ready-gate.conf": {
       "src": "scripts/substrate/units/funnel-drain.timer.d/ready-gate.conf",
       "src_blob": "ffbdc6bcf87b904fb813dc6246f4bc6ef3a324a8",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "12378342ed9ddf05dfc3936b4dd673c9b6a28513"
+      }
     },
     "/usr/lib/systemd/system/gap-compose.service": {
       "src": "scripts/substrate/units/gap-compose.service",
       "src_blob": "3b65f0f3e0ad133d9e14f69856dbf65b6f64b163",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "a98a86e61aab8197bfb79ca139701c860680795f"
+      }
     },
     "/usr/lib/systemd/system/gap-compose.service.d/run-dir.conf": {
       "src": "scripts/substrate/units/gap-compose.service.d/run-dir.conf",
-      "src_blob": "2a020849384a9b13de2190ee639710b84ed914fb",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "src_blob": "3c2067aeed29a137157da13b836b3ca7625fa362",
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "32489bb0e1b439daa2738edb17cc617702ff7d7c"
+      }
     },
     "/usr/lib/systemd/system/gap-compose.service.d/watchdog.conf": {
       "src": "scripts/substrate/units/gap-compose.service.d/watchdog.conf",
       "src_blob": "89734692561a7ff8c4abe8ae05e67404f725d636",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "a15cacf30edc662fb681a2623d8749ca24945440"
+      }
     },
     "/usr/lib/systemd/system/gap-compose.timer": {
       "src": "scripts/substrate/units/gap-compose.timer",
       "src_blob": "0bd59cf534c5524fb8cc1a3da3a00a3a5e3b07f9",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "0c185dce6fd770d3722c2bf05760d7c8e04a5521"
+      }
     },
     "/usr/lib/systemd/system/gap-store-census.service": {
       "src": "scripts/substrate/units/gap-store-census.service",
-      "src_blob": "639eb1657550a27965b08dcf4bbefd2c8ae1b605",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "src_blob": "e7e5ec45421d84baaaca546f40443d9f825499bc",
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "9088e96b2cc08c703a5b5c8f7fbd15212bf5641a"
+      }
     },
     "/usr/lib/systemd/system/gap-store-census.timer": {
       "src": "scripts/substrate/units/gap-store-census.timer",
       "src_blob": "49196e92272d4ff3e207deaa646149e4f6198977",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "13433313e4af96cae2c0543ffd50f6262a3ffcd5"
+      }
     },
     "/usr/lib/systemd/system/git-push-setup.service": {
       "src": "scripts/substrate/units/git-push-setup.service",
       "src_blob": "fcd93d93ea1cb4733737ee72db4d330caf6f6955",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "268f906cc504ff1649dbf34937c0a8af8b5b8d70"
+      }
     },
     "/usr/lib/systemd/system/git-push-setup.service.d/05-secret-dir-out-of-reach.conf": {
       "src": "scripts/substrate/units/git-push-setup.service.d/05-secret-dir-out-of-reach.conf",
       "src_blob": "90b334b6dddb3dd22562cad5950b82e6b7e5494e",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "86708566f9b5479c2d6c6d88bba250fe5131cec1"
+      }
     },
     "/usr/lib/systemd/system/goal-host-behavior.service": {
       "src": "scripts/substrate/units/goal-host-behavior.service",
       "src_blob": "ed6535dff03b426cad269b2dc069ea89a024d392",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "377f01d93651f454d2f412ffa133b5091d2914ff"
+      }
     },
     "/usr/lib/systemd/system/goal-host-behavior.timer": {
       "src": "scripts/substrate/units/goal-host-behavior.timer",
       "src_blob": "4725cef92256c4319b1e286ad0a03cac296bbe4b",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "e508215f3897c6df78d5932f3cc7cf6012e99353"
+      }
     },
     "/usr/lib/systemd/system/goal-host-vessel.service": {
       "src": "scripts/substrate/units/goal-host-vessel.service",
-      "src_blob": "50ce0bcbb1029f11a2a3df028c7ec3b3071d3691",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "src_blob": "5a4f705eadee070fecec64381b36b9532e7472a0",
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "64b23591fef9f4f24988703f4822af0ed24e816a"
+      }
     },
     "/usr/lib/systemd/system/goal-host-vessel.service.d/10-secrets-out-of-reach.conf": {
       "src": "scripts/substrate/units/goal-host-vessel.service.d/10-secrets-out-of-reach.conf",
       "src_blob": "5edc729deb06af74f476c92c81b6638c355c4f97",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "8a9dfe1f0cfab12417bdc9f877c8342c6485d640"
+      }
     },
     "/usr/lib/systemd/system/goal-host-vessel.service.d/drain-timeout.conf": {
       "src": "scripts/substrate/units/goal-host-vessel.service.d/drain-timeout.conf",
       "src_blob": "ccbcc87ee95c149a17874f4ae1d312f76e10c2bf",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "d12ae7ca2abb5acbd1a60a99b57299607e502fa5"
+      }
     },
     "/usr/lib/systemd/system/goal-host-vessel.service.d/federation-route-preference.conf": {
       "src": "scripts/substrate/units/goal-host-vessel.service.d/federation-route-preference.conf",
       "src_blob": "2602f33bce4bb22bf6bb60023e8b0b992ce59b47",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "886e818324184453190134b58504e006906fd985"
+      }
     },
     "/usr/lib/systemd/system/human-surface-vessel.service": {
       "src": "scripts/substrate/units/human-surface-vessel.service",
       "src_blob": "1b9da9abd43d00c2fdc83380082ed9395cc1a334",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "5a78b41545bf3197bc1ade11052f13e380ea222f"
+      }
     },
     "/usr/lib/systemd/system/human-surface-vessel.service.d/10-secrets-out-of-reach.conf": {
       "src": "scripts/substrate/units/human-surface-vessel.service.d/10-secrets-out-of-reach.conf",
       "src_blob": "5edc729deb06af74f476c92c81b6638c355c4f97",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "8a9dfe1f0cfab12417bdc9f877c8342c6485d640"
+      }
     },
     "/usr/lib/systemd/system/identity-seeder.service": {
       "src": "scripts/substrate/units/identity-seeder.service",
       "src_blob": "ba905af50672adb956714ee6a67b0d0fa8c12c8c",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "faacd196bcbb6c37f36af9352945f382ce36b61b"
+      }
     },
     "/usr/lib/systemd/system/identity-seeder.service.d/05-secret-dir-out-of-reach.conf": {
       "src": "scripts/substrate/units/identity-seeder.service.d/05-secret-dir-out-of-reach.conf",
       "src_blob": "e5a92e07520c7960b84cf6889177a128efec95f4",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "4c97b71fd1992e333ab7de55321cc6576ea1365c"
+      }
     },
     "/usr/lib/systemd/system/identity-vessel.service": {
       "src": "scripts/substrate/units/identity-vessel.service",
       "src_blob": "d234a47c892766ff41e58fbc1edcbfa1185a74fa",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "92ba25d7efdb21dac9672f24634d55e94fb13844"
+      }
     },
     "/usr/lib/systemd/system/identity-vessel.service.d/10-secrets-out-of-reach.conf": {
       "src": "scripts/substrate/units/identity-vessel.service.d/10-secrets-out-of-reach.conf",
       "src_blob": "5edc729deb06af74f476c92c81b6638c355c4f97",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "8a9dfe1f0cfab12417bdc9f877c8342c6485d640"
+      }
     },
     "/usr/lib/systemd/system/ingest-docs.service": {
       "src": "scripts/substrate/units/ingest-docs.service",
       "src_blob": "7aebc52ac0e374cb5d5cbc10646040d9d1e8f54c",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "751bef80f4e8c9998da5158c6203f5349c242934"
+      }
     },
     "/usr/lib/systemd/system/ingest-docs.service.d/run-dir.conf": {
       "src": "scripts/substrate/units/ingest-docs.service.d/run-dir.conf",
-      "src_blob": "b9d2b931648dd874059ed60c1dc8366d0f2e422d",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "src_blob": "9375a439dbe98aaf845ffb8f1ce2ed4c19d22b93",
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "6d7770d23a30161a4b3bd84b22da70cb2b312b8a"
+      }
     },
     "/usr/lib/systemd/system/ingest-docs.timer": {
       "src": "scripts/substrate/units/ingest-docs.timer",
       "src_blob": "84727b22e5ba5095711db40a2fdc905be8883498",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "0c944758788f2973a6b6d80cbfcff98b88441692"
+      }
     },
     "/usr/lib/systemd/system/ingest-docs.timer.d/ready-gate.conf": {
       "src": "scripts/substrate/units/ingest-docs.timer.d/ready-gate.conf",
       "src_blob": "ffbdc6bcf87b904fb813dc6246f4bc6ef3a324a8",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "12378342ed9ddf05dfc3936b4dd673c9b6a28513"
+      }
     },
     "/usr/lib/systemd/system/joint-liveness.service": {
       "src": "scripts/substrate/units/joint-liveness.service",
-      "src_blob": "7a558bce0f50aa4654abfdd58a0ab16849556e4e",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "src_blob": "4cdb406be234bde2baefc31fa4123fc8c89863a7",
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "94accbd026967bfb276123db61dde9017a3afb40"
+      }
     },
     "/usr/lib/systemd/system/joint-liveness.timer": {
       "src": "scripts/substrate/units/joint-liveness.timer",
       "src_blob": "69df222ef85791b66ca2ae16fd57d43eed629a95",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "787555d6e2360be34177ff9bc0f1049fe92e72e3"
+      }
     },
     "/usr/lib/systemd/system/journald-stdout-forwarder.service": {
       "src": "scripts/substrate/units/journald-stdout-forwarder.service",
       "src_blob": "124c39b40b73dd71f6a3e8e07ab410c3f8e6fcb6",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "51672c657036b3a6b0971bfbcde732894c8b310e"
+      }
     },
     "/usr/lib/systemd/system/learning-liveness-probe.service": {
       "src": "scripts/substrate/units/learning-liveness-probe.service",
-      "src_blob": "4e08f3855e8c211e308477e5ed34d9254e2ac676",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "src_blob": "6a3b644ade127af9f694592a3b8711049b760b52",
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "2e32691d23e4dcb1fb603e458e2d45b19fdd66d1"
+      }
     },
     "/usr/lib/systemd/system/learning-liveness-probe.timer": {
       "src": "scripts/substrate/units/learning-liveness-probe.timer",
       "src_blob": "6e7b7a7300a4886633ffe7b35424885748dd8b4c",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "88acc70bc9a22cb5baa63e49b0f3c5743ccb1967"
+      }
     },
     "/usr/lib/systemd/system/learning-loop-selftest.service": {
       "src": "scripts/substrate/units/learning-loop-selftest.service",
-      "src_blob": "b59b2731acdb30a8b3160b157c18a421fd0768c0",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "src_blob": "04e892543246855d59df6a8a972f1525d2f6130c",
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "188daf8f076d7bc1bb04246e6d2d2a29c6e42278"
+      }
     },
     "/usr/lib/systemd/system/learning-loop-selftest.timer": {
       "src": "scripts/substrate/units/learning-loop-selftest.timer",
       "src_blob": "60406593423fba7d119c80f548eac77c9ddbcbaf",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "43fdd3fff8f8bce2ae51a5487b682ef819082e4c"
+      }
     },
     "/usr/lib/systemd/system/light-dispatch-healthcheck.service": {
       "src": "scripts/substrate/units/light-dispatch-healthcheck.service",
       "src_blob": "7be85bfa349033c2ee365932e4cc61f4113fc530",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "ea1fbb0a1a3e417288e90de14c91e6fbd0e86078"
+      }
     },
     "/usr/lib/systemd/system/light-dispatch-healthcheck.timer": {
       "src": "scripts/substrate/units/light-dispatch-healthcheck.timer",
       "src_blob": "c114b75b299365d00e78cc17d9540fc16bcea024",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "60f1b96c03b96e2e3978fb4b433d95d383cd3641"
+      }
     },
     "/usr/lib/systemd/system/light-dispatch-healthcheck.timer.d/ready-gate.conf": {
       "src": "scripts/substrate/units/light-dispatch-healthcheck.timer.d/ready-gate.conf",
       "src_blob": "ffbdc6bcf87b904fb813dc6246f4bc6ef3a324a8",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "12378342ed9ddf05dfc3936b4dd673c9b6a28513"
+      }
     },
     "/usr/lib/systemd/system/light-dispatch-vessel.service": {
       "src": "scripts/substrate/units/light-dispatch-vessel.service",
       "src_blob": "e4c739ec26b37bd3186bae13edff60c10d496e88",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "4e8d6e009217f0d9ab3f6ef0e53ca7cf590e5b9e"
+      }
     },
     "/usr/lib/systemd/system/light-dispatch-vessel.service.d/10-secrets-out-of-reach.conf": {
       "src": "scripts/substrate/units/light-dispatch-vessel.service.d/10-secrets-out-of-reach.conf",
       "src_blob": "5edc729deb06af74f476c92c81b6638c355c4f97",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "8a9dfe1f0cfab12417bdc9f877c8342c6485d640"
+      }
     },
     "/usr/lib/systemd/system/llm-resolver-vessel.service": {
       "src": "scripts/substrate/units/llm-resolver-vessel.service",
       "src_blob": "3c79ef671c3e5b22b7f92e798e9499449563173e",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "06ba7aeb3192abcbe5c917c195aabbae4b372a15"
+      }
     },
     "/usr/lib/systemd/system/llm-resolver-vessel.service.d/10-secrets-out-of-reach.conf": {
       "src": "scripts/substrate/units/llm-resolver-vessel.service.d/10-secrets-out-of-reach.conf",
       "src_blob": "5edc729deb06af74f476c92c81b6638c355c4f97",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "8a9dfe1f0cfab12417bdc9f877c8342c6485d640"
+      }
     },
     "/usr/lib/systemd/system/llm-resolver-vessel.service.d/stop-timeout.conf": {
       "src": "scripts/substrate/units/llm-resolver-vessel.service.d/stop-timeout.conf",
       "src_blob": "d0b575f67bb882572ad37d4b06800fc446e7d938",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "5c23ee56949fe5a03f40f72e485872ed27e82284"
+      }
     },
     "/usr/lib/systemd/system/local-tools-vessel.service": {
       "src": "scripts/substrate/units/local-tools-vessel.service",
       "src_blob": "ed2b3341032bf229535cdb968a41826c75b8308e",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "c3df8f3c29ac09577208e28cb1d82175221ada1f"
+      }
     },
     "/usr/lib/systemd/system/local-tools-vessel.service.d/10-secrets-out-of-reach.conf": {
       "src": "scripts/substrate/units/local-tools-vessel.service.d/10-secrets-out-of-reach.conf",
       "src_blob": "5edc729deb06af74f476c92c81b6638c355c4f97",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "8a9dfe1f0cfab12417bdc9f877c8342c6485d640"
+      }
     },
     "/usr/lib/systemd/system/m1-trainer.service": {
       "src": "scripts/substrate/units/m1-trainer.service",
       "src_blob": "009a019240b5063220b383c607f143868bc3e666",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "762ae28e64a62a58b87b718f7a2025b1256b005b"
+      }
     },
     "/usr/lib/systemd/system/m1-trainer.timer": {
       "src": "scripts/substrate/units/m1-trainer.timer",
       "src_blob": "78eea0a985cdb76d194032395ace03eefc89c80c",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "d94ecc85b8637f616fde92b5680533cd17cb6037"
+      }
     },
     "/usr/lib/systemd/system/m1-trainer.timer.d/ready-gate.conf": {
       "src": "scripts/substrate/units/m1-trainer.timer.d/ready-gate.conf",
       "src_blob": "ffbdc6bcf87b904fb813dc6246f4bc6ef3a324a8",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "12378342ed9ddf05dfc3936b4dd673c9b6a28513"
+      }
     },
     "/usr/lib/systemd/system/memory-budget-check.service": {
       "src": "scripts/substrate/units/memory-budget-check.service",
-      "src_blob": "e265e098f9e409d199fa5aeac57c6a4e9783d3af",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "src_blob": "5f5921a007704a7d5a82913a24927258306d58c7",
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "552e8a59b508fbabae1a3fbcf219bd75ec970363"
+      }
     },
     "/usr/lib/systemd/system/memory-budget-check.timer": {
       "src": "scripts/substrate/units/memory-budget-check.timer",
       "src_blob": "aa42b93f5295dd77b454ed93392c3d8f042f7535",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "4c565e08f63ce791da2a2aedfa7e821ef3adadb9"
+      }
     },
     "/usr/lib/systemd/system/metric-collector-vessel.service": {
       "src": "scripts/substrate/units/metric-collector-vessel.service",
       "src_blob": "369537ce69aabedae08163811b2abccd1a14deb8",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "27529b85a62403d65db879c605c765c7f3afd101"
+      }
     },
     "/usr/lib/systemd/system/metric-collector-vessel.service.d/10-secrets-out-of-reach.conf": {
       "src": "scripts/substrate/units/metric-collector-vessel.service.d/10-secrets-out-of-reach.conf",
       "src_blob": "5edc729deb06af74f476c92c81b6638c355c4f97",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "8a9dfe1f0cfab12417bdc9f877c8342c6485d640"
+      }
     },
     "/usr/lib/systemd/system/model-reality-audit.service": {
       "src": "scripts/substrate/units/model-reality-audit.service",
       "src_blob": "f6e6ec551d361bb85942e3263b470f1c0f4a2019",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "cdb7c06d9a49ad1a368d9434f916f62e8ab819ab"
+      }
     },
     "/usr/lib/systemd/system/model-reality-audit.service.d/run-dir.conf": {
       "src": "scripts/substrate/units/model-reality-audit.service.d/run-dir.conf",
-      "src_blob": "fcedc178987dd7f2207c5e6c832540966a0e62c3",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "src_blob": "01d170a6661eb3df7fb01187dfd9e15d68034d04",
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "71d87c16efea6686206134d102a2bdcf82cb3ca7"
+      }
     },
     "/usr/lib/systemd/system/model-reality-audit.timer": {
       "src": "scripts/substrate/units/model-reality-audit.timer",
       "src_blob": "e32d872c4df1724f2ac287de5a6c3ffa5723b1e3",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "6c2b25d07545b62d8d2c28ae58428254c32863aa"
+      }
     },
     "/usr/lib/systemd/system/model-reality-audit.timer.d/ready-gate.conf": {
       "src": "scripts/substrate/units/model-reality-audit.timer.d/ready-gate.conf",
       "src_blob": "ffbdc6bcf87b904fb813dc6246f4bc6ef3a324a8",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "12378342ed9ddf05dfc3936b4dd673c9b6a28513"
+      }
     },
     "/usr/lib/systemd/system/novnc.service": {
       "src": "scripts/substrate/units/novnc.service",
       "src_blob": "4fa0c456dd11d88b1a8a0f60a9bcea41c867d4d6",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "68205d2332c04c92e4c92166c9420d584f7e31ac"
+      }
     },
     "/usr/lib/systemd/system/observe-orthogonal-refresh.service": {
       "src": "scripts/substrate/units/observe-orthogonal-refresh.service",
       "src_blob": "bb1c9dabb880afb78d8d54417688fc6eda20fb8b",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "cc2a53e093eb7112a76da6055742bcd10c1f5a24"
+      }
     },
     "/usr/lib/systemd/system/observe-orthogonal-refresh.service.d/run-dir.conf": {
       "src": "scripts/substrate/units/observe-orthogonal-refresh.service.d/run-dir.conf",
-      "src_blob": "178ebb8a8e03b65959e023ed898799008cbd0516",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "src_blob": "3341da73b92714dd46ea1e9f2ce771a30b110fce",
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "06b9b9f570cf8945451dad441f89345d8c2b2970"
+      }
     },
     "/usr/lib/systemd/system/observe-orthogonal-refresh.timer": {
       "src": "scripts/substrate/units/observe-orthogonal-refresh.timer",
       "src_blob": "313ef874b14536839cfe62537da2630975f96c43",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "996a7ca5096c6ca1dd48b80260e3e2432b02f848"
+      }
     },
     "/usr/lib/systemd/system/observe-orthogonal-refresh.timer.d/ready-gate.conf": {
       "src": "scripts/substrate/units/observe-orthogonal-refresh.timer.d/ready-gate.conf",
       "src_blob": "ffbdc6bcf87b904fb813dc6246f4bc6ef3a324a8",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "12378342ed9ddf05dfc3936b4dd673c9b6a28513"
+      }
     },
     "/usr/lib/systemd/system/obsidian-collaborate.service": {
       "src": "scripts/substrate/units/obsidian-collaborate.service",
       "src_blob": "81ee2276e05cd6cb9115451af2dda7e7e60bf4da",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "86d7c3cde22ae2bc0b31783239480d6fdc98ceab"
+      }
     },
     "/usr/lib/systemd/system/obsidian-collaborate.service.d/10-secrets-out-of-reach.conf": {
       "src": "scripts/substrate/units/obsidian-collaborate.service.d/10-secrets-out-of-reach.conf",
       "src_blob": "5edc729deb06af74f476c92c81b6638c355c4f97",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "8a9dfe1f0cfab12417bdc9f877c8342c6485d640"
+      }
     },
     "/usr/lib/systemd/system/obsidian-collaborate.timer": {
       "src": "scripts/substrate/units/obsidian-collaborate.timer",
       "src_blob": "9b4856613aeb3fc2aa608dfa891077f3c95dbe32",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "6c4567fcf8171b0a01fded0b5a41233a514e5132"
+      }
     },
     "/usr/lib/systemd/system/obsidian-desktop.service": {
       "src": "scripts/substrate/units/obsidian-desktop.service",
       "src_blob": "5290b9d2e084f61d2ec993b951fb73895357dab0",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "8014e8bca78ddf985982ecbc3bd39a0f487220a4"
+      }
     },
     "/usr/lib/systemd/system/obsidian-desktop.service.d/10-secrets-out-of-reach.conf": {
       "src": "scripts/substrate/units/obsidian-desktop.service.d/10-secrets-out-of-reach.conf",
       "src_blob": "5edc729deb06af74f476c92c81b6638c355c4f97",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "8a9dfe1f0cfab12417bdc9f877c8342c6485d640"
+      }
     },
     "/usr/lib/systemd/system/obsidian-intake.service": {
       "src": "scripts/substrate/units/obsidian-intake.service",
       "src_blob": "b02de2639d330a5a4bceeb6e4fa15c12036f81c8",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "7ac110e49d6015f0b7ccad5fd13a388210a5444f"
+      }
     },
     "/usr/lib/systemd/system/obsidian-intake.service.d/10-secrets-out-of-reach.conf": {
       "src": "scripts/substrate/units/obsidian-intake.service.d/10-secrets-out-of-reach.conf",
       "src_blob": "5edc729deb06af74f476c92c81b6638c355c4f97",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "8a9dfe1f0cfab12417bdc9f877c8342c6485d640"
+      }
     },
     "/usr/lib/systemd/system/obsidian-intake.timer": {
       "src": "scripts/substrate/units/obsidian-intake.timer",
       "src_blob": "1a668a7fc41ef9c4a32a9700378c1584e5a7c4c6",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "4cb79d29438c26551cc990d5df6d9594aecdaa9d"
+      }
     },
     "/usr/lib/systemd/system/obsidian-learn.service": {
       "src": "scripts/substrate/units/obsidian-learn.service",
       "src_blob": "0fd5f304b3c7228ac01266b5a72b4ce2ae7645f0",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "50073e1de6546f4fb33ec9221e7b82351f45781c"
+      }
     },
     "/usr/lib/systemd/system/obsidian-learn.service.d/10-secrets-out-of-reach.conf": {
       "src": "scripts/substrate/units/obsidian-learn.service.d/10-secrets-out-of-reach.conf",
       "src_blob": "5edc729deb06af74f476c92c81b6638c355c4f97",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "8a9dfe1f0cfab12417bdc9f877c8342c6485d640"
+      }
     },
     "/usr/lib/systemd/system/obsidian-learn.timer": {
       "src": "scripts/substrate/units/obsidian-learn.timer",
       "src_blob": "b846b8fcf4bd7b4619b532717134dfa70dcae6f0",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "cc15236abe752ec6914e358bc16efcec2eba53f3"
+      }
     },
     "/usr/lib/systemd/system/obsidian-xorg.service": {
       "src": "scripts/substrate/units/obsidian-xorg.service",
       "src_blob": "f3dc35441ebcc6909c5d96983d2c4c46bf8e38b6",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "93872d2337a1a62734c6ba390af95d785d4f3ec5"
+      }
     },
     "/usr/lib/systemd/system/obsidian-xorg.service.d/10-secrets-out-of-reach.conf": {
       "src": "scripts/substrate/units/obsidian-xorg.service.d/10-secrets-out-of-reach.conf",
       "src_blob": "5edc729deb06af74f476c92c81b6638c355c4f97",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "8a9dfe1f0cfab12417bdc9f877c8342c6485d640"
+      }
     },
     "/usr/lib/systemd/system/operator-goal-generator.service": {
       "src": "scripts/substrate/units/operator-goal-generator.service",
       "src_blob": "a27d7363288c510a9a8e51d19d28f68d7de9ce68",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "ab145d697c9bfe48345625ed8810827885ec56dd"
+      }
     },
     "/usr/lib/systemd/system/operator-goal-generator.service.d/run-dir.conf": {
       "src": "scripts/substrate/units/operator-goal-generator.service.d/run-dir.conf",
-      "src_blob": "8820f9e3037f9149e0984c2081c8d70bb6133bff",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "src_blob": "31537ed508e1da80de73a0aa988ed5c1e7caecd7",
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "8a9ced2c1b08d23ceb463bfd5f96d0db410ab662"
+      }
     },
     "/usr/lib/systemd/system/operator-goal-generator.service.d/watchdog.conf": {
       "src": "scripts/substrate/units/operator-goal-generator.service.d/watchdog.conf",
       "src_blob": "898c2f8429a9f1e217727bbb223d9193a68afd3c",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "1b47e0ac27002430d204b207cc1bd6bfa5f758f8"
+      }
     },
     "/usr/lib/systemd/system/operator-goal-generator.timer": {
       "src": "scripts/substrate/units/operator-goal-generator.timer",
       "src_blob": "f31763488905e5567a639d1a4e2aedba2676fd06",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "6f309377fdba7043387427ca635ec62ab26c6fb6"
+      }
     },
     "/usr/lib/systemd/system/operator-goal-generator.timer.d/ready-gate.conf": {
       "src": "scripts/substrate/units/operator-goal-generator.timer.d/ready-gate.conf",
       "src_blob": "ffbdc6bcf87b904fb813dc6246f4bc6ef3a324a8",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "12378342ed9ddf05dfc3936b4dd673c9b6a28513"
+      }
     },
     "/usr/lib/systemd/system/relevance-sink-vessel.service": {
       "src": "scripts/substrate/units/relevance-sink-vessel.service",
       "src_blob": "9a38ae006f2f2c4469ba086d439f75c114a5d4c5",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "aab12f689a5d7dc2fcbad03b921db8a08468b09f"
+      }
     },
     "/usr/lib/systemd/system/relevance-sink-vessel.service.d/10-secrets-out-of-reach.conf": {
       "src": "scripts/substrate/units/relevance-sink-vessel.service.d/10-secrets-out-of-reach.conf",
       "src_blob": "5edc729deb06af74f476c92c81b6638c355c4f97",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "8a9dfe1f0cfab12417bdc9f877c8342c6485d640"
+      }
     },
     "/usr/lib/systemd/system/rhythm-cadence.service": {
       "src": "scripts/substrate/units/rhythm-cadence.service",
-      "src_blob": "330f6853c067e417cc37b3eb2bbd81fa3b17e205",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "src_blob": "1771a1f03cc85d067a6b9853e62d00b132345e68",
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "16e22bea688c8e55aaf0ff4d6b32af5cdd482c50"
+      }
     },
     "/usr/lib/systemd/system/rhythm-cadence.timer": {
       "src": "scripts/substrate/units/rhythm-cadence.timer",
       "src_blob": "9efabcc3567e6611ef04f5492d32eafd4096e64c",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "b8acb83f8b2ae32ee8aa6043d1d1576aa131f10a"
+      }
     },
     "/usr/lib/systemd/system/ribosome-vessel.service": {
       "src": "scripts/substrate/units/ribosome-vessel.service",
       "src_blob": "b19cfaa16940f4a87892413811175c14fb40646e",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "a17c972a6a1500c73cb53805e789b9b58d452f86"
+      }
     },
     "/usr/lib/systemd/system/ribosome-vessel.service.d/10-secrets-out-of-reach.conf": {
       "src": "scripts/substrate/units/ribosome-vessel.service.d/10-secrets-out-of-reach.conf",
       "src_blob": "5edc729deb06af74f476c92c81b6638c355c4f97",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "8a9dfe1f0cfab12417bdc9f877c8342c6485d640"
+      }
     },
     "/usr/lib/systemd/system/runtime-drift.service": {
       "src": "scripts/substrate/units/runtime-drift.service",
-      "src_blob": "44460f1cb881f45ff15cddba39a31d442e28d132",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "src_blob": "0005ce1b3fc3f4fd3598b882fafa4bfceff9a8e9",
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "243ce51c778a0e2a10927e44a496e892f05f9d3a"
+      }
     },
     "/usr/lib/systemd/system/runtime-drift.timer": {
       "src": "scripts/substrate/units/runtime-drift.timer",
       "src_blob": "97862c325fe4c72c0858615dc2fa6b2b8e402af1",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "972afaf2de1280f1fe84923ba71b2f61ba2c9ce7"
+      }
     },
     "/usr/lib/systemd/system/self-development-trend.service": {
       "src": "scripts/substrate/units/self-development-trend.service",
       "src_blob": "9aff502fc6d7c7e2c0a937f7a1580f2674a5fc05",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "beddd6d7c741c53b43caaca863bd75cd18dcc3f0"
+      }
     },
     "/usr/lib/systemd/system/self-development-trend.timer": {
       "src": "scripts/substrate/units/self-development-trend.timer",
       "src_blob": "7692b1a1d983f521f0bc62e5955ba3dee111105f",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "bf6aed1250ab6fc8aab6dc224380048d1d125aad"
+      }
     },
     "/usr/lib/systemd/system/self-operational-health.service": {
       "src": "scripts/substrate/units/self-operational-health.service",
       "src_blob": "e166670d3456a2dd23b33d3d51a2c19009a3e34c",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "3ece5d0107ed5cb59ab2659ea23d3696a1897baf"
+      }
     },
     "/usr/lib/systemd/system/self-operational-health.service.d/run-dir.conf": {
       "src": "scripts/substrate/units/self-operational-health.service.d/run-dir.conf",
-      "src_blob": "6d00c396b177a13443584e844546891ac040007f",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "src_blob": "1488636af18de79e5a8e16e11b8c4ae5db6881a0",
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "d0469890340dadcf1e0423529f5080cb9b374635"
+      }
     },
     "/usr/lib/systemd/system/self-operational-health.timer": {
       "src": "scripts/substrate/units/self-operational-health.timer",
       "src_blob": "44b8594f6626928c82788ef58a5133cda3954491",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "628ea1c3b2f1672b934e3fc1852c0aa08f04f998"
+      }
     },
     "/usr/lib/systemd/system/self-operational-health.timer.d/ready-gate.conf": {
       "src": "scripts/substrate/units/self-operational-health.timer.d/ready-gate.conf",
       "src_blob": "ffbdc6bcf87b904fb813dc6246f4bc6ef3a324a8",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "12378342ed9ddf05dfc3936b4dd673c9b6a28513"
+      }
     },
     "/usr/lib/systemd/system/self-recovery.service": {
       "src": "scripts/substrate/units/self-recovery.service",
       "src_blob": "ca2e9492dbe7b306ace072b9a83f2ba36e205045",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "bfeb394a5bd930a3e162ed9d42c21aac08aeaf0d"
+      }
     },
     "/usr/lib/systemd/system/self-recovery.timer": {
       "src": "scripts/substrate/units/self-recovery.timer",
       "src_blob": "e8e263637c8de2880d292a62b96fc26f38afb65e",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "eaa3378b1c933b667ac7492677904d19affb57d6"
+      }
     },
     "/usr/lib/systemd/system/self-recovery.timer.d/ready-gate.conf": {
       "src": "scripts/substrate/units/self-recovery.timer.d/ready-gate.conf",
       "src_blob": "ffbdc6bcf87b904fb813dc6246f4bc6ef3a324a8",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "12378342ed9ddf05dfc3936b4dd673c9b6a28513"
+      }
     },
     "/usr/lib/systemd/system/self-repair-operational.service": {
       "src": "scripts/substrate/units/self-repair-operational.service",
       "src_blob": "c2ae92edbe5763feb49dd18b98b52cd86d9d3b96",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "7c031c72f13f03504b80bbb199b5a98fbd5bc8b4"
+      }
     },
     "/usr/lib/systemd/system/self-repair-operational.service.d/run-dir.conf": {
       "src": "scripts/substrate/units/self-repair-operational.service.d/run-dir.conf",
-      "src_blob": "36645687aecd5293244b9092962082002efe80d9",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "src_blob": "14146a6ee2b903d88a7f22d1f66446bacb50006b",
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "6e724fbcabf9b419f11fad38ba563c16341610fa"
+      }
     },
     "/usr/lib/systemd/system/self-repair-operational.timer": {
       "src": "scripts/substrate/units/self-repair-operational.timer",
       "src_blob": "cbf779903279ee34957aebce50b882d6593dda49",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "5bc6176b5c518d9e6dc861e8529349e686e493cc"
+      }
     },
     "/usr/lib/systemd/system/self-repair-operational.timer.d/ready-gate.conf": {
       "src": "scripts/substrate/units/self-repair-operational.timer.d/ready-gate.conf",
       "src_blob": "ffbdc6bcf87b904fb813dc6246f4bc6ef3a324a8",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "12378342ed9ddf05dfc3936b4dd673c9b6a28513"
+      }
     },
     "/usr/lib/systemd/system/service.d/05-secret-dir-out-of-reach.conf": {
       "src": "scripts/substrate/units/service.d/05-secret-dir-out-of-reach.conf",
       "src_blob": "285fb7cc4588bf40bb9449f7ad5b17497c07b958",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "0576b2b3432d0d93cd1efcae6265e24afc0528d8"
+      }
     },
     "/usr/lib/systemd/system/service.d/06-gate-public-read-only.conf": {
       "src": "scripts/substrate/units/service.d/06-gate-public-read-only.conf",
       "src_blob": "5b170fc57d6c97ba877fbc711939dc9f44711a4b",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "d98587361d50ed0326c1706ff0de1398cc9eab58"
+      }
     },
     "/usr/lib/systemd/system/service.d/07-run-dir-read-only.conf": {
       "src": "scripts/substrate/units/service.d/07-run-dir-read-only.conf",
       "src_blob": "92575a6ffbc9a9d8516b80f65212ca0ed3b7fc93",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "3883a8e239049aa1731a72f1fc2ad6d782023c12"
+      }
     },
     "/usr/lib/systemd/system/service.d/EXEMPT": {
       "src": "scripts/substrate/units/service.d/EXEMPT",
       "src_blob": "dc4e044373623a0834e69b8de7f7aba3c4ff26ce",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "244dd3cf3db1aac344b08ba79665cbd75ca1f8e3"
+      }
     },
     "/usr/lib/systemd/system/service.d/WRITERS": {
       "src": "scripts/substrate/units/service.d/WRITERS",
       "src_blob": "ed0c9094a5084c93c639b030b196c5d34849817c",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "2253a77732a038526ce58bf3fa933f4f34e16a98"
+      }
     },
     "/usr/lib/systemd/system/spectral-gap.service": {
       "src": "scripts/substrate/units/spectral-gap.service",
       "src_blob": "0b8f83aae9c9e086f8c08bef981924de73f57349",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "83a2c4a2c8bf7573c41b37febde5e2191b2a356e"
+      }
     },
     "/usr/lib/systemd/system/spectral-gap.service.d/run-dir.conf": {
       "src": "scripts/substrate/units/spectral-gap.service.d/run-dir.conf",
-      "src_blob": "7867c8741d12a9813fb83f2280d4ac8306d78554",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "src_blob": "63b3b9de1e9df0efa93433686a2ceff3a1a7b0db",
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "1815ec29280d7f73f93d78b01a03d027c3ad4d6c"
+      }
     },
     "/usr/lib/systemd/system/spectral-gap.timer": {
       "src": "scripts/substrate/units/spectral-gap.timer",
       "src_blob": "297422be1ba089edf02485e077c73b194d555ce3",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "e09afa39d99a18d806b8e30fc97bba8c1c7783fc"
+      }
     },
     "/usr/lib/systemd/system/spectral-gap.timer.d/ready-gate.conf": {
       "src": "scripts/substrate/units/spectral-gap.timer.d/ready-gate.conf",
       "src_blob": "ffbdc6bcf87b904fb813dc6246f4bc6ef3a324a8",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "12378342ed9ddf05dfc3936b4dd673c9b6a28513"
+      }
     },
     "/usr/lib/systemd/system/stateful-ui-vessel.service": {
       "src": "scripts/substrate/units/stateful-ui-vessel.service",
       "src_blob": "ea9d27815e6a2b0e9bcba0b23a4a47403966555f",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "6f801cdb0151c7daf5a16bad4e955fe97d506e8b"
+      }
     },
     "/usr/lib/systemd/system/stateful-ui-vessel.service.d/10-secrets-out-of-reach.conf": {
       "src": "scripts/substrate/units/stateful-ui-vessel.service.d/10-secrets-out-of-reach.conf",
       "src_blob": "5edc729deb06af74f476c92c81b6638c355c4f97",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "8a9dfe1f0cfab12417bdc9f877c8342c6485d640"
+      }
     },
     "/usr/lib/systemd/system/substrate-active-scripts-seed.service": {
       "src": "scripts/substrate/units/substrate-active-scripts-seed.service",
-      "src_blob": "cfa590107aaed0369efa9c166aaf59d2e3c5c0fc",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "src_blob": "e379d40dce18e6dfbc5c3e33918a9a3226661ad2",
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "f23d0dd2e995ca41fc02822d5cf7e8ec63ebbc24"
+      }
     },
     "/usr/lib/systemd/system/substrate-active-scripts-seed.service.d/07-run-dir-read-only.conf": {
       "src": "scripts/substrate/units/substrate-active-scripts-seed.service.d/07-run-dir-read-only.conf",
       "src_blob": "647248dd2386beae6460464a96d24af3080f31d8",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "88f6eb23b3bdbec9c2a0a988b0af2d3f2e19db2a"
+      }
     },
     "/usr/lib/systemd/system/substrate-pull-sync.service": {
       "src": "scripts/substrate/units/substrate-pull-sync.service",
-      "src_blob": "e87496ef9b70d7fbde12f049a16248d88c7446f6",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "src_blob": "9ce76bdff09372c18188034ea9b0b33e652e99cb",
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "db9f0d9fb2018e46c9edea4dedd37a7539d61865"
+      }
     },
     "/usr/lib/systemd/system/substrate-pull-sync.service.d/05-secret-dir-out-of-reach.conf": {
       "src": "scripts/substrate/units/substrate-pull-sync.service.d/05-secret-dir-out-of-reach.conf",
       "src_blob": "693657658e5ecc2f6a733b38c31c696ee9c90490",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "8ac69c595e207566eae3882c6250e6cf5c28bcbe"
+      }
     },
     "/usr/lib/systemd/system/substrate-pull-sync.service.d/06-gate-public-read-only.conf": {
       "src": "scripts/substrate/units/substrate-pull-sync.service.d/06-gate-public-read-only.conf",
       "src_blob": "8b2d2c2897bb9b770dc23405e1de2929fee1c1ed",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "71b64f468c952a14d4e1af275abde43cc0849553"
+      }
     },
     "/usr/lib/systemd/system/substrate-pull-sync.service.d/07-run-dir-read-only.conf": {
       "src": "scripts/substrate/units/substrate-pull-sync.service.d/07-run-dir-read-only.conf",
       "src_blob": "e110272ed3e4b57e527834c7e70407b08d5e1a34",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "de5d2df268ba2a14710b5c236e8b1893c208862a"
+      }
     },
     "/usr/lib/systemd/system/substrate-pull-sync.timer": {
       "src": "scripts/substrate/units/substrate-pull-sync.timer",
       "src_blob": "2bceec62b6b19205305f1d27fef3c3405f6f2b77",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "ff1587f338e5bb681e5f561129aedbc71de33f28"
+      }
     },
     "/usr/lib/systemd/system/substrate-pull-sync.timer.d/ready-gate.conf": {
       "src": "scripts/substrate/units/substrate-pull-sync.timer.d/ready-gate.conf",
       "src_blob": "ffbdc6bcf87b904fb813dc6246f4bc6ef3a324a8",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "12378342ed9ddf05dfc3936b4dd673c9b6a28513"
+      }
     },
     "/usr/lib/systemd/system/substrate-ready.service": {
       "src": "scripts/substrate/units/substrate-ready.service",
       "src_blob": "bd0a669420020f4e9aa573c018ee1afa8c1352f7",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "62bfffca9605e6e7035eb0d08bcb560169d06efb"
+      }
     },
     "/usr/lib/systemd/system/surgical-gap-scan.service": {
       "src": "scripts/substrate/units/surgical-gap-scan.service",
       "src_blob": "2e3b1450e3c15981d94f70029096c4f82d21e9fd",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "e331b16b1ad36c0e05f34606051826bf68f21adb"
+      }
     },
     "/usr/lib/systemd/system/surgical-gap-scan.service.d/run-dir.conf": {
       "src": "scripts/substrate/units/surgical-gap-scan.service.d/run-dir.conf",
-      "src_blob": "874233e7139fc2e99a4a51905eb627984f9b1aa9",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "src_blob": "95c1dabfb9ca7274c5c6d7ef19c1622604f5235d",
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "63485f4151cfe02e132e0318a7b517dd4c8e1106"
+      }
     },
     "/usr/lib/systemd/system/surgical-gap-scan.timer": {
       "src": "scripts/substrate/units/surgical-gap-scan.timer",
       "src_blob": "c3c6b16b9eb16f30e730a0b2a5d1d56f619d2d11",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "ef5665258c3e39a11703f9c40335e4d9297f3969"
+      }
     },
     "/usr/lib/systemd/system/surgical-gap-scan.timer.d/ready-gate.conf": {
       "src": "scripts/substrate/units/surgical-gap-scan.timer.d/ready-gate.conf",
       "src_blob": "ffbdc6bcf87b904fb813dc6246f4bc6ef3a324a8",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "12378342ed9ddf05dfc3936b4dd673c9b6a28513"
+      }
     },
     "/usr/lib/systemd/system/surrealdb.service": {
       "src": "scripts/substrate/units/surrealdb.service",
       "src_blob": "416058698bd5fe319907c4827275982b6fa98436",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "bc7c9add123d8f89e69f9ff9a4131d8e373dfca7"
+      }
     },
     "/usr/lib/systemd/system/trace-store-health-check.service": {
       "src": "scripts/substrate/units/trace-store-health-check.service",
-      "src_blob": "c7c361d64c6a7aa6a9a958920f1cd0c92cc9bde3",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "src_blob": "e59b8784fb91de3af85294ae9f037ecddd616eb6",
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "fda7166d3db1ccd4cf52318b156aac0f714f6c1a"
+      }
     },
     "/usr/lib/systemd/system/trace-store-health-check.timer": {
       "src": "scripts/substrate/units/trace-store-health-check.timer",
       "src_blob": "89ab3a86d1bb840cd6caac859031c9cd125c66cf",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "a99056e914c93ee79a2ad876bd40a1571121367e"
+      }
     },
     "/usr/lib/systemd/system/typecheck-scenario-gen.service": {
       "src": "scripts/substrate/units/typecheck-scenario-gen.service",
       "src_blob": "1de8f25fd3360b76a4c6a4e78d77b47301bfce9b",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "c73124e28485e2d3888cbff18ddffb55e50074ad"
+      }
     },
     "/usr/lib/systemd/system/typecheck-scenario-gen.service.d/run-dir.conf": {
       "src": "scripts/substrate/units/typecheck-scenario-gen.service.d/run-dir.conf",
-      "src_blob": "3512779770fea01ed6bc3da43fe550fc906d5ea8",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "src_blob": "fda71161c5e1368854b209f0d52395cb75d8ea8e",
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "05df329de304df902851164edb32a0c8c2e71683"
+      }
     },
     "/usr/lib/systemd/system/typecheck-scenario-gen.timer": {
       "src": "scripts/substrate/units/typecheck-scenario-gen.timer",
       "src_blob": "933b6ffe880268179b6301468247c5498033beff",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "d3cc0a8cbed8a0364fab5b309048e906d9fee4a7"
+      }
     },
     "/usr/lib/systemd/system/validator-liveness.service": {
       "src": "scripts/substrate/units/validator-liveness.service",
-      "src_blob": "e4a0d1e49735821f86aa94d94cf93b7a331c44ea",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "src_blob": "38b4b9dd312fe75ab53e1b81d0c06ebf62c04565",
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "58102550f2a6b88b4b52827264cce58580cdeb47"
+      }
     },
     "/usr/lib/systemd/system/validator-liveness.timer": {
       "src": "scripts/substrate/units/validator-liveness.timer",
       "src_blob": "4ff633eb441a0b42d0a5e31efa47cf55df22250b",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "b2d73a56d2c4805eff738acbababd598215f37ed"
+      }
     },
     "/usr/lib/systemd/system/valkey.service": {
       "src": "scripts/substrate/units/valkey.service",
       "src_blob": "8e8da4835ac5694df7b4159417b3c05c9baec261",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "0aa485cdd14b7243220abd05f17762370a2d2585"
+      }
     },
     "/usr/lib/systemd/system/vessel.d/10-secrets-out-of-reach.conf": {
       "src": "scripts/substrate/units/vessel.d/10-secrets-out-of-reach.conf",
       "src_blob": "5edc729deb06af74f476c92c81b6638c355c4f97",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "8a9dfe1f0cfab12417bdc9f877c8342c6485d640"
+      }
     },
     "/usr/lib/systemd/system/vessel.d/EXCEPTIONS": {
       "src": "scripts/substrate/units/vessel.d/EXCEPTIONS",
       "src_blob": "1c6dbb91b5232a3338c0ce488a015c627b476d1d",
-      "level": "none",
-      "reason": "units-exempt",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "8ea86656cb4812cc8f5a7334da6755c3b770eb58"
+      }
     },
     "/usr/local/bin/apply-inventory": {
       "src": "scripts/substrate/apply-inventory.sh",

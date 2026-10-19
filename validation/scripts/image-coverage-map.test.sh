@@ -49,6 +49,12 @@ while IFS=$'\t' read -r dst level reason fixtures evidence; do
   esac
 done < "$T/rows"
 [ "$lvl_bad" = 0 ] && ok "levels, reasons and fixtures are well formed" || bad "levels, reasons and fixtures are well formed"
+# A syntax-class mutation cannot earn behaviour for a unit file: a line systemd cannot parse is a syntax error there,
+# not a change in what the unit does (exit 99 is a behaviour mutation only in a script).
+UNITS_DIR=/usr/lib/systemd/system
+sx=$(jq -r --arg u "$UNITS_DIR/" '[.paths|to_entries[]|select((.key|startswith($u)) and .value.level=="behaviour"
+        and ((.value.evidence.mutation // "") | test("^insert `exit 99` after line 1$|^append a syntax error$")))|.key]|length' "$CM")
+[ "$sx" = 0 ] && ok "no unit path claims behaviour on a syntax-class mutation" || bad "$sx unit path(s) claim behaviour on a syntax-class mutation (that is parse)"
 
 # 3. A reason is a fact about the tree, not a label: gate_paths decides outside-gate-paths, and what
 #    pull-sync installs today (image-convergence-surface.test.sh) decides converges-today-uncovered vs unreached.
@@ -58,13 +64,23 @@ bash "$HERE/image-convergence-surface.test.sh" 2>/dev/null | sed -n 's/^  never 
 [ -s "$T/never" ] || echo "  (note: pull-sync installs every tier A path; no path reads as unreached)"
 owned() { jq -e --arg k "$1" '.[$k]|(.owner_gap|type=="string" and length>0) and (.expires|type=="string" and test("^[0-9]{4}-[0-9]{2}-[0-9]{2}$"))' "$CM" >/dev/null 2>&1; }
 UDIR=$(jq -r '.units_exempt.dir // empty' "$CM")
-if [ -n "$UDIR" ] && owned units_exempt; then
+# The units exemption is optional: once a fixture covers the unit files it is deleted, and then no entry may still
+# claim units-exempt (a reason with no record behind it would be an exemption nobody owns or dates).
+NUE=$(jq '[.paths[]|select(.reason=="units-exempt")]|length' "$CM")
+if [ -z "$UDIR" ] && ! jq -e 'has("units_exempt")' "$CM" >/dev/null 2>&1; then
+  UDIR="/nonexistent-units-dir"
+  [ "$NUE" = 0 ] && ok "no units exemption: no entry claims units-exempt" || bad "no units exemption record, yet $NUE entries claim units-exempt"
+elif [ -n "$UDIR" ] && owned units_exempt; then
   ok "the units exemption is a named record with an owner gap and an expiry"
-  echo "  units exempt, uncovered: $(jq '[.paths[]|select(.reason=="units-exempt")]|length' "$CM") paths under $UDIR until $(jq -r .units_exempt.expires "$CM") (owner: $(jq -r .units_exempt.owner_gap "$CM"))"
+  echo "  units exempt, uncovered: $NUE paths under $UDIR until $(jq -r .units_exempt.expires "$CM") (owner: $(jq -r .units_exempt.owner_gap "$CM"))"
 else UDIR="/nonexistent-units-dir"; bad "the units exemption is a named record with an owner gap and an expiry"; fi
 # Every path that converges today with no fixture is listed, by name, in its own owned and dated record.
+# A parse-level path that pull-sync installs also converges today without a behaviour proof: it is debt too.
+: > "$T/parse_conv"
+while IFS=$'\t' read -r pdst psrc; do in_gate "$psrc" && ! grep -qxF "$pdst" "$T/never" && echo "$pdst" >> "$T/parse_conv"; done \
+  < <(jq -r '.paths|to_entries[]|select(.value.level=="parse")|[.key,.value.src]|@tsv' "$CM")
 if owned converges_today_exempt && diff <(jq -r '.converges_today_exempt.paths[]?' "$CM" | sort) \
-     <(jq -r '.paths|to_entries[]|select(.value.reason=="converges-today-uncovered")|.key' "$CM" | sort) > "$T/cte"; then
+     <( { jq -r '.paths|to_entries[]|select(.value.reason=="converges-today-uncovered")|.key' "$CM"; cat "$T/parse_conv"; } | sort -u) > "$T/cte"; then
   ok "every uncovered converging path is listed in an owned, dated exemption"
   echo "  converges today, uncovered: $(jq '.converges_today_exempt.paths|length' "$CM") paths until $(jq -r .converges_today_exempt.expires "$CM") (owner: $(jq -r .converges_today_exempt.owner_gap "$CM"))"
 else head -10 "$T/cte" 2>/dev/null | sed 's/^/  exemption drift: /'; bad "every uncovered converging path is listed in an owned, dated exemption"; fi

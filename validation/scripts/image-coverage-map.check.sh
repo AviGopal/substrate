@@ -32,6 +32,8 @@ mutate() { # how src -> mutated content on stdout
     'insert `exit 99` after line 1') sed '1a exit 99' "$2" ;;
     'append a syntax error') cat "$2"; printf '\nif then fi ((\n' ;;
     'replace with {}') echo '{}' ;;
+    'delete every InaccessiblePaths= line') sed '/^[[:space:]]*InaccessiblePaths[[:space:]]*=/d' "$2" ;;
+    'rewrite ExecStart= to /bin/true') sed 's#^\([[:space:]]*ExecStart[[:space:]]*=\).*#\1/bin/true#' "$2" ;;
     *) return 1 ;;
   esac
 }
@@ -61,6 +63,22 @@ while IFS=$'\t' read -r dst src level fixtures how mblob; do
   if [ -z "$miss" ]; then ok "$level claim replays: $dst ($fixtures)"
   else echo "  failing under the mutant: $got"; bad "$level claim replays: $dst (did not fail:$miss)"; fi
 done < <(jq -r '.paths|to_entries[]|select(.value.level!="none")|[.key,.value.src,.value.level,(.value.fixtures|join(",")),.value.evidence.mutation,.value.evidence.mutated_blob]|@tsv' "$CM")
+
+# 1b. Level honesty for parse claims: a SEMANTIC mutant of a unit file. A parse entry is one whose fixtures notice
+#     only syntax; if they also fail the semantic mutant, the entry could earn behaviour (reported, not failed). The
+#     two mutants are the ones that matter most: the fleet-wide secrets mask emptied, and a vessel that runs nothing.
+while IFS=$'\t' read -r src how; do
+  [ -f "$ROOT/$src" ] || continue
+  dst=$(jq -r --arg s "$src" '[.paths|to_entries[]|select(.value.src==$s)|.key][0] // empty' "$CM")
+  lvl=$(jq -r --arg d "$dst" '.paths[$d].level // "none"' "$CM")
+  run_mutant "$src" "$how"; got="$GOT"
+  if [ "$got" = ERR ]; then echo "  semantic mutant of $src ($how) could not be judged"
+  elif [ "$got" = - ]; then ok "semantic mutant passes the corpus, so $dst stays $lvl (not behaviour): $how"
+  else echo "  semantic mutant of $src ($how) FAILS $got: this entry could earn behaviour"; fi
+done <<'SEM'
+scripts/substrate/units/vessel.d/10-secrets-out-of-reach.conf	delete every InaccessiblePaths= line
+scripts/substrate/units/activity-api.service	rewrite ExecStart= to /bin/true
+SEM
 
 # 2. Negative control: `none` must mean no fixture notices the mutant.
 UDIR=$(jq -r '.units_exempt.dir // "/nonexistent"' "$CM")
