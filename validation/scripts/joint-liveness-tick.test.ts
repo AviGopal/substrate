@@ -14,7 +14,7 @@
 // zero_field / nonzero_field / defect_field (judge/gap-admission.ts); and the observer's response
 // contract lists missing_count, measured only when input.vessel_ids is non-empty
 // (RESPONSE_CONTRACTS.discovery_vessel_registry_observer). The assertions below check exactly that.
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it, spyOn } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -121,5 +121,29 @@ describe("joint-liveness-tick (module)", () => {
     expect(registrationEditSite("loop-vessel", root)).toEqual({ edit_site: "repos/loop-vessel/src/index.ts" });
     expect(registrationEditSite("plain-vessel", root)).toEqual({ edit_site_unset_reason: "repos/plain-vessel/src/index.ts does not construct the shared DiscoveryRegistrationLoop" });
     expect(String((registrationEditSite("gone-vessel", root) as { edit_site_unset_reason: string }).edit_site_unset_reason)).toContain("is not on the vessel tree");
+  });
+
+  // The inventory's "registers": false is the one exemption (development-vessel's health tick reads the same flag).
+  const SILENT = "joint-fixture-silent-vessel";
+  const SILENT_JOINT = { name: "fixture-silent", kind: "discovery_registered", vesselIds: [SILENT], reader: "a fixture reader" };
+  const inventoryWith = (row: Record<string, unknown>) => () => ({ vessels: [{ unit: `${SILENT}.service`, repo: SILENT, health_port: 1, ...row }] });
+
+  it("MUST-FAIL: a vessel whose inventory row says registers:false, absent from the registry, reads NOT severed, with the reason logged", async () => {
+    const { evaluate } = await import(SCRIPT);
+    const log = spyOn(console, "log").mockImplementation(() => {});
+    try {
+      const detail = await evaluate(SILENT_JOINT, 0, 0, async () => [{ vesselId: PRESENT }], inventoryWith({ registers: false }));
+      expect(detail).toBeNull();
+      expect(log.mock.calls.map((c) => String(c[0]))).toContain(`[joint-liveness] expected unregistered: ${SILENT} (fixture-silent): its inventory row says registers: false`);
+      // the flag exempts only its own vessel
+      expect(await evaluate({ ...SILENT_JOINT, vesselIds: [SILENT, ABSENT] }, 0, 0, async () => [], inventoryWith({ registers: false }))).toBe(`not registered in discovery: ${ABSENT}`);
+    } finally { log.mockRestore(); }
+  });
+
+  it("CONTROL: the same vessel without the flag, absent from the registry, still reads severed", async () => {
+    const { evaluate } = await import(SCRIPT);
+    for (const row of [{}, { registers: true }]) {
+      expect(await evaluate(SILENT_JOINT, 0, 0, async () => [{ vesselId: PRESENT }], inventoryWith(row))).toBe(`not registered in discovery: ${SILENT}`);
+    }
   });
 });

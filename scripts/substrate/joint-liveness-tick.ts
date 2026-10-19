@@ -152,10 +152,35 @@ async function registry(): Promise<Array<{ vesselId?: string; endpoint?: string 
   return registryCache;
 }
 
-/** The named vessels with no registry row of that exact id, sorted. Pure. */
-export function missingRegistrations(vesselIds: readonly string[], registryIds: readonly string[]): string[] {
+/** The named vessels with no registry row of that exact id, sorted; those in `expected` are left out. Pure. */
+export function missingRegistrations(vesselIds: readonly string[], registryIds: readonly string[], expected: ReadonlySet<string> = new Set()): string[] {
   const ids = new Set(registryIds);
-  return [...new Set(vesselIds)].filter((id) => !ids.has(id)).sort();
+  return [...new Set(vesselIds)].filter((id) => !ids.has(id) && !expected.has(id)).sort();
+}
+
+// EXPECTED UNREGISTERED (2026-10-19). A vessel that serves no shape has nothing to advertise, and discovery does not
+// register with itself: for those, absence from the registry is the healthy reading. The inventory row's
+// `"registers": false` is the ONE exemption source, the same flag development-vessel's substrate_health_tick reads
+// (daemonVesselsFromInventory), so the two registration detectors cannot disagree about which absence is a defect.
+// Without it a stale binding reported such a vessel severed on every tick, forever.
+const INVENTORY_PATHS = ["/workspace/substrate/fleet/vessels.inventory.json", "/usr/local/share/substrate/vessels.inventory.json"];
+function inventoryLive(): unknown {
+  for (const f of INVENTORY_PATHS) {
+    try { return JSON.parse(readFileSync(f, "utf8")); } catch { /* absent/unreadable → try next */ }
+  }
+  return null;
+}
+/** The vessels (unit name without ".service", and repo) whose inventory row says `"registers": false`. Pure. */
+export function expectedUnregistered(inventory: unknown): Set<string> {
+  const rows = (inventory as { vessels?: unknown } | null)?.vessels;
+  const out = new Set<string>();
+  if (!Array.isArray(rows)) return out;
+  for (const r of rows as Array<Record<string, unknown>>) {
+    if (r?.registers !== false) continue;
+    if (typeof r.unit === "string" && r.unit.endsWith(".service")) out.add(r.unit.slice(0, -".service".length));
+    if (typeof r.repo === "string" && r.repo.length > 0) out.add(r.repo);
+  }
+  return out;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -223,7 +248,7 @@ async function armRead(vessels: string[]): Promise<number | null> {
 }
 
 /** Evaluate one registered joint. Returns null when healthy, else the severed detail. Throws if unreadable. */
-export async function evaluate(b: JointBinding, newestExec: number, nowMs: number, reg: typeof registry = registry): Promise<string | null> {
+export async function evaluate(b: JointBinding, newestExec: number, nowMs: number, reg: typeof registry = registry, inventory: () => unknown = inventoryLive): Promise<string | null> {
   if (b.kind === "sql_newest") {
     const rows = await sql<{ t?: number }>(b.sql);
     const t = typeof rows?.[0]?.t === "number" ? (rows[0]!.t as number) * 1000 : null;
@@ -244,7 +269,12 @@ export async function evaluate(b: JointBinding, newestExec: number, nowMs: numbe
     return null;
   }
   if (b.kind === "discovery_registered") {
-    const missing = missingRegistrations(b.vesselIds, (await reg()).map((v) => String(v.vesselId ?? "")));
+    const ids = (await reg()).map((v) => String(v.vesselId ?? ""));
+    const expected = expectedUnregistered(inventory());
+    for (const id of missingRegistrations(b.vesselIds, ids).filter((v) => expected.has(v))) {
+      console.log(`[joint-liveness] expected unregistered: ${id} (${b.name}): its inventory row says registers: false`);
+    }
+    const missing = missingRegistrations(b.vesselIds, ids, expected);
     return missing.length ? `not registered in discovery: ${missing.join(", ")}` : null;
   }
   if (b.kind === "discovery_health") {
@@ -329,7 +359,7 @@ async function main() {
     if (detail) {
       severed++;
       // A registration joint is armed from the vessels it found missing, re-read live through the arming instrument.
-      const missing = b.kind === "discovery_registered" ? missingRegistrations(b.vesselIds, (await registry()).map((v) => String(v.vesselId ?? ""))) : null;
+      const missing = b.kind === "discovery_registered" ? missingRegistrations(b.vesselIds, (await registry()).map((v) => String(v.vesselId ?? "")), expectedUnregistered(inventoryLive())) : null;
       const read = missing && missing.length > 0 ? await armRead(missing).catch(() => null) : null;
       const site = missing && missing.length === 1 ? registrationEditSite(missing[0]!, VESSEL_TREE) : null;
       await emitGap(
