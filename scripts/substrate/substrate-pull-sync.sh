@@ -279,6 +279,7 @@ tuning_param() {
     *) _tp_why="http_$_tp_code" ;;
   esac
   case "$TP_VALUE" in ''|*[!0-9]*) TP_VALUE="$2"; _tp_why="${_tp_why:-non_numeric}" ;; esac
+  TP_WHY="$_tp_why" # why the default was used ("" = the row was read), for a caller that must tell "no row" from "unreadable"
   if [ -n "$_tp_why" ] && [ "${TP_FALLBACK_SEEN#* $1 }" = "$TP_FALLBACK_SEEN" ]; then
     TP_FALLBACK_SEEN="$TP_FALLBACK_SEEN$1 "
     log "tuning_param_fallback name=$1 reason=$_tp_why default=$2"
@@ -313,6 +314,33 @@ host_contended() {
   _hc_w="$_hc_a10"; [ "$_hc_a60" -gt "$_hc_w" ] && _hc_w="$_hc_a60"
   [ "$_hc_w" -ge "$_hc_pct" ] || return 1
   HC_WHY="host contended: cpu pressure some avg10=${_hc_a10}% avg60=${_hc_a60}% >= ${_hc_pct}% (pull_sync.testgate_psi_defer_pct)"
+  return 0
+}
+# START BY RHYTHM, NOT IN PHASE (2026-10-19). Co-hosted nodes' gates are woken by one push and started their suites
+# together, so each ran on a host the others loaded: one node's development-vessel suite was KILLED at its wall (TEST GATE
+# BLIND, HELD) while another node's gate ran beside it. No lock can serialize them (no shared mount, see HOST CONTENTION
+# ADMISSION); each node instead waits a START JITTER drawn per tick from 0..N seconds before its first suite run of the
+# tick (once per tick, TJ_DONE: a per-vessel wait would multiply across vessels), N the shaped tuning row
+# pull_sync.testgate_start_jitter_s read by tuning_param. DEFAULT 180 s: a default of 0 would land inert (no jitter
+# until someone writes the row). The default applies when the store answers with no row; an UNREADABLE answer adds no
+# wait (TP_WHY), so a store outage, or a harness whose stubbed store answers nothing usable, never slows a tick. 180 s is under a third of the 10 min timer interval and of a ~550-600 s
+# development-vessel suite, so two co-hosted starts land a minute apart on average while the wait costs at most 180 s
+# of the gate budget (the budget is re-checked after it). An explicit row of 0 turns it off. Returns 0 when it waited.
+# Top-level and called from the gate only when defined, like host_contended: a harness that sources the gate slice
+# without it never sleeps.
+testgate_start_jitter() {
+  [ -n "${TJ_DONE:-}" ] && return 1
+  TJ_DONE=1
+  declare -F tuning_param >/dev/null 2>&1 || return 1
+  tuning_param pull_sync.testgate_start_jitter_s 180; local _tj_max="${TP_VALUE:-0}" _tj
+  case "$_tj_max" in ''|*[!0-9]*) return 1 ;; esac
+  [ "$_tj_max" -gt 0 ] || return 1
+  # The default applies when the store ANSWERED (a value, or null: no row). An unreadable answer (unreachable, a non-2xx,
+  # a non-numeric body) adds no wait: a read failure must not slow every gate of the tick.
+  case "${TP_WHY:-}" in ''|null) ;; *) log "${1:-?}: suite start jitter skipped: pull_sync.testgate_start_jitter_s unreadable (${TP_WHY}); no wait added"; return 1 ;; esac
+  _tj=$(( RANDOM % (_tj_max + 1) ))
+  log "${1:-?}: suite start jitter ${_tj}s (drawn from 0..${_tj_max}s, pull_sync.testgate_start_jitter_s; once this tick) so co-hosted gates do not start in phase"
+  [ "$_tj" -gt 0 ] && sleep "$_tj"
   return 0
 }
 # Failing-test names that are red ON PURPOSE in this commit: an OPEN gap's class2 check (evidence_resolve
@@ -3613,10 +3641,28 @@ EOF
         classification_metadata:{node:$node,vessel:$v,head:$head}}}}}' 2>/dev/null)"
     skipped=$((skipped + 1)); continue
   else
+    # START BY RHYTHM, NOT IN PHASE (see testgate_start_jitter): once per tick, before the first suite run, then the
+    # host and the budget are re-checked before it starts.
+    if declare -F testgate_start_jitter >/dev/null 2>&1 && testgate_start_jitter "$v"; then
+      if declare -F host_contended >/dev/null 2>&1 && host_contended; then testgate_budget_defer "the suite run" "$SUITE_COST_S" "$HC_WHY"; skipped=$((skipped + 1)); continue; fi
+    fi
     # Re-checked here: ensure_clone_deps (above) can install for minutes.
     if [ "$(gate_left)" -lt "$SUITE_COST_S" ]; then testgate_budget_defer "the suite run" "$SUITE_COST_S"; skipped=$((skipped + 1)); continue; fi
     date +%s > "$MARKER_DIR/$v.testgate-slot" 2>/dev/null || true
+    # CONTENTION SEEN DURING THE RUN (2026-10-19). The admission check reads the host before the run; a co-hosted gate
+    # that starts after it is seen only DURING the run. A sampler reads host_contended every quarter of the suite wall
+    # while the suite runs, and once more at its end; the first contended reading is kept (SC_WHY).
+    SC_WHY=""; _sc_file="$(mktemp "${TMPDIR:-/tmp}/pullsync-contention-XXXXXX" 2>/dev/null || true)"; _sc_pid=""
+    if [ -n "$_sc_file" ] && declare -F host_contended >/dev/null 2>&1; then
+      _sc_every=$(( ${SUITE_EFF_WALL_S:-240} / 4 )); [ "$_sc_every" -ge 1 ] || _sc_every=1
+      ( trap 'kill "$_sc_sl" 2>/dev/null; exit 0' TERM
+        while :; do sleep "$_sc_every" & _sc_sl=$!; wait "$_sc_sl"; host_contended && { [ -s "$_sc_file" ] || echo "mid-run: $HC_WHY" > "$_sc_file"; }; done ) &
+      _sc_pid=$!
+    fi
     T_OUT="$(run_suite)"; T_FAIL="$(count_pf "$T_OUT" fail)"; T_PASS="$(count_pf "$T_OUT" pass)"; record_suite_wall "$T_OUT"
+    if [ -n "$_sc_pid" ]; then kill "$_sc_pid" 2>/dev/null; wait "$_sc_pid" 2>/dev/null || true; fi
+    [ -n "$_sc_file" ] && { SC_WHY="$(head -1 "$_sc_file" 2>/dev/null)"; rm -f "$_sc_file" 2>/dev/null; }
+    if [ -z "$SC_WHY" ] && declare -F host_contended >/dev/null 2>&1 && host_contended; then SC_WHY="at the end: $HC_WHY"; fi
     # UNRESOLVABLE MODULES THE PARENT SHARES ARE EXCLUDED, NOT CARRIED AS A SHARED COUNT. A
     # test file that cannot resolve an import is one UNNAMED failure that hides every test in
     # it. When the parent, measured now under identical conditions, cannot resolve the same
@@ -3658,6 +3704,11 @@ EOF
     fi
     if [ -n "$GATE_BLIND_WHY" ]; then
       : # blind (above): no verdict, no baseline write
+    elif [ -z "$T_FAIL" ] && [ -n "$SC_WHY" ] && killed_at_wall "$T_OUT"; then
+      # A SUITE KILLED AT ITS WALL ON A CONTENDED HOST DID NOT MEASURE THE COMMIT, IT MEASURED THE HOST (2026-10-19, the
+      # principle of the protected retry): DEFERRED through the counted path, not HELD as blind; the next tick re-runs it.
+      log "$v: suite run KILLED at its wall (TEST_TIMEOUT_SECONDS=${TEST_TIMEOUT_SECONDS:-${SUITE_WALL_S:-240}}) while the host was contended ($SC_WHY): not a blind verdict about ${HEAD:0:10}; deferring"
+      testgate_budget_defer "the suite run (killed at its wall under contention)" "$SUITE_COST_S" "suite killed at its wall under contention ($SC_WHY)"; skipped=$((skipped + 1)); continue
     elif [ -z "$T_FAIL" ]; then
       log "$v: !!! TEST GATE BLIND — suite produced no countable result ($(killed_at_wall "$T_OUT" && echo "killed_at_wall: TEST_TIMEOUT_SECONDS=${TEST_TIMEOUT_SECONDS:-${SUITE_WALL_S:-240}}" || echo "errored or absent")); HOLDING $v (a gate that did not measure never promotes; runtime keeps its current code)"
       # A blind verdict that discards its output cannot be diagnosed: the same command run
