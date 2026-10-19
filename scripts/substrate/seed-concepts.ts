@@ -125,7 +125,7 @@ const VESSEL_CONSTRUCTION_CONCEPTS: SeedConcept[] = [
   {
     source_type: "vessel_construction_pattern",
     shape: "vessel_shape_contract",
-    content: "Vessels declare shape ownership in discovery registration (shapes: string[]). The shapes list must match the cases handled in POST /resolve. Vessels may own zero shapes (pure consumers like ribosome-vessel). Shape names use snake_case and describe the data type, not the operation.",
+    content: "Vessels declare shape ownership in discovery registration (shapes: string[]). The shapes list must match the cases handled in POST /resolve. A vessel that owns no shapes (a pure consumer such as ribosome-vessel) does not register at all: discovery refuses an empty shapes list, and its inventory row declares \"registers\": false. Shape names use snake_case and describe the data type, not the operation.",
     metadata: { tag: "vessel-construction.shapes", source_doc: "TYPESCRIPT_VESSEL_TEMPLATE.md" },
   },
   {
