@@ -1067,7 +1067,13 @@ reseed_run_dir_on_promote() {
 gate_candidate() {
   local out line cs="$PULLSYNC_ACCEPTED_DIR/scripts/substrate/gate/candidate.sh"
   [ -f "$cs" ] || { log "gate: !!! no classifier in the accepted gate — gate candidates are NOT evaluated (and never installed)"; return 0; }
-  out="$(bash "$cs" --gate-dir "$PULLSYNC_GATE_DIR" --super "$SUPER_DIR" --candidate "$1" 2>&1)"
+  # The soak length is shaped: the row the ACCEPTED policy names (soak_ticks.row) is read the way every pull-sync row
+  # is, and handed to candidate.sh, which may only raise the accepted floor with it and names what it used. Default 0
+  # here means "no row": candidate.sh then applies the floor. A row that cannot be read is passed as unreadable.
+  local srow; srow="$(jq -r '.soak_ticks.row // "gate.soak_ticks"' "$PULLSYNC_ACCEPTED_DIR/scripts/substrate/gate/gate-policy.json" 2>/dev/null)"
+  tuning_param "${srow:-gate.soak_ticks}" 0
+  out="$(bash "$cs" --gate-dir "$PULLSYNC_GATE_DIR" --super "$SUPER_DIR" --candidate "$1" \
+           --soak-row "${TP_VALUE:-}" --soak-row-why "${TP_WHY:-}" 2>&1)"
   while IFS= read -r line; do
     case "$line" in
       'GAP '*) emit_gap "${line#GAP }" ;;

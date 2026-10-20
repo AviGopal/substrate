@@ -63,6 +63,10 @@ G() { git -c user.name=t -c user.email=t@t -c init.defaultBranch=dev -c core.hoo
 R="$T/r"; G init -q "$R"; mkdir -p "$R/scripts/substrate" "$R/scripts/git-hooks" "$R/validation/scripts/gate/fixtures"
 cp "$ROOT/scripts/substrate/substrate-pull-sync.sh" "$R/scripts/substrate/"
 cp -r "$ROOT/scripts/substrate/units" "$ROOT/scripts/substrate/gate" "$R/scripts/substrate/"
+# This test judges which candidates SOAK (are promotable) versus are refused or widening, so it states its soak floor
+# (3) in the scratch repo itself rather than inherit the policy's (1 since the shaped soak row). Pinned here, the
+# accepted copy and every candidate carry the same floor, so no candidate reads as lowering it (a widening).
+jq '.soak_ticks.default = 3' "$R/scripts/substrate/gate/gate-policy.json" > "$T/pol.json" && mv "$T/pol.json" "$R/scripts/substrate/gate/gate-policy.json"
 cp -r "$LISTS" "$R/scripts/git-hooks/env-ratchet"
 cp "$ROOT/validation/scripts/gate/fixtures/parses.sh" "$R/validation/scripts/gate/fixtures/"
 G -C "$R" add -A; G -C "$R" commit -qm base0 --no-verify; BASE0="$(G -C "$R" rev-parse HEAD)"
