@@ -24,7 +24,6 @@
       "repos/human-surface-vessel/",
       "repos/cycle-demo-3/",
       "repos/development-vessel/src/resolvers/attempt-register.ts",
-      "repos/development-vessel/src/resolvers/gap-lifecycle-scan.ts",
       "repos/development-vessel/src/resolvers/self-fact-reconcile.ts",
       "repos/development-vessel/src/resolvers/vessel-mitosis-evaluate.ts",
       "scripts/bootstrap-seeder.ts",
@@ -111,7 +110,6 @@
       "repos/goal-host-vessel/test/oracle-label-principal.test.ts",
       "repos/goal-host-vessel/test/operator-credential-forwarding.test.ts",
       "repos/relevance-sink-vessel/src/index.ts",
-      ".claude/",
       "repos/goal-host-vessel/test/judge-consistency/verdict-consistency.test.ts",
       "repos/goal-host-vessel/test/judge-consistency/heldout.test.ts"
     ],
