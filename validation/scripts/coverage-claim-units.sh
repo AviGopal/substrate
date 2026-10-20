@@ -12,7 +12,9 @@ ROOT="$(cd "$(dirname "$0")/../.." && pwd)"; CM="$ROOT/scripts/substrate/gate/co
 T="$(mktemp -d "${TMPDIR:-/tmp}/claimunits.XXXXXX")"; trap 'rm -rf "$T"' EXIT
 bash "$ROOT/validation/scripts/gate-fixture-unit-semantics.test.sh" --emit "$T/claims" > "$T/out" 2>&1 \
   || { tail -5 "$T/out"; echo "the unit fixtures' own test failed; no claims written"; exit 1; }
-jq -Rn '[inputs | split("\t") | {src: .[0], mutation: .[1], fixtures: (.[2] | split(",")), mutated_blob: .[3]}]' < "$T/claims" > "$T/claims.json"
+# src_blob is the blob the claim was replayed on, so a claim written for a changed file is not left stale.
+while IFS=$'\t' read -r src how fx mb; do printf '%s\t%s\t%s\t%s\t%s\n' "$src" "$how" "$fx" "$mb" "$(git hash-object "$ROOT/$src")"; done < "$T/claims" > "$T/claims5"
+jq -Rn '[inputs | split("\t") | {src: .[0], mutation: .[1], fixtures: (.[2] | split(",")), mutated_blob: .[3], src_blob: .[4]}]' < "$T/claims5" > "$T/claims.json"
 echo "claims: $(jq length "$T/claims.json") unit file(s)"
 [ "${1:-}" = --write ] || { echo "(re-run with --write to put them in the map)"; exit 0; }
 ACC="claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh"
@@ -21,6 +23,7 @@ jq --slurpfile c "$T/claims.json" --arg acc "$ACC" '
   | .paths |= with_entries(
       if $by[.value.src] then
         .value.level = "behaviour" | .value.reason = "mutation-proven" | .value.fixtures = $by[.value.src].fixtures
+        | .value.src_blob = $by[.value.src].src_blob
         | .value.evidence = {accepted: $acc, mutation: $by[.value.src].mutation, mutated_blob: $by[.value.src].mutated_blob}
       else . end)' "$CM" > "$CM.new" && mv "$CM.new" "$CM"
 # A claim this tool wrote earlier that the replay no longer supports is NAMED, not silently downgraded: its parse

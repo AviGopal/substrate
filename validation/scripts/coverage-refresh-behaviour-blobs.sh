@@ -7,7 +7,11 @@
 # Without --write it prints what it would change.
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"; CM="$ROOT/scripts/substrate/gate/coverage.json"
-mutate() { case "$1" in 'insert `exit 99` after line 1') sed '1a exit 99' "$2" ;; 'append a syntax error') cat "$2"; printf '\nif then fi ((\n' ;; 'replace with {}') echo '{}' ;; *) return 1 ;; esac; }
+mutate() { case "$1" in 'insert `exit 99` after line 1') sed '1a exit 99' "$2" ;; 'append a syntax error') cat "$2"; printf '\nif then fi ((\n' ;; 'replace with {}') echo '{}' ;;
+  'delete every InaccessiblePaths= line') sed '/^[[:space:]]*InaccessiblePaths[[:space:]]*=/d' "$2" ;;
+  'rewrite ExecStart= to /bin/true') sed 's#^\([[:space:]]*ExecStart[[:space:]]*=\).*#\1/bin/true#' "$2" ;;
+  'delete every On*= trigger line') sed '/^[[:space:]]*On[A-Za-z]*[[:space:]]*=/d' "$2" ;;
+  *) return 1 ;; esac; }  # the spellings image-coverage-map.check.sh's mutate() replays
 upd='{}'; n=0
 while IFS=$'\t' read -r dst src blob how; do
   [ -f "$ROOT/$src" ] || continue
