@@ -17,6 +17,8 @@
 #   (i) MUST-FAIL (qa): a candidate whose policy LOWERS soak_ticks.default (1 -> 0) or RAISES soak_ticks.max
 #       (12 -> 99) is a WIDENING, held and never promoted; the verdict names which; a candidate that only RAISES the
 #       floor (1 -> 2) is not
+#   (j) MUST-FAIL: a candidate whose gate-policy.json is not valid JSON is a widening, held after a second tick (the
+#       classifier's older policy rules read an unparseable policy as "no change"; the object check closes that)
 # usage: validation/scripts/gate-soak-ticks-row.test.sh   (bash, git, jq, flock; no root)
 source "$(dirname "$0")/lib/gate-test-lib.sh"
 
@@ -87,4 +89,9 @@ v1="$(held '.soak_ticks.default=0')"; v2="$(held '.soak_ticks.max=99')"; v3="$(h
   && [[ "$v3" == *promote* ]] \
   && ok "(i) lowering the floor or raising the cap is a named widening, still held after a second tick; raising the floor promotes" \
   || bad "(i) got: [$v1] [$v2] [$v3]"
+# (j)
+setup 1; row ""; printf '{"gate_paths": [\n' > "$T/seed/scripts/substrate/gate/gate-policy.json"; C="$(gt_push "unparseable policy")"
+gt_live_tick; vj="$(vline)"; gt_live_tick
+[[ "$vj" == widening*"is not a JSON object"* ]] && [ "$(cat "$G/accepted.sha")" = "$A0" ] && [ "$(gt_records promote)" = 0 ] \
+  && ok "(j) an unparseable candidate policy is a widening, still held after a second tick" || bad "(j) got: $vj (accepted moved: $( [ "$(cat "$G/accepted.sha")" = "$A0" ] && echo no || echo YES))"
 done_tests
