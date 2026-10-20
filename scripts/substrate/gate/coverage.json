@@ -143,7 +143,8 @@
       "/usr/local/share/substrate/secrets.env.sh",
       "/usr/local/share/substrate/vessels.inventory.json",
       "/usr/local/share/substrate/vessels.manifest.json",
-      "/vessels/seed-identity.ts"
+      "/vessels/seed-identity.ts",
+      "/usr/lib/systemd/system/service.d/20-deregister-on-stop.conf"
     ]
   },
   "paths": {
@@ -2874,7 +2875,7 @@
     },
     "/usr/local/bin/discovery-deregister": {
       "src": "scripts/substrate/discovery-deregister.sh",
-      "src_blob": "053bf7ff649200b40309fe6899dff3fd204c7b78",
+      "src_blob": "d3d295bd75fd93e158604f7cc88822033f038521",
       "level": "none",
       "reason": "unreached",
       "fixtures": []
@@ -3795,6 +3796,20 @@
       "level": "none",
       "reason": "converges-today-uncovered",
       "fixtures": []
+    },
+    "/usr/lib/systemd/system/service.d/20-deregister-on-stop.conf": {
+      "src": "scripts/substrate/units/service.d/20-deregister-on-stop.conf",
+      "src_blob": "903dec2d65bd01e1ffdc34e62462cc3a15f54356",
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "62ddcf4b561f40858e095c17bd0f87db866459ac"
+      }
     }
   }
 }

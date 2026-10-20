@@ -2,6 +2,13 @@
 # discovery-deregister.sh — remove a vessel's registration(s) from discovery.
 #
 #   discovery-deregister.sh <vessel-name-or-id-substring>
+#   discovery-deregister.sh --unit <unit name without .service>
+#
+# --unit is the form every service's stop hook uses (units/service.d/20-deregister-on-stop.conf, ExecStopPost with
+# %N): it matches EXACTLY the rows that unit registers, never a substring of another vessel's id. A row matches when
+# its vesselId equals the name or is the name plus an instance suffix ("<name>-local", "<name>-<host>",
+# "<name>-<n>"), or its vesselName equals the name. Every service runs the hook, and most register nothing, so in
+# --unit mode no match exits 0 quietly (only the substring form reports exit 2 for a typo).
 #
 # The graceful-detach primitive: called by rendered units' ExecStopPost on any
 # clean stop, and by vessel-ctl uninstall, so a planned detach leaves the
@@ -15,8 +22,20 @@ apikey_cfg() { [ -n "${1:-}" ] && printf 'header = "Authorization: ApiKey %s"\n'
 
 set -uo pipefail
 
-NEEDLE="${1:?usage: discovery-deregister.sh <vessel-name-or-id-substring>}"
+MODE=substring
+if [ "${1:-}" = --unit ]; then MODE=unit; shift; fi
+NEEDLE="${1:?usage: discovery-deregister.sh [--unit] <vessel-name-or-id-substring>}"
 DISCOVERY="${DISCOVERY_ENDPOINT:-http://127.0.0.1:8100}"
+# --unit runs on EVERY service stop, oneshot ticks included, so it touches the network only for a unit the fleet
+# inventory lists as a long-running vessel (a health_port) that registers (registers is not false). Anything else,
+# or no readable inventory, is a quiet no-op: TTL expiry stays the backstop. Manifest vessels are rendered with
+# their own ExecStopPost (render-unit), so they need no entry here.
+if [ "$MODE" = unit ]; then
+  INV="${DEREGISTER_INVENTORY:-/workspace/substrate/fleet/vessels.inventory.json}"
+  [ -f "$INV" ] || INV=/usr/local/share/substrate/vessels.inventory.json
+  jq -e --arg u "$NEEDLE.service" '[.vessels[]? | select(.unit == $u and (.health_port // null) != null and (.registers // true) != false)] | length > 0' \
+    "$INV" >/dev/null 2>&1 || exit 0
+fi
 KEY="${METABOB_API_KEY:-$(grep -m1 '^METABOB_API_KEY=' /etc/substrate/env 2>/dev/null | cut -d= -f2- | tr -d '"')}"
 [ -n "$KEY" ] || exit 0
 
@@ -30,9 +49,10 @@ KEY="${METABOB_API_KEY:-$(grep -m1 '^METABOB_API_KEY=' /etc/substrate/env 2>/dev
 SUB="${FED_SUBSTRATE_ID:-$(grep -m1 '^FED_SUBSTRATE_ID=' /etc/substrate/env 2>/dev/null | cut -d= -f2- | tr -d '"')}"
 IDS="$(curl -s -m 5 -X POST -K <(apikey_cfg "$KEY") -H 'Content-Type: application/json' \
   -d '{"pointer":{"type":"vesselRegistry"}}' "$DISCOVERY/resolve" 2>/dev/null \
-  | jq -r --arg n "$NEEDLE" --arg sub "$SUB" '.content.vessels[]?
-      | (.vesselId // .id // "") as $vid
-      | select((($vid + " " + (.name // "")) | contains($n))
+  | jq -r --arg n "$NEEDLE" --arg sub "$SUB" --arg mode "$MODE" '.content.vessels[]?
+      | (.vesselId // .id // "") as $vid | ($vid | sub("@.*$"; "")) as $base
+      | select((if $mode == "unit" then ($base == $n or ($base | startswith($n + "-")) or ((.vesselName // "") == $n))
+                else (($vid + " " + (.name // "")) | contains($n)) end)
           and (($vid | contains("@") | not) or (($sub != "") and ($vid | endswith("@" + $sub)))))
       | $vid' 2>/dev/null || true)"
 
@@ -60,6 +80,7 @@ for id in $IDS; do
   fi
 done
 if [ "$_removed" -eq 0 ]; then
+  [ "$MODE" = unit ] && exit 0
   echo "[discovery-deregister] no registry entry matched '$NEEDLE' — nothing to remove" >&2
   exit 2
 fi

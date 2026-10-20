@@ -165,6 +165,7 @@ scripts/substrate/units/self-repair-operational.timer.d/ready-gate.conf	/usr/lib
 scripts/substrate/units/service.d/05-secret-dir-out-of-reach.conf	/usr/lib/systemd/system/service.d/05-secret-dir-out-of-reach.conf	0644	A
 scripts/substrate/units/service.d/06-gate-public-read-only.conf	/usr/lib/systemd/system/service.d/06-gate-public-read-only.conf	0644	A
 scripts/substrate/units/service.d/07-run-dir-read-only.conf	/usr/lib/systemd/system/service.d/07-run-dir-read-only.conf	0644	A
+scripts/substrate/units/service.d/20-deregister-on-stop.conf	/usr/lib/systemd/system/service.d/20-deregister-on-stop.conf	0644	A
 scripts/substrate/units/service.d/EXEMPT	/usr/lib/systemd/system/service.d/EXEMPT	0644	A
 scripts/substrate/units/service.d/WRITERS	/usr/lib/systemd/system/service.d/WRITERS	0644	A
 scripts/substrate/units/spectral-gap.service	/usr/lib/systemd/system/spectral-gap.service	0644	A
@@ -787,6 +788,7 @@ scripts/substrate/units/self-repair-operational.timer.d/ready-gate.conf	/usr/loc
 scripts/substrate/units/service.d/05-secret-dir-out-of-reach.conf	/usr/local/share/substrate/super-repo/scripts/substrate/units/service.d/05-secret-dir-out-of-reach.conf	0644	B
 scripts/substrate/units/service.d/06-gate-public-read-only.conf	/usr/local/share/substrate/super-repo/scripts/substrate/units/service.d/06-gate-public-read-only.conf	0644	B
 scripts/substrate/units/service.d/07-run-dir-read-only.conf	/usr/local/share/substrate/super-repo/scripts/substrate/units/service.d/07-run-dir-read-only.conf	0644	B
+scripts/substrate/units/service.d/20-deregister-on-stop.conf	/usr/local/share/substrate/super-repo/scripts/substrate/units/service.d/20-deregister-on-stop.conf	0644	B
 scripts/substrate/units/service.d/EXEMPT	/usr/local/share/substrate/super-repo/scripts/substrate/units/service.d/EXEMPT	0644	B
 scripts/substrate/units/service.d/WRITERS	/usr/local/share/substrate/super-repo/scripts/substrate/units/service.d/WRITERS	0644	B
 scripts/substrate/units/spectral-gap.service	/usr/local/share/substrate/super-repo/scripts/substrate/units/spectral-gap.service	0644	B
