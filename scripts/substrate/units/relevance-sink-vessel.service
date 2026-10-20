@@ -8,6 +8,9 @@ EnvironmentFile=/etc/substrate/env
 Environment=PORT=8255
 ExecStart=/root/.bun/bin/bun /vessels/relevance-sink-vessel/src/index.ts
 Restart=on-failure
+# A restart delay keeps a crash loop under the default start limit (5 starts in 10 s): without it systemd retries
+# after 100 ms and leaves the vessel failed for good after a burst.
+RestartSec=5
 StandardOutput=journal
 StandardError=journal
 [Install]

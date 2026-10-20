@@ -2075,7 +2075,7 @@
     },
     "/usr/lib/systemd/system/relevance-sink-vessel.service": {
       "src": "scripts/substrate/units/relevance-sink-vessel.service",
-      "src_blob": "9a38ae006f2f2c4469ba086d439f75c114a5d4c5",
+      "src_blob": "53344c77123f88e082d67e7bf12e2700d5049081",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -2084,7 +2084,7 @@
       "evidence": {
         "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
         "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "d106e6c9b86a4c1967c93ddc14a6ad18995994e2"
+        "mutated_blob": "97949879caaf5a3f6442ceed81626a578b685442"
       }
     },
     "/usr/lib/systemd/system/relevance-sink-vessel.service.d/10-secrets-out-of-reach.conf": {

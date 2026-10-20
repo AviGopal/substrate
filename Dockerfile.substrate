@@ -438,6 +438,15 @@ RUN chmod +x /usr/local/bin/substrate-entrypoint /usr/local/bin/gen-env /usr/loc
         autonomy-metrics.timer \
         self-operational-health.timer \
         self-repair-operational.timer \
+        joint-liveness.timer \
+        validator-liveness.timer \
+        memory-budget-check.timer \
+        trace-store-health-check.timer \
+        runtime-drift.timer \
+        db-maintenance.timer \
+        db-contention-check.timer \
+        learning-liveness-probe.timer \
+        coherence-recover.timer \
         operator-goal-generator.timer \
         auto-describe-resolvers.timer \
         surgical-gap-scan.timer \
