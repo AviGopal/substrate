@@ -156,12 +156,14 @@ export const GOAL_HOST_KEY_SCOPES: string[] = ["read", "write", "tools-exec"];
 // identity's admin path (/v1/keys/issue with SUBSTRATE_ADMIN_KEY) for the fleet key's own org/user. Persisted to the
 // scoped files (secrets-manifest: goal-host-vessel, identity-seeder) and the store, never to the shared env. Fails
 // OPEN (a warning; the boot continues): the runner then reports "not provisioned" and the credit stop holds.
+// identity's verdict on a key: { valid, key_id, scopes, org_id, user_id } (the body's data; {} when absent).
+async function val(k: string): Promise<any> {
+  const r = await fetch(`${IDENTITY_URL}/v1/keys/validate`, { method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ api_key: k }), signal: AbortSignal.timeout(8_000) });
+  return ((await r.json()) as any)?.data ?? {};
+}
+
 async function ensureCorpusRunnerKey(fleetKey: string): Promise<void> {
-  const val = async (k: string) => {
-    const r = await fetch(`${IDENTITY_URL}/v1/keys/validate`, { method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ api_key: k }), signal: AbortSignal.timeout(8_000) });
-    return ((await r.json()) as any)?.data ?? {};
-  };
   try {
     const current = (process.env.GOAL_HOST_CORPUS_RUNNER_API_KEY ?? "").trim();
     if (current) {
@@ -190,6 +192,64 @@ async function ensureCorpusRunnerKey(fleetKey: string): Promise<void> {
     console.log(`[seed-identity] issued ${CORPUS_RUNNER_KEY_NAME} key_id=${j?.data?.key_id ?? "?"} (scoped files + store); goal-host-vessel must restart to load it`);
   } catch (e) {
     console.warn(`[seed-identity] corpus runner key error: ${(e as Error).message}`);
+  }
+}
+
+// ensureGoalHostToolsExec: the per-boot upgrade for a node seeded before GOAL_HOST_KEY_SCOPES carried tools-exec
+// (user ruling 2026-10-20, "Identity scope grant"). There goal-host's key keeps [read, write], so under the daemon's
+// tool gate every tool hop of the walk is refused. It runs on every warm boot, next to ensureCorpusRunnerKey, and
+// asks identity, by key_id only, never comparing or printing a key value:
+//   - goal-host's key IS the fleet key (same key_id): node-self admits it at the daemon, so nothing is granted;
+//   - it already carries tools-exec: nothing to do (so a second boot makes no call);
+//   - otherwise: ONE apiKey_write impulse on identity's resolve door, as the admin key, adding tools-exec to that
+//     key_id. The same key, same secret: no rotation, so goal-host needs no restart and no file changes.
+// The fleet key is only ever validated, never named in the write, so it never gains the scope. Fails OPEN like its
+// siblings: every skip is one logged reason and the boot continues. An identity that predates apiKey_write answers
+// 400 RESOLVE_FAILED (its authentication parse refuses the body), logged as such and retried next boot; the codes of
+// identity's grant path (GRANT_REFUSALS) are logged by name. Exported so a check can drive it alone: it reads
+// and writes no file, only identity.
+export const TOOLS_EXEC_SCOPE = "tools-exec";
+// identity's apiKey_write refusals (resolvers/grant-scope.ts), each with the reason the boot log gives.
+export const GRANT_REFUSALS: Record<string, string> = {
+  NOT_FOUND: "identity has no api_key row for that key_id",
+  FORBIDDEN: "the admin key may not grant it (not admin, or the key is in another org)",
+  SCOPE_NOT_GRANTABLE: "identity's allowlist does not admit tools-exec",
+  PERSIST_FAILED: "identity could not write the api_key row",
+};
+export async function ensureGoalHostToolsExec(fleetKey: string): Promise<void> {
+  try {
+    const goalHostKey = (process.env.GOAL_HOST_VESSEL_API_KEY ?? "").trim();
+    if (!goalHostKey) { console.log("[seed-identity] goal-host tools-exec: skipped, GOAL_HOST_VESSEL_API_KEY empty this boot"); return; }
+    const gh = await val(goalHostKey);
+    if (gh.valid !== true || !gh.key_id) { console.warn("[seed-identity] goal-host tools-exec: skipped, goal-host's key does not authenticate"); return; }
+    const fleet = await val(fleetKey);
+    if (!fleet.key_id) { console.warn(`[seed-identity] goal-host tools-exec: skipped, the fleet key has no key_id to tell it from goal-host key_id=${gh.key_id}`); return; }
+    if (fleet.key_id === gh.key_id) { console.log(`[seed-identity] goal-host tools-exec: not needed, goal-host's key is the fleet key (key_id=${gh.key_id}; node-self covers it)`); return; }
+    if (Array.isArray(gh.scopes) && gh.scopes.includes(TOOLS_EXEC_SCOPE)) { console.log(`[seed-identity] goal-host tools-exec: key_id=${gh.key_id} already carries it`); return; }
+    const admin = (process.env.SUBSTRATE_ADMIN_KEY ?? "").trim();
+    if (!admin) { console.warn(`[seed-identity] goal-host tools-exec: skipped for key_id=${gh.key_id}, SUBSTRATE_ADMIN_KEY empty this boot (retried next boot)`); return; }
+    const r = await fetch(`${IDENTITY_URL}/v1/auth/resolve`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `ApiKey ${admin}` },
+      body: JSON.stringify({ impulse: { pointer: { type: "apiKey_write", key_id: gh.key_id, add_scopes: [TOOLS_EXEC_SCOPE] } } }),
+      signal: AbortSignal.timeout(15_000),
+    });
+    const j = (await r.json().catch(() => null)) as any;
+    if (r.ok && j?.success === true) {
+      console.log(j?.data?.changed === false
+        ? `[seed-identity] goal-host tools-exec: key_id=${gh.key_id} already carries it (identity changed nothing)`
+        : `[seed-identity] goal-host tools-exec: granted to key_id=${gh.key_id} (same key, no rotation)`);
+      return;
+    }
+    const code = String(j?.error?.code ?? "?");
+    if (r.status === 400 && code === "RESOLVE_FAILED") {
+      console.warn(`[seed-identity] goal-host tools-exec: skipped for key_id=${gh.key_id}, identity does not serve apiKey_write yet (${r.status} ${code}; retried next boot)`);
+      return;
+    }
+    const why = GRANT_REFUSALS[code] ?? "unrecognised answer";
+    console.warn(`[seed-identity] goal-host tools-exec: refused for key_id=${gh.key_id}: ${r.status} ${code}, ${why} (retried next boot)`);
+  } catch (e) {
+    console.warn(`[seed-identity] goal-host tools-exec error: ${(e as Error).message}`);
   }
 }
 
@@ -370,6 +430,7 @@ async function main() {
       // the re-issue path below.
       await ensureAdminKey(existing);
       await ensureCorpusRunnerKey(existing);
+      await ensureGoalHostToolsExec(existing);
       return;
     }
     console.log(
@@ -391,6 +452,7 @@ async function main() {
     console.log(`${describeIssuedKey("substrate-default", reissued)} — re-issued and wrote it to env + secrets; key consumers must restart`);
     await ensureAdminKey(reissued.key);
     await ensureCorpusRunnerKey(reissued.key);
+    await ensureGoalHostToolsExec(reissued.key);
     return;
   }
 
