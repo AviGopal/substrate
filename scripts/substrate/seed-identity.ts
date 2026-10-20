@@ -140,12 +140,15 @@ async function waitForIdentity(maxMs = 30_000): Promise<void> {
 }
 
 // goal-host's corpus runner: a SEPARATE principal (2026-10-12, user ruling via qa, key option (d) as refined). Its
-// only scope is verdict-corpus:write, the one credential the verdict-corpus writer accepts. goal-host's main key keeps
-// the default [read, write]: the walk's egress sends that key, so it must never carry the corpus scope.
+// only scope is verdict-corpus:write, the one credential the verdict-corpus writer accepts. goal-host's main key is
+// GOAL_HOST_KEY_SCOPES below: the walk's egress sends that key, so it must never carry the corpus scope.
 export const CORPUS_RUNNER_KEY_NAME = "goal-host-corpus-runner";
 export const CORPUS_RUNNER_KEY_SCOPES: string[] = ["verdict-corpus:write"];
 // goal-host's MAIN key: explicit, and it must NEVER carry verdict-corpus:write or admin (the walk's egress sends it).
-export const GOAL_HOST_KEY_SCOPES: string[] = ["read", "write"];
+// tools-exec (2026-10-20, user ruling): the daemon admits its state-changing tool shapes (shell, fs_write, fs_edit,
+// git_commit, code_*) only from node-self, admin or tools-exec, and the walk is the ReAct floor that calls them. No
+// other key gets it: the fleet key is the node's own key, which node-self already admits at the daemon.
+export const GOAL_HOST_KEY_SCOPES: string[] = ["read", "write", "tools-exec"];
 
 // ensureCorpusRunnerKey: provision the runner's key on EVERY boot of a node whose identity this seeder serves (spokes
 // skip identity-seeder entirely: ExecCondition), not only on a genuine first boot, so a long-lived substrate gets it

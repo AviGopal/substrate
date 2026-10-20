@@ -1,7 +1,7 @@
 // seed-identity-corpus-runner.test.ts: on a genuine first boot seed-identity mints goal-host's corpus runner as a SEPARATE
 // principal with ONLY verdict-corpus:write, writes it to its scoped files (secrets-manifest: goal-host-vessel) and the
-// persisted store, never to the shared /etc/substrate/env; goal-host's main key keeps the default [read, write], because
-// the walk's egress sends that key (key option (d), 2026-10-12).
+// persisted store, never to the shared /etc/substrate/env; goal-host's main key never carries the corpus scope, because
+// the walk's egress sends that key (key option (d), 2026-10-12). Its tools-exec scope: seed-identity-tools-exec.test.ts.
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -16,8 +16,8 @@ describe("goal-host corpus runner key", () => {
   test("minted with those scopes", () => {
     expect(src).toMatch(/issueKey\(token, user_id, org_id, CORPUS_RUNNER_KEY_NAME, CORPUS_RUNNER_KEY_SCOPES\)/);
   });
-  test("MUST-FAIL: goal-host's MAIN key is minted [read, write] and NEVER carries verdict-corpus:write", () => {
-    expect(GOAL_HOST_KEY_SCOPES).toEqual(["read", "write"]);
+  test("MUST-FAIL: goal-host's MAIN key is minted [read, write, tools-exec] and NEVER carries verdict-corpus:write", () => {
+    expect(GOAL_HOST_KEY_SCOPES).toEqual(["read", "write", "tools-exec"]);
     expect(GOAL_HOST_KEY_SCOPES).not.toContain("verdict-corpus:write");
     expect(src).toMatch(/issueKey\(token, user_id, org_id, "goal-host-vessel", GOAL_HOST_KEY_SCOPES\);/);
   });
