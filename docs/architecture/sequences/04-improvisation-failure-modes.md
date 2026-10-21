@@ -16,7 +16,7 @@ The organising claim is that **failure is graded, not merely detected**. Every f
 
 ## Key Concepts
 
-1. **Canonical failure taxonomy** — `verifier_negative`, `budget_exhausted`, `safety_breach`, `cascading`, `user_abort`; anything else is filtered at the wire boundary.
+1. **Canonical failure taxonomy** — six typed members, `verifier_negative`, `budget_exhausted`, `safety_breach`, `cascading`, `user_abort` and `prediction_disagreement`, plus the untyped `execution_error` for an unhandled resolver throw. The executor's trace sink forwards the first five and `execution_error` unchanged and rewrites any other type into `execution_error`, keeping a description of the original in `reason` ([`FAILURE_MODES.md`](../../learning/FAILURE_MODES.md)).
 2. **Hollow completion** — `status = completed` with the asked output absent. Detected by `verifyGoalReached`, penalised through `penaliseHollowTemplate`.
 3. **In-flight recovery** — on a miss: β-penalise, exclude the failed approach, `recommendExcluding` a different one, retry until reached or exhausted.
 4. **Floor** — `universalToolFallback` / `runGroundedToolLoop`: bounded, grounded tool use so no goal is structurally unreachable for want of a learned pathway.

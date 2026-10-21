@@ -255,6 +255,11 @@ continuation), `trajectory_divergence` (predicted signatures diverged from the
 observed one at some index within the horizon), and `action_no_effect` (a
 command was dispatched and the pre/post state signatures are identical).
 
+The union also accepts the untyped `execution_error` (optional `reason`), which
+the engine records for an unhandled resolver throw; the executor's trace sink
+rewrites any type it does not forward into it. See
+[`learning/FAILURE_MODES.md`](learning/FAILURE_MODES.md).
+
 **The outcome-conditional β step is the standing rule.** A failure does not
 always cost a full β. `computeDeltas` in
 `repos/activity-api/src/lib/posterior-update.ts` maps the outcome to the step
@@ -273,6 +278,7 @@ size, so "how wrong" survives into the posterior instead of being flattened:
 | `prediction_disagreement` / `intent_inconsistency` | 0 | 0.5 — a guess, and it was wrong |
 | `prediction_disagreement` / `trajectory_divergence` | 0 | 0.5 — same |
 | `prediction_disagreement` with an absent or unrecognised `sub_type` | 0 | 0.5, with a warning — the half-penalty is the majority case, and this mode always means a wrong guess rather than a validator rejection |
+| `execution_error` | 0 | 0 when the `reason` names an environmental failure; otherwise 1 (with a warning when there is no `reason`) |
 | an unrecognised `failure_mode.type` | 0 | 1, with a warning — unknown modes default strict |
 
 The two defaults point in opposite directions on purpose: an unknown *failure

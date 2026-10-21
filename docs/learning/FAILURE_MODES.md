@@ -56,7 +56,8 @@ failure class in a self-maintaining system exists and has never been reached.
 
 The union discriminates on `type`. Every member carries a human-readable `reason`; the
 remaining fields are per-member and are **intended** to make the record actionable rather
-than a label — see *Measured state* above for how much of that is currently true.
+than a label — see the section above on counting the store before reasoning from the taxonomy for why
+that intent must be checked against the store.
 
 | `type` | Meaning | Fields beyond `reason` |
 |---|---|---|
@@ -74,6 +75,20 @@ victim can be told apart from a cause without a second lookup.
 
 Documents that enumerate five members are missing `prediction_disagreement`, which is the
 only member whose penalty depends on a sub-case rather than on the member alone.
+
+## `execution_error`: the untyped member
+
+Besides the six typed members, the union accepts `execution_error`, whose only field is an
+optional `reason`. It is what the engine records for an unhandled resolver throw, so it
+collects every failure no typed member describes; do not assume it is rare (see the section above on counting the store).
+
+The executor's trace sink (`repos/ias-executor-ts/src/adapters/activity-api-trace-sink.ts`)
+forwards five typed members — all but `prediction_disagreement` — and `execution_error`
+unchanged. Any other type, `prediction_disagreement` included, is **rewritten** at the wire
+into `execution_error`, with a one-line description of the original carried in `reason`;
+a failed walk with no failure mode at all is sent as `execution_error` carrying its reach
+reason. So a `prediction_disagreement` row reaches the store only from a writer other than
+the executor's sink.
 
 ## `prediction_disagreement` and its three sub-cases
 
@@ -101,12 +116,6 @@ and is penalised in full.
 | Success (binary path) | 1 | 0 |
 | Success (graded-yield path) | *y* | 1 − *y* |
 | Failure with no `failure_mode` recorded | 0 | 1 (warning — but see note) |
-
-> **Do not treat that warning as a signal until you find its reader.** A warning collected
-> into a structure the caller discards is computed correctly and observed by nobody. Before
-> relying on any "with a warning" behaviour described here, confirm something outside the
-> test suite consumes it — tests reading a value prove the value is produced, never that
-> anyone is listening.
 | `verifier_negative` | 0 | 1 |
 | `budget_exhausted` | 0 | 0.5 |
 | `safety_breach` | 0 | 1 |
@@ -116,7 +125,16 @@ and is penalised in full.
 | `prediction_disagreement` / `intent_inconsistency` | 0 | 0.5 |
 | `prediction_disagreement` / `trajectory_divergence` | 0 | 0.5 |
 | `prediction_disagreement` with an unknown or absent `sub_type` | 0 | 0.5 (with a warning) |
+| `execution_error` whose `reason` names an environmental failure (infrastructure unreachable) | 0 | 0 |
+| `execution_error` with any other `reason` | 0 | 1 |
+| `execution_error` with no `reason` | 0 | 1 (with a warning) |
 | An unrecognised `type` | 0 | 1 (with a warning) |
+
+> **Do not treat a warning as a signal until you find its reader.** A warning collected
+> into a structure the caller discards is computed correctly and observed by nobody. Before
+> relying on any "with a warning" behaviour described here, confirm something outside the
+> test suite consumes it — tests reading a value prove the value is produced, never that
+> anyone is listening.
 
 Read the zeroes deliberately. `cascading` scores nothing because the upstream cause already
 carries the penalty and double-counting would blame a victim for its neighbour's defect.

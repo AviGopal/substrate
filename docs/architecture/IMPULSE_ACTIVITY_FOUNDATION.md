@@ -1144,7 +1144,7 @@ The following terms appear in older documents and should be removed when encount
 - **"Improvisation Outcome"** — superseded by variance + failure-mode tracking.
 - **"Trailblazing"** — never implemented; remains only in archived docs.
 
-The active replacement is the failure-mode taxonomy (`verifier_negative`, `budget_exhausted`, `safety_breach`, `cascading`, `user_abort`) plus posterior variance, which together capture what these older terms gestured at. The full deprecated-term list (these plus the drifted state names and "The Two Primitives") is [`../GLOSSARY.md`](../GLOSSARY.md) §7.
+The active replacement is the failure-mode taxonomy (`verifier_negative`, `budget_exhausted`, `safety_breach`, `cascading`, `user_abort`, `prediction_disagreement`, and the untyped `execution_error`; see [`../learning/FAILURE_MODES.md`](../learning/FAILURE_MODES.md)) plus posterior variance, which together capture what these older terms gestured at. The full deprecated-term list (these plus the drifted state names and "The Two Primitives") is [`../GLOSSARY.md`](../GLOSSARY.md) §7.
 
 ---
 

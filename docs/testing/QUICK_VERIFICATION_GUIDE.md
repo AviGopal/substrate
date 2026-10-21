@@ -238,7 +238,7 @@ jq '.failure_mode' trace.json
 jq '.tasks[] | select(.status == "failed") | .toolCalls[]' trace.json
 ```
 
-Failure mode types: `verifier_negative`, `budget_exhausted`, `safety_breach`, `cascading`, `user_abort`.
+Failure mode types: `verifier_negative`, `budget_exhausted`, `safety_breach`, `cascading`, `user_abort`, `prediction_disagreement`, and the untyped `execution_error` ([`../learning/FAILURE_MODES.md`](../learning/FAILURE_MODES.md)).
 
 ### Verify variant A/B learning
 

@@ -134,7 +134,7 @@ The four tiers in detail: the bounded LLM tool loop, the deterministic handlers,
 What happens when a goal does not go well: the taxonomy, the posterior consequence of each type, the in-flight recovery loop, and the staging discipline for code changes.
 
 **Key concepts:**
-- Canonical taxonomy: `verifier_negative`, `budget_exhausted`, `safety_breach`, `cascading`, `user_abort`
+- Canonical taxonomy: `verifier_negative`, `budget_exhausted`, `safety_breach`, `cascading`, `user_abort`, `prediction_disagreement`, plus the untyped `execution_error`
 - Differentiated deltas — a budget breach is a half penalty; a cascade victim carries none
 - Recovery is in-flight: β-penalise, exclude, `recommendExcluding`, retry
 - Hollow completion is itself a failure mode, mirrored to concept-db as a class-grain lesson
@@ -343,5 +343,5 @@ Two mechanical constraints follow from the ingester: **section headings are perm
 | Hooks | `subscription.shape` on a template | `LifecycleSubscriberVessel`, `matchesFilter`, `refuseForDepthCap` | Subscriber executions graded like any other activity |
 
 **Walk tiers:** `learned_pathway`, `satisfier`, `universal_tool_fallback`, `feature_compose`, `fresh_derivation`
-**Failure types:** `verifier_negative`, `budget_exhausted`, `safety_breach`, `cascading`, `user_abort`
+**Failure types:** `verifier_negative`, `budget_exhausted`, `safety_breach`, `cascading`, `user_abort`, `prediction_disagreement`, plus the untyped `execution_error`
 **Composition depth:** capped at 2 by default for subscriber dispatches (audit override to at most 4); `compose` dispatches are depth- and cycle-guarded and refuse as `safety_breach`
