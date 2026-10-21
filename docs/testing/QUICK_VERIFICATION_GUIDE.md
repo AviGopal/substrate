@@ -355,7 +355,8 @@ bun run validation/scripts/stratified-harness.ts
 | `METABOB_API_KEY` | Authentication | `mb-<base64>-<hex>` (~160 chars) |
 | `ACTIVITY_API_URL` | Backend endpoint | `http://localhost:18080` |
 
-Client tooling reads the client configuration file (`~/.metabob/config.json`, or the file
-`METABOB_CONFIG_PATH` names; a project-local `.metabob/config.json` shadows both). The
+Client tooling reads the client configuration file (`~/.metabob/config.json`, a link to its
+home `~/.substrate/config.json`, or the file `METABOB_CONFIG_PATH` names; a project-local
+`.metabob/config.json` shadows both). The
 fleet emits it with `substrate-connect`; nothing on the host fills an unset value from it at
 launch.

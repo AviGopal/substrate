@@ -785,9 +785,10 @@ hold one.
 
 ## Pointing tools at a substrate
 
-Harnesses and clients read the target substrate from the client configuration file,
-`~/.metabob/config.json` (override: `METABOB_CONFIG_PATH`; a project-local
-`.metabob/config.json` shadows it). The image emits that file for the fleet it runs in
+Harnesses and clients read the target substrate from the client configuration file. Its
+home is `~/.substrate/config.json`, and `~/.metabob/config.json` is kept as a link to it,
+which is the path the cockpit and most harnesses read (override: `METABOB_CONFIG_PATH`; a
+project-local `.metabob/config.json` shadows it). The image emits that file for the fleet it runs in
 (`substrate-connect`, see [README § Installation](../README.md#installation)), with the
 endpoint computed from the fleet's own port prefix, so a second fleet on the same host gets
 its own endpoint without hand-editing. To point a client at another substrate, emit the
@@ -945,7 +946,7 @@ Federation routes capability queries across substrates: hub/spoke over a shared 
 
 **`substrate-doctor` reports `failed units: bootstrap-seeder.service`**: the seeder registers the shared activity templates and exits non-zero if *any* template is rejected, so one bad template exhausts its restart budget and leaves systemd `degraded`. See which failed with `docker exec <container> journalctl -u bootstrap-seeder | grep '✗'`. A rejection reading `the composition declares a precondition it produces itself` is a defect in that seed template, not in your deployment: the rest of the fleet is usable and those specific activities are absent. Re-run after a fix with `docker exec <container> systemctl start bootstrap-seeder`.
 
-**Harness connection errors**: confirm the client configuration (`~/.metabob/config.json`, or the file `METABOB_CONFIG_PATH` names) points at the fleet you mean, and that no project-local `.metabob/config.json` shadows it. Re-emit it with `substrate-connect` to reset.
+**Harness connection errors**: confirm the client configuration (`~/.substrate/config.json`, read through its link `~/.metabob/config.json`, or the file `METABOB_CONFIG_PATH` names) points at the fleet you mean, and that no project-local `.metabob/config.json` shadows it. Re-emit it with `substrate-connect` to reset.
 
 **`vessel-ctl restart <vessel>` fails**: the container must be running (see README § Installation). Units restart in-place; the container itself is not restarted. An unknown vessel is refused by name rather than reported as a success — run `vessel-ctl status` to see the units this fleet actually has. Every unit is restartable, including activity-api, identity-vessel, discovery-vessel and surrealdb.
 

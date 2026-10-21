@@ -16,7 +16,7 @@ with a notice, so set it in the fleet's `.env`.
 | **Advanced bootstrap** | the variables below | host `.env`, forwarded by the manifest | at boot | no |
 | **Generated secrets** | `JWT_SECRET`, `SURREAL_PASS`, API-key signing secret, the operator key | workspace `.substrate-secrets` | at boot | n/a (never hand-edited) |
 | **Runtime policy** | vessel additions (`vessel-ctl install`), `pushPolicy`, `llmModelPolicy`, rhythms | impulses in the substrate | at use time | **yes** |
-| **Client** | endpoint + key | `~/.metabob/config.json` (override: `METABOB_CONFIG_PATH`; a project-local `.metabob/config.json` shadows it) | by the cockpit | n/a |
+| **Client** | endpoint + key | `~/.substrate/config.json`, reached by the cockpit through the link `~/.metabob/config.json` (overrides: the installer honours `SUBSTRATE_CONFIG_PATH`, then `METABOB_CONFIG_PATH`; the cockpit honours only `METABOB_CONFIG_PATH`; a project-local `.metabob/config.json` shadows it for the cockpit) | by the cockpit | n/a |
 
 Anything the system should learn or change at runtime belongs in the runtime-policy tier
 as a shaped impulse (law 1), not here. The size of the advanced tier is a measure of
