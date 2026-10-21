@@ -1126,6 +1126,28 @@
         "key-595289e706e5",
         "compose2"
       ]
+    },
+    {
+      "id": "repair_autonomy",
+      "instrument": "repair_autonomy",
+      "profiles": [
+        "standalone",
+        "hub"
+      ],
+      "edit_site": "repos/development-vessel/src/resolvers/self-fact-reconcile.ts",
+      "must_fail": "fixture:operator-armed-verified-landing",
+      "window_hours": 168
+    },
+    {
+      "id": "lane_revert_within_1h",
+      "instrument": "lane_revert_within_1h",
+      "profiles": [
+        "standalone",
+        "hub"
+      ],
+      "edit_site": "repos/development-vessel/src/resolvers/self-fact-reconcile.ts",
+      "must_fail": "fixture:regressed-settlement-no-revert",
+      "window_hours": 168
     }
   ]
 }
