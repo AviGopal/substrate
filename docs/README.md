@@ -140,7 +140,6 @@ cockpit's tool surface is enumerated in the root `CLAUDE.md` linked at the top o
 - [Workbench Chain-Based UX Design](architecture/WORKBENCH_CHAIN_UX_DESIGN.md) — the chain vocabulary of the workbench surface.
 - [Interactive Activities and the Human Resolver](guides/INTERACTIVE_ACTIVITIES_AND_HUMAN_RESOLVER.md) — dispatching a task to a human as a resolver and waiting on the answer.
 - [Substrate-Narration Protocol](SUBSTRATE_NARRATION_PROTOCOL.md) — the operator-side narration and gap-accumulation methodology.
-- [Substrate presentation deck](SUBSTRATE_PRESENTATION_2026_06.md) — the slide-level framing used to explain the system to an outside audience.
 
 ## 8. Operations and bootstrap
 
