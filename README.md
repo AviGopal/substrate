@@ -2,9 +2,14 @@
 
 **An autonomous AI development system built on the impulse–activity foundation, with Thompson Sampling for continuous learning. The system develops itself: goals are dispatched into a running substrate, every execution is traced, and successful patterns become reusable templates.**
 
-> **Start here:** [`CLAUDE.md`](CLAUDE.md) is the authoritative, continuously-maintained description of how to work in this repo. This README is a high-level orientation; when the two disagree, CLAUDE.md wins. When either disagrees with the running substrate, the running substrate wins.
+> **Start here.** A substrate is a fleet of *vessels* running in one container. You give it a goal in plain language. It works backward over a graph of data *shapes* to find steps that reach the goal, runs those steps, and traces every one. From those traces it learns which pathways work. It applies the same loop to its own code: it drafts changes, verifies them and lands them.
 >
-> **All documentation:** [`docs/README.md`](docs/README.md) is the index of everything under `docs/` — architecture lenses, operations guides, and reference material. This README links only a handful of them.
+> - **What it is:** [Overview](#overview) and [Core concepts](#core-concepts) below. The canonical definition is [`docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md).
+> - **Run one:** [Installation](#installation), the only place setup commands appear.
+> - **Use one as a person:** [`docs/HUMAN_SURFACE.md`](docs/HUMAN_SURFACE.md).
+> - **Read next:** [`docs/README.md`](docs/README.md), the documentation index, grouped by what each document is for.
+>
+> **Agents working in this repository** start from [`CLAUDE.md`](CLAUDE.md), the operating manual: the laws, the dispatch loop and the operator role. When this README and CLAUDE.md disagree, CLAUDE.md wins. When either disagrees with the running substrate, the running substrate wins.
 
 ## Overview
 
@@ -13,7 +18,7 @@ The substrate demonstrates:
 - **Impulse–Activity architecture** — universal data (*impulses*) processed through constrained state transitions (*activities*).
 - **Learning loop** — Thompson Sampling for activity selection, Bayesian relevance scoring for impulses, and extraction of reusable templates from successful traces (see *Learning loop* below for which extractor actually runs).
 - **Vessel pattern** — capabilities are provided by *vessels* (bundles of activities + resolvers + lifecycle hooks) that live where their data lives.
-- **Self-governance / autonomy** — the substrate detects its own operational gaps, proposes and verifies changes, and lands them through the **mitosis cutover** loop, moving along the S1 → S2 → S3 autonomy trajectory (operator-authored development → substrate-authored development under supervision → a system that resists harmful intervention with cited evidence).
+- **Self-governance / autonomy** — the substrate detects its own operational gaps, proposes changes, and lands them through the **mitosis cutover** loop. Autonomy is a contract the docs define, not a claim. A landing does not count as success in itself. It is judged after it lands: was the goal behind it reached (a clean exit is not enough), and did verification run against the landed tree ([`docs/QUALIFICATION.md`](docs/QUALIFICATION.md))? Dissent is part of the same contract. The system may decline a goal or resist an intervention, but it must give its reason as evidence, never as a silent failure ([`docs/architecture/SUBSTRATE_AS_SOVEREIGN.md`](docs/architecture/SUBSTRATE_AS_SOVEREIGN.md)). The trajectory runs S1 → S2 → S3: operator-authored development, then substrate-authored development under supervision, then a system that resists harmful intervention with cited evidence.
 
 ## Architecture foundation
 
@@ -562,6 +567,6 @@ This repo pins each vessel via a submodule gitlink (`repos/<vessel>` → a commi
 - [`CLAUDE.md`](CLAUDE.md) — authoritative working guide (the laws, the dispatch loop, the operator role, fleet anchors).
 - [`docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md) — canonical system definition.
 - [`docs/SUBSTRATE.md`](docs/SUBSTRATE.md) — operating reference for the single-container substrate: inventory and profiles, `vessel-ctl`, the iteration loop, troubleshooting.
-- [`docs/architecture/`](docs/architecture/) — the `SUBSTRATE_AS_*` lenses (dynamics, MDP, network, representation, DEC, fleet, software) and supporting design docs.
+- [`docs/architecture/`](docs/architecture/) — the `SUBSTRATE_AS_*` lenses (dynamics, MDP, network, representation, DEC, fleet, software, sovereign) and supporting design docs.
 - [`docs/RBAC_GUIDE.md`](docs/RBAC_GUIDE.md), [`docs/AUTH_JWT_CLAIMS.md`](docs/AUTH_JWT_CLAIMS.md) — multi-tenant isolation and auth claims.
 - [`openspec/changes/`](openspec/changes/) — future-change proposals, designs, and tasks.
