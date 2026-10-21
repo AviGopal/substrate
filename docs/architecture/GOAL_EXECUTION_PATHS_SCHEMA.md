@@ -68,7 +68,7 @@ They are deliberately **not** `parent_goal_hash` / `parent_path_signature`. That
 
 The `UPDATE` writes them as `$x ?? x`, so a later non-reusing run of the same path cannot erase the evidence that the pathway was once borrowed.
 
-### Per-Goal Record & Reuse (2026-06)
+### Per-Goal Record & Reuse
 
 Every goal dispatched through `goal-host-vessel` (`/run-goal` or `/resolve`) records the path it took, keyed by the hash of the goal text. Two functions in `repos/goal-host-vessel/src/index.ts` own the loop:
 
@@ -77,7 +77,7 @@ Every goal dispatched through `goal-host-vessel` (`/run-goal` or `/resolve`) rec
 
 **The goal-reaching gate.** `success` on this row is a *reach* verdict, not an exit status. `verifyGoalReached` runs after execution and is layered: deterministic pre-checks fire first and never consult a model — no content and no meaningful produced shape is `deterministic:no-output`; a `mitosisStaged` shape with no evidence of a landed cutover is `deterministic:staged-not-landed`, because an edit staged in a clone but never pushed to origin is not a reach; a digest whose every non-empty line is an error envelope is rejected structurally. Only what survives those checks reaches the LLM judge. A run whose activity returned `status=completed` without producing the goal's completion shapes is recorded `reached=false`, the selected template is β-penalised, and the row's `success` reflects the gate. This is what keeps hollow completion from α-crediting a wrapper. The gate is the walk's own consumer of the deliverable, not a separate verification layer. Upstream outputs are verified by the activities that consume them, with credit following declared data-flow provenance. A human's verdict on the same goal is a consumer verdict of equal standing, so it must update this row, the trace and the reuse cache, not only the dispatch record.
 
-### Terminal Output Shapes (Migration 092, 2026-04-26)
+### Terminal Output Shapes
 
 Two sibling array columns carry shapes, and they mean different things:
 

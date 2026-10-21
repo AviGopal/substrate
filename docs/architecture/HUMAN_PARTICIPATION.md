@@ -1,8 +1,9 @@
 # Human participation: behavior and evidence contract
 
-Status: first exchange pathway implemented locally; autonomous improvement and human
-usability gains remain to be demonstrated. This work is operator-authored. It is not
-evidence of the substrate improving its own interface.
+Status: behavior and evidence contract. It states what a participation pathway must do and
+how that is judged; whether a running pathway meets it, and whether it makes the surface
+more usable for people, is measured rather than asserted here. Operator-authored work on a
+pathway is not evidence of the substrate improving its own interface.
 
 Humans participate as implicit vessels. Human-surface is an explicit communication
 boundary, with discoverable question, feedback, and rendering capabilities. Activities
@@ -75,8 +76,8 @@ warning; subsequent appends begin on a new line. Replay does not emit new intera
 The recent-feedback feed remains capped at 500. Question state and response-id
 deduplication use all retained journal records so that unrelated traffic cannot reopen
 an answered question or turn a retry into another contribution. These indexes and
-journals currently grow with retained history. Compaction, pagination, multi-writer
-coordination and retention policy are follow-up work; use one vessel writer per journal
+journals grow with retained history. Compaction, pagination, multi-writer coordination
+and retention policy are outside this contract; use one vessel writer per journal
 directory. No network-wide concurrency bound or complete provenance chain is claimed.
 
 ## Validation and quality bar
@@ -170,9 +171,8 @@ confidence in the trace, so the junction is graded and the arm can LOSE to the
 floor on a measured family; must be wired fail-closed; and must never render a
 confidence number to a person, which is separately forbidden.
 
-Tier 3 is a trajectory and not a current component. The reason is a measurement:
-after the planner was repaired so that a bare single-line value reaches the value
-renderer, the misroute class on the live pool went to zero, and no remaining
-form on that pool is decided by a guess that a better guesser would improve.
+Tier 3 is a trajectory, not a component. It stays one while no form on the pool
+is decided by a guess that a better guesser would improve; a planner that routes a
+bare single-line value to the value renderer leaves no such guess for that class.
 An inference arm is justified when the census says otherwise — which is what the
 census is for.

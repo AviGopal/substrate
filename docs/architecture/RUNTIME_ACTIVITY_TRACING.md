@@ -4,12 +4,13 @@
 > This document describes a design, not a running subsystem.**
 >
 > The decision was not a deferral, and the reason is specific rather than general. The
-> instrument writes a trace per request. The trace store is currently the fleet's binding
-> resource constraint: it sits at its configured memory ceiling, in a throttle-and-reclaim
-> band where it stops answering even a trivial liveness query while never crossing the
-> hard limit that would trigger a restart — so the intended self-recovery never fires.
-> Installing a per-request tracer into that store would add load to the exact component
-> that is failing from load, and would do so in the name of observability.
+> instrument writes a trace per request, into the trace store — the component that becomes
+> the fleet's binding resource constraint when its working set is unbounded. At its
+> configured memory ceiling it sits in a throttle-and-reclaim band where it stops answering
+> even a trivial liveness query while never crossing the hard limit that would trigger a
+> restart, so the intended self-recovery never fires. Installing a per-request tracer into
+> that store would add load to the exact component that fails from load, and would do so in
+> the name of observability.
 >
 > **Order of operations: bound retention first, install second.** The prerequisite is a
 > retention policy that holds the working set under the store's cache budget. Until that
@@ -192,7 +193,7 @@ A row missing `reached` or missing its output shapes is storage, not evidence.
 - **`reuseOpportunities`** — resolvers used across many distinct activities, ranked by reuse
   factor.
 
-Read that list as intent rather than as results available today, because two defects sit
+Read that list as intent rather than as results available, because two defects sit
 between the strings and the store they claim to read. First, `hotPaths`, `errorPatterns` and
 `reuseOpportunities` each project or group on `activity_template_id`; the `execution` table is
 declared `SCHEMAFULL` and defines `activity_id` instead, and nothing under

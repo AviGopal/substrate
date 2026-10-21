@@ -8,9 +8,11 @@
 > where it aligns with established results, where it diverges, and what
 > falsifiable predictions it makes that the literature has not yet tested.
 >
-> Survey conducted 2026-06-04 against arXiv, USENIX, NeurIPS proceedings,
-> and primary blog/repo sources. Citations are by arXiv id and venue
-> where possible.
+> The survey draws on arXiv, USENIX, NeurIPS proceedings, and primary
+> blog/repo sources. Citations are by arXiv id and venue where possible.
+> It is a reading of a moving literature: a later result can overturn any
+> alignment or divergence claimed here, so check a claim's citation
+> before relying on it.
 
 ## Summary
 
@@ -63,7 +65,7 @@ untouched when adding a vessel" (§8.2 of SUBSTRATE_AS_MDP) is the same
 orthogonality bet that LoRAHub and Polytropon make. The literature
 predicts soft violations: shared resolvers and shared LLM backbones
 entangle "independent" cells through correlated noise. The substrate
-framing does not currently model this entanglement explicitly — testable
+framing does not model this entanglement explicitly — testable
 but not tested.
 
 ## 2. Federated LLM training
@@ -177,7 +179,7 @@ templates. Whether per-cell counts ever accumulate enough to be
 informative at substrate scale is precisely the Heaps'-saturation
 question.
 
-**Companion citations (added 2026-06-09 for substrate-internal docs).**
+**Companion citations (for substrate-internal docs).**
 Three results outside the immediate LLM-Bayesian literature ground
 specific MDP-doc claims:
 
@@ -198,7 +200,7 @@ specific MDP-doc claims:
   (arXiv:2602.22873) — MDL representation learning + multi-chart
   atlas autoencoders; relevant to Foundation doc §"Variant System"
   (per-activity MDL-minimum manifold reframing). Author attributions
-  omitted pending verification (ids post-date the 2026-06 survey's
+  omitted pending verification (ids post-date the survey's
   verified set).
 
 ## 5. Scaling laws and capability emergence
@@ -345,7 +347,7 @@ arXiv:2302.12526 "Model-Based Uncertainty in Value Functions";
 HyperAgent arXiv:2402.10228). DeepSea-style exploration benchmarks
 measure "first episode where sparse reward is found in ≥10% of
 episodes" — a posterior-concentration proxy — but no agent benchmark
-currently reports per-cell or per-skill posterior variance over time.
+the survey found reports per-cell or per-skill posterior variance over time.
 
 **Substrate alignment.** Direction-of-travel aligned with field's move
 toward process-level + continuous metrics.

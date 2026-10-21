@@ -1,11 +1,11 @@
 # The substrate earns sovereignty: refusal, revision, and answering
 
 > **STATUS: EXPECTATION, NOT DESCRIPTION. Read this as the contract the system will be
-> verified against, not as behavior it has.** Of the mechanisms below, only fragments exist:
-> the reach gate contains an honest-refusal path (it withholds a verdict rather than guess),
-> and one refusal class files capability gaps. Everything else — a declined outcome distinct
-> from failure in the persisted vocabulary, refusal-precision grading, purpose-anchored gate
-> revision, self-binding, a self-readable conduct ledger — is unbuilt at the time of writing.
+> verified against, not as behavior it has.** Each mechanism below — a declined outcome
+> distinct from failure in the persisted vocabulary, refusal-precision grading,
+> purpose-anchored gate revision, self-binding, a self-readable conduct ledger — is owed,
+> and whether any part of it exists is a question for the code and the store, not for this
+> document. Each section names a test for its defect; run it rather than assume.
 > Where this document and the code disagree, the code is what exists and this document is
 > what is owed. Verify any specific claim against the store before relying on it.
 

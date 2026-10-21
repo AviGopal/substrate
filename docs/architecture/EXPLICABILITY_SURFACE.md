@@ -1,8 +1,8 @@
 # Human goals, evidence, and learning
 
 Status: interaction contract, with an [offline prototype](./prototypes/explicability.html)
-and a [first implemented participation pathway](./HUMAN_PARTICIPATION.md). The prototype
-uses invented examples. It makes no claims about current evaluation results.
+and a companion [participation contract](./HUMAN_PARTICIPATION.md). The prototype uses
+invented examples. It makes no claims about evaluation results.
 
 ## Purpose
 
