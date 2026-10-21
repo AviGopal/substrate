@@ -3,7 +3,6 @@
   "autonomyScope": {
     "excluded_paths": [
       "repos/development-vessel/src/resolvers/feature-compose.ts",
-      "repos/development-vessel/src/resolvers/vessel-mitosis-cutover.ts",
       "repos/development-vessel/src/resolvers/pull-cutover.ts",
       "repos/development-vessel/src/resolvers/push-policy.ts",
       "repos/development-vessel/src/resolvers/git-push.ts",
@@ -28,7 +27,6 @@
       "repos/development-vessel/src/resolvers/vessel-mitosis-evaluate.ts",
       "scripts/bootstrap-seeder.ts",
       "repos/development-vessel/src/resolvers/scope-earn-in.ts",
-      "repos/development-vessel/src/resolvers/test-suite.ts",
       "repos/development-vessel/test/resolvers/scope-earn-in.test.ts",
       "repos/development-vessel/test/resolvers/evaluator-grant-scan.test.ts",
       "repos/development-vessel/test/resolvers/scope-change-pin.test.ts",
@@ -66,7 +64,6 @@
       "repos/development-vessel/test/resolvers/judge-modules-closed.test.ts",
       "repos/development-vessel/src/resolvers/attempt-ledger.ts",
       "repos/development-vessel/src/lib/operator-hold.ts",
-      "repos/development-vessel/src/test-child-env.ts",
       "repos/development-vessel/src/resolvers/patch-with-tools.ts",
       "repos/development-vessel/src/lib/operator-direct.ts",
       "repos/development-vessel/src/resolvers/intervention-evaluate.ts",
