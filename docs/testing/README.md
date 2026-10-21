@@ -47,7 +47,7 @@ Both harnesses read `~/.metabob/config.json` for the substrate endpoint — no h
 |-----------|---------------|-------------|
 | development-vessel | `repos/development-vessel/test/` | `cd repos/development-vessel && bun test` |
 | Activity API | `repos/activity-api/test/` | `cd repos/activity-api && bun test` |
-| Identity Vessel | `repos/identity-vessel/test/` | `cd repos/identity-vessel && bun test` |
+| Identity Vessel | `repos/identity-vessel/src/**/*.test.ts` (colocated) | `cd repos/identity-vessel && bun test` |
 
 ---
 

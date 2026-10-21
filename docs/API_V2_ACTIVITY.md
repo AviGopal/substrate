@@ -1147,7 +1147,7 @@ Get current session info.
 - `boredom_queue` - Autonomous task queue
 - `vessel_registry` - Active vessels
 
-**See:** `openspec/contracts/surrealdb-schema.md` for complete schema
+**See:** [`SCHEMA_OWNERSHIP.md`](SCHEMA_OWNERSHIP.md) for which vessel owns which tables and where their schema files live
 
 ---
 

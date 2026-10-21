@@ -270,7 +270,7 @@ When reading any arrow that shows an emitter pushing to a consumer: it passes th
 - [`RESOLVER_TRACKING.md`](../RESOLVER_TRACKING.md) — resolver attribution in traces
 - [`IMPULSE_STATE_SPACE_SPEC.md`](../IMPULSE_STATE_SPACE_SPEC.md) — the state-space model selection conditions on
 - [`RUNTIME_ACTIVITY_TRACING.md`](../RUNTIME_ACTIVITY_TRACING.md) — what a trace carries and why
-- [`DEPLOYMENT_WORKFLOW.md`](../../../repos/deployment/DEPLOYMENT_WORKFLOW.md) — deployment procedure
+- [README § Installation](../../../README.md#installation) — deployment procedure
 
 ## Architectural Clarity: goal-host-vessel vs Activity-API
 
