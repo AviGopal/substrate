@@ -131,4 +131,4 @@ Templates with empty per-task shape metadata still work, but they get the pre-61
 ## Related
 
 - [`../architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](../architecture/IMPULSE_ACTIVITY_FOUNDATION.md) — impulse model and activity structure, including resolver-level impulse composition
-- propagated impulses surface in the workbench execution tree (see `repos/workbench`)
+- propagated impulses surface in the workbench execution tree (the workbench is a separate repository, not a submodule of this super-repo)

@@ -15,7 +15,7 @@ trending toward zero.
 ## §A. Purpose
 
 The substrate (the deployed vessel fleet — discovery-vessel + activity-api +
-identity-vessel + development-vessel + concept-db + user-vessel + others)
+identity-vessel + development-vessel + concept-db + others)
 has, at any moment `t`, a defined **knowledge surface**: everything the
 substrate itself can resolve, query, or learn from. The narration protocol
 enforces a single discipline:

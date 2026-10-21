@@ -489,14 +489,14 @@ The chart and helmfile must plumb:
 
 **Secret provisioning is intentionally out-of-tree.** The chart references the secret by name but doesn't create it. Steps to activate a new vessel:
 
-1. Add a `<vessel>` block to `repos/deployment/scripts/generate-secrets.sh`
+1. Add a `<vessel>` block to `scripts/generate-secrets.sh` in the deployment repository (a separate repository, not a submodule of this super-repo)
 2. Edit the sops-encrypted canary secrets file (requires the Age key), adding `<vessel>.apiKey`
 3. Register the key in the identity-vessel seed so activity-api accepts it
 4. Either add `templates/secret.yaml` to the chart (mirroring an existing vessel chart) or create the secret imperatively in the `activity-system` namespace
 
 Without these the pod starts but registration stays unauthenticated (and the Secret reference may block pod start entirely if absent).
 
-**Concrete example:** `repos/deployment/charts/concept-db/` plus its release block in `helmfile.yaml.gotmpl`.
+**Concrete example:** the deployment repository's `charts/concept-db/` plus its release block in `helmfile.yaml.gotmpl`.
 
 ---
 

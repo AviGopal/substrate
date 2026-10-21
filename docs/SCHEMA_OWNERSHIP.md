@@ -34,7 +34,7 @@ so the boundary is enforced by table `PERMISSIONS` and by the discipline below.
 | activity-api | `repos/activity-api/sql/*.surql`, `sql/schemas/`, `sql/migrations/` | `repos/activity-api/scripts/init-database.ts`, run as `ExecStartPre` of `activity-api.service` |
 | concept-db | `repos/concept-db/sql/core/`, `sql/upkeep/` | `repos/concept-db/scripts/apply-schema.ts` (`bun run apply-schema`), run as `ExecStartPre` of `concept-db.service` |
 | identity-vessel | `repos/identity-vessel/sql/migrations/` | the vessel itself at startup, only when `SCHEMA_AUTOAPPLY=true`; otherwise an operator or init step applies them |
-| user-vessel | `repos/user-vessel/sql/` | the deployment that runs user-vessel; the substrate fleet inventory does not include it |
+| user-vessel | its own `sql/` directory, in a separate repository that is not a submodule of this super-repo | the deployment that runs user-vessel; the substrate fleet inventory does not include it |
 
 Both in-container runners are idempotent and non-fatal by design. Their unit
 lines carry a `-` prefix so a datastore that is slow to accept connections
@@ -105,12 +105,13 @@ definition and application: identity-vessel applies its own migrations only when
 is a reference document with every `DEFINE` removed, describing the fields the
 vessel reads rather than creating them.
 
-`repos/user-vessel/sql/` defines the tenancy tables themselves —
+user-vessel's `sql/` defines the tenancy tables themselves —
 `organizations`, `users`, `organization_members`, `accounts`, `account_members`,
 `projects`, `project_members`, `federation_links`, `invitations`,
-`mcp_usage_snapshot`, `mcp_outcome_event`. user-vessel is a submodule of this
-super-repo but is not in the substrate's fleet inventory, so a local substrate
-runs identity-vessel as the validator over tables user-vessel authored.
+`mcp_usage_snapshot`, `mcp_outcome_event`. user-vessel lives in a separate
+repository, is not a submodule of this super-repo, and is not in the substrate's
+fleet inventory, so a local substrate runs identity-vessel as the validator over
+tables user-vessel authored.
 
 ## Concept-db tables
 
@@ -132,19 +133,20 @@ restricted to `$token.role = 'admin'`.
 
 ## The archived core schema layer
 
-`repos/deployment/vessels/metabob-proto/surrealdb/core/` holds the historical
-core schema — `schema_version`, `organizations`, `users`, `api_keys`,
-`minibob_instance`, `projects`, `project_members`, `subscriptions`,
-`audit_logs`, `connection`. Read it as reference for what those tables looked
+The deployment repository, which is separate and not a submodule of this
+super-repo, holds the historical core schema under
+`vessels/metabob-proto/surrealdb/core/`: `schema_version`, `organizations`,
+`users`, `api_keys`, `minibob_instance`, `projects`, `project_members`,
+`subscriptions`, `audit_logs`, `connection`. Read it as reference for what those tables looked
 like; do not treat it as a live migration source.
 
 Two facts fix its status. `Dockerfile.substrate` copies no part of
-`repos/deployment` into the substrate image, so those files are not present in a
+the deployment repository into the substrate image, so those files are not present in a
 running container. And `repos/activity-api/sql/migrate.ts` — the older runner
 that applies this core layer before the activity schemas — locates it through
 `METABOB_PROTO_PATH`, which nothing under `scripts/` sets. The substrate's
-schema path is `scripts/init-database.ts`, which applies only activity-api's own
-files. `migrate.ts` runs against a checkout where that core layer exists and the
+schema path is `repos/activity-api/scripts/init-database.ts`, which applies only
+activity-api's own files. `migrate.ts` runs against a checkout where that core layer exists and the
 environment variable points at it.
 
 ## Cross-vessel data access
