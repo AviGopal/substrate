@@ -2,7 +2,7 @@
 
 Every document under `docs/` is an **expectation the substrate holds about itself**, not
 prose about the substrate. The tree is a runtime input: `scripts/substrate/ingest-docs-as-concepts.ts`
-splits each file into sections and writes them into concept-db, where the code-authoring
+splits each Markdown file into sections and writes them into concept-db, where the code-authoring
 path reads them back at drafting time. The contract that governs this is `DOC_INGESTION.md`
 under purpose 4 below — read it before authoring or restructuring anything here.
 
@@ -70,8 +70,8 @@ outcome is skipped rather than credited or blamed — a posterior fed by exit st
 to prefer whatever exits cleanly.
 
 - [The substrate is a slow–fast dynamical system](architecture/SUBSTRATE_AS_DYNAMICS.md) — the learning dynamics on a growing complex.
-- [Failure modes](learning/FAILURE_MODES.md) — the six-member failure taxonomy carried on traces, and the outcome-conditional posterior step sizes.
-- [Runtime Activity Tracing](architecture/RUNTIME_ACTIVITY_TRACING.md) — the meta-trace levels and what each records.
+- [Failure modes](learning/FAILURE_MODES.md) — the failure taxonomy the schema defines (six typed members plus the untyped `execution_error`), why the store must be counted before reasoning from it, and the outcome-conditional posterior step sizes.
+- [Runtime Activity Tracing](architecture/RUNTIME_ACTIVITY_TRACING.md) — a design for per-request meta-trace levels, deliberately left uninstalled until the trace working set is bounded.
 - [Resolver Tracking](architecture/RESOLVER_TRACKING.md) — recording which resolver served each impulse so selection is learned, not configured.
 - [`thompson_posterior` shape](impulse-types/thompson_posterior.md) — the posterior itself, as a resolvable shape.
 - [Learning-Loop Write Resolvers](impulse-types/LEARNING_LOOP_WRITE_RESOLVERS.md) — the write side of the loop, shape by shape.
@@ -94,6 +94,7 @@ memory files are a derived cache.
 - [Memory As Substrate](MEMORY_AS_SUBSTRATE.md) — the `memoryNote` store, its read and write directions, and why the files are a cache.
 - [Investigating and benchmarking concept-db](guides/CONCEPT_DB_INVESTIGATION.md) — how to interrogate the prose-knowledge vessel the authoring path depends on.
 - [Concept Integration Templates](guides/CONCEPT_INTEGRATION_TEMPLATES.md) — calling concept shapes from an activity template.
+- [The substrate earns sovereignty](architecture/SUBSTRATE_AS_SOVEREIGN.md) — the expectation that refusal, revision and answering are authorities the system earns with evidence, never flags an operator sets.
 
 ## 5. Topology and federation — where a vessel runs, how substrates peer
 
@@ -127,7 +128,7 @@ the whole mechanism rather than merely skipping a check.
 
 **Purpose:** there are two kinds of interface, and they are not variants of each other. An
 agent works through the metabob-mcp cockpit: dispatch a goal, poll it, reconstruct the
-walk's reasoning, record a verdict. A human works through one of two: the web human
+walk's reasoning, record a verdict. A human works through a human surface: the web human
 surface, a page that takes plain language and draws what came back in the form the content
 calls for; or an Obsidian vessel, where each connected vault is a surface onto a
 *different* human resolver with its own local information. All are resolvers to the
@@ -137,9 +138,10 @@ cockpit's tool surface is enumerated in the root `CLAUDE.md` linked at the top o
 
 - [Running a human surface](HUMAN_SURFACE.md) — what a surface needs (a relayed hub and the join token it issues; the launch is sequence D of the install page), what runs locally versus on the hub, and why a surface that loads but cannot dispatch is a hub-link problem.
 - [Human project lifecycle](guides/HUMAN_PROJECT_LIFECYCLE.md) — what a human can expect across starting or joining, configuring, maintaining, deploying, interacting and checking health, with acceptance criteria per activity.
-- [Workbench Chain-Based UX Design](architecture/WORKBENCH_CHAIN_UX_DESIGN.md) — the chain vocabulary of the workbench surface.
+- [Human goals, evidence, and learning](architecture/EXPLICABILITY_SURFACE.md) — the interaction contract for how a surface shows a person what was asked, what came back and the evidence behind it, with an offline prototype.
+- [Human participation](architecture/HUMAN_PARTICIPATION.md) — the behaviour and evidence contract for a human's questions, answers and feedback reaching the substrate as shaped exchanges.
+- [Workbench Chain-Based UX Design](architecture/WORKBENCH_CHAIN_UX_DESIGN.md) — the chain vocabulary of the workbench surface, a contract for any surface that edits chains (the workbench itself is a separate repository, not part of the running fleet).
 - [Interactive Activities and the Human Resolver](guides/INTERACTIVE_ACTIVITIES_AND_HUMAN_RESOLVER.md) — dispatching a task to a human as a resolver and waiting on the answer.
-- [Substrate-Narration Protocol](SUBSTRATE_NARRATION_PROTOCOL.md) — the operator-side narration and gap-accumulation methodology.
 
 ## 8. Operations and bootstrap
 
@@ -168,6 +170,9 @@ expectation, and a verification gate with no call sites can never be observed fa
 so can never be trusted when it passes.
 
 - [Shape→Action→Evidence Expectations](architecture/SHAPE_ACTION_EVIDENCE_EXPECTATIONS.md) — falsifiable expectations with named metrics and floors.
-- [External Validation](guides/EXTERNAL_VALIDATION.md) — validation as a resolver, and the error-type taxonomy it applies.
+- [The qualification envelope](QUALIFICATION.md) — the tasks, faults, budgets and escalation conditions the substrate must handle without operator hands, and the metrics that judge it.
+- [The learning-loop selftest](validation/LEARNING_LOOP_SELFTEST.md) — a probe with known ground truth that follows one execution through every learning seam.
+- [External Validation](guides/EXTERNAL_VALIDATION.md) — validation as a resolver; it predates the failure-mode taxonomy, so its error-type tables are not the live penalty path.
+- [Substrate-Narration Protocol](SUBSTRATE_NARRATION_PROTOCOL.md) — the operator-side narration and gap-accumulation methodology.
 - [Testing documentation](testing/README.md) — index of the verification material.
 - [Quick Verification Guide](testing/QUICK_VERIFICATION_GUIDE.md) — the short path to confirming a running substrate behaves, starting from the five-level `substrate-status` verdict.

@@ -557,7 +557,7 @@ This repo pins each vessel via a submodule gitlink (`repos/<vessel>` → a commi
 
 ## Documentation
 
-**[`docs/README.md`](docs/README.md) is the full documentation index** — every guide under `docs/`, grouped by what it is for. The handful below are the entry points.
+**[`docs/README.md`](docs/README.md) is the documentation index** — the documents under `docs/` that describe how the system behaves, grouped by what each is for. The handful below are the entry points.
 
 - [`CLAUDE.md`](CLAUDE.md) — authoritative working guide (the laws, the dispatch loop, the operator role, fleet anchors).
 - [`docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md) — canonical system definition.

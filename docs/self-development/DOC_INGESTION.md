@@ -4,8 +4,8 @@
 sections and written into concept-db as embedded concepts, where the substrate's own
 code-authoring path reads them back at drafting time and the documentation-alignment scan
 reads them to find which documents "expect" a landed code change. A document that no
-reader consumes is an archive; every document in this tree has a reader, and the shape it
-ingests under decides which one.
+reader consumes is an archive; every Markdown document in this tree has a reader, and the
+shape it ingests under decides which one.
 
 The ingester is `scripts/substrate/ingest-docs-as-concepts.ts`. The primary consumer is
 `consultPrinciples` in `repos/development-vessel/src/resolvers/feature-compose.ts`.

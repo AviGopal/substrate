@@ -76,5 +76,4 @@ detector, and a silent failure of the detector is itself a gap:
 - The reach verdict is consumed by learning (`alphaBetaDelta` non-empty on
   deterministic reaches) and by selection (pathway acceptance observed at the
   policy threshold).
-- Post-land verification executes on cutovers (see gap class
-  `autonomous-landings-are-never-post-verified` while open).
+- Post-land verification executes on cutovers.
