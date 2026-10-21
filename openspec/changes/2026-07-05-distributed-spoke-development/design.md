@@ -1,6 +1,6 @@
 # Design: distributed spoke development
 
-## The observed state (2026-07-05, hub `138.197.116.56`)
+## The observed state (2026-07-05, hub `<old-hub-ip>`)
 
 Discovery `registry/stats`: 6 live vessels, all healthy, **all registered with loopback endpoints**:
 

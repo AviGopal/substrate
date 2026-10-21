@@ -224,7 +224,7 @@ lever has nothing to act on. Running it would have measured the transport outage
 ## 9. Concept recall is intermittent over the relay — CORRECTED FROM MY FIRST READ
 
 **What I first wrote here was wrong and is retracted in place.** I claimed the spoke was dialing a
-stale peer, on the reasoning that the egress target `138.197.116.56` is not the hub
+stale peer, on the reasoning that the egress target `<old-hub-ip>` is not the hub
 (`syzygy.host` = `104.236.0.175`). The inference was bad: that address is the **relay**, not the
 hub, and the spoke holds a live circuit through it.
 

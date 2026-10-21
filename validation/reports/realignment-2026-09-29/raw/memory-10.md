@@ -98,7 +98,7 @@ Per-note extraction (chronological order within the shard is alphabetical; dates
 
 ### 12. the-spoke-has-been-shouting-into-a-decommissioned-relay (2026-08-10)
 - keys: federation-p2p, env-gating, node-locality, trace-store-db, endpoint-routing
-- 19-agent audit; 8 of 12 high/critical findings refuted. Hub syzygy.host/104.236.0.175 contributing (2.04M executions); spoke federation egress dark; old droplet 138.197.116.56 :30333 still accepts reservations (decoy).
+- 19-agent audit; 8 of 12 high/critical findings refuted. Hub syzygy.host/104.236.0.175 contributing (2.04M executions); spoke federation egress dark; old droplet <old-hub-ip> :30333 still accepts reservations (decoy).
 - RELAY frozen at module load (let RELAY in federation-transport-server.ts) from /bootstrap while DNS pointed at old droplet; egressNoReservationCount 3705->3794; ~2038 egress failures/24h; llm_completion, concept, executionReplicationPull dark. Comment claimed law-1 compliance while code froze it.
 - Clash 2: local discovery advertises activity-api-local 127.0.0.1:8080 confidence 1 first for executionTraces — 9-day-stale store (hub 2.04M vs local 1.55M executions, 400 divergent names). Role-selection drift: masked units active again.
 - Clash 3: hub rows advertise 127.0.0.1 ports; PEER_FANOUT_MODE=union would dial own localhost; arms when transport restarted.

@@ -9,7 +9,7 @@ workspace/surreal volumes, local `/health`), read-only HTTP GETs against the rem
 ## 1. What these containers are
 
 - **Spokes of the remote production hub `syzygy.host`** (resolves to `104.236.0.175`; July memory notes record
-  the hub at `138.197.116.56` — the hub VM moved). They are **not** peers of the local `substrate-live` /
+  the hub at `<old-hub-ip>` — the hub VM moved). They are **not** peers of the local `substrate-live` /
   `compose2-live` pair: the local `substrate-live` discovery returns `Vessel not found` for
   `goal-host-vessel@syzygy-local-inventory-20260922`, `human-surface-vessel@syzygy-local-surface-20260922`
   and `goal-host-vessel@syzygy-hub`; the remote hub returns `Vessel not found` for every `@local-dev-spoke`

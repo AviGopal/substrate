@@ -23,7 +23,7 @@
 # arm is live, after which this script should not be needed.
 #
 # Usage:  bash scripts/substrate/bootstrap-remote-google-arm.sh
-# Env:    SSH_KEY (default ~/.ssh/syzygy_deploy)  HUB=root@<hub-host>  (REQUIRED)
+# Env:    SSH_KEY=<path to the hub deploy key>  HUB=root@<hub-host>  (both REQUIRED)
 
 # apikey_cfg KEY: the curl config line that carries an ApiKey, for `curl -K <(apikey_cfg "$K")` or
 # `apikey_cfg "$K" | curl -K -`. The key never reaches argv (printf is a builtin), so no process listing shows it.
@@ -41,7 +41,7 @@ if [ -z "${HUB:-}" ]; then
   exit 2
 fi
 HUB="${HUB}"
-SSH_KEY="${SSH_KEY:-$HOME/.ssh/syzygy_deploy}"
+SSH_KEY="${SSH_KEY:?set SSH_KEY to the path of the hub deploy key — this script has no default key, by design}"
 HUB_CONTAINER_IP="${HUB_CONTAINER_IP:-172.17.0.2}"
 HUB_PORT="${HUB_PORT:-8221}"  # llm-resolver-opus wrapper; full provider registry + cascade once the fixed image lands
 PORT=18225

@@ -60,7 +60,7 @@ problem-class rollup, mechanisms, and principles at the end.
 - 07-21 `bfc6af1`: hollow greens on edit-intent (42b32a91, 40d343e6 reached but origin unchanged). First fix `d679cfb` was PHANTOM (guard in verifyGoalReached, which the edit-intent return sites never call). Fixed 3 sites (goal-host index.ts :3859, :4149, :4206) → reached = !!landedSha. Verified d485e0ca reached=NO; positive control 1618e700 concept-db advanced cd6f18e→4835a781.
 - `238a4a3`: grader-side lies — verifyGoalReached:865 FAVORABLE w/o landing; persistSatisfierTrace:4137 durable trace reached:true unconditionally. "The RETURN can be honest while the TRAINING TRACE lies."
 - T0 baseline close_rate 0.1243 (71/571), latency median 0.24h; 275 reopen events/43774 funnel rows.
-- LLM plane down (hub relay 138.197.116.56/tcp/30333, `llm fetch 502`); unblocked via peer/groq.
+- LLM plane down (hub relay <old-hub-ip>/tcp/30333, `llm fetch 502`); unblocked via peer/groq.
 - `2022d6f` trend instrument (close_rate, median_latency into funnel-history.jsonl); over-fired 20×/min → `ea7698af` append-cooldown (substrate landed via 471abbd8 — substrate-authored).
 - `2aaa834` local-tools mapPath (repos/ → /vessels) fixing ENOENT and a shadow garbage tree `/vessels/local-tools-vessel/repos`; detached-HEAD push lesson.
 - Hollow learned-composition `activity:⟨...codereplaceresult-to-codeinsertresult...⟩` α=58.86 from 62/63 exit-status greens, tasks inputShapes:[]/outputShapes:[].
@@ -206,7 +206,7 @@ problem-class rollup, mechanisms, and principles at the end.
 [hollow-landing, sync-deploy-drift, human-surface-escalation, dormant-mechanism, memory-recall]
 
 ### project-federation-parity-trail (07-13→07-14)
-- Topology: hub syzygy-hub (138.197.116.56), spokes syzygy-spoke, min-proof, mac-local. Memory + gap stores are per-substrate silos.
+- Topology: hub syzygy-hub (<old-hub-ip>), spokes syzygy-spoke, min-proof, mac-local. Memory + gap stores are per-substrate silos.
 - Gaps: `federation-fleet-vocabulary-not-federated` (spoke 11 local shapes vs 373 hub), `federation-transport-local-resolve-no-remote-hop`, `reach-gate-false-positive-on-no-progress-walk`, `hub-mirror-vessel-id-double-suffix` (b027d2f2), `federation-direct-dial-never-attempted`, `edit-intent-cannot-reach-super-repo-scripts`.
 - Parity probe: hub/mac/min inference conf 0 → blind walks stamped reached:true (index.ts:2913 `reached = verdict?.reached !== false` fails open). Fixed substrate-authored b5278a3 (routeOverRanked, envelope unwrap), 4af057a (reach gate fails closed), faa4f7d.
 - `42a0087` fleetActivityFeed read `id` vs `vesselId` (one-line) — landed first try in 6899-line file.

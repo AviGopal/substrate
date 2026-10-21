@@ -63,7 +63,7 @@ through frozen HTTP env URLs (law 1 and law 11 violations), not through discover
 - Forward targets by day, surface: 09-22: 4,409 to hub peer `…6yz95okd7tjBHWkVAAdZ`; 09-23: 1; 09-25: 485 to hub + 271 to `…3PjfJCE62W8rdCu9aLSZ`; 09-29: 2 to inventory. Inventory: 09-24: 33; 09-25: 150. **P2P traffic has been near-idle since 09-25.**
 
 ### syzygy-hub droplet (104.236.0.175)
-- TCP 30333/18100/18101/18210 open from the host. The old droplet `138.197.116.56:18100` still times out (the Defect A address).
+- TCP 30333/18100/18101/18210 open from the host. The old droplet `<old-hub-ip>:18100` still times out (the Defect A address).
 - Discovery: 29 rows, 402 shapes, uptime ~7.06 days. `/bootstrap` is honest (public relay + public identity + discovery endpoint), because this node was hand-fed `PUBLIC_IP`.
 - Metrics carry historical ids for **16 distinct `spoke-xxxxxxxx` substrates** plus `local-dev-spoke`, `syzygy-hub` (self-mirror rows such as `llm-resolver-opus@syzygy-hub`) and the two syzygy-local rows. Every ephemeral compose/demo run minted a fresh `spoke-<hex>` identity, so identity churn is visible in the hub's metric cardinality (codebase-bloat / residue).
 - **Unauthenticated `GET /vessels/:id` and `/metrics` on a public IP** expose the fleet topology (vessel ids, shapes, endpoints). The 09-12 proposal lists the libp2p-ingress confused deputy as still open, and this adds an HTTP surface to the same exposure.

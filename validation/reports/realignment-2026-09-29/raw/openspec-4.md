@@ -168,7 +168,7 @@ Entries:
   loaded-but-disabled) → every edit-intent goal died `endpoint discovery failed (llm=true,
   tools=false)`. Restored via `systemd_restart`. Toolbelt detector v1 false-positives because
   "same vesselId" ≠ "same location"; blocked on routable endpoints.
-- **07-09** — hub `138.197.116.56:18080` unreachable; traces spool-and-replay.
+- **07-09** — hub `<old-hub-ip>:18080` unreachable; traces spool-and-replay.
 - **Live (substrate-gap.ts:1215):** "GapDrainObserver subscribes to activity-api's websocket,
   which on a spoke is the HUB's — unreachable when the hub is down, and silently so." The event
   path built on 07-09 is node-local-blind. Observer still constructed (`src/index.ts:395-398`,

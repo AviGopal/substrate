@@ -150,7 +150,7 @@ change exists to eliminate).
 
 ## Residual risk / open questions
 
-- The hub (`138.197.116.56:18080`) remains unreachable; goal-host trace persistence
+- The hub (`<old-hub-ip>:18080`) remains unreachable; goal-host trace persistence
   is spool-and-replay (durable, verified replaying). When the hub returns, the spool
   drains automatically. Local learning reads (Thompson per-goal paths) are degraded
   until then — pre-existing condition, out of scope.

@@ -31,9 +31,9 @@ The cause is an address, and it is exactly the thing invariant 2 forbids:
 ```
 $ docker exec substrate-live grep -E '^HUB_DISCOVERY_URL=' /etc/substrate/env /workspace/.substrate-secrets
 /etc/substrate/env:HUB_DISCOVERY_URL=""
-/workspace/.substrate-secrets:HUB_DISCOVERY_URL=http://138.197.116.56:18100
+/workspace/.substrate-secrets:HUB_DISCOVERY_URL=http://<old-hub-ip>:18100
 
-$ curl -s --max-time 6 -o /dev/null -w '%{http_code}' http://138.197.116.56:18100/bootstrap
+$ curl -s --max-time 6 -o /dev/null -w '%{http_code}' http://<old-hub-ip>:18100/bootstrap
 000                                          # unreachable, 6s timeout
 ```
 
@@ -229,7 +229,7 @@ Every factual claim above was re-verified against the tree and the running subst
 findings that changed are recorded here rather than edited away, because the original
 readings are the measurement record.
 
-**Still true, re-confirmed:** the dead droplet at `138.197.116.56:18100` answers HTTP 000;
+**Still true, re-confirmed:** the dead droplet at `<old-hub-ip>:18100` answers HTTP 000;
 `/workspace/.substrate-secrets` still pins `HUB_DISCOVERY_URL` to it while
 `/etc/substrate/env` has it empty, and the workspace file still wins; `/bootstrap` still
 returns `{"relay_multiaddrs":[],"identity_endpoint":"http://127.0.0.1:8101","discovery_endpoint":""}`,

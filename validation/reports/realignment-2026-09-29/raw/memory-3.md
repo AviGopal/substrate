@@ -230,7 +230,7 @@ Notes are read in order; findings are recorded per-note first (chronological evi
 - Serial dispatch only: concurrency starves inference to [].
 
 ### reference-a-libp2p-row-rewritten-into-an-http-address-hangs-forever-2026-08-10
-- RELAY_MULTIADDR empty -> transport derives relay from /bootstrap ONCE at module load; substrate-live anchored to pre-migration droplet 138.197.116.56: 7,333 egress failures, 0 successes. Fix = restart transport; durable fix (read relay at use time) not made — code comment claims the invariant, implementation does opposite. (federation-p2p, docs-drift)
+- RELAY_MULTIADDR empty -> transport derives relay from /bootstrap ONCE at module load; substrate-live anchored to pre-migration droplet <old-hub-ip>: 7,333 egress failures, 0 successes. Fix = restart transport; durable fix (read relay at use time) not made — code comment claims the invariant, implementation does opposite. (federation-p2p, docs-drift)
 - reachableFrom rewrote libp2p rows into HTTP addresses (syzygy.host:18401 no route) -> fixed ada62cff (p2p first via 127.0.0.1:8401). Error path unreachable (12s x candidates > server idle timeout) -> 4s budget + idleTimeout 30s. Transport returns dead circuit as content.error with HTTP 200. `??` doesn't replace empty string in env. (endpoint-routing, env-gating)
 
 ### reference-a-lifetime-cpu-average-is-not-a-live-burn-2026-08-12

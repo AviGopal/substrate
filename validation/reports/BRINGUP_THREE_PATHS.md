@@ -916,7 +916,7 @@ Read it back with `goalWalkState` over the same path.
 | Wanted a lean node; got the UI vessels, LLM fleet, ribosome, analysis, relevance sink | `roles.spoke = [compute, ui, seed, infra, registry]` and role is per-unit — coarse by construction. | `ENABLED_VESSELS` allowlist or `DISABLED_VESSELS` subtraction |
 | Every hub register 401s; no `@<id>` rows; locally fine | Locally minted `METABOB_API_KEY` (`secrets.env.sh:31` generates one when none is supplied). **`HUB_API_KEY` is read by three components and set by NOTHING in this tree** — the `API_KEY` fallback is always the operative path. | `make -C scripts/substrate issue-key NAME=spoke-<loc>` on the **hub host** (`Makefile:618-620`) |
 | Transport flaps every 5s; spoke locally healthy, invisible to hub | Empty `relay_multiaddrs` from `<hub>/bootstrap` → `process.exit(1)` (`federation-transport-server.ts:61`) with `Restart=always`/`RestartSec=5`. Or a cold-volume `WorkingDirectory` that does not exist yet (self-healing, expected on first boot). | `docker exec … curl 127.0.0.1:8401/health`; then `journalctl -u federation-transport-vessel -n 50` |
-| Fan-out misses hub producers; everything else fine | **A baked drop-in wins.** `units/discovery-vessel.service.d/federation-peering.conf` hardcodes `PEER_DISCOVERY_ENDPOINTS=http://138.197.116.56:18100`, and `Dockerfile.substrate:213` copies `units/` into `/usr/lib`. A drop-in `Environment=` is applied after `EnvironmentFile=`, so it beats gen-env. **Confirmed live.** | `docker exec substrate-live systemctl show discovery-vessel.service -p Environment \| tr ' ' '\n' \| grep PEER_DISCOVERY` |
+| Fan-out misses hub producers; everything else fine | **A baked drop-in wins.** `units/discovery-vessel.service.d/federation-peering.conf` hardcodes `PEER_DISCOVERY_ENDPOINTS=http://<old-hub-ip>:18100`, and `Dockerfile.substrate:213` copies `units/` into `/usr/lib`. A drop-in `Environment=` is applied after `EnvironmentFile=`, so it beats gen-env. **Confirmed live.** | `docker exec substrate-live systemctl show discovery-vessel.service -p Environment \| tr ' ' '\n' \| grep PEER_DISCOVERY` |
 | Federation egress dark for days while reservations converge reliably | With `RELAY_MULTIADDR` empty the transport derives the relay from `/bootstrap` **once at module load** (`let RELAY`, never re-read) — the code comment claims read-at-use-time and the implementation does the opposite. A moved hub does not move a long-lived process. | Restart the transport after any hub migration; verify a `/p2p-circuit` multiaddr, not a green unit |
 | `make recreate` silently converts a spoke into a standalone; the fleet looks **healthier** afterwards | `ENABLED_ROLES`/`DISABLED_VESSELS`/`PROFILE` are launch-time `?=` args nothing persists. (`recreate` now carries them forward, `Makefile:376-414`.) | Verify the echoed `[recreate] carrying forward launch identity: …`, then re-read `/etc/substrate/env` |
 | `make up` on an **already-running** container silently ignores join settings | `Makefile:348-349` prints "already running" and skips run-live; `LAUNCH_OVERRIDES` is checked only on the stopped-container branch (`:351`). **UNVERIFIED** — read from code, not tested. | Read `/etc/substrate/env` after the command, never the command's output |
@@ -967,13 +967,13 @@ getent hosts syzygy.host
 for p in 18100 18101 18080 18210 18260 30333; do
   timeout 4 bash -c "</dev/tcp/104.236.0.175/$p" 2>/dev/null && echo "$p OPEN" || echo "$p CLOSED"
 done
-timeout 5 bash -c "</dev/tcp/138.197.116.56/30333" 2>/dev/null && echo "relay OPEN" || echo "relay CLOSED"
+timeout 5 bash -c "</dev/tcp/<old-hub-ip>/30333" 2>/dev/null && echo "relay OPEN" || echo "relay CLOSED"
 ```
 
-Observed: `/bootstrap` advertises `/ip4/138.197.116.56/tcp/30333/p2p/12D3KooWJ9Jdv…`, while
+Observed: `/bootstrap` advertises `/ip4/<old-hub-ip>/tcp/30333/p2p/12D3KooWJ9Jdv…`, while
 `syzygy.host` resolves to **104.236.0.175** and **the hub's own 30333 is CLOSED**. The old
 droplet's HTTP plane is dead (`:18100` → `code=000 connect=0.000000`) but its **libp2p relay
-daemon still accepts** — `138.197.116.56:30333` is OPEN, and `substrate-live`'s transport holds
+daemon still accepts** — `<old-hub-ip>:30333` is OPEN, and `substrate-live`'s transport holds
 `activeReservations:1` against it.
 
 **Every federated join today — Path A and Path B both — rides a zombie relay on a box whose HTTP
@@ -1047,7 +1047,7 @@ docker exec substrate-live grep -E '^PEER_DISCOVERY_ENDPOINTS=' /etc/substrate/e
 curl -s http://127.0.0.1:18100/registry/stats
 ```
 
-The unit environment carries `PEER_DISCOVERY_ENDPOINTS=http://138.197.116.56:18100` (the dead
+The unit environment carries `PEER_DISCOVERY_ENDPOINTS=http://<old-hub-ip>:18100` (the dead
 droplet) while `/etc/substrate/env` says `syzygy.host` — **the baked drop-in wins at runtime, as
 predicted**, which settles Path B's open question. The local registry reports a healthy
 19 vessels / 305 shapes throughout: **local registration health is completely independent of

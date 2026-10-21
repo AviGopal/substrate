@@ -8,7 +8,7 @@ Written notes per source file (batch order), then a regrouping by problem-class 
 ## Batch A (files 1–20)
 
 ### deploy-anywhere-proven-and-git-selfalter-2026-07-12
-- [federation-p2p] 07-12 bare `avigopal/substrate:dev` booted as spoke of syzygy.host (138.197.116.56; hub 18080/18100/18101, relay 30333); `spoke-federate` → 11 `@anywhere-proof` mirror rows in hub registry; goal on spoke `:28210` walked hub templates, traces landed in HUB store. Toy goal reached:false (walk quality). Outcome: worked (connectivity).
+- [federation-p2p] 07-12 bare `avigopal/substrate:dev` booted as spoke of syzygy.host (<old-hub-ip>; hub 18080/18100/18101, relay 30333); `spoke-federate` → 11 `@anywhere-proof` mirror rows in hub registry; goal on spoke `:28210` walked hub templates, traces landed in HUB store. Toy goal reached:false (walk quality). Outcome: worked (connectivity).
 - [sync-deploy-drift] Self-alteration git contract: `SUBSTRATE_GIT_PAT` → setup-git-push credential helper + writable clones of 16 vessel repos + super-repo. Trap fixed `d3253945`: credential-less boot seeds super-repo as bare tree (no .git), later PAT could never upgrade (clone refuses non-empty dir) → init-in-place + fetch + `checkout -f -B dev origin/dev`. Worked (proven on spoke).
 - [sync-deploy-drift] Docker Hub tags stale (pre-fix digests bfdf7d80/15844153); rebuild dev=1fb3f80e20a4 obsidian=11cdc40448e3; push pending user-run.
 - [endpoint-routing] goal-host has NO `/goal-status` HTTP route; status via MCP goal_status/journal.

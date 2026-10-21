@@ -132,7 +132,7 @@ A 29 KB running log with **six successive self-corrections**, the canonical "pro
 
 ## 114. 2026-09-12-host-independent-federation-join  (keys: federation-p2p, env-gating, endpoint-routing, sync-deploy-drift)
 
-- **Defects (live probe 09-12):** A dead droplet IP `138.197.116.56:18100` pinned in `/workspace/.substrate-secrets`
+- **Defects (live probe 09-12):** A dead droplet IP `<old-hub-ip>:18100` pinned in `/workspace/.substrate-secrets`
   outranked `/etc/substrate/env` ⇒ transport restart loop `activating` (NRestarts 23→32); B transport `process.exit(1)`
   without relay ⇒ circular bootstrap; C `/bootstrap` serves loopback `identity_endpoint` + empty discovery; D 13/13
   vessels unreachable from foreign vantage (initially misdiagnosed as per-vessel multiaddrs — corrected in place);

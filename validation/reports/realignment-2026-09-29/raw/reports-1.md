@@ -455,7 +455,7 @@ Date span covered: 2026-08-16 -> 2026-09-26. Read-only; nothing was dispatched, 
 - Poisoned discovery row (09-22 02:36): transient verify instance registered ephemeral :24892 under live local-tools id;
   heartbeats kept it alive; every grounding window 0 bytes. Filed (probe changed endpoint before storing).
 - Hardcoded ports: vessel-health-report.ts METABOB_ENDPOINT ?? :8080, DISCOVERY ?? :8100 (08-16); cockpit config pinned
-  syzygy (08-22); PEER_DISCOVERY_ENDPOINTS hardcoded dead droplet 138.197.116.56 in baked drop-in (08-18).
+  syzygy (08-22); PEER_DISCOVERY_ENDPOINTS hardcoded dead droplet <old-hub-ip> in baked drop-in (08-18).
 - Advertised spelling: goalDispatchAsync indexed, goal_dispatch_async alias -> "no producer" (08-18).
 - Federation ingress 404 on /resolve looks like dead relay; envelope normalization (3b4f921a) (08-18).
 - 18 unmounted endpoint call sites (08-17).
@@ -557,7 +557,7 @@ Date span covered: 2026-08-16 -> 2026-09-26. Read-only; nothing was dispatched, 
   (09-22); surface-empty 4 causes (anchor, dead relay, path 404, envelope) (08-18); human-surface HOST=127.0.0.1 loopback pin.
 
 ### federation-p2p
-- Relay on half-decommissioned host 138.197.116.56 while syzygy=104.236.0.175; `relay_multiaddrs` check passes green on
+- Relay on half-decommissioned host <old-hub-ip> while syzygy=104.236.0.175; `relay_multiaddrs` check passes green on
   zombie (08-18). RELAY read once at module load. Empty relay -> process.exit(1) flap every 5s.
 - Only shaped impulse resolutions cross the relay; bespoke HTTP verbs unreachable by construction; goalDispatchAsync as
   shape (3b4f921a) (08-18).

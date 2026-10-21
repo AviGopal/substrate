@@ -49,7 +49,7 @@ Files: `README.md` (7.3KB), `PROGRESSION.md` (8.5KB), `schema.json`, `cycles/cyc
 | cycle-6 | 05-23 06:42 | 6/0/0 |
 | cycle-7 | 05-23 06:47 | 6/0/0 |
 | cycle-8-verify | 05-23 07:38 | 6/0/0 |
-| 2026-07-05-failure-mode-report (hub `138.197.116.56:18080`) | 07-05 09:57 | **1/0/6** (7 scenarios; same six are `gap`, only `loop-c-vessel-scaffold-dispatch-consumer` reuse) |
+| 2026-07-05-failure-mode-report (hub `<old-hub-ip>:18080`) | 07-05 09:57 | **1/0/6** (7 scenarios; same six are `gap`, only `loop-c-vessel-scaffold-dispatch-consumer` reuse) |
 
 Commits: d8004133 (05-22 DEV-1..4), b9eca1ed (05-22 cycle-2 "autonomous proposals"), d0aee198
 (05-22 "first clean cycle"), 5504d03c (05-22 "LIFT CANDIDATE"), 4b7ce0e8 (05-23 cycle-8 +

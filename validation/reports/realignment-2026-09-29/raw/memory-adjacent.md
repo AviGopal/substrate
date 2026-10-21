@@ -87,7 +87,7 @@ Every link gives: date, what was found, what was declared, and what the next lin
 - 07-05 (`hub_spoke_shellresult_break`): every hub vessel registered a loopback endpoint (`127.0.0.1:8080`, …), unreachable from any other machine. MCP `registry_query` read "a STALE/different registry".
 - 07-26 (substrate-utils): the resolve path must use the pointer envelope, otherwise 400.
 - 08-08 (substrate-utils `surface-goal-host-unreachable`): the hub goal-host was registered with the **federation transport's address `:8401`**, which `reachableFrom()` rewrote to `syzygy.host:18401` → 000. Cause: a 401 heartbeat storm led to TTL expiry and a bad re-register. Workaround: **pin `GOAL_HOST_ENDPOINT=http://172.17.0.1:18210`**.
-- 08-10: the hub IP moved from 138.197.116.56 to 104.236.0.175, and a cached literal made a healthy hub read as down. Registry listing endpoints 404 on the hub, and "grep -c over a 404 body" read as 0 rows.
+- 08-10: the hub IP moved from <old-hub-ip> to 104.236.0.175, and a cached literal made a healthy hub read as down. Registry listing endpoints 404 on the hub, and "grep -c over a 404 body" read as 0 rows.
 - 08-21 (metabob-mcp): "goal-host's discovery row is stale (127.0.0.1:18401) which breaks run_goal*/goal_status/goal_reasoning/provide_feedback".
 - 09-22 (substrate index): the resolve-URL joiner overshot (endpoint + absolute resolvePath = invalid URL, so "no producer"). 248 escalations went to the **pinned `:8270`**, a replaced vessel.
 - Recurrences: 8. The pattern is the same each time: a writer or caller pins a peer (or a path format), the peer changes, and the failure reads as "no producer" or silence.

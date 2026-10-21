@@ -1963,7 +1963,7 @@ if [[ -f "$SECRETS_STORE" ]]; then
     # turns a moved hub into a permanent outage. This is not hypothetical: an
     # older revision of the heredoc emitted HUB_DISCOVERY_URL, the name then left
     # the list, and the carry-through below dutifully preserved it — so
-    # HUB_DISCOVERY_URL=http://138.197.116.56:18100 (a decommissioned droplet)
+    # HUB_DISCOVERY_URL=http://<old-hub-ip>:18100 (a decommissioned droplet)
     # survived every gen-env run, outranked the empty value in /etc/substrate/env
     # because the unit loaded .substrate-secrets last, and kept
     # federation-transport-vessel hard-exiting "no relay anchor" forever.
