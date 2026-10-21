@@ -1,6 +1,12 @@
 # RBAC Troubleshooting Guide
 
-This guide helps diagnose and resolve common RBAC-related issues in the Metabob ecosystem.
+This guide helps diagnose and resolve common RBAC-related issues across the vessel fleet.
+
+Every diagnosis here runs with the caller's own credential. Root credentials bypass
+PERMISSIONS, so a root session cannot show what a caller sees, and a fix made through one
+is a hand-edit of the database. Schema and data repairs land as migrations in the vessel
+that owns the table ([SCHEMA_OWNERSHIP.md](SCHEMA_OWNERSHIP.md)) and apply when its unit
+starts.
 
 ## Quick Diagnostics
 
@@ -18,14 +24,16 @@ curl -H "Authorization: Bearer $JWT_TOKEN" \
 echo $JWT_TOKEN | cut -d'.' -f2 | base64 -d 2>/dev/null | jq .
 ```
 
-### Check SurrealDB Connection
+### Check Data Access as the Caller
 
 ```bash
-# Direct SurrealDB query
-surreal sql --conn http://localhost:8000 \
-  --ns activity-system --db learning_loop \
-  --user root --pass $PASSWORD \
-  -q "INFO FOR DB"
+# With an API key, the default template list comes from a catalogue that
+# activity-api reads on its own connection and filters by organisation in
+# application code, so this count shows that filter, not PERMISSIONS.
+curl -s -H "Authorization: ApiKey $API_KEY" \
+  http://localhost:18080/v2/activities/templates | jq '.templates | length'
+# A user JWT's reads run under the caller's own credential; read with that
+# token to see what PERMISSIONS let the caller see.
 ```
 
 ---
@@ -52,13 +60,13 @@ echo $JWT_TOKEN | cut -d'.' -f2 | base64 -d 2>/dev/null | jq .
 
 **Fix:** Re-authenticate to get fresh token via identity-vessel:
 ```bash
-# Dashboard / JWT login
-curl -X POST https://identity.metabob.com/v1/auth/login \
+# Dashboard / JWT login (identity-vessel, at its fleet address)
+curl -X POST http://localhost:18101/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email": "user@example.com", "password": "..."}'
 
 # API key validation (used by service-to-service callers)
-curl -X POST https://identity.metabob.com/v1/keys/validate \
+curl -X POST http://localhost:18101/v1/keys/validate \
   -H "Content-Type: application/json" \
   -d '{"api_key": "mb_env-org-user-keyid-hmac"}'
 ```
@@ -102,12 +110,12 @@ docker exec <container> vessel-ctl restart <vessel>
 
 ```surql
 -- Check your auth context
-SELECT * FROM $auth;
+RETURN $token;
 
 -- Check record's org_id
 SELECT org_id FROM activity_template WHERE id = 'template:xxx';
 
--- Compare: Does $auth.org_id match record's org_id?
+-- Compare: does $token.org_id match the record's org_id?
 ```
 
 **Possible Causes:**
@@ -126,10 +134,10 @@ Legacy data may not have org_id set.
 -- Find records without org_id
 SELECT id FROM activity_template WHERE org_id IS NONE;
 
--- Backfill to default org
-UPDATE activity_template SET org_id = organizations:metabob_internal
-  WHERE org_id IS NONE;
 ```
+
+**Fix:** a backfill is a data migration in the owning vessel, applied on unit start —
+never an `UPDATE` typed into a live session.
 
 #### C. PERMISSIONS Clause Too Restrictive
 
@@ -137,7 +145,8 @@ UPDATE activity_template SET org_id = organizations:metabob_internal
 -- Check table permissions
 INFO FOR TABLE activity_template;
 
--- Should show PERMISSIONS with $auth.org_id checks
+-- Should show PERMISSIONS scoped on $token.org_id (see RBAC_GUIDE.md: $auth is NONE
+-- under both in-fleet signers, so a clause on $auth.* filters everything out)
 ```
 
 ---
@@ -153,10 +162,10 @@ INFO FOR TABLE activity_template;
 
 ```bash
 # Check goal-host-vessel logs inside substrate container
-docker exec substrate-live journalctl -u goal-host-vessel --lines=50
+docker exec <container> journalctl -u goal-host-vessel --lines=50
 
 # Or check boredom-vessel
-docker exec substrate-live journalctl -u boredom-vessel --lines=50
+docker exec <container> journalctl -u boredom-vessel --lines=50
 ```
 
 **Possible Causes:**
@@ -170,8 +179,8 @@ The key must be registered with identity-vessel.
 # Check the key configured for the local substrate
 cat ~/.metabob/config.json | jq .metabob.apiKey
 
-# Validate it against identity-vessel
-curl -X POST http://localhost:18101/v1/keys/validate   # identity-vessel is the validator; activity-api mounts only /v2/* \
+# Validate it against identity-vessel (the validator; activity-api mounts only /v2/*)
+curl -X POST http://localhost:18101/v1/keys/validate \
   -H "Content-Type: application/json" \
   -d '{"api_key": "<your-key>"}'
 ```
@@ -187,7 +196,7 @@ If the key is not valid, re-emit the client configuration from the fleet with
 curl http://localhost:18080/health
 
 # From inside the container (goal-host-vessel uses this)
-docker exec substrate-live curl http://localhost:8080/health
+docker exec <container> curl http://localhost:8080/health
 ```
 
 > **Removed patterns (do not use):** `minibob_instance` table, `MINIBOB_INSTANCE_ID` / `MINIBOB_INSTANCE_API_KEY` env vars, and the Helm values block for `minibob.instanceId` are removed. The current auth path is a plain HMAC API key (`METABOB_API_KEY`) validated via identity-vessel.
@@ -202,19 +211,17 @@ docker exec substrate-live curl http://localhost:8080/health
 
 **Diagnosis:**
 
-```surql
--- Query as root (bypasses PERMISSIONS)
--- Connect with root credentials
-SELECT count() FROM activity_template;
--- Returns: 150
+An empty result under PERMISSIONS looks exactly like an empty table, so start from the
+claims PERMISSIONS evaluate, not from a root count:
 
--- Query as authenticated user
--- Connect with JWT
-SELECT count() FROM activity_template;
--- Returns: 0
-
--- The difference = PERMISSIONS filtering
+```bash
+# The org and projects the caller's token carries
+echo $JWT_TOKEN | cut -d'.' -f2 | base64 -d 2>/dev/null | jq '{org_id, project_ids}'
 ```
+
+If the claims name the wrong org, or none, the filtering is working as designed. Whether
+the rows exist in another org is a question for a caller of that org, asked with that
+caller's credential — not for root credentials, which bypass PERMISSIONS.
 
 **Possible Causes:**
 
@@ -240,7 +247,7 @@ echo $JWT_TOKEN | cut -d'.' -f2 | base64 -d | jq .org_id
 INFO FOR TABLE activity_template;
 
 -- Check user's project membership
-SELECT * FROM project_members WHERE user_id = $auth.id;
+SELECT * FROM project_members WHERE user_id = $token.user_id;
 ```
 
 ---
@@ -259,7 +266,7 @@ SELECT * FROM project_members WHERE user_id = $auth.id;
 
 ```bash
 # Validate the key directly
-curl -X POST https://identity.metabob.com/v1/keys/validate \
+curl -X POST http://localhost:18101/v1/keys/validate \
   -H "Content-Type: application/json" \
   -d '{"api_key": "<your-key>"}'
 ```
@@ -271,7 +278,7 @@ curl -X POST https://identity.metabob.com/v1/keys/validate \
 Use identity-vessel to check:
 ```bash
 # key_id is the portion before the final HMAC segment
-curl -X POST https://identity.metabob.com/v1/keys/validate \
+curl -X POST http://localhost:18101/v1/keys/validate \
   -H "Content-Type: application/json" \
   -d '{"api_key": "<your-key>"}' | jq .data
 # Look for: "valid": false, "error": "API key has been revoked"
@@ -312,8 +319,10 @@ Re-copy the key from the dashboard (shown once at creation). Ensure no trailing 
 | Endpoint | Limit |
 |----------|-------|
 | `/v1/auth/login` | 10 requests/minute |
-| `/v1/keys/validate` | 10 requests/minute |
-| `/v1/keys/issue` | 5 requests/minute |
+| `/v1/auth/signup` | 5 requests/minute |
+| `/v1/auth/password/hash`, `/v1/auth/password/verify` | 5 requests/minute |
+| `/v1/keys/validate` | 100 requests/minute |
+| `/v1/auth/resolve` | 100 requests/minute |
 
 > **Removed endpoints:** `/v2/auth/minibob/signin` and `/v2/auth/apikey` on activity-api are removed. Rate-limiting now applies to identity-vessel endpoints only.
 
@@ -331,21 +340,18 @@ Re-copy the key from the dashboard (shown once at creation). Ensure no trailing 
 **Diagnosis:**
 
 ```surql
--- Check applied migrations
-SELECT * FROM schema_version ORDER BY applied_at DESC;
+-- Check applied migrations (activity-api records each applied file here)
+SELECT * FROM init_migrations;
 ```
 
 **Fix:** Most schemas are migrations applied when the owning vessel's unit starts, so restarting
 that vessel is the remedy; see [SCHEMA_OWNERSHIP.md](SCHEMA_OWNERSHIP.md) for which vessel owns
-which tables. activity-api additionally carries a migration runner that can be invoked directly.
+which tables. (activity-api's older `sql/migrate.ts` runner is not the substrate's schema
+path; SCHEMA_OWNERSHIP says why.)
 
 ```bash
 # Apply on unit start
 docker exec <container> vessel-ctl restart <vessel>
-
-# activity-api schemas, applied directly
-cd repos/activity-api
-bun run sql/migrate.ts
 ```
 
 ---
@@ -370,10 +376,11 @@ bun run sql/migrate.ts
 -- Check table definition
 INFO FOR TABLE problematic_table;
 
--- If PERMISSIONS missing, add:
+-- If PERMISSIONS are missing, the repair is a migration in the owning vessel
+-- (SCHEMA_OWNERSHIP.md), applied on unit start; it defines, for example:
 DEFINE TABLE problematic_table SCHEMAFULL
   PERMISSIONS
-    FOR select, create, update, delete WHERE org_id = $auth.org_id;
+    FOR select, create, update, delete WHERE org_id = $token.org_id;
 ```
 
 #### B. Query Using Root Credentials
@@ -385,12 +392,12 @@ Application code may be using root credentials instead of user JWT.
 #### C. org_id Field Missing
 
 ```surql
--- Add org_id field if missing
+-- In a migration of the owning vessel, not a live session:
 DEFINE FIELD org_id ON problematic_table TYPE record<organizations>
   ASSERT $value != NONE
-  VALUE $value OR $auth.org_id;
+  VALUE $value OR $token.org_id;
 
--- Backfill existing records
+-- Backfill existing records (same migration)
 UPDATE problematic_table SET org_id = organizations:default
   WHERE org_id IS NONE;
 ```
@@ -410,26 +417,14 @@ decode_jwt() {
 decode_jwt "$JWT_TOKEN"
 ```
 
-### 2. SurrealDB Shell
-
-```bash
-# Interactive SQL shell
-surreal sql \
-  --conn http://localhost:8000 \
-  --ns activity-system \
-  --db learning_loop \
-  --user root \
-  --pass $PASSWORD
-```
-
-### 3. Test Authentication Flow
+### 2. Test Authentication Flow
 
 ```bash
 #!/bin/bash
 # test-auth.sh
 
 # 1. Validate API key via identity-vessel
-VALIDATION=$(curl -s -X POST https://identity.metabob.com/v1/keys/validate \
+VALIDATION=$(curl -s -X POST http://localhost:18101/v1/keys/validate \
   -H "Content-Type: application/json" \
   -d '{"api_key": "'$API_KEY'"}')
 
@@ -443,17 +438,17 @@ curl -s -H "Authorization: ApiKey $API_KEY" \
 
 > **Removed pattern:** activity-api no longer issues tokens via `/v2/auth/apikey`. Pass the HMAC API key directly as `Authorization: ApiKey <key>` to activity-api; identity-vessel validates it internally.
 
-### 4. Check Pod Logs
+### 3. Check Vessel Logs
 
 ```bash
 # Activity API logs
-docker exec substrate-live journalctl -u activity-api -f
+docker exec <container> journalctl -u activity-api -f
 
 # development-vessel logs
-docker exec substrate-live journalctl -u development-vessel -f
+docker exec <container> journalctl -u development-vessel -f
 
 # SurrealDB logs
-docker exec substrate-live journalctl -u surrealdb -f
+docker exec <container> journalctl -u surrealdb -f
 ```
 
 ---
@@ -466,13 +461,13 @@ If unable to resolve:
    - Error message
    - JWT claims (decoded)
    - Table PERMISSIONS
-   - schema_version entries
+   - `init_migrations` entries
    - Relevant logs
 
 2. **Check documentation:**
-   - `docs/RBAC_GUIDE.md`
-   - `docs/AUTH_JWT_CLAIMS.md`
-   - `docs/MULTI_TENANT_ARCHITECTURE.md`
+   - [RBAC_GUIDE.md](RBAC_GUIDE.md)
+   - [AUTH_JWT_CLAIMS.md](AUTH_JWT_CLAIMS.md)
+   - [SCHEMA_OWNERSHIP.md](SCHEMA_OWNERSHIP.md)
 
 3. **File issue:**
    - Include all diagnostics
