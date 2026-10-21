@@ -123,7 +123,7 @@ The engine's built-in event vocabulary is open-ended: `LifecycleEventType` names
 | `impulse.loaded` | An impulse was loaded |
 | `lifecycle.emitted` | A lifecycle event was emitted |
 
-**Colon-form shapes subscribers use**, forwarded to the bus in dotted snake_case:
+**Colon-form shapes subscribers use**, forwarded to the bus in dotted snake_case. The mapping is mechanical and applies to any shape; three of the rows below are names nothing emits (see the next table), so a subscription to them registers and never fires:
 
 | Subscription shape | Bus form |
 |---|---|
@@ -136,7 +136,7 @@ The engine's built-in event vocabulary is open-ended: `LifecycleEventType` names
 | `lifecycle:gap:classified` | `lifecycle.gap.classified` |
 | `lifecycle:llm:dispatched` | `lifecycle.llm.dispatched` |
 
-`lifecycle:llm:dispatched` is emitted by the `llm-prompt` resolver *before* the model call, which is what lets an audit subscriber see the dispatch without log archaeology. `ribosome-extract` subscribes to `lifecycle:activity:postExecution`.
+`lifecycle:llm:dispatched` is emitted by the `llm-prompt` resolver *before* the model call, which is what lets an audit subscriber see the dispatch without log archaeology. `ribosome-extract` subscribes to `lifecycle:activity:postExecution`, which no emitter produces, so that subscription is never reached; ribosome-vessel runs extraction as a standing service instead ([`CORE_IDIOMS.md`](../../CORE_IDIOMS.md), idiom 6).
 
 **Implementation:** `LifecycleEventType` and `LifecycleEvent` in `repos/ias-executor-ts/src/ontology.ts`; `mapEventTypeToBusForm` and `BusForwardingEventSink` in `src/adapters/bus-forwarder.ts`.
 
@@ -210,7 +210,7 @@ sequenceDiagram
     Note over Sub: logged and swallowed — B and C are unaffected,<br/>and the emitting execution never sees it
 ```
 
-**Winnowing.** `defaultTopKForShape` returns `HIGH_FREQUENCY_TOP_K` (1) for shapes in `HIGH_FREQUENCY_SHAPES` — `lifecycle:task:completed`, `lifecycle:task:started`, `lifecycle:execution:tick`, `task.completed`, `task.started` — and `ONE_SHOT_TOP_K` (3) otherwise. `must_fire` on a subscription declares an intent to bypass winnowing.
+**Winnowing (designed, not wired).** The subscriber vessel fires every matching subscriber that survives dedupe and the depth cap; no code path consumes the top-K constants, so the frequency classes in the table below describe the intended ranking, not observed behaviour ([`activity-level-executor-hooks.md`](../../specs/activity-level-executor-hooks.md)). `defaultTopKForShape` returns `HIGH_FREQUENCY_TOP_K` (1) for shapes in `HIGH_FREQUENCY_SHAPES` — `lifecycle:task:completed`, `lifecycle:task:started`, `lifecycle:execution:tick`, `task.completed`, `task.started` — and `ONE_SHOT_TOP_K` (3) otherwise. `must_fire` on a subscription declares an intent to bypass winnowing.
 
 **Isolation is a contract, not a courtesy.** Every matched, non-deduped, non-depth-capped subscriber must eventually be dispatched or suppressed, and a dispatcher error must not cascade to the emitting execution. That is what keeps a badly-written subscriber from taking down the run that woke it.
 
@@ -268,11 +268,11 @@ The bottom of that graph is the whole argument for this design. A subscriber dis
 | Subscription shape | Fires when | Typical reaction | Frequency class |
 |---|---|---|---|
 | `lifecycle:task:preBinding` | Before a task's inputs are bound | Slot binding — supply a missing shape | high |
-| `lifecycle:task:started` | A task begins | Observation, tracing | high (top-K 1) |
+| `lifecycle:task:started` | Never — nothing emits it; it is a parity constant | — | — |
 | `lifecycle:task:completed` | A task finishes | Validator dispatch, progress tracking | high (top-K 1) |
-| `lifecycle:execution:tick` | Periodic progress signal | Liveness, long-run monitoring | high (top-K 1) |
+| `lifecycle:execution:tick` | Never — nothing emits it; it is a parity constant | — | — |
 | `lifecycle:execution:succeeded` | An execution completed successfully | Audit of a produced report, extraction candidacy | one-shot (top-K 3) |
-| `lifecycle:activity:postExecution` | After an activity execution | `ribosome-extract` | one-shot |
+| `lifecycle:activity:postExecution` | Never — declared by `ribosome-extract`, emitted by nothing | — | — |
 | `lifecycle:gap:classified` | A gap has been classified | Gap routing, repair goal generation | one-shot |
 | `lifecycle:llm:dispatched` | Immediately before a model call | Dispatch audit without log archaeology | one-shot |
 | `impulse.created` / `impulse.loaded` | Impulse lifecycle | Impulse-level checks | varies |
