@@ -5,8 +5,8 @@
 > *deprecated aliases*. This file does not re-derive concepts — it points at the
 > source-of-truth doc that owns each one.
 >
-> **Source-of-truth map.** Ontology (impulse/activity/vessel/resolver, the
-> primitives) → [`architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](architecture/IMPULSE_ACTIVITY_FOUNDATION.md).
+> **Source-of-truth map.** Ontology (the four primitives impulse/pointer/resolver/vessel,
+> and activity, which is derived from them) → [`architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](architecture/IMPULSE_ACTIVITY_FOUNDATION.md).
 > The three states, durability groups, and what is implementation detail →
 > [`architecture/SUBSTRATE_AS_SOFTWARE.md`](architecture/SUBSTRATE_AS_SOFTWARE.md).
 > The three math lenses and their shared dictionary →
