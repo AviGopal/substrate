@@ -1,6 +1,6 @@
 # JWT Claims Structure
 
-This document describes the JWT token structure used for authenticated requests across the vessel fleet. Tokens are minted and verified by identity-vessel, the single validator; every other vessel checks credentials against it rather than decoding tokens itself.
+This document describes the JWT token structure used for authenticated requests across the vessel fleet. identity-vessel is the single validator of caller credentials: it mints session tokens, and every other vessel checks an API key or bearer token against it rather than decoding it itself. One token is signed elsewhere: once identity-vessel has validated an API key, activity-api signs a short-lived database token carrying the caller's org and project claims for its own SurrealDB session, and SurrealDB verifies it so that PERMISSIONS can scope on `$token.org_id` (see [RBAC_GUIDE.md](RBAC_GUIDE.md)).
 
 ## Overview
 

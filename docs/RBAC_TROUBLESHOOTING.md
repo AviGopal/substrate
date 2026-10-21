@@ -78,9 +78,8 @@ The JWT secret must match between token issuer and validator.
 INFO FOR DB;
 
 -- Should show:
--- accesses: { jwt_external: ... }
--- (jwt_external is the only active access method; minibob_record and apikey_token
--- are defined for backward compatibility but are no longer issued against)
+-- accesses: { apikey_token: ... }
+-- (the one JWT access method both in-fleet signers issue against; see RBAC_GUIDE.md)
 ```
 
 **Fix:** Schema changes are migrations applied when the owning vessel's unit starts, so the

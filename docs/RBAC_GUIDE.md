@@ -15,18 +15,16 @@ SELECT * FROM activity_template WHERE org_id = $token.org_id
 
 ## `$auth` vs `$token` (which one do I use?)
 
-All activity-api JWTs — both identity-vessel-minted dashboard tokens and activity-api self-signed API-key tokens — verify against a single access method: `jwt_external` (`TYPE JWT`, `ALGORITHM HS256`, defined in `metabob-proto/surrealdb/core/001-auth-access.surql`). The `$auth` vs `$token` split comes from whether the JWT's `id` claim resolves to a real SurrealDB record:
+Both kinds of token that reach SurrealDB verify against one access method, `apikey_token` (`TYPE JWT`, `ALGORITHM HS512`), defined in `repos/activity-api/sql/000-auth-schema.surql`. Its key is substituted from the shared JWT secret when the schema is applied, so the signers and the verifier hold one secret (see [SCHEMA_OWNERSHIP.md](SCHEMA_OWNERSHIP.md)). The `$auth` vs `$token` split comes from whether the token carries an `id` claim that resolves to a real SurrealDB record:
 
-| Caller | `id` claim | `$auth` | `$token` |
+| Caller | Token signed by | `$auth` | `$token` |
 |---|---|---|---|
-| Dashboard user (identity-vessel JWT) | `users:alice` — resolves to a real row | Populated (the user record) | Populated (raw claims) |
-| API-key auth (activity-api self-signs with `jwt_external` since commit a20314a, 2026-04-22) | `api_key:${keyId}` — **not** a record | `NONE` | Populated (raw claims) |
+| A user session | identity-vessel | `NONE` — the token carries no `id` claim | Populated (raw claims) |
+| An API-key request | activity-api, after identity-vessel has validated the key: a short-lived database token for activity-api's own session | `NONE` — the signer omits `id` on purpose, because `api_key:<keyId>` is not a record | Populated (raw claims) |
 
-**Rule of thumb for activity-api tables:** prefer `$token` in PERMISSIONS. It works for both callers (dashboard *and* API-key), whereas `$auth` evaluates to `NONE` under API-key auth and silently filters everything out. Migrations 079, 080, and 083 (2026-04) swept 20 tables from `$auth.*` to `$token.*` precisely because Thompson-Sampling queries, template listing, and impulse resolution were returning empty under API-key auth.
+**Rule of thumb: use `$token` in PERMISSIONS.** Neither signer issues an `id` claim, so a clause written on `$auth.*` evaluates against `NONE` and silently filters everything out — the symptom is empty template listings, empty Thompson queries and empty impulse resolution under an otherwise valid credential.
 
-`$auth` remains correct when a pattern genuinely needs the authenticated record — for example, looking up the user row for display name or preferences — and the caller is known to be dashboard-JWT. For raw org scoping, use `$token.org_id`.
-
-> **Historical note:** activity-api previously self-signed API-key JWTs with `AC: 'apikey_token'` + `alg: HS512` against a `DEFINE ACCESS apikey_token ... TYPE JWT` block introduced in migration 064. Commit a20314a switched to `AC: 'jwt_external'` + `alg: HS256` to match the shared `metabob-proto` access definition. The `apikey_token` access is still defined in `metabob-activity-api/sql/000-auth-schema.surql` and migration 064/069 for backward compatibility but is no longer issued against.
+`$auth` is correct only for a token whose `id` claim names a real record, and only when a pattern genuinely needs that record (a display name, a preference). For org scoping, use `$token.org_id`.
 
 ## The $token Variable
 
@@ -34,7 +32,7 @@ After authentication, `$token` contains the claims from the JWT:
 
 ```json
 {
-  "id": "users:alice",           // User or instance ID
+  "sub": "users:alice",          // User or instance ID
   "org_id": "organizations:acme", // Organization
   "role": "admin",               // User's role
   "project_id": "projects:api",  // Optional: project scope
@@ -44,7 +42,7 @@ After authentication, `$token` contains the claims from the JWT:
 
 ## PERMISSIONS Patterns
 
-> **Note:** The examples below use `$auth.*` for historical continuity only. In deployed activity-api migrations these are `$token.*` — see the `$auth` vs `$token` section above. **When authoring new migrations, always use `$token.*` for org/project scoping.** Reach for `$auth.*` only when you genuinely need the authenticated record (dashboard JWT callers only). Using `$auth.org_id` in new migrations will silently filter out all API-key callers.
+> **Note:** The examples below use `$auth.*` for historical continuity only. In deployed activity-api migrations these are `$token.*` — see the `$auth` vs `$token` section above. **When authoring new migrations, always use `$token.*` for org/project scoping.** Reach for `$auth.*` only when you genuinely need the authenticated record, under a token whose `id` claim names one; neither in-fleet signer issues such a claim. Using `$auth.org_id` in new migrations will silently filter out every caller.
 
 ### Pattern 1: Org-Scoped Read/Write
 
@@ -294,7 +292,7 @@ SELECT * FROM activity_template WHERE name CONTAINS 'test'
 ### Check Current Auth
 
 ```surql
-SELECT * FROM $auth;
+SELECT * FROM $token;
 ```
 
 ### Explain Query Plan
@@ -319,7 +317,7 @@ DEFINE ACCESS test_user ON DATABASE TYPE JWT
 
 1. **Always use PERMISSIONS** on multi-tenant tables
 2. **Never rely only on application-level filtering**
-3. **Use `$token.org_id`** as the primary isolation mechanism (works for both API-key and dashboard-JWT callers; `$auth.org_id` silently drops API-key results)
+3. **Use `$token.org_id`** as the primary isolation mechanism (works for every in-fleet token; `$auth.org_id` is `NONE` under both signers and silently drops results)
 4. **Create indexes** on org_id fields
 5. **Test isolation** between organizations
 6. **Use authenticated connections** (`createAuthenticatedClient`)
