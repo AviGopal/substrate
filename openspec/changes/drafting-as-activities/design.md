@@ -127,8 +127,9 @@ The live `autonomyScope` record is authoritative over the seed.
    separate families, because their outcomes differ.
 2. **The core loads the named assembly from an allowlist.** An id must match
    `^drafter-v[0-9]+[a-z0-9-]*$` and resolve to `src/drafter/variants/<id>/index.ts`. `"floor"` names
-   the core's own floor with no module loaded; an absent id drafts exactly as today (the drafter
-   module is loaded as it is now). Anything else drafts with the floor and records
+   the core's own floor with no module loaded; an absent id, or the explicit `"drafter-v1"`, drafts
+   exactly as today (the shipped drafter module is loaded as it is now), so a recorded id always
+   replays its own drafter. Anything else drafts with the floor and records
    `fell_back: "unknown_variant"`. Every F1–F8 pin applies to every
    variant. F2/F3 extend to the variants directory. F7 extends so that a compose whose targets fall
    under `src/drafter/` drafts with the floor and never loads a variant.
