@@ -21,7 +21,7 @@ Stage 1 is the minimal pair that makes selection and attribution possible: 1.1 a
   `drafter.fell_back`.
 - [ ] 1.2 **[operator build]** Load the named assembly from an allowlist: `drafter_variant` on the
   pointer, `^drafter-v[0-9]+[a-z0-9-]*$` → `src/drafter/variants/<id>/index.ts`, `"floor"` for the
-  floor. Anything else drafts with the floor and records `fell_back: "unknown_variant"`. Extend the
+  floor; absent drafts exactly as today. Anything else drafts with the floor and records `fell_back: "unknown_variant"`. Extend the
   pins:
   - F2/F3: purity, and the only importer, over `src/drafter/variants/`;
   - F7: any target under `src/drafter/` drafts with the floor and loads no variant.
