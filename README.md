@@ -1,24 +1,49 @@
 # substrate — a self-improving development substrate
 
-**An autonomous AI development system built on the impulse–activity foundation, with Thompson Sampling for continuous learning. The system develops itself: goals are dispatched into a running substrate, every execution is traced, and successful patterns become reusable templates.**
+**A development system that learns from its own executions. You give it goals in plain language; it finds and runs the steps that reach them, traces every step, judges afterwards whether each goal was actually reached, and turns the pathways that reach into reusable templates. It runs the same loop on its own code.**
 
-> **Start here.** A substrate is a fleet of *vessels* running in one container. You give it a goal in plain language. It works backward over a graph of data *shapes* to find steps that reach the goal, runs those steps, and traces every one. From those traces it learns which pathways work. It applies the same loop to its own code: it drafts changes, verifies them and lands them.
+> **Start here.** A substrate is a fleet of *vessels* running in one container. You give it a goal in plain language. It walks backward over a graph of data *shapes* to find steps that reach the goal, and runs those steps through *resolvers*: deterministic, pattern or LLM. Every step is traced. Afterwards it judges whether the goal was actually reached, not merely whether the process exited cleanly, and from those verdicts it learns which pathways reach. It applies the same loop to its own code: it drafts changes, verifies them and lands them.
 >
+> - **See it work:** [A goal, end to end](#a-goal-end-to-end), one illustrative goal from request to verdict.
 > - **What it is:** [Overview](#overview) and [Core concepts](#core-concepts) below. The canonical definition is [`docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md).
-> - **Run one:** [Installation](#installation), the only place setup commands appear.
+> - **Run one:** [Quick start](#quick-start) (one command), part of [Installation](#installation), the only place setup commands appear.
 > - **Use one as a person:** [`docs/HUMAN_SURFACE.md`](docs/HUMAN_SURFACE.md).
 > - **Read next:** [`docs/README.md`](docs/README.md), the documentation index, grouped by what each document is for.
 >
 > **Agents working in this repository** start from [`CLAUDE.md`](CLAUDE.md), the operating manual: the laws, the dispatch loop and the operator role. When this README and CLAUDE.md disagree, CLAUDE.md wins. When either disagrees with the running substrate, the running substrate wins.
 
+## A goal, end to end
+
+An illustrative goal, sent from the agent cockpit (a person types the same sentence into the human surface):
+
+```
+mcp__metabob__run_goal_async  goal="list the HTTP routes activity-api serves, and which of them require authentication"
+```
+
+**What the walk does.**
+
+1. **Infers the target.** It reads the goal for the shape of an answer that would satisfy it: here, a report pairing each route with its authentication requirement.
+2. **Chains backward.** From that target shape it looks for activities that produce it, then for producers of *their* inputs, until it reaches shapes it already holds, such as the goal text and the vessel's source tree. Where several producers fit, it chooses by learned posterior (Thompson sampling). Where none exists yet, a tool-enabled step bridges the gap: by design, no goal is out of reach merely because nothing has been learned for it.
+3. **Binds and runs.** Each step's output is bound, shape to shape, into the next step's input, and each task goes to a resolver: for instance a deterministic one to list and read the source files, and an LLM to assemble the report from what they returned.
+4. **Traces every step**: inputs, outputs, the resolver used, cost and duration.
+
+**What comes back.** The dispatch returns a `dispatchId` at once. `goal_status` then gives the shapes it produced and the `reached` verdict, `execution_trace` holds the output itself, and `goal_reasoning` reconstructs the walk's decision log: which target it inferred, which producers it chose, and why.
+
+**How reach is judged.** After execution, a judge reads the produced output against the goal and asks whether the goal was reached. A clean exit is not enough: a run that completes but produces something other than what was asked is `reached:false`. On `reached:false` the walk penalises that approach, excludes it, and tries a different one, within a bounded number of attempts. A verdict you record with `provide_feedback` is kept in the verification corpus that the judge is checked and calibrated against.
+
+**What it learns.** The verdict is what grades the activities that ran, and a pathway that reached is recorded against the goal. The design expects a later goal with the same intent to run over that pathway directly, and a similar goal to reuse it and walk only the difference: other inputs at the start, or another output shape at the end.
+
+**Code changes are goals too.** A goal that names a source file in one of the vessel repositories and describes the change is routed to a composer that drafts the edit, checks that it typechecks, and lands it as a traced commit, which is then judged like any other goal.
+
 ## Overview
 
-The substrate demonstrates:
+The substrate is built from:
 
 - **Impulse–Activity architecture** — universal data (*impulses*) processed through constrained state transitions (*activities*).
-- **Learning loop** — Thompson Sampling for activity selection, Bayesian relevance scoring for impulses, and extraction of reusable templates from successful traces (see *Learning loop* below for which extractor actually runs).
+- **The walk** — goal execution as backward-chaining over the shape graph. It is held to a floor and a ceiling: at worst it does what a reason–act–observe agent would, with every step traced; at best it runs a pathway it has already learned.
+- **Learning loop** — Thompson Sampling for activity selection, Bayesian relevance scoring for impulses, and extraction of reusable templates from executions that reached their goal (see *Learning loop* below).
 - **Vessel pattern** — capabilities are provided by *vessels* (bundles of activities + resolvers + lifecycle hooks) that live where their data lives.
-- **Self-governance / autonomy** — the substrate detects its own operational gaps, proposes changes, and lands them through the **mitosis cutover** loop. Autonomy is a contract the docs define, not a claim. A landing does not count as success in itself. It is judged after it lands: was the goal behind it reached (a clean exit is not enough), and did verification run against the landed tree ([`docs/QUALIFICATION.md`](docs/QUALIFICATION.md))? Dissent is part of the same contract. The system may decline a goal or resist an intervention, but it must give its reason as evidence, never as a silent failure ([`docs/architecture/SUBSTRATE_AS_SOVEREIGN.md`](docs/architecture/SUBSTRATE_AS_SOVEREIGN.md)). The trajectory runs S1 → S2 → S3: operator-authored development, then substrate-authored development under supervision, then a system that resists harmful intervention with cited evidence.
+- **Self-development under a contract** — the substrate detects its own operational gaps, drafts changes, and lands them through the **mitosis cutover** loop. What counts is defined by a contract, not by activity. A landing is judged after it lands: was the goal behind it reached (a clean exit is not enough), and did verification run against the landed tree ([`docs/QUALIFICATION.md`](docs/QUALIFICATION.md))? Dissent is part of the same contract. The system may decline a goal or resist an intervention, but it must give its reason as evidence, never as a silent failure ([`docs/architecture/SUBSTRATE_AS_SOVEREIGN.md`](docs/architecture/SUBSTRATE_AS_SOVEREIGN.md)). The trajectory runs S1 → S2 → S3: operator-authored development, then substrate-authored development under supervision, then a system that resists harmful intervention with cited evidence.
 
 ## Architecture foundation
 
@@ -87,6 +112,23 @@ declaration, the launch manifest `docker-compose.yml` and a `.env` of install in
 Docker with `docker compose`, or Podman with `podman compose` (rootless supported).
 `docker` below works identically with `podman`. Nothing else is needed on the host for the
 substrate itself; the cockpit adds node/npx and [Bun](https://bun.sh) (the cockpit server runs on Bun).
+
+### Quick start
+
+A standalone substrate on one host, in one command from sequence A below. Run it from
+an empty directory, with your provider key in place of the placeholder. This block is a
+copy for reading; the tested commands, the status check that follows, and what to do when
+one fails, are in [A. Standalone](#a-standalone-the-default).
+
+```bash
+docker run --rm --pull always ghcr.io/avigopal/substrate:dev install | ANTHROPIC_API_KEY=sk-ant-… sh
+```
+
+It installs and launches the fleet, waits until it has reached a goal, and writes the
+client config. It prints a `claude mcp add …` line: run it to register the cockpit (which
+needs node/npx and Bun). Once sequence A's status check reads `usable`, send a first goal
+through the cockpit, as in [A goal, end to end](#a-goal-end-to-end), or open the human
+surface at `http://localhost:18310/`.
 
 ### Where things run
 
@@ -515,15 +557,14 @@ This repo pins each vessel via a submodule gitlink (`repos/<vessel>` → a commi
 - **activity-api** (`repos/activity-api`) — TypeScript/Bun/Hono backend. Execution-trace store, Thompson-Sampling learner, and resolver for the shapes it owns (traces, templates, metrics, goal paths, composition stats). Not a universal resolver.
 - **discovery-vessel** (`repos/discovery-vessel`) — vessel capability registry with resolver contracts; the routing fixed-point. Auth is applied to every route, with `/bootstrap` deliberately carved out as pre-auth so a joining spoke can read the anchor before it has been accepted.
 - **goal-host-vessel** (`repos/goal-host-vessel`) — wraps `GoalHost` from `ias-executor-ts`; primary dispatch target for all goal execution, with in-flight goal-seeking + a goal-reaching gate.
-- **llm-resolver-vessel** / **local-tools-vessel** / **ribosome-vessel** / **boredom-vessel** — LLM completion, filesystem/process tools, template extraction from successful traces (*proposal-only by default — see* Learning loop, *step 5*), and the autonomous idle/topology loop, respectively. llm-resolver-vessel also owns the LLM model policy.
+- **llm-resolver-vessel** / **local-tools-vessel** / **ribosome-vessel** / **boredom-vessel** — LLM completion, filesystem/process tools, template extraction from executions that reached their goal, and the autonomous idle/topology loop, respectively. llm-resolver-vessel also owns the LLM model policy.
 - **concept-db** (`repos/concept-db`) — concept-graph shapes + dense semantic search.
 - **development-vessel** (`repos/development-vessel`) — meta-vessel for substrate self-development; owns the authoritative `memoryNote` store.
 - **identity-vessel** (`repos/identity-vessel`) — single source of truth for authentication (HMAC API keys + JWT issuance).
-- **analysis-vessel** (`repos/analysis-vessel`) — *retired from the running fleet.* The code-analysis resolver. Its inventory entry is marked `"retired": true`, so `apply-inventory` masks its unit under every profile and no deployment publishes a port for it; the source stays in the tree.
-- **workbench** — *a separate repository, not a submodule of this super-repo and not part of the running fleet.* An observability and human-in-the-loop authoring surface over `activity-api`. It ships no systemd unit, is absent from `scripts/substrate/vessels.inventory.json`, and no deployment publishes a port for it — do not expect to find it on a running substrate.
 - **stateful-ui-vessel** (`repos/stateful-ui-vessel`) — the substrate's own UI: a pool of panels and interactor impulses served as a three-region view (pool / execution / decisions).
 - **human-surface-vessel** (`repos/human-surface-vessel`) — the human interface the substrate serves: the workbench at `<prefix>310`, where a person sends goals, answers the substrate's questions, and grades what it produced. A human is a resolver; their answers and verdicts return as shaped impulses.
 - **obsidian-vessel** (`repos/obsidian-vessel`) — an optional, additional human surface: each connected vault is a window for a different human resolver, reached through the vessel's sidecar conduit. A substrate runs without it.
+- **Not in the running fleet:** analysis-vessel (`repos/analysis-vessel`, retired; its source stays in the tree) and workbench (a separate repository, not a submodule).
 
 ## Learning loop
 
@@ -531,23 +572,17 @@ This repo pins each vessel via a submodule gitlink (`repos/<vessel>` → a commi
 2. **Execute** — the activity runs, producing an execution trace.
 3. **Record** — the trace is stored with success/failure, cost, and duration.
 4. **Learn** — α/β posteriors update for future selection; impulse-relevance and resolver metrics feed back.
-5. **Extract** — successful executions become reusable templates. Several paths
-   mint them, and which one dominates changes over time, so **read the pool
-   rather than trusting any list here**:
+5. **Extract** — executions that reached their goal are extracted into reusable
+   templates, which re-enter selection as activities and are graded like any other.
+   The ribosome is the extractor the design names; which extraction paths are
+   active in a given fleet is visible in the running template pool:
 
    ```bash
    curl -s "$ACTIVITY_API/v2/activities/templates?limit=100" \
      -H "Authorization: ApiKey $KEY" | jq -r '.templates[] | "\(.created_at)  \(.id)"' | sort -r
    ```
 
-   One thing worth knowing before you read that output: the **ribosome** is the
-   intended extractor and it is **not** currently what mints. Its
-   `ribosome-extract` template defaults `applyExtraction` to `false`, and its own
-   notes record that in that mode nothing is registered in the pool. So a
-   template you find was authored by some other path — treat "the ribosome mints
-   templates" as the design, not as a description of today.
-
-**Reuse before minting:** before minting a new activity/resolver, prefer an existing producer of the needed output shape. Reuse sharpens posteriors and adds a composition edge; minting is the justified exception, not the default. (The intended mechanism is a rise in the credit-mixing rate λ₁ — stated as design, not as a measurement: activity-api's own source notes that the two live governors calling themselves λ₁ compute different quantities, so no λ₁ claim is currently falsifiable.) See CLAUDE.md → *The laws*, law 3.
+**Reuse before minting:** before minting a new activity/resolver, prefer an existing producer of the needed output shape. Reuse sharpens posteriors and adds a composition edge; minting is the justified exception, not the default. (In the learning dynamics, reuse is what raises the credit-mixing rate λ₁, the rate at which credit spreads across the activity graph, which has to outpace the rate at which new, untested activities are minted: [`docs/architecture/SUBSTRATE_AS_DYNAMICS.md`](docs/architecture/SUBSTRATE_AS_DYNAMICS.md).) See CLAUDE.md → *The laws*, law 3.
 
 ## Key design principles
 
@@ -556,7 +591,7 @@ This repo pins each vessel via a submodule gitlink (`repos/<vessel>` → a commi
 3. **Resolvers live where data lives** — don't centralize resolution. `activity-api` is the trace store *and* the learner: it also serves the Thompson posteriors and template writes. What it must not become is a general-purpose resolver for other vessels' data. (The LLM model policy is the worked example of the rule: it is owned by llm-resolver-vessel, where the arms live, not by the learner.)
 4. **Metadata first, content later** — reasoners see metadata to decide; resolvers load content to execute.
 5. **Record everything** — every execution is traced; this is the raw material for learning.
-6. **Learn from traces** — Thompson Sampling, relevance scores, and template extraction (which path mints today: see *Learning loop*, step 5 — it is not the ribosome).
+6. **Learn from traces** — Thompson Sampling, relevance scores, and template extraction from executions that reached their goal (see *Learning loop*, step 5).
 7. **Reserve improvisation** — when nothing matches, try something new, but record it.
 8. **LLMs are tools, not controllers** — use LLMs for reasoning; deterministic resolvers for everything else.
 
