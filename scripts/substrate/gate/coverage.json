@@ -1171,7 +1171,7 @@
     },
     "/usr/lib/systemd/system/goal-host-vessel.service": {
       "src": "scripts/substrate/units/goal-host-vessel.service",
-      "src_blob": "5a4f705eadee070fecec64381b36b9532e7472a0",
+      "src_blob": "0ac8c5aadc1e5f6d7fd9255f791ec1138bc099b1",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -1180,7 +1180,7 @@
       "evidence": {
         "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
         "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "bd8e370f4471ad27b7b12d223762f8dcf3700992"
+        "mutated_blob": "66dd7cac92b55b0767340c90c38b1ad85213d8a5"
       }
     },
     "/usr/lib/systemd/system/goal-host-vessel.service.d/10-secrets-out-of-reach.conf": {

@@ -34,9 +34,14 @@ RestartSec=5
 # Raised from 2G/3G: Bun cold footprint exceeds 2G at startup (2026-06-04).
 MemoryHigh=4G
 MemoryMax=6G
-# Also slow restart so we don't thrash through OOM/restart loops at speed.
-RestartSteps=3
-RestartMaxDelaySec=30
+# Also slow restart so we don't thrash through OOM/restart loops at speed. The fleet's
+# systemd (252) has no RestartSteps=/RestartMaxDelaySec= (254+; it ignores them as
+# unknown keys, so the escalation they named never happened), so the extra wait is taken
+# here from NRestarts, which counts consecutive automatic restarts and is reset by a
+# manual start or restart (a deploy's restart is never delayed): none on a first start,
+# then 5, 10, 20, 40 s, capped at 55 s, on top of RestartSec. '-': a fault in this line
+# must never stop goal-host from starting.
+ExecStartPre=-/bin/sh -c 'n=$(systemctl show -p NRestarts --value goal-host-vessel.service); [ "$n" -gt 0 ] 2>/dev/null || exit 0; d=$((5 << (n < 5 ? n - 1 : 4))); [ "$d" -gt 55 ] && d=55; sleep "$d"'
 
 StandardOutput=journal
 StandardError=journal
