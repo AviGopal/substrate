@@ -1283,7 +1283,7 @@
     },
     "/usr/lib/systemd/system/identity-vessel.service": {
       "src": "scripts/substrate/units/identity-vessel.service",
-      "src_blob": "d234a47c892766ff41e58fbc1edcbfa1185a74fa",
+      "src_blob": "3937e735851ac75c2caff25d4b339f8ea96b843e",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -1292,7 +1292,7 @@
       "evidence": {
         "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
         "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "54996c02445894636a25d977c90b4f8adfdcd8a5"
+        "mutated_blob": "7165c85c2acd567f2205331524b189c6e8e56f38"
       }
     },
     "/usr/lib/systemd/system/identity-vessel.service.d/10-secrets-out-of-reach.conf": {
