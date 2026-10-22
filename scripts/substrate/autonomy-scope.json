@@ -275,7 +275,24 @@
       "repos/goal-host-vessel/test/named-unadvertised-target.test.ts",
       "repos/goal-host-vessel/test/negated-edit-routing.test.ts",
       "repos/development-vessel/test/resolvers/landing-admissible.test.ts",
-      "repos/goal-host-vessel/test/judge-consistency/"
+      "repos/goal-host-vessel/test/judge-consistency/",
+      "repos/development-vessel/src/resolvers/operator-acts.ts",
+      "repos/development-vessel/test/self-fact-evaluator/",
+      "repos/development-vessel/test/fixtures/check-contract-mismatch/",
+      "repos/development-vessel/test/resolvers/check-contract-mismatch.test.ts",
+      "repos/development-vessel/test/resolvers/pending-sweep-grounded-birth-override.test.ts",
+      "repos/development-vessel/test/resolvers/feature-compose-concept-priors.test.ts",
+      "repos/development-vessel/test/resolvers/feature-compose-concept-credit.test.ts",
+      "repos/development-vessel/src/resolvers/vessel-paths.ts",
+      "repos/development-vessel/src/resolvers/gap-lifecycle-scan.ts",
+      "repos/development-vessel/test/self-fact-evaluator/operator-acts-labels.test.ts",
+      "repos/development-vessel/test/self-fact-evaluator/operator-acts-lineage.test.ts",
+      "repos/development-vessel/test/self-fact-evaluator/operator-acts-link5.test.ts",
+      "repos/development-vessel/test/self-fact-evaluator/self-fact-aggregate-persist.test.ts",
+      "repos/development-vessel/test/self-fact-evaluator/self-fact-repair-lane-revert.test.ts",
+      "repos/development-vessel/test/self-fact-evaluator/self-fact-repair-review-fixes.test.ts",
+      "repos/development-vessel/test/self-fact-evaluator/self-fact-repair-review-fixes-ad.test.ts",
+      "repos/development-vessel/test/self-fact-evaluator/self-fact-response-contract.test.ts"
     ],
     "require_falsifier_classes": [
       "class2"
