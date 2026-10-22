@@ -547,7 +547,10 @@
             "repos/development-vessel/test/resolvers/feature-compose-concept-priors.test.ts",
             "repos/development-vessel/test/resolvers/feature-compose-concept-credit.test.ts",
             "repos/development-vessel/src/resolvers/vessel-paths.ts",
-            "repos/development-vessel/src/resolvers/gap-lifecycle-scan.ts"
+            "repos/development-vessel/src/resolvers/gap-lifecycle-scan.ts",
+            "repos/development-vessel/test/routes/route-caller-stamp-every-write.test.ts",
+            "repos/development-vessel/test/fixtures/check-references-missing-export/",
+            "repos/development-vessel/test/resolvers/gap-check-supply-forwarding-gates.test.ts"
           ],
           "require_falsifier_classes": [
             "class2"
@@ -828,7 +831,10 @@
             "repos/development-vessel/test/resolvers/feature-compose-concept-priors.test.ts",
             "repos/development-vessel/test/resolvers/feature-compose-concept-credit.test.ts",
             "repos/development-vessel/src/resolvers/vessel-paths.ts",
-            "repos/development-vessel/src/resolvers/gap-lifecycle-scan.ts"
+            "repos/development-vessel/src/resolvers/gap-lifecycle-scan.ts",
+            "repos/development-vessel/test/routes/route-caller-stamp-every-write.test.ts",
+            "repos/development-vessel/test/fixtures/check-references-missing-export/",
+            "repos/development-vessel/test/resolvers/gap-check-supply-forwarding-gates.test.ts"
           ],
           "require_falsifier_classes": [
             "class2"
@@ -1115,7 +1121,10 @@
             "repos/development-vessel/test/resolvers/feature-compose-concept-priors.test.ts",
             "repos/development-vessel/test/resolvers/feature-compose-concept-credit.test.ts",
             "repos/development-vessel/src/resolvers/vessel-paths.ts",
-            "repos/development-vessel/src/resolvers/gap-lifecycle-scan.ts"
+            "repos/development-vessel/src/resolvers/gap-lifecycle-scan.ts",
+            "repos/development-vessel/test/routes/route-caller-stamp-every-write.test.ts",
+            "repos/development-vessel/test/fixtures/check-references-missing-export/",
+            "repos/development-vessel/test/resolvers/gap-check-supply-forwarding-gates.test.ts"
           ],
           "require_falsifier_classes": [
             "class2"

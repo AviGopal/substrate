@@ -292,7 +292,10 @@
       "repos/development-vessel/test/self-fact-evaluator/self-fact-repair-lane-revert.test.ts",
       "repos/development-vessel/test/self-fact-evaluator/self-fact-repair-review-fixes.test.ts",
       "repos/development-vessel/test/self-fact-evaluator/self-fact-repair-review-fixes-ad.test.ts",
-      "repos/development-vessel/test/self-fact-evaluator/self-fact-response-contract.test.ts"
+      "repos/development-vessel/test/self-fact-evaluator/self-fact-response-contract.test.ts",
+      "repos/development-vessel/test/routes/route-caller-stamp-every-write.test.ts",
+      "repos/development-vessel/test/fixtures/check-references-missing-export/",
+      "repos/development-vessel/test/resolvers/gap-check-supply-forwarding-gates.test.ts"
     ],
     "require_falsifier_classes": [
       "class2"
