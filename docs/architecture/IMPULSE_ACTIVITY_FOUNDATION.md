@@ -929,11 +929,10 @@ own discovery-vessel knows about. The post-lift agenda extends this
 boundary: peer substrates make additional vessels reachable, and
 foreign-provenance impulses flow into the local concept graph under
 explicit signature-gated trust weighting. The structural mechanism is
-fleet federation — see `openspec/changes/2026-05-23-vessel-federation`
-for the peer-aware discovery primitive and
-`openspec/changes/2026-05-31-substrate-fleet-federation` for the
+fleet federation: a peer-aware discovery primitive, with the
 information-flow, image-artifact, self-install, and adversarial-audit
-layers built on top.
+layers built on top (their change proposals are kept in the
+repository's history).
 
 The invariant that survives: no vessel above the discovery layer
 learns about substrates as routing targets. Substrate identity
@@ -945,8 +944,8 @@ shapes" — the reachable subgraph is just larger.
 The (a)/(b)/(c) inter-substrate adversary-model progression
 (operator-trusted peers → semi-trusted federation → open federation)
 is the structural mechanism by which the post-lift agenda items
-named in `openspec/changes/2026-04-26-impulse-activity-loop/tasks.md`
-§27.S.5 — security, authenticity, cooperation, federation,
+named in the impulse–activity loop change's task list (§27.S.5,
+kept in the repository's history) — security, authenticity, cooperation, federation,
 self-recovery — get realized. Open federation (c) is the
 inter-substrate operationalization of S3: the substrate may admit
 untrusted peers only once the §27.S.6 push-away rubric measures
@@ -1001,8 +1000,8 @@ foreign-evidence-only) and refuses with cited rationale if so.
 Refusals feed the §27.S.6 `interventionRefused` ledger with
 `source: "observe-detect-resolve"` provenance.
 
-See `openspec/changes/2026-05-31-substrate-fleet-federation/specs/
-observe-detect-resolve/spec.md` for the full requirements. The
+The full requirements were specified in the fleet-federation change's
+observe-detect-resolve spec, kept in the repository's history. The
 foundation-level invariant: from inside any reasoning vessel, the
 security loop is still "vessels and shapes" — guardian-vessels
 ingest, detector activities classify, resolver activities (gated by

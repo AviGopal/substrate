@@ -32,8 +32,8 @@ substrate behavior, and therefore highest-leverage to extract into
 substrate-queryable form.
 
 The protocol is the operator-vessel's observation channel, and it feeds the
-gap-as-impulse pattern proposed in
-`openspec/changes/2026-05-23-intervention-tracking/`. It is the mirror image of
+gap-as-impulse pattern proposed in the intervention-tracking change
+(kept in the repository's history). It is the mirror image of
 a substrate-public report: those describe substrate-internal state to the
 outside, while a gap record describes operator-internal load-bearing knowledge
 to the substrate. Both are needed to say honestly what the system does and does
