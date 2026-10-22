@@ -26,6 +26,12 @@
 #   (j) held, untouched: the accepted relay dependencies differ from the ones the image installed
 #   (k) held, untouched: a probe window is open on the node
 #   (l) a unit that is not active, or that systemd runs from another tree, is not restarted; the tree converges
+# a restart that did not happen is still owed (the tree on disk already equals accepted):
+#   (n) a unit left owed by a tick that swapped and was killed before the restart is restarted on the next tick
+#   (o) a unit whose loaded set moved on disk under it (its start is the recorded one, its hash is not) is restarted,
+#       and the record then names its new start; with the record matching, (c) is the control (no restart)
+#   (p) such a restart that does not come back ready: failed and filed, nothing restored (nothing was swapped), and
+#       the next tick does not bounce it again
 # structure:
 #   (m) converge_tier_b runs at top level every tick, after converge_fleet_defs, and the done line reports tier_b
 #
@@ -211,6 +217,39 @@ if [ "$r" = "converged 0" ] && [ ! -s "$D/sys/restarts" ] && same "$A/federation
    && same "$A/federation-relay/ingress-auth.ts" "$B/federation-relay/ingress-auth.ts" && grep -q 'federation-transport-vessel.service runs /workspace/git' "$D/log"; then
   ok "(l) an inactive unit and one run from another tree are not restarted; the tree converges"
 else bad "(l) got '$r'; restarts: $(tr '\n' ' ' < "$D/sys/restarts" 2>/dev/null)"; fi
+
+equalize() { # <dir>: make the baked tree equal to accepted (image-owned files aside)
+  local A="$1/acc/scripts/substrate" B="$1/baked/scripts/substrate"
+  cp "$A/federation-relay/ingress-auth.ts" "$B/federation-relay/ingress-auth.ts"; chmod 755 "$B/tool.sh"
+  rm -f "$B/docker-compose.yml"; ln -s ../../docker-compose.yml "$B/docker-compose.yml"
+}
+# (n)
+D="$T/n"; mk "$D"; equalize "$D"; echo federation-transport-vessel.service > "$D/mk/tier-b.owed"
+r="$(run "$D")"
+if [ "$r" = "converged 0" ] && [ "$(restarts "$D" federation-transport-vessel.service)" = 1 ] && [ "$(restarts "$D" federation-relay.service)" = 0 ] \
+   && [ ! -s "$D/mk/tier-b.owed" ] && grep -q 'owed a restart' "$D/log"; then
+  ok "(n) a restart owed by an interrupted tick is taken on the next one, and the debt cleared"
+else bad "(n) got '$r'; restarts: $(tr '\n' ' ' < "$D/sys/restarts" 2>/dev/null); owed: $(cat "$D/mk/tier-b.owed" 2>/dev/null)"; fi
+# (o)
+D="$T/o"; mk "$D"; equalize "$D"; st0="$(cat "$D/sys/federation-transport-vessel.service.start")"
+jq -n --argjson st "$st0" '{tree_hash: "old", units: [{unit: "federation-transport-vessel.service", started_epoch: $st, loaded_hash: "not-what-is-on-disk"}]}' > "$D/mk/tier-b.json"
+r="$(run "$D")"
+if [ "$r" = "converged 0" ] && [ "$(restarts "$D" federation-transport-vessel.service)" = 1 ] && grep -q 'changed on disk under the running unit' "$D/log" \
+   && [ "$(jq -r '.units[] | select(.unit == "federation-transport-vessel.service") | .started_epoch' "$D/mk/tier-b.json")" != "$st0" ]; then
+  ok "(o) bytes that moved under a running unit restart it; the record names its new start"
+else bad "(o) got '$r'; restarts: $(tr '\n' ' ' < "$D/sys/restarts" 2>/dev/null); log: $(tail -2 "$D/log" | tr '\n' ' ')"; fi
+# (p)
+D="$T/p"; mk "$D"; equalize "$D"; B="$D/baked/scripts/substrate"; cp "$B/federation-relay/ingress-auth.ts" "$T/p.before"
+st0="$(cat "$D/sys/federation-transport-vessel.service.start")"
+jq -n --argjson st "$st0" '{tree_hash: "old", units: [{unit: "federation-transport-vessel.service", started_epoch: $st, loaded_hash: "not-what-is-on-disk"}]}' > "$D/mk/tier-b.json"
+echo 0 > "$D/sys/healthy"
+r="$(run "$D")"
+if [ "$r" = "unready 1" ] && same "$T/p.before" "$B/federation-relay/ingress-auth.ts" && [ "$(restarts "$D" federation-transport-vessel.service)" = 1 ] \
+   && grep -q '"pull-sync-tier-b-unit-unready-after-owed-restart"' "$D/gaps" && [ ! -e "$D/mk/tier-b.refused" ]; then
+  ok "(p) an owed restart that is not ready: failed and filed, nothing restored"
+else bad "(p) got '$r'; restarts: $(tr '\n' ' ' < "$D/sys/restarts" 2>/dev/null); log: $(tail -2 "$D/log" | tr '\n' ' ')"; fi
+: > "$D/sys/restarts"; r="$(run "$D")"
+[ "$r" = "current 0" ] && [ ! -s "$D/sys/restarts" ] && ok "(p) the next tick does not bounce it again" || bad "(p) next tick: got '$r'; restarts: $(tr '\n' ' ' < "$D/sys/restarts")"
 
 # (m)
 awk '/^converge_fleet_defs "/{f=1} f && /^converge_tier_b$/{print "after"; exit}' "$SCRIPT" | grep -q after \

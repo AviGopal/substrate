@@ -2004,6 +2004,10 @@ unit_start_epoch() {
 #     accepted set. Otherwise last-good is renamed back, the unit restarted again, a gap filed and the tick counted
 #     failed. The tree is then refused until the accepted tree changes, so a bad tree is not retried, and the
 #     transport not bounced, on every tick.
+#   - A RESTART THAT DID NOT HAPPEN IS STILL OWED. The units to restart are written to $MARKER_DIR/tier-b.owed before
+#     the swap, so a tick killed between swap and restart restarts them on the next one. A unit whose start is the
+#     recorded one while its loaded set on disk no longer hashes to the record (bytes moved under it, a hand copy) is
+#     restarted too: equal-to-accepted on disk is never reported as loaded unless the unit started on it.
 #   - RECORDED in $MARKER_DIR/tier-b.json (accepted sha, tree hash, per-unit loaded hash and start). Decisions never
 #     read it; they compare content.
 # validation/scripts/pull-sync-tier-b-converges-baked-tree.test.sh.
@@ -2089,7 +2093,7 @@ converge_tier_b() {
   TIERB_STATE=unrun
   [ -n "${PULLSYNC_ACCEPTED_DIR:-}" ] || { TIERB_STATE=ungated; return 0; }
   local acc="$PULLSYNC_ACCEPTED_DIR" dst="$TIERB_DST" src sha why="" f nfx=0 a b w mf th n
-  local name wd ex port u uwd rel entry rs t_swap bad="" dig want_dig st
+  local name wd ex port u uwd rel entry rs t_swap bad="" dig want_dig st rec owed_prev=0
   src="$acc/scripts/substrate"; sha="$(jq -r '.sha // empty' "$acc/MANIFEST.json" 2>/dev/null)"
   [ -d "$dst" ] || { TIERB_STATE=absent; return 0; }
   [ -d "$src" ] || { TIERB_STATE=held; log "tier-b: held: the accepted gate has no scripts/substrate; $dst stays as it is"; return 0; }
@@ -2134,13 +2138,26 @@ converge_tier_b() {
     tierb_closure "$src" "$entry" > "$w/acl.$name"
     { cat "$w/acl.$name"; tierb_closure "$dst" "$entry"; } | LC_ALL=C sort -u > "$w/cl.$name"
     rs=0; [ "$n" -gt 0 ] && grep -qxF -f "$w/changed" "$w/cl.$name" && rs=1
+    # A restart is also owed when this tree already matches but the unit never reloaded it: a tick that swapped and
+    # did not reach the restart (tier-b.owed), or bytes that moved under the running unit since the record (its start
+    # is the recorded one, its loaded set on disk is not). Either way the disk is not what runs.
+    if [ "$rs" = 0 ]; then
+      st="$(unit_start_epoch "$u")"
+      rec="$(jq -r --arg u "$u" '.units[]? | select(.unit == $u) | "\(.started_epoch) \(.loaded_hash)"' "$MARKER_DIR/tier-b.json" 2>/dev/null | head -1)"
+      if grep -qxF "$u" "$MARKER_DIR/tier-b.owed" 2>/dev/null; then
+        rs=1; log "tier-b: $u is owed a restart: a tick swapped its files and did not finish"
+      elif [ -n "$st" ] && [ "${rec%% *}" = "$st" ] && [ "${rec#* }" != "$(tierb_listing "$dst" "$w/acl.$name" | sha256sum | cut -c1-64)" ]; then
+        rs=1; log "tier-b: $u: its loaded set changed on disk under the running unit (started $st, not by this tick)"
+      fi
+    fi
     printf '%s\t%s\t%s\t%s\t%s\n' "$name" "$u" "$entry" "$port" "$rs" >> "$w/plan"
   done < "$w/units"
-  if [ "$n" = 0 ]; then
+  if [ "$n" = 0 ] && ! grep -q $'\t1$' "$w/plan"; then
     TIERB_STATE=current
     [ "$(jq -r '.tree_hash // empty' "$MARKER_DIR/tier-b.json" 2>/dev/null)" = "$th" ] || tierb_record "$sha" "$th" 0 "$w/plan" "$w"
     rm -rf "$w"; return 0
   fi
+  [ -s "$MARKER_DIR/tier-b.owed" ] && owed_prev=1
   if [ "$(cut -f1 "$MARKER_DIR/tier-b.refused" 2>/dev/null)" = "$th" ]; then
     TIERB_STATE=refused
     log "tier-b: held: tree ${th:0:12} (accepted ${sha:0:10}) was refused on this node ($(cut -f3- "$MARKER_DIR/tier-b.refused")); it is tried again when the accepted tree changes"
@@ -2149,7 +2166,9 @@ converge_tier_b() {
   probe_window_open && {
     TIERB_STATE=held; log "tier-b: held: $PW_WHY is open on this node; the tree is not swapped while restarts are held"
     rm -rf "$w"; return 0; }
-  # STAGE every changed file and keep what it replaces; verify the stage before anything moves.
+  # STAGE every changed file and keep what it replaces; verify the stage before anything moves. (Nothing to stage
+  # when the tree already matches and only a restart is owed.)
+  if [ "$n" -gt 0 ]; then
   rm -rf "$TIERB_WORK/stage" "$TIERB_WORK/last-good.new"
   mkdir -p "$TIERB_WORK/stage" "$TIERB_WORK/last-good.new/tree" || why="cannot create $TIERB_WORK"
   : > "$TIERB_WORK/last-good.new/added"
@@ -2174,8 +2193,11 @@ converge_tier_b() {
     > "$TIERB_WORK/last-good.new/from"
   rm -rf "$TIERB_WORK/last-good" && mv "$TIERB_WORK/last-good.new" "$TIERB_WORK/last-good" \
     || { TIERB_STATE=held; log "tier-b: held: !!! could not keep last-good; $dst is untouched"; rm -rf "$w"; return 0; }
+  fi
+  # Units owed a restart are written down BEFORE the swap, so a tick killed between swap and restart leaves them owed.
+  awk -F'\t' '$5 == 1 { print $2 }' "$w/plan" > "$MARKER_DIR/tier-b.owed" 2>/dev/null || true
   # SWAP: one rename per file, then the whole tree must read as accepted.
-  while IFS= read -r f; do
+  [ "$n" -gt 0 ] && while IFS= read -r f; do
     mkdir -p "$dst/$(dirname "$f")" && mv -f -T "$TIERB_WORK/stage/$f" "$dst/$f" || { bad="could not swap $f"; break; }
   done < "$w/changed"
   t_swap="$(date +%s)"
@@ -2196,8 +2218,19 @@ converge_tier_b() {
       [ "$dig" = "$want_dig" ] || { bad="$u loads ${dig:0:12}, not the accepted ${want_dig:0:12}"; break; }
     done < "$w/plan"
   fi
+  if [ -n "$bad" ] && [ "$n" = 0 ] && [ "$owed_prev" = 0 ]; then
+    # Nothing was swapped this tick or left half-done by an earlier one, so last-good is not the tree this unit ran:
+    # there is nothing to restore. The record takes the unit as it is now, so it is not bounced again every tick.
+    TIERB_STATE=unready; failed=$((failed + 1)); rm -f "$MARKER_DIR/tier-b.owed"
+    log "tier-b: !!! NOT converged: $bad (a restart owed for bytes that moved under the unit); nothing was swapped, so nothing is restored"
+    tierb_record "$sha" "$th" 0 "$w/plan" "$w"
+    emit_gap "$(jq -n -c --arg s "pull-sync restarted a unit that runs the baked super-repo tree ($dst) because its loaded files had changed on disk under it (not by tier-B convergence; a hand copy?), and it did not come back ready: $bad." \
+      --arg sha "$sha" --arg th "$th" \
+      '{impulse:{pointer:{type:"substrateGap_write",gap:{id:"pull-sync-tier-b-unit-unready-after-owed-restart",category:"service_failure",source:"substrate_detected",summary:$s,classification_metadata:{accepted_sha:$sha,tree_hash:$th},status:"open"}}}}' 2>/dev/null)"
+    rm -rf "$w"; return 0
+  fi
   if [ -n "$bad" ]; then
-    TIERB_STATE=restored; failed=$((failed + 1))
+    TIERB_STATE=restored; failed=$((failed + 1)); rm -f "$MARKER_DIR/tier-b.owed"
     if tierb_restore "$dst"; then log "tier-b: !!! NOT converged: $bad; restored last-good ($n file(s))"
     else log "tier-b: !!! NOT converged: $bad; and restoring last-good FAILED for some file(s) under $dst"; fi
     while IFS=$'\t' read -r u port; do
@@ -2211,7 +2244,7 @@ converge_tier_b() {
       '{impulse:{pointer:{type:"substrateGap_write",gap:{id:"pull-sync-tier-b-convergence-refused",category:"service_failure",source:"substrate_detected",summary:$s,classification_metadata:{accepted_sha:$sha,tree_hash:$th},status:"open"}}}}' 2>/dev/null)"
     rm -rf "$TIERB_WORK/stage" "$w"; return 0
   fi
-  TIERB_STATE=converged; rm -f "$MARKER_DIR/tier-b.refused"
+  TIERB_STATE=converged; rm -f "$MARKER_DIR/tier-b.refused" "$MARKER_DIR/tier-b.owed"
   tierb_record "$sha" "$th" "$n" "$w/plan" "$w"
   log "tier-b: CONVERGED $dst to accepted ${sha:-unknown} (tree ${th:0:12}, $n file(s) swapped, last-good kept in $TIERB_WORK/last-good)"
   while IFS=$'\t' read -r name u entry port rs; do
