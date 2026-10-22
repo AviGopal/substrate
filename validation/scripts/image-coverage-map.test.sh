@@ -8,8 +8,9 @@
 #   parse      only a syntax mutation does
 #   none       no fixture fails; reason says why it stays baked or why its convergence is uncovered:
 #              outside-gate-paths, units-exempt (the named units_exempt record, with owner gap and expiry),
-#              converges-today-uncovered (pull-sync installs it with no fixture; each one listed in the
-#              converges_today_exempt record, with its own owner gap and expiry), unreached (baked only)
+#              converges-today-uncovered (pull-sync installs it with no fixture only because the optional
+#              converges_today_exempt record lists it, with its own owner gap and expiry; with no record no
+#              entry may claim it), unreached (baked only, whether or not pull-sync has an installer for it)
 # The mutation proofs and the exemption expiry are judged by image-coverage-map.check.sh (slow, and a date
 # must not turn every unrelated commit red). This test keeps
 # the map consistent with the manifest, the corpus, gate_paths and what pull-sync installs today, so a
@@ -57,7 +58,10 @@ sx=$(jq -r --arg u "$UNITS_DIR/" '[.paths|to_entries[]|select((.key|startswith($
 [ "$sx" = 0 ] && ok "no unit path claims behaviour on a syntax-class mutation" || bad "$sx unit path(s) claim behaviour on a syntax-class mutation (that is parse)"
 
 # 3. A reason is a fact about the tree, not a label: gate_paths decides outside-gate-paths, and what
-#    pull-sync installs today (image-convergence-surface.test.sh) decides converges-today-uncovered vs unreached.
+#    pull-sync installs today decides converges-today-uncovered vs unreached. "Installs today" is two facts: an
+#    installer exists (image-convergence-surface.test.sh; $T/never lists the paths with none), AND pull-sync's
+#    coverage gate would let it through (cov_allows in substrate-pull-sync.sh: level behaviour on the current
+#    src blob, or listed in a converges_today_exempt record). The second is mirrored below from this same map.
 mapfile -t GLOBS < <(jq -r '.gate_paths[]' "$POL")
 in_gate() { local g; for g in "${GLOBS[@]}"; do case "$1" in $g) return 0 ;; esac; done; return 1; }
 bash "$HERE/image-convergence-surface.test.sh" 2>/dev/null | sed -n 's/^  never converged: //p' | sort > "$T/never"
@@ -74,23 +78,52 @@ elif [ -n "$UDIR" ] && owned units_exempt; then
   ok "the units exemption is a named record with an owner gap and an expiry"
   echo "  units exempt, uncovered: $NUE paths under $UDIR until $(jq -r .units_exempt.expires "$CM") (owner: $(jq -r .units_exempt.owner_gap "$CM"))"
 else UDIR="/nonexistent-units-dir"; bad "the units exemption is a named record with an owner gap and an expiry"; fi
-# Every path that converges today with no fixture is listed, by name, in its own owned and dated record.
-# A parse-level path that pull-sync installs also converges today without a behaviour proof: it is debt too.
-: > "$T/parse_conv"
-while IFS=$'\t' read -r pdst psrc; do in_gate "$psrc" && ! grep -qxF "$pdst" "$T/never" && echo "$pdst" >> "$T/parse_conv"; done \
-  < <(jq -r '.paths|to_entries[]|select(.value.level=="parse")|[.key,.value.src]|@tsv' "$CM")
-if owned converges_today_exempt && diff <(jq -r '.converges_today_exempt.paths[]?' "$CM" | sort) \
-     <( { jq -r '.paths|to_entries[]|select(.value.reason=="converges-today-uncovered")|.key' "$CM"; cat "$T/parse_conv"; } | sort -u) > "$T/cte"; then
+# The converges_today_exempt record is optional too. While it exists, every path with an installer and no
+# behaviour proof (none in a gate path, or parse) is listed in it by name, owned and dated: that is the debt it
+# carries. Its expiry is judged by image-coverage-map.check.sh, so a date does not turn every commit red here.
+CTE=0; jq -e 'has("converges_today_exempt")' "$CM" >/dev/null 2>&1 && CTE=1
+jq -r 'if has("converges_today_exempt") then (.converges_today_exempt.paths // [])[] else empty end' "$CM" | sort > "$T/cte_list"
+# The cov_allows mirror: <dst> installs in place today. An installer exists, and either the record lists it or it
+# is behaviour on the current src blob (substrate-pull-sync.sh refuses everything else and leaves it baked).
+installs_today() { # dst src level blob
+  grep -qxF "$1" "$T/never" && return 1
+  [ "$CTE" = 1 ] && grep -qxF "$1" "$T/cte_list" && return 0
+  [ "$3" = behaviour ] && [ -f "$ROOT/$2" ] && [ "$(git hash-object "$ROOT/$2" 2>/dev/null)" = "$4" ]
+}
+# Gate paths with an installer but no behaviour proof: what a record must list while one exists.
+: > "$T/parse_inst"; : > "$T/parse_conv"; : > "$T/inst_today"
+while IFS=$'\t' read -r pdst psrc plevel pblob; do
+  installs_today "$pdst" "$psrc" "$plevel" "$pblob" && echo "$pdst" >> "$T/inst_today"
+  [ "$plevel" = parse ] && in_gate "$psrc" || continue
+  grep -qxF "$pdst" "$T/never" || echo "$pdst" >> "$T/parse_inst"
+  # A parse-level path that pull-sync installs today converges without a behaviour proof: it is debt too.
+  installs_today "$pdst" "$psrc" "$plevel" "$pblob" && echo "$pdst" >> "$T/parse_conv"
+done < <(jq -r '.paths|to_entries[]|[.key,.value.src,.value.level,(.value.src_blob//"")]|@tsv' "$CM")
+NCT=$(jq '[.paths[]|select(.reason=="converges-today-uncovered")]|length' "$CM")
+if [ "$CTE" = 0 ]; then
+  # No record: nothing converges without a behaviour proof, so no entry may claim converges-today-uncovered
+  # and no parse-level path may install today (a reason with no record behind it is an exemption nobody owns).
+  if [ "$NCT" = 0 ] && [ ! -s "$T/parse_conv" ]; then ok "no converges-today exemption: no entry claims converges-today-uncovered and no parse path installs today"
+  else
+    { jq -r '.paths|to_entries[]|select(.value.reason=="converges-today-uncovered")|.key' "$CM"; sed 's/$/ (parse, installs today)/' "$T/parse_conv"; } \
+      | head -10 | sed 's/^/  unowned convergence: /'
+    bad "no converges-today exemption record, yet $NCT entries claim converges-today-uncovered and $(wc -l < "$T/parse_conv") parse paths install today"
+  fi
+elif owned converges_today_exempt && diff "$T/cte_list" \
+     <( { jq -r '.paths|to_entries[]|select(.value.reason=="converges-today-uncovered")|.key' "$CM"; cat "$T/parse_inst"; } | sort -u) > "$T/cte"; then
   ok "every uncovered converging path is listed in an owned, dated exemption"
   echo "  converges today, uncovered: $(jq '.converges_today_exempt.paths|length' "$CM") paths until $(jq -r .converges_today_exempt.expires "$CM") (owner: $(jq -r .converges_today_exempt.owner_gap "$CM"))"
 else head -10 "$T/cte" 2>/dev/null | sed 's/^/  exemption drift: /'; bad "every uncovered converging path is listed in an owned, dated exemption"; fi
+echo "  installs in place today: $(wc -l < "$T/inst_today") of $(jq '.paths|length' "$CM") tier A paths (an installer, and behaviour on the current blob or listed in the record)"
 rs_bad=0
 while IFS=$'\t' read -r dst level reason _ _; do
   src=$(jq -r --arg d "$dst" '.paths[$d].src' "$CM")
   if in_gate "$src"; then
     if [ "$level" = none ]; then
+      # With a record, a none path with an installer is its debt (listed above); with none, cov_allows refuses
+      # level none, so the path is baked only whether or not it has an installer.
       if [[ "$dst" == "$UDIR"/* ]]; then want=units-exempt
-      elif grep -qxF "$dst" "$T/never"; then want=unreached; else want=converges-today-uncovered; fi
+      elif [ "$CTE" = 1 ] && ! grep -qxF "$dst" "$T/never"; then want=converges-today-uncovered; else want=unreached; fi
       [ "$reason" = "$want" ] || { echo "  $dst: reason $reason, but the tree says $want"; rs_bad=1; }
     fi
   else
