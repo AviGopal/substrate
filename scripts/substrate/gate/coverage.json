@@ -147,6 +147,12 @@
       "/usr/lib/systemd/system/service.d/20-deregister-on-stop.conf"
     ]
   },
+  "tier_b": {
+    "_doc": "Tier B (in-place-image-convergence 2.4): the baked copy of scripts/substrate (/usr/local/share/substrate/super-repo/scripts/substrate) that the federation transport and relay run from. pull-sync's converge_tier_b converges it in place from the ACCEPTED gate only while this record names at least one behaviour fixture and the accepted corpus (validation/scripts/gate/fixtures/) holds each one; otherwise the tree stays as baked and the tick says held. A fixture is named by its file name. The relay fixture is the one that judges the tree by what it carries (large noise frames over two circuits); the transport server is not run by any fixture, so the readiness check after its restart (health, start time, loaded hash) is its only judge. Removing a name here holds the tree again.",
+    "fixtures": [
+      "federation-relay-large-frames.sh"
+    ]
+  },
   "paths": {
     "/scripts/bootstrap-seeder.ts": {
       "src": "scripts/bootstrap-seeder.ts",
@@ -3043,7 +3049,7 @@
     },
     "/usr/local/bin/substrate-pull-sync": {
       "src": "scripts/substrate/substrate-pull-sync.sh",
-      "src_blob": "1a4e9a7792c03cb05ccb5f53fe708883e92c3a81",
+      "src_blob": "340cd057d1b5f70a90e837063ebda2adea5e9a6a",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -3052,7 +3058,7 @@
       "evidence": {
         "accepted": "ac413feeaa16e68dde1a169a9d7748fd28d95ce8",
         "mutation": "insert `exit 99` after line 1",
-        "mutated_blob": "b6553edc0474e36382fdc1e9df13bef69aedf48d"
+        "mutated_blob": "4c22b56c11d87d6acf4d0ce90dd62903348b3673"
       }
     },
     "/usr/local/bin/substrate-ready": {

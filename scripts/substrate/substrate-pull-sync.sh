@@ -1957,7 +1957,8 @@ revert_target_hashes() {
 # code keeps running, and it drops every peer's circuit for nothing. Measured on the hub 2026-10-18T02:39:35Z: a
 # pull-sync restart put the transport back on the 10-13 baked ingress-auth.ts after the change had landed in the
 # clone. So the transport and relay restart only when they actually run this clone's tree. Otherwise the change is
-# said to be NOT live (it reaches the node with an image and a recreate), and nothing is bounced.
+# said to be NOT live from the clone, and nothing is bounced here: once the gate accepts it, converge_tier_b installs it
+# into the baked tree and restarts the unit that loads it.
 # fed_unit_runs_clone <unit>: 0 when the unit's WorkingDirectory is $SUPER_DIR or below it.
 fed_unit_runs_clone() {
   local wd; wd="$(systemctl show -p WorkingDirectory --value "$1" 2>/dev/null)"
@@ -1970,6 +1971,254 @@ unit_start_epoch() {
   local ts; ts="$(systemctl show -p ActiveEnterTimestamp --value "$1" 2>/dev/null)"
   [ -n "$ts" ] || return 0
   date -d "$ts" +%s 2>/dev/null || true
+}
+
+# TIER B: THE BAKED SUPER-REPO TREE CONVERGES IN PLACE, FROM THE ACCEPTED GATE ONLY (in-place-image-convergence 2.4).
+#
+# The federation transport and relay run from $TIERB_DST, the copy of scripts/substrate the image bakes (their
+# WorkingDirectory, see fed_unit_runs_clone). Nothing converged that tree, so a landed transport or relay fix ran
+# nowhere until a recreate, and a restart reloaded the old file while reading as success (913bc251). converge_tier_b
+# runs on every gated tick and makes that tree equal to the ACCEPTED gate's scripts/substrate:
+#   - SOURCE: $PULLSYNC_ACCEPTED_DIR only, the gate-passed `git archive` gate-runner hash-checks every tick. A clone or
+#     a candidate never feeds it, and an ungated tick converges nothing here.
+#   - HELD (logged, not failed) until the accepted coverage map's tier_b record names a behaviour fixture and the
+#     accepted corpus holds each one it names; while a probe window holds restarts on this node; and when the accepted
+#     relay dependencies differ from the ones the image installed (node_modules is built at image build, 2.6: that
+#     change needs an image).
+#   - IMAGE-OWNED FILES ARE NEVER TOUCHED: node_modules/, and federation-relay/package.json and bun.lock, which the
+#     image build rewrites. A file the accepted tree lacks is left in place: the non_root_paths are absent from
+#     accepted/ by construction, so absence is not a deletion.
+#   - CONTENT-COMPARED per file, as git records it (mode and blob; a symlink by its link text). An equal tree is a
+#     no-op: nothing is copied and nothing restarts.
+#   - STAGE, THEN SWAP. The changed files are copied into $TIERB_WORK/stage and verified blob by blob, the files they
+#     replace are kept in $TIERB_WORK/last-good, and then each staged file is renamed over its target. A rename is
+#     atomic per file. The tree cannot be swapped by one directory rename: on an overlay root without redirect_dir
+#     (the container's), renaming a directory that comes from the image layer fails with EXDEV and mv falls back to
+#     copy-and-delete. So the whole set is staged and verified first, and no unit restarts until all of it is in place.
+#   - RESTART ONLY WHAT CHANGED. A vessels-manifest unit whose workdir is in this tree, that is active and that
+#     systemd runs from there, restarts only when a file of its loaded set changed: its manifest exec entry plus the
+#     closure of its relative imports. The relay imports nothing local, so it still restarts only on a relay.ts
+#     change; the transport restarts on its server or ingress-auth.
+#   - CONVERGED ONLY BY EFFECT. A restarted unit must come back ready (healthy on its health port; with none, active
+#     and not restarted again), must have started at or after the swap, and its loaded set on disk must hash to the
+#     accepted set. Otherwise last-good is renamed back, the unit restarted again, a gap filed and the tick counted
+#     failed. The tree is then refused until the accepted tree changes, so a bad tree is not retried, and the
+#     transport not bounced, on every tick.
+#   - RECORDED in $MARKER_DIR/tier-b.json (accepted sha, tree hash, per-unit loaded hash and start). Decisions never
+#     read it; they compare content.
+# validation/scripts/pull-sync-tier-b-converges-baked-tree.test.sh.
+TIERB_DST=/usr/local/share/substrate/super-repo/scripts/substrate
+TIERB_WORK=/usr/local/share/substrate/.tier-b
+TIERB_STATE=unrun
+tierb_image_owned() { # <path in the tree> -> 0 when the image build owns it (never converged)
+  case "$1" in node_modules/*|*/node_modules/*|federation-relay/package.json|federation-relay/bun.lock) return 0 ;; esac
+  return 1
+}
+tierb_listing() { # <root> <paths-file> -> "<path>\t<mode> <blob>" per path in input order, "<path>\tabsent" when missing
+  local root="$1" p i=0
+  local -a ps=() reg=() hb=()
+  mapfile -t ps < "$2"
+  for p in "${ps[@]}"; do [ ! -L "$root/$p" ] && [ -f "$root/$p" ] && reg+=("$p"); done
+  if [ "${#reg[@]}" -gt 0 ]; then
+    mapfile -t hb < <(cd "$root" && printf '%s\n' "${reg[@]}" | git hash-object --no-filters --stdin-paths 2>/dev/null)
+    [ "${#hb[@]}" = "${#reg[@]}" ] || return 1
+  fi
+  for p in "${ps[@]}"; do
+    if [ -L "$root/$p" ]; then printf '%s\t120000 %s\n' "$p" "$(printf '%s' "$(readlink "$root/$p")" | git hash-object --no-filters --stdin)"
+    elif [ -f "$root/$p" ]; then
+      if [ -x "$root/$p" ]; then printf '%s\t100755 %s\n' "$p" "${hb[$i]}"; else printf '%s\t100644 %s\n' "$p" "${hb[$i]}"; fi
+      i=$((i + 1))
+    else printf '%s\tabsent\n' "$p"; fi
+  done
+}
+tierb_closure() { # <root> <entry path> -> the entry and every file it reaches by relative import, sorted
+  local root="$1" f d s c n seen=$'\n'
+  local -a todo=("$2")
+  while [ "${#todo[@]}" -gt 0 ]; do
+    f="${todo[0]}"; todo=("${todo[@]:1}")
+    case "$seen" in *$'\n'"$f"$'\n'*) continue ;; esac
+    [ -f "$root/$f" ] || continue
+    seen="$seen$f"$'\n'; d="$(dirname "$f")"
+    while IFS= read -r s; do
+      for c in "$s" "$s.ts" "$s.tsx" "$s.js" "$s.mjs" "$s/index.ts" "$s/index.js"; do
+        n="$(realpath -m --relative-to="$root" "$root/$d/$c")"
+        case "$n" in ..|../*) continue ;; esac
+        [ -f "$root/$n" ] && { todo+=("$n"); break; }
+      done
+    done < <(grep -oE "(from|import|require)[[:space:]]*\(?[[:space:]]*['\"]\.\.?/[^'\"]+['\"]" "$root/$f" 2>/dev/null \
+               | sed -E "s/.*['\"](\.\.?\/[^'\"]+)['\"]$/\1/")
+  done
+  printf '%s' "${seen#$'\n'}" | LC_ALL=C sort
+}
+tierb_ready() { # <unit> <health port, or - for none> <since epoch> -> 0 when it started at or after <since> and is ready
+  local u="$1" port="${2#-}" since="$3" st _
+  for _ in 1 2 3 4 5; do
+    st="$(unit_start_epoch "$u")"
+    if [ -n "$st" ] && [ "$st" -ge "$since" ] && systemctl is-active "$u" >/dev/null 2>&1; then
+      if [ -n "$port" ]; then healthy "$port" && return 0
+      else sleep 4; [ "$(unit_start_epoch "$u")" = "$st" ] && systemctl is-active "$u" >/dev/null 2>&1 && return 0; fi
+    fi
+    sleep 4
+  done
+  return 1
+}
+tierb_restore() { # <dst> -> 0 when every file the last swap touched is back as last-good kept it
+  local dst="$1" lg="$TIERB_WORK/last-good" f rc=0
+  while IFS= read -r f; do
+    [ -n "$f" ] || continue
+    if [ -e "$lg/tree/$f" ] || [ -L "$lg/tree/$f" ]; then
+      rm -rf "$TIERB_WORK/restore.tmp"
+      cp -P -p "$lg/tree/$f" "$TIERB_WORK/restore.tmp" && mv -f -T "$TIERB_WORK/restore.tmp" "$dst/$f" || rc=1
+    fi
+  done < "$lg/changed"
+  while IFS= read -r f; do [ -n "$f" ] && { rm -f "$dst/$f" || rc=1; }; done < "$lg/added"
+  return $rc
+}
+tierb_record() { # <sha> <tree hash> <swapped count> <plan file> <work dir> -> $MARKER_DIR/tier-b.json
+  local sha="$1" th="$2" n="$3" plan="$4" w="$5" name u entry port rs st dig
+  while IFS=$'\t' read -r name u entry port rs; do
+    st="$(unit_start_epoch "$u")"
+    dig="$(tierb_listing "$TIERB_DST" "$w/acl.$name" | sha256sum | cut -c1-64)"
+    jq -n -c --arg u "$u" --arg e "$entry" --arg d "$dig" --arg st "$st" --arg r "$rs" \
+      '{unit:$u, entry:$e, loaded_hash:$d, started_epoch:($st|tonumber? // null), restarted:($r=="1")}'
+  done < "$plan" | jq -s -c --arg s "$sha" --arg t "$th" --arg dst "$TIERB_DST" --arg at "$(date -u +%FT%TZ)" --argjson n "$n" \
+      '{accepted_sha:$s, tree_hash:$t, dst:$dst, at:$at, swapped:$n, units:.}' > "$MARKER_DIR/tier-b.json.tmp" 2>/dev/null \
+    && mv -f "$MARKER_DIR/tier-b.json.tmp" "$MARKER_DIR/tier-b.json" 2>/dev/null || true
+}
+converge_tier_b() {
+  TIERB_STATE=unrun
+  [ -n "${PULLSYNC_ACCEPTED_DIR:-}" ] || { TIERB_STATE=ungated; return 0; }
+  local acc="$PULLSYNC_ACCEPTED_DIR" dst="$TIERB_DST" src sha why="" f nfx=0 a b w mf th n
+  local name wd ex port u uwd rel entry rs t_swap bad="" dig want_dig st
+  src="$acc/scripts/substrate"; sha="$(jq -r '.sha // empty' "$acc/MANIFEST.json" 2>/dev/null)"
+  [ -d "$dst" ] || { TIERB_STATE=absent; return 0; }
+  [ -d "$src" ] || { TIERB_STATE=held; log "tier-b: held: the accepted gate has no scripts/substrate; $dst stays as it is"; return 0; }
+  while IFS= read -r f; do
+    case "$f" in ''|*/*|.*) why="tier_b names an invalid fixture '$f'"; break ;; esac
+    [ -f "$acc/validation/scripts/gate/fixtures/$f" ] || { why="its fixture $f is not in the accepted corpus"; break; }
+    nfx=$((nfx + 1))
+  done < <(jq -r '(.tier_b.fixtures // []) | .[] | strings' "$src/gate/coverage.json" 2>/dev/null)
+  [ -z "$why" ] && [ "$nfx" = 0 ] && why="the accepted coverage map names no behaviour fixture for it (tier_b.fixtures)"
+  if [ -n "$why" ]; then TIERB_STATE=held; log "tier-b: held: $dst stays as it is: $why"; return 0; fi
+  if [ -f "$src/federation-relay/package.json" ]; then
+    a="$(jq -cS '(.dependencies // {}) | del(.["@avigopal/libp2p-federation-transport"])' "$src/federation-relay/package.json" 2>/dev/null)"
+    b="$(jq -cS '(.dependencies // {}) | del(.["@avigopal/libp2p-federation-transport"])' "$dst/federation-relay/package.json" 2>/dev/null)"
+    if [ -z "$a" ] || [ "$a" != "$b" ]; then
+      TIERB_STATE=held
+      log "tier-b: held: the accepted relay dependencies differ from the ones the image installed in $dst/federation-relay/node_modules; that change needs an image"
+      return 0
+    fi
+  fi
+  w="$(mktemp -d "${TMPDIR:-/tmp}/pull-sync-tierb.XXXXXX")" || { TIERB_STATE=held; log "tier-b: held: cannot create a temp dir"; return 0; }
+  (cd "$src" && find . \( -type f -o -type l \) -print) | sed 's#^\./##' \
+    | while IFS= read -r f; do tierb_image_owned "$f" || printf '%s\n' "$f"; done | LC_ALL=C sort > "$w/paths"
+  if ! { tierb_listing "$src" "$w/paths" > "$w/want" && tierb_listing "$dst" "$w/paths" > "$w/have"; } || [ ! -s "$w/want" ]; then
+    TIERB_STATE=held; log "tier-b: held: !!! could not hash the accepted tree or $dst"; rm -rf "$w"; return 0
+  fi
+  th="$(sha256sum < "$w/want" | cut -c1-64)"
+  mf="${FLEET_DIR:-/workspace/substrate/fleet}/vessels.manifest.json"
+  [ -f "$mf" ] || mf=/usr/local/share/substrate/vessels.manifest.json
+  # One unit per line; "-" stands for an absent exec or health port, because a tab IFS collapses an empty field.
+  jq -r --arg d "$dst" '.vessels[]? | select((.workdir // "") as $x | $x == $d or ($x | startswith($d + "/")))
+      | [.name, .workdir, (.exec // "-"), ((.health_port // "-") | tostring)] | @tsv' "$mf" > "$w/units" 2>/dev/null
+  awk -F'\t' 'NR == FNR { h[$1] = $2; next } h[$1] != $2 { print $1 }' "$w/have" "$w/want" > "$w/changed"
+  n="$(wc -l < "$w/changed")"
+  : > "$w/plan"
+  while IFS=$'\t' read -r name wd ex port; do
+    [ -n "$name" ] && [ "$ex" != - ] || continue
+    u="$name.service"
+    systemctl is-active "$u" >/dev/null 2>&1 || continue
+    uwd="$(systemctl show -p WorkingDirectory --value "$u" 2>/dev/null)"
+    [ "${uwd%/}" = "${wd%/}" ] || { log "tier-b: $u runs ${uwd:-<unset>}, not $wd; it is not restarted for this tree"; continue; }
+    rel="${wd#"$dst"}"; rel="${rel#/}"; entry="${rel:+$rel/}$ex"
+    tierb_closure "$src" "$entry" > "$w/acl.$name"
+    { cat "$w/acl.$name"; tierb_closure "$dst" "$entry"; } | LC_ALL=C sort -u > "$w/cl.$name"
+    rs=0; [ "$n" -gt 0 ] && grep -qxF -f "$w/changed" "$w/cl.$name" && rs=1
+    printf '%s\t%s\t%s\t%s\t%s\n' "$name" "$u" "$entry" "$port" "$rs" >> "$w/plan"
+  done < "$w/units"
+  if [ "$n" = 0 ]; then
+    TIERB_STATE=current
+    [ "$(jq -r '.tree_hash // empty' "$MARKER_DIR/tier-b.json" 2>/dev/null)" = "$th" ] || tierb_record "$sha" "$th" 0 "$w/plan" "$w"
+    rm -rf "$w"; return 0
+  fi
+  if [ "$(cut -f1 "$MARKER_DIR/tier-b.refused" 2>/dev/null)" = "$th" ]; then
+    TIERB_STATE=refused
+    log "tier-b: held: tree ${th:0:12} (accepted ${sha:0:10}) was refused on this node ($(cut -f3- "$MARKER_DIR/tier-b.refused")); it is tried again when the accepted tree changes"
+    rm -rf "$w"; return 0
+  fi
+  probe_window_open && {
+    TIERB_STATE=held; log "tier-b: held: $PW_WHY is open on this node; the tree is not swapped while restarts are held"
+    rm -rf "$w"; return 0; }
+  # STAGE every changed file and keep what it replaces; verify the stage before anything moves.
+  rm -rf "$TIERB_WORK/stage" "$TIERB_WORK/last-good.new"
+  mkdir -p "$TIERB_WORK/stage" "$TIERB_WORK/last-good.new/tree" || why="cannot create $TIERB_WORK"
+  : > "$TIERB_WORK/last-good.new/added"
+  [ -n "$why" ] || while IFS= read -r f; do
+    mkdir -p "$TIERB_WORK/stage/$(dirname "$f")" && cp -P -p "$src/$f" "$TIERB_WORK/stage/$f" || { why="could not stage $f"; break; }
+    if [ -e "$dst/$f" ] || [ -L "$dst/$f" ]; then
+      mkdir -p "$TIERB_WORK/last-good.new/tree/$(dirname "$f")" && cp -P -p "$dst/$f" "$TIERB_WORK/last-good.new/tree/$f" \
+        || { why="could not keep the last-good copy of $f"; break; }
+    else printf '%s\n' "$f" >> "$TIERB_WORK/last-good.new/added"; fi
+  done < "$w/changed"
+  if [ -z "$why" ]; then
+    awk -F'\t' 'NR == FNR { c[$1] = 1; next } ($1 in c)' "$w/changed" "$w/want" > "$w/want.changed"
+    tierb_listing "$TIERB_WORK/stage" "$w/changed" > "$w/staged" 2>/dev/null && cmp -s "$w/staged" "$w/want.changed" \
+      || why="the staged copy does not match the accepted tree"
+  fi
+  if [ -n "$why" ]; then
+    TIERB_STATE=held; log "tier-b: held: !!! $why; $dst is untouched"
+    rm -rf "$TIERB_WORK/stage" "$TIERB_WORK/last-good.new" "$w"; return 0
+  fi
+  cp "$w/changed" "$TIERB_WORK/last-good.new/changed"
+  printf '%s\t%s\n' "$(jq -r '.accepted_sha // "image"' "$MARKER_DIR/tier-b.json" 2>/dev/null || echo image)" "$(sha256sum < "$w/have" | cut -c1-64)" \
+    > "$TIERB_WORK/last-good.new/from"
+  rm -rf "$TIERB_WORK/last-good" && mv "$TIERB_WORK/last-good.new" "$TIERB_WORK/last-good" \
+    || { TIERB_STATE=held; log "tier-b: held: !!! could not keep last-good; $dst is untouched"; rm -rf "$w"; return 0; }
+  # SWAP: one rename per file, then the whole tree must read as accepted.
+  while IFS= read -r f; do
+    mkdir -p "$dst/$(dirname "$f")" && mv -f -T "$TIERB_WORK/stage/$f" "$dst/$f" || { bad="could not swap $f"; break; }
+  done < "$w/changed"
+  t_swap="$(date +%s)"
+  if [ -z "$bad" ]; then tierb_listing "$dst" "$w/paths" > "$w/now" 2>/dev/null && cmp -s "$w/now" "$w/want" || bad="$dst does not read as the accepted tree after the swap"; fi
+  # RESTART each unit whose loaded set changed; it converges only when it is ready on the accepted bytes.
+  : > "$w/restarted"
+  if [ -z "$bad" ]; then
+    while IFS=$'\t' read -r name u entry port rs; do
+      [ "$rs" = 1 ] || continue
+      printf '%s\t%s\n' "$u" "$port" >> "$w/restarted"
+      restart_breadcrumb "$name" "tier-b convergence to accepted ${sha:0:10}" 2>/dev/null || true
+      systemctl restart "$u" 2>/dev/null || true
+      log "tier-b: restarted $u: its loaded set (entry $entry) changed"
+      sleep "$STAGGER_SECONDS"
+      if ! tierb_ready "$u" "$port" "$t_swap"; then bad="$u did not come back ready on the new tree$([ "$port" != - ] && echo " (health :$port)")"; break; fi
+      dig="$(tierb_listing "$dst" "$w/acl.$name" | sha256sum | cut -c1-64)"
+      want_dig="$(tierb_listing "$src" "$w/acl.$name" | sha256sum | cut -c1-64)"
+      [ "$dig" = "$want_dig" ] || { bad="$u loads ${dig:0:12}, not the accepted ${want_dig:0:12}"; break; }
+    done < "$w/plan"
+  fi
+  if [ -n "$bad" ]; then
+    TIERB_STATE=restored; failed=$((failed + 1))
+    if tierb_restore "$dst"; then log "tier-b: !!! NOT converged: $bad; restored last-good ($n file(s))"
+    else log "tier-b: !!! NOT converged: $bad; and restoring last-good FAILED for some file(s) under $dst"; fi
+    while IFS=$'\t' read -r u port; do
+      systemctl restart "$u" 2>/dev/null || true; sleep "$STAGGER_SECONDS"
+      tierb_ready "$u" "$port" "$(( $(date +%s) - STAGGER_SECONDS - 1 ))" && log "tier-b: $u is back on last-good" \
+        || log "tier-b: !!! $u is not ready on last-good either; self-recovery owns escalation"
+    done < "$w/restarted"
+    printf '%s\t%s\t%s\n' "$th" "$sha" "$bad" > "$MARKER_DIR/tier-b.refused" 2>/dev/null || true
+    emit_gap "$(jq -n -c --arg s "pull-sync could not converge the baked super-repo tree ($dst) to the accepted gate ${sha:0:10} (tree ${th:0:12}): $bad. Last-good was restored and that tree is refused on this node until the accepted tree changes." \
+      --arg sha "$sha" --arg th "$th" \
+      '{impulse:{pointer:{type:"substrateGap_write",gap:{id:"pull-sync-tier-b-convergence-refused",category:"service_failure",source:"substrate_detected",summary:$s,classification_metadata:{accepted_sha:$sha,tree_hash:$th},status:"open"}}}}' 2>/dev/null)"
+    rm -rf "$TIERB_WORK/stage" "$w"; return 0
+  fi
+  TIERB_STATE=converged; rm -f "$MARKER_DIR/tier-b.refused"
+  tierb_record "$sha" "$th" "$n" "$w/plan" "$w"
+  log "tier-b: CONVERGED $dst to accepted ${sha:-unknown} (tree ${th:0:12}, $n file(s) swapped, last-good kept in $TIERB_WORK/last-good)"
+  while IFS=$'\t' read -r name u entry port rs; do
+    st="$(unit_start_epoch "$u")"
+    log "tier-b: $u loads $entry set $(tierb_listing "$dst" "$w/acl.$name" | sha256sum | cut -c1-12) = accepted, started $( [ -n "$st" ] && date -u -d "@$st" +%FT%TZ ) ($( [ "$rs" = 1 ] && echo restarted || echo 'unchanged, not restarted'))"
+  done < "$w/plan"
+  rm -rf "$TIERB_WORK/stage" "$w"; return 0
 }
 
 # THE OWED RESTART ENDS LIKE THE SAME-TICK ONE (2026-10-13). A restart deferred for in-flight work and taken on a later
@@ -4964,7 +5213,7 @@ if [ "$SUPER_FETCH_OK" = 1 ]; then
         if fed_unit_runs_clone federation-relay.service; then
           systemctl restart federation-relay.service 2>/dev/null || true
         else
-          log "super-repo: relay.ts changed in the clone but is NOT live: federation-relay runs ${FED_UNIT_WD} (the image bake), so a restart would reload the old file; not restarting (an image and a recreate deliver it)"
+          log "super-repo: relay.ts changed in the clone but is NOT live: federation-relay runs ${FED_UNIT_WD} (the image bake), so a restart would reload the old file; not restarting (once the gate accepts it, converge_tier_b installs it there and restarts the relay)"
         fi
       fi
       _fed_changed=0; { [ "$CHANGED" = "all" ] || grep -q '^scripts/substrate/federation-relay/' <<<"$CHANGED"; } && _fed_changed=1
@@ -4972,7 +5221,7 @@ if [ "$SUPER_FETCH_OK" = 1 ]; then
       if [ "$_fed_changed" = 1 ] && systemctl is-active federation-transport-vessel.service >/dev/null 2>&1 \
          && ! fed_unit_runs_clone federation-transport-vessel.service; then
         _fed_clone=0
-        log "super-repo: scripts/substrate/federation-relay/ changed in the clone but is NOT live: federation-transport-vessel runs ${FED_UNIT_WD} (the image bake), so a restart would reload the old files and drop every circuit; not restarting (an image and a recreate deliver it)"
+        log "super-repo: scripts/substrate/federation-relay/ changed in the clone but is NOT live: federation-transport-vessel runs ${FED_UNIT_WD} (the image bake), so a restart would reload the old files and drop every circuit; not restarting (once the gate accepts it, converge_tier_b installs it there and restarts the transport)"
       fi
       if [ "$_fed_changed" = 1 ] && [ "$_fed_clone" = 1 ] \
          && systemctl is-active federation-transport-vessel.service >/dev/null 2>&1; then
@@ -5073,6 +5322,10 @@ revive_failed_timers
 # them up at all.
 converge_fleet_defs "${SUPER_REPO_DIR:-/workspace/git/super-repo}"
 
+# The baked super-repo tree the federation units run from converges from the ACCEPTED gate every gated tick, after the
+# units and fleet definitions (see converge_tier_b). Content-compared, so a tick with nothing to change is a no-op.
+converge_tier_b
+
 # FAILING-TEST GENERATOR, deferred to the end of the tick (see the queue note at the test gate).
 while IFS='|' read -r gv gq gh gd; do
   [ -n "$gv" ] || continue
@@ -5082,7 +5335,7 @@ while IFS='|' read -r gv gq gh gd; do
   rm -rf "$gq"
 done <<< "$GEN_QUEUE"
 
-log "done — synced=$synced skipped=$skipped deferred=$deferred failed=$failed coverage_skipped=$COV_SKIPPED coverage_map=$COV_STATE link_audit=ok:$LA_OK/relinked:$LA_RELINKED/deferred:$LA_DEFERRED/refused:$LA_REFUSED/absent:$LA_ABSENT"
+log "done — synced=$synced skipped=$skipped deferred=$deferred failed=$failed coverage_skipped=$COV_SKIPPED coverage_map=$COV_STATE link_audit=ok:$LA_OK/relinked:$LA_RELINKED/deferred:$LA_DEFERRED/refused:$LA_REFUSED/absent:$LA_ABSENT tier_b=$TIERB_STATE"
 
 # EXIT NON-ZERO WHEN SOMETHING FAILED.
 #
