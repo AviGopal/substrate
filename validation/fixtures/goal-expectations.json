@@ -21,7 +21,7 @@
       "goal": "How many numbered 'laws' are defined in the substrate's top-level CLAUDE.md governance document? Answer with just the number and a one-line list of their titles.",
       "tier": "introspection",
       "expectation": "The exact count of numbered laws in CLAUDE.md (ground truth computed independently by the harness).",
-      "oracle": { "type": "numeric", "extract": "\\b(\\d{1,2})\\b", "op": "eq", "value_cmd": "grep -cE '^[0-9]+\\. ' \"${SUBSTRATE_CLAUDE_MD:-/home/avi/documents/work/substrate/CLAUDE.md}\"" },
+      "oracle": { "type": "numeric", "extract": "\\b(\\d{1,2})\\b", "op": "eq", "value_cmd": "grep -cE '^[0-9]+\\. ' \"${SUBSTRATE_CLAUDE_MD:-$(git rev-parse --show-toplevel)/CLAUDE.md}\"" },
       "note": "Ground truth is computed from the actual file, not assumed — the oracle is independent of the system."
     },
     {

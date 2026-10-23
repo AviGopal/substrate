@@ -18,7 +18,7 @@ set -euo pipefail
 
 # REPO_DIR defaults to THIS super-repo's obsidian-vessel, derived from the script's own
 # location rather than hardcoded. The previous default named a different checkout
-# (/home/avi/documents/work/exp-repo/metabob-devbob/...) which is 228 commits behind
+# (an older checkout elsewhere on the host) which is 228 commits behind
 # origin/dev — so a run here would have built month-old source and installed it over the
 # vault, silently reverting every landed UI change. Deriving the path also satisfies law
 # 11: the script works wherever the super-repo is cloned, with no host-specific literal.
