@@ -71,8 +71,6 @@ curl -X POST http://localhost:18101/v1/keys/validate \
   -d '{"api_key": "mb_env-org-user-keyid-hmac"}'
 ```
 
-> **Removed patterns (do not use):** `POST /v2/auth/minibob/signin` and `POST /v2/auth/apikey` on activity-api are removed. All auth goes through identity-vessel.
-
 #### B. Wrong JWT Secret
 
 The JWT secret must match between token issuer and validator.
@@ -199,8 +197,6 @@ curl http://localhost:18080/health
 docker exec <container> curl http://localhost:8080/health
 ```
 
-> **Removed patterns (do not use):** `minibob_instance` table, `MINIBOB_INSTANCE_ID` / `MINIBOB_INSTANCE_API_KEY` env vars, and the Helm values block for `minibob.instanceId` are removed. The current auth path is a plain HMAC API key (`METABOB_API_KEY`) validated via identity-vessel.
-
 ---
 
 ### 4. Empty Query Results
@@ -323,8 +319,6 @@ Re-copy the key from the dashboard (shown once at creation). Ensure no trailing 
 | `/v1/auth/password/hash`, `/v1/auth/password/verify` | 5 requests/minute |
 | `/v1/keys/validate` | 100 requests/minute |
 | `/v1/auth/resolve` | 100 requests/minute |
-
-> **Removed endpoints:** `/v2/auth/minibob/signin` and `/v2/auth/apikey` on activity-api are removed. Rate-limiting now applies to identity-vessel endpoints only.
 
 **Fix:** Wait 60 seconds and retry. If legitimate traffic, contact admin.
 

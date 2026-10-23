@@ -283,8 +283,8 @@ is at `http://localhost:18310/`.
 The installer refuses to start a new fleet whose names or ports another fleet on this host
 already holds, and names what it found. Add `--name <n> --prefix <nn>` (sequence E). It
 writes the client config only when the existing config is absent or already points at this
-fleet. That is `~/.substrate/config.json`, or `~/.metabob/config.json` on a host whose layout
-has not yet been converged. Otherwise it leaves that file alone and prints the
+fleet. That is `~/.substrate/config.json`, or `~/.metabob/config.json` on an older host
+layout. Otherwise it leaves that file alone and prints the
 `METABOB_CONFIG_PATH` to use. Only the install inputs (the table above) are taken from your shell. Advanced
 variables are read from the fleet's `.env` only, and one that is merely set in your shell
 is ignored with a notice, so an unrelated `GITHUB_TOKEN` never configures a fleet.
@@ -507,7 +507,7 @@ running fleet.
 
 **Iterate:**
 
-> ⚠ **Nothing on your host is bind-mounted into the container.** Editing
+> **Nothing on your host is bind-mounted into the container.** Editing
 > `repos/<vessel>/` on the host and then restarting the unit runs the *old*
 > code — the restart is real, the edit simply never arrived. The container has
 > its own clone, and **git is the only channel** into it.
@@ -536,13 +536,13 @@ this table exists so you know the verb exists at all.
 
 | Need | Command |
 |---|---|
-| Is it *correct*? | `docker exec <c> substrate-doctor`: auth, registry, restart loops, and whether an LLM arm can actually complete. Costs a real completion per arm; don't loop it. |
+| Is it *correct*? | `docker exec <c> substrate-doctor`: auth, registry, restart loops, and whether an LLM arm can actually complete. Costs a real completion per arm, so run it on demand. |
 | What's running / restarting? | `docker exec <c> vessel-ctl status` (services; `restarts=` is the cheap tell) · `systemctl list-timers` for the timer half |
-| Preview a selection change | `docker exec <c> env DRY_RUN=1 ENABLED_ROLES=<roles> apply-inventory`: read-only, and the one instrument that reports honestly on every selection variable |
+| Preview a selection change | `docker exec <c> env DRY_RUN=1 ENABLED_ROLES=<roles> apply-inventory`: read-only; it reports every selection variable |
 | Inventory vs reality | `vessel-ctl drift` (read-only) → `vessel-ctl apply` (converges; **no action lines = converged**) |
 | Add / remove a capability | `vessel-ctl list` · `install <v>` · `uninstall <v>` · `deregister <v>` (registry only, leaves the unit alone) |
 | Update the code | `substrate-pull-sync`: converges vessels *and* the fleet tooling from git |
-| Where did this setting come from? | `docker exec <c> substrate-config`: `unrecorded` means "this tool cannot answer", not "your value won" |
+| Where did this setting come from? | `docker exec <c> substrate-config`: `unrecorded` means the source of that value was not recorded |
 
 **Resource footprint:** the image is ~0.7 GB; a fleet that has been learning for a while
 carries a workspace volume in the high hundreds of MB and grows with trace retention
@@ -550,7 +550,7 @@ carries a workspace volume in the high hundreds of MB and grows with trace reten
 
 ## Keeping submodule pointers current
 
-This repo pins each vessel via a submodule gitlink (`repos/<vessel>` → a commit in that vessel's own repo, tracking its `dev` branch per `.gitmodules`). Vessels are developed and pushed independently (by the substrate's own cutover loop or by an operator working directly in a vessel checkout), so the pointer recorded here always lags the vessel's true `dev` HEAD by some amount. `.github/workflows/bump-submodules.yml` bounds that lag: on a schedule (and on manual dispatch) it resolves each submodule's latest `dev` commit with `git ls-remote` (no clone, no checkout — just a ref lookup), fast-forwards any gitlink that moved via `git update-index --cacheinfo`, and commits + pushes the result directly to `dev`. It runs as a GitHub Actions job, not a host cron or Makefile target, so currentness does not depend on any particular machine being on — the constraint recorded in this project's operating notes is that the substrate (and its supporting automation) must not rely on the host. A submodule the workflow's token cannot read (a private repo in a different GitHub org) is skipped with a warning rather than failing the run; the pointer for that submodule stays whatever the last successful bump (or manual `git submodule update --remote`) left it.
+This repo pins each vessel via a submodule gitlink (`repos/<vessel>` → a commit in that vessel's own repo, tracking its `dev` branch per `.gitmodules`). Vessels are developed and pushed independently (by the substrate's own cutover loop or by an operator working directly in a vessel checkout), so the pointer recorded here always lags the vessel's true `dev` HEAD by some amount. `.github/workflows/bump-submodules.yml` bounds that lag: on a schedule (and on manual dispatch) it resolves each submodule's latest `dev` commit with `git ls-remote` (no clone, no checkout — just a ref lookup), fast-forwards any gitlink that moved via `git update-index --cacheinfo`, and commits + pushes the result directly to `dev`. It runs as a GitHub Actions job, not a host cron or Makefile target, so currentness does not depend on any particular machine being on: the substrate and its supporting automation never rely on a host. A submodule the workflow's token cannot read (a private repo in a different GitHub org) is skipped with a warning rather than failing the run; the pointer for that submodule stays whatever the last successful bump (or manual `git submodule update --remote`) left it.
 
 ## Core components
 
@@ -564,7 +564,6 @@ This repo pins each vessel via a submodule gitlink (`repos/<vessel>` → a commi
 - **stateful-ui-vessel** (`repos/stateful-ui-vessel`) — the substrate's own UI: a pool of panels and interactor impulses served as a three-region view (pool / execution / decisions).
 - **human-surface-vessel** (`repos/human-surface-vessel`) — the human interface the substrate serves: the workbench at `<prefix>310`, where a person sends goals, answers the substrate's questions, and grades what it produced. A human is a resolver; their answers and verdicts return as shaped impulses.
 - **obsidian-vessel** (`repos/obsidian-vessel`) — an optional, additional human surface: each connected vault is a window for a different human resolver, reached through the vessel's sidecar conduit. A substrate runs without it.
-- **Not in the running fleet:** analysis-vessel (`repos/analysis-vessel`, retired; its source stays in the tree) and workbench (a separate repository, not a submodule).
 
 ## Learning loop
 
@@ -574,8 +573,8 @@ This repo pins each vessel via a submodule gitlink (`repos/<vessel>` → a commi
 4. **Learn** — α/β posteriors update for future selection; impulse-relevance and resolver metrics feed back.
 5. **Extract** — executions that reached their goal are extracted into reusable
    templates, which re-enter selection as activities and are graded like any other.
-   The ribosome is the extractor the design names; which extraction paths are
-   active in a given fleet is visible in the running template pool:
+   The ribosome extracts them; the running template pool shows what each fleet
+   has extracted:
 
    ```bash
    curl -s "$ACTIVITY_API/v2/activities/templates?limit=100" \
@@ -604,4 +603,4 @@ This repo pins each vessel via a submodule gitlink (`repos/<vessel>` → a commi
 - [`docs/SUBSTRATE.md`](docs/SUBSTRATE.md) — operating reference for the single-container substrate: inventory and profiles, `vessel-ctl`, the iteration loop, troubleshooting.
 - [`docs/architecture/`](docs/architecture/) — the `SUBSTRATE_AS_*` lenses (dynamics, MDP, network, representation, DEC, fleet, software, sovereign) and supporting design docs.
 - [`docs/RBAC_GUIDE.md`](docs/RBAC_GUIDE.md), [`docs/AUTH_JWT_CLAIMS.md`](docs/AUTH_JWT_CLAIMS.md) — multi-tenant isolation and auth claims.
-- [`openspec/changes/`](openspec/changes/) — future-change proposals, designs, and tasks.
+- [`openspec/changes/`](openspec/changes/) — change proposals: the design and tasks for each change in progress.

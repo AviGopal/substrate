@@ -104,7 +104,7 @@ List all activity templates with Thompson Sampling scores.
       "category": "bugfix",
       "scope": "project",
       "org_id": "acme",
-      "project_id": "devbob",
+      "project_id": "my-project",
       "task_steps": [...],
       "genealogy": {
         "parent_variant_id": null,
@@ -162,7 +162,7 @@ Create new activity template.
   ],
   "scope": "project",
   "org_id": "acme",
-  "project_id": "devbob",
+  "project_id": "my-project",
   "genealogy": {
     "parent_variant_id": null,
     "generation": 1,
@@ -235,7 +235,7 @@ Store impulse data with project-scoped isolation.
 ```json
 {
   "impulse_id": "errorFile",
-  "project_id": "devbob",
+  "project_id": "my-project",
   "impulse_data": {
     "type": "file",
     "path": "src/tool/bash.ts",
@@ -253,7 +253,7 @@ Store impulse data with project-scoped isolation.
 ```json
 {
   "impulse_id": "errorFile",
-  "project_id": "devbob",
+  "project_id": "my-project",
   "api_key": "...",
   "created_at": "2026-03-23T17:30:00Z"
 }
@@ -262,7 +262,7 @@ Store impulse data with project-scoped isolation.
 **Error 400:** (Impulse already exists)
 ```json
 {
-  "error": "Impulse errorFile already exists for project devbob"
+  "error": "Impulse errorFile already exists for project my-project"
 }
 ```
 
@@ -276,7 +276,7 @@ Resolve impulse pointer to actual content.
 ```json
 {
   "impulse_id": "errorFile",
-  "project_id": "devbob",
+  "project_id": "my-project",
   "impulse_data": {
     "type": "file",
     "path": "repos/local-tools-vessel/src/index.ts",
@@ -320,7 +320,7 @@ Retrieve stored impulse by ID.
 ```json
 {
   "impulse_id": "errorFile",
-  "project_id": "devbob",
+  "project_id": "my-project",
   "impulse_data": {
     "type": "file",
     "path": "src/tool/bash.ts",
