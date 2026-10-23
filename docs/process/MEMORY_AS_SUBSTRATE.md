@@ -184,7 +184,7 @@ This law governs *system* memory only.
 
 ## References
 
-- [`docs/SUBSTRATE.md`](SUBSTRATE.md) — substrate operational context.
+- [`docs/SUBSTRATE.md`](../SUBSTRATE.md) — substrate operational context.
 - `repos/development-vessel/src/resolvers/memory-note.ts` — the resolver's read
   and write pointers, storage layout, and note record.
 - `.claude/hooks/` — the three hook scripts and their fail-open behaviour.

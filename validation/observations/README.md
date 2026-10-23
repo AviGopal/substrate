@@ -2,7 +2,7 @@
 
 This directory is the on-disk surface of `validation/scripts/substrate-narrator.ts`.
 It accumulates substrate-side observation logs that the substrate-narration
-protocol (`docs/SUBSTRATE_NARRATION_PROTOCOL.md`) consumes.
+protocol (`docs/process/SUBSTRATE_NARRATION_PROTOCOL.md`) consumes.
 
 ## Directory layout
 

@@ -136,7 +136,7 @@ The engine's built-in event vocabulary is open-ended: `LifecycleEventType` names
 | `lifecycle:gap:classified` | `lifecycle.gap.classified` |
 | `lifecycle:llm:dispatched` | `lifecycle.llm.dispatched` |
 
-`lifecycle:llm:dispatched` is emitted by the `llm-prompt` resolver *before* the model call, which is what lets an audit subscriber see the dispatch without log archaeology. `ribosome-extract` subscribes to `lifecycle:activity:postExecution`, which no emitter produces, so that subscription is never reached; ribosome-vessel runs extraction as a standing service instead ([`CORE_IDIOMS.md`](../../CORE_IDIOMS.md), idiom 6).
+`lifecycle:llm:dispatched` is emitted by the `llm-prompt` resolver *before* the model call, which is what lets an audit subscriber see the dispatch without log archaeology. `ribosome-extract` subscribes to `lifecycle:activity:postExecution`, which no emitter produces, so that subscription is never reached; ribosome-vessel runs extraction as a standing service instead ([`CORE_IDIOMS.md`](../../process/CORE_IDIOMS.md), idiom 6).
 
 **Implementation:** `LifecycleEventType` and `LifecycleEvent` in `repos/ias-executor-ts/src/ontology.ts`; `mapEventTypeToBusForm` and `BusForwardingEventSink` in `src/adapters/bus-forwarder.ts`.
 

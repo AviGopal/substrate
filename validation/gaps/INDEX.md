@@ -5,7 +5,7 @@ workflow. Each `<gap_id>.yaml` file is a description-record artifact;
 this `INDEX.md` is the bridge-priority list across all of them.
 
 For the methodology and record format, see
-[`docs/SUBSTRATE_NARRATION_PROTOCOL.md`](../../docs/SUBSTRATE_NARRATION_PROTOCOL.md).
+[`docs/process/SUBSTRATE_NARRATION_PROTOCOL.md`](../../docs/process/SUBSTRATE_NARRATION_PROTOCOL.md).
 
 ## Usage
 
@@ -29,7 +29,7 @@ one or more description records to this directory, update the table below:
 
 ## Categories
 
-See [`docs/SUBSTRATE_NARRATION_PROTOCOL.md`](../../docs/SUBSTRATE_NARRATION_PROTOCOL.md) §D for category definitions:
+See [`docs/process/SUBSTRATE_NARRATION_PROTOCOL.md`](../../docs/process/SUBSTRATE_NARRATION_PROTOCOL.md) §D for category definitions:
 `missing_concept`, `missing_idiom`, `missing_pattern`, `conversation_only`,
 `doc_unread`, `training_knowledge`, `irreducibly_operator`.
 

@@ -4,7 +4,7 @@ Every document under `docs/` is an **expectation the substrate holds about itsel
 prose about the substrate. The tree is a runtime input: `scripts/substrate/ingest-docs-as-concepts.ts`
 splits each Markdown file into sections and writes them into concept-db, where the code-authoring
 path reads them back at drafting time. The contract that governs this is `DOC_INGESTION.md`
-under purpose 4 below — read it before authoring or restructuring anything here.
+under *For agents and contributors* below — read it before authoring or restructuring anything here.
 
 This index is organised by the nine architectural purposes the substrate must manifest to
 stay stable and keep growing. A document appears under exactly one purpose: the one it is
@@ -24,11 +24,9 @@ splits the concept graph and costs the drafter a correct recall.
 
 - [Impulse-Activity Foundation](architecture/IMPULSE_ACTIVITY_FOUNDATION.md) — the canonical ontology; read before implementing anything.
 - [Impulse State Space Specification](architecture/IMPULSE_STATE_SPACE_SPEC.md) — the pool as a state space, and what selecting over it means.
-- [Impulse Conformance Ledger](architecture/IMPULSE_CONFORMANCE_LEDGER.md) — the invariant that every data-plane hop is a typed impulse, and the control-plane exemptions.
 - [The substrate is an open representation](architecture/SUBSTRATE_AS_REPRESENTATION.md) — shapes as axes of an open representation.
 - [The substrate as a weighted cell complex](architecture/SUBSTRATE_AS_DEC.md) — the discrete-exterior-calculus lens on the same objects.
 - [Glossary](GLOSSARY.md) — canonical terms; the tie-breaker when two documents disagree on a name.
-- [Core Idioms](CORE_IDIOMS.md) — the recurring compositions of the four primitives, in foundation vocabulary.
 - [Impulse Shape Definitions](shapes/README.md) — how a shape document declares metadata, pointer, and resolved content.
 - [Impulse-Write Resolver Path](specs/impulse-write-resolver.md) — how a shape is *written*, not only read.
 
@@ -88,9 +86,6 @@ what the authoring path reads at drafting time, what gate a proposal must clear,
 the system's own memory lives — the substrate's store is authoritative and operator-side
 memory files are a derived cache.
 
-- [Doc ingestion](self-development/DOC_INGESTION.md) — the contract governing every other document in this tree, and how `docs/architecture/**` reaches the code-authoring prompt.
-- [Foundation Compliance Checks](FOUNDATION_COMPLIANCE_CHECKS.md) — the gate between a substrate-authored proposal and admission into the change tree.
-- [Memory As Substrate](MEMORY_AS_SUBSTRATE.md) — the `memoryNote` store, its read and write directions, and why the files are a cache.
 - [Investigating and benchmarking concept-db](guides/CONCEPT_DB_INVESTIGATION.md) — how to interrogate the prose-knowledge vessel the authoring path depends on.
 - [Concept Integration Templates](guides/CONCEPT_INTEGRATION_TEMPLATES.md) — calling concept shapes from an activity template.
 - [The substrate earns sovereignty](architecture/SUBSTRATE_AS_SOVEREIGN.md) — the expectation that refusal, revision and answering are authorities the system earns with evidence, never flags an operator sets.
@@ -168,9 +163,21 @@ its metric and its floor so it can be falsified; an expectation that cannot fail
 expectation, and a verification gate with no call sites can never be observed failing and
 so can never be trusted when it passes.
 
-- [Shape→Action→Evidence Expectations](architecture/SHAPE_ACTION_EVIDENCE_EXPECTATIONS.md) — falsifiable expectations with named metrics and floors.
-- [The qualification envelope](QUALIFICATION.md) — the tasks, faults, budgets and escalation conditions the substrate must handle without operator hands, and the metrics that judge it.
-- [The learning-loop selftest](validation/LEARNING_LOOP_SELFTEST.md) — a probe with known ground truth that follows one execution through every learning seam.
-- [Substrate-Narration Protocol](SUBSTRATE_NARRATION_PROTOCOL.md) — the operator-side narration and gap-accumulation methodology.
 - [Testing documentation](testing/README.md) — index of the verification material.
 - [Quick Verification Guide](testing/QUICK_VERIFICATION_GUIDE.md) — the short path to confirming a running substrate behaves, starting from the five-level `substrate-status` verdict.
+
+## For agents and contributors
+
+The working notes under `process/` govern how the system's own development is run: how documents
+reach the drafter, the gates a proposal passes, the qualification envelope, and the probes and
+methods agents use. They are read by the substrate and by the people and agents developing it.
+
+- [Doc ingestion](process/DOC_INGESTION.md) — the contract governing every other document in this tree, and how `docs/architecture/**` reaches the code-authoring prompt.
+- [Core Idioms](process/CORE_IDIOMS.md) — the recurring compositions of the four primitives, in foundation vocabulary.
+- [Impulse Conformance Ledger](process/IMPULSE_CONFORMANCE_LEDGER.md) — the invariant that every data-plane hop is a typed impulse, and the control-plane exemptions.
+- [Foundation Compliance Checks](process/FOUNDATION_COMPLIANCE_CHECKS.md) — the gate between a substrate-authored proposal and admission into the change tree.
+- [Memory As Substrate](process/MEMORY_AS_SUBSTRATE.md) — the `memoryNote` store, its read and write directions, and why the files are a cache.
+- [The qualification envelope](process/QUALIFICATION.md) — the tasks, faults, budgets and escalation conditions the substrate must handle without operator hands, and the metrics that judge it.
+- [Shape→Action→Evidence Expectations](process/SHAPE_ACTION_EVIDENCE_EXPECTATIONS.md) — falsifiable expectations with named metrics and floors.
+- [The learning-loop selftest](process/LEARNING_LOOP_SELFTEST.md) — a probe with known ground truth that follows one execution through every learning seam.
+- [Substrate-Narration Protocol](process/SUBSTRATE_NARRATION_PROTOCOL.md) — the operator-side narration and gap-accumulation methodology.

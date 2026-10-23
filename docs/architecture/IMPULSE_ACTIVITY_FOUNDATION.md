@@ -99,7 +99,7 @@ advertised data, not part of the contract. Control-plane exchanges (discovery
 register/heartbeat, identity auth, health probes) and a vessel accessing *its
 own* store are exempt. Known violations, per-seam migration decisions, and the
 dual-parse conformance prerequisite are tracked in
-[`IMPULSE_CONFORMANCE_LEDGER.md`](IMPULSE_CONFORMANCE_LEDGER.md).
+[`IMPULSE_CONFORMANCE_LEDGER.md`](../process/IMPULSE_CONFORMANCE_LEDGER.md).
 
 ---
 

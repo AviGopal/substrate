@@ -4,7 +4,7 @@
 > uses, defined in foundation-aligned vocabulary, with citations to the code and
 > specs that already use them. This document introduces no new primitives — every
 > idiom here is a composition of the four primitives named in
-> [`architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](architecture/IMPULSE_ACTIVITY_FOUNDATION.md)
+> [`architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](../architecture/IMPULSE_ACTIVITY_FOUNDATION.md)
 > §"Minimum Self-Stable Set": **impulse**, **pointer**, **resolver**, **vessel**.
 >
 > **Purpose**: the substrate reads its own documentation. `scripts/substrate/ingest-docs-as-concepts.ts`
@@ -69,7 +69,7 @@ gives the canonical decomposition. The executor is the canonical IAS host
 (`repos/ias-executor-ts`), and the walk it performs — backward-chaining from
 the goal's target shapes, then judging whether the goal was *reached* — is the
 execution model described in
-[`architecture/SUBSTRATE_AS_SOFTWARE.md`](architecture/SUBSTRATE_AS_SOFTWARE.md) §3.
+[`architecture/SUBSTRATE_AS_SOFTWARE.md`](../architecture/SUBSTRATE_AS_SOFTWARE.md) §3.
 
 **Composability.** Composes pointer-as-shape (foundation
 §"Pointer-as-Shape: The Bootstrap Principle"), resolver dispatch, and trace
@@ -142,7 +142,7 @@ Learning Duality".
 impulse-pool selection (the `impulse_preparation` and `impulse_pool_selection`
 resolvers in the executor), and model selection inside the LLM resolver, which
 Thompson-ranks per-model sub-resolver ids (`llmText@<model>`) as described in
-[`architecture/RESOLVER_TRACKING.md`](architecture/RESOLVER_TRACKING.md)
+[`architecture/RESOLVER_TRACKING.md`](../architecture/RESOLVER_TRACKING.md)
 §"Per-model LLM sub-resolvers".
 
 **Composability.** Composes trace recording (the data source) and
@@ -258,7 +258,7 @@ command was dispatched and the pre/post state signatures are identical).
 The union also accepts the untyped `execution_error` (optional `reason`), which
 the engine records for an unhandled resolver throw; the executor's trace sink
 rewrites any type it does not forward into it. See
-[`learning/FAILURE_MODES.md`](learning/FAILURE_MODES.md).
+[`learning/FAILURE_MODES.md`](../learning/FAILURE_MODES.md).
 
 **The outcome-conditional β step is the standing rule.** A failure does not
 always cost a full β. `computeDeltas` in
@@ -723,8 +723,8 @@ recursive application of a finite idiom set across an unbounded shape space.
 
 ## References
 
-- [`architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](architecture/IMPULSE_ACTIVITY_FOUNDATION.md) — the canonical model; every §-citation above names a section, not a line number.
-- [`architecture/SUBSTRATE_AS_SOFTWARE.md`](architecture/SUBSTRATE_AS_SOFTWARE.md) — the execution walk and the durability groups the idioms move between.
-- [`architecture/RESOLVER_TRACKING.md`](architecture/RESOLVER_TRACKING.md) — resolver tiers, per-model sub-resolvers, and the tier-versus-dispatch-pathway distinction.
-- [`GLOSSARY.md`](GLOSSARY.md) — canonical term spellings, deprecated aliases, and the retired-name policy.
+- [`architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](../architecture/IMPULSE_ACTIVITY_FOUNDATION.md) — the canonical model; every §-citation above names a section, not a line number.
+- [`architecture/SUBSTRATE_AS_SOFTWARE.md`](../architecture/SUBSTRATE_AS_SOFTWARE.md) — the execution walk and the durability groups the idioms move between.
+- [`architecture/RESOLVER_TRACKING.md`](../architecture/RESOLVER_TRACKING.md) — resolver tiers, per-model sub-resolvers, and the tier-versus-dispatch-pathway distinction.
+- [`GLOSSARY.md`](../GLOSSARY.md) — canonical term spellings, deprecated aliases, and the retired-name policy.
 - `CLAUDE.md` — the laws and the operator role that idioms 7, 10, 11, and 13 are measured against.

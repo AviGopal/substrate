@@ -13,7 +13,7 @@
 > [`architecture/SUBSTRATE_AS_MDP.md`](architecture/SUBSTRATE_AS_MDP.md),
 > [`SUBSTRATE_AS_DEC.md`](architecture/SUBSTRATE_AS_DEC.md),
 > [`SUBSTRATE_AS_DYNAMICS.md`](architecture/SUBSTRATE_AS_DYNAMICS.md) (dictionary in
-> DYNAMICS §0). Idioms (named compositions) → [`CORE_IDIOMS.md`](CORE_IDIOMS.md).
+> DYNAMICS §0). Idioms (named compositions) → [`CORE_IDIOMS.md`](process/CORE_IDIOMS.md).
 > Shapes vocabulary → [`shapes/README.md`](shapes/README.md). Operational behavior
 > → `CLAUDE.md`.
 
