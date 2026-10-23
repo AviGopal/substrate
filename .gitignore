@@ -301,3 +301,10 @@ scripts/substrate/federation-relay/.relay-*key*.protobuf
 /packages/**/*.d.ts
 /packages/**/*.d.ts.map
 !/packages/interaction-conformance/fixtures/P12/*-dist/bundle.js
+# The same for the two vessels kept as plain directories in this repository; their units run the .ts.
+/repos/clock-vessel/**/*.js
+/repos/clock-vessel/**/*.d.ts
+/repos/clock-vessel/**/*.map
+/repos/relevance-sink-vessel/**/*.js
+/repos/relevance-sink-vessel/**/*.d.ts
+/repos/relevance-sink-vessel/**/*.map
