@@ -1,10 +1,4 @@
 {
-  "enabledPlugins": {
-    "playwright@claude-plugins-official": true
-  },
-  "worktree": {
-    "bgIsolation": "none"
-  },
   "hooks": {
     "SessionStart": [
       {

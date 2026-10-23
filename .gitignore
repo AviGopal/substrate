@@ -179,9 +179,8 @@ scripts/substrate/workspace/
 # ── Untracked heavy nested-git checkouts (kept on disk, out of git) ──
 # Multi-GB sibling repos that live under repos/ but are not super-repo
 # submodules. Committing them as plain files would bloat history irreversibly.
-/repos/activity-dashboard/
+/repos/*-dashboard/
 /repos/metabob-analysis-api/
-/repos/metabob-dashboard/
 /repos/metabob-opencode/
 /repos/k8s-activity-executor/
 /repos/vessels/
@@ -194,7 +193,6 @@ scripts/substrate/workspace/
 /validation/activity-reuse-benchmark-*.json
 # stray root scratch file
 /disrupt-application.md
-/repos/metabob-internal-dashboard/
 
 # ── Dropped from the substrate submodule set ──
 # Product / UI / deploy repos not needed to build or run the substrate
@@ -203,7 +201,6 @@ scripts/substrate/workspace/
 /repos/conversation-vessel/
 /repos/user-vessel/
 /repos/workbench/
-/repos/metabob-cloud-dashboard/
 /repos/terminal/
 /repos/react-renderer/
 
@@ -296,7 +293,6 @@ validation/human-participation/witness-excluded/
 # "pub" in the name is misleading). Never commit one.
 scripts/substrate/federation-relay/.relay-*key*.protobuf
 *.protobuf
-
 # Compiler output next to the shared packages' TypeScript sources. Packages are run from
 # source or built into dist/ by the image; a committed .js sibling shadows its .ts source
 # for any `./x.js` import. The two conformance fixtures below are hand-made bundles.

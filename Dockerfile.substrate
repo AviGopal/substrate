@@ -4,7 +4,7 @@
 # All inter-vessel calls are localhost — no trust boundary to cross.
 #
 # Build:
-#   docker build -f Dockerfile.substrate --target base -t metabob/substrate:dev .
+#   docker build -f Dockerfile.substrate --target base -t ghcr.io/avigopal/substrate:dev .
 #   (CI adds --build-arg IMAGE_REVISION/IMAGE_CREATED/IMAGE_SOURCE, which become the
 #   org.opencontainers.image.* labels and /etc/substrate/image-revision; build in
 #   Docker format so the HEALTHCHECK survives Podman)
@@ -525,7 +525,7 @@ ENTRYPOINT ["/usr/local/bin/substrate-entrypoint"]
 # primary interface, reachable from a browser via noVNC.
 #
 #   docker build -f Dockerfile.substrate --target substrate-obsidian \
-#       -t metabob/substrate:obsidian .
+#       -t ghcr.io/avigopal/substrate:obsidian .
 #
 # In this flavour Obsidian stops being a host peer (host.docker.internal:27183)
 # and becomes an in-substrate citizen: the obsidian-vessel plugin talks to
