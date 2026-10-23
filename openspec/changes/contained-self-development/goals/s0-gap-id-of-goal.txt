@@ -6,7 +6,7 @@ new:
 // GAP ID OF A GOAL (contained-self-development, gap supply step 0). A compose is attributed to the
 // gap its goal names. Only "Close substrate gap X:" was recognised, so gap-to-feature's own
 // investigation dispatches ("investigate and decompose gap X: …", "investigate gap X before
-// composing …") were minted as fresh `route-edit-<hash>` gaps: 593 open on 2026-09-27, 384 of
+// composing …") were minted as fresh `route-edit-<hash>` gaps: hundreds open, most of
 // them investigation outputs (4 closed, 0 with a falsifier), each failing, narrowing and being
 // investigated again under a new hash. Attributing them to the parent X keeps the work, its
 // failures and its closure on the gap that asked for it.

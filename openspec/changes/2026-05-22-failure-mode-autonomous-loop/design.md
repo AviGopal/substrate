@@ -91,7 +91,7 @@ satisfying the "no LLM in vessel code" rule.
 }
 ```
 
-**Resolved (DEV-2, 2026-05-22):**
+**Resolved:**
 
 ias-executor-ts already ships `makeIterationResolver` at
 `src/resolvers/iteration.ts`. However, `body.resolver = "activity"` is
@@ -173,7 +173,7 @@ proposals actually close gaps when the harness re-measures.
   precondition check in task 1: read existing proposal files, skip
   scenarios with ≥ 3 prior attempts in last 7 days.)
 
-## Open questions — all resolved (DEV-2/DEV-3, 2026-05-22)
+## Open questions — all resolved
 
 1. **Iteration** → see above; single-scenario-per-invocation chosen.
 2. **conversation-vessel discovery registration** → added

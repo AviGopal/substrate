@@ -1,9 +1,9 @@
-In repos/development-vessel/src/resolvers/gap-to-feature.ts, make the closure sweep learn from an operator revert: when an open gap carries an operator-written regressed_by with a revert_sha and an attempt_id owned by this node, write once the regressed settlement, a class-posterior miss, an UNFAVORABLE outcome and an attempt_consequence lesson the drafter reads, and treat that landing as reverted, because four landings whose own check passed were reverted by the operator on 09-28 and nothing the system learns from ever heard it. Apply exactly these 3 edits; each old text occurs exactly once:
+In repos/development-vessel/src/resolvers/gap-to-feature.ts, make the closure sweep learn from an operator revert: when an open gap carries an operator-written regressed_by with a revert_sha and an attempt_id owned by this node, write once the regressed settlement, a class-posterior miss, an UNFAVORABLE outcome and an attempt_consequence lesson the drafter reads, and treat that landing as reverted, because four landings whose own check passed were reverted by the operator and nothing the system learns from ever heard it. Apply exactly these 3 edits; each old text occurs exactly once:
 EDIT 1
 old:
 export async function sweepPendingLandVerifications(): Promise<{ checked: number; closed: number }> {
 new:
-// OPERATOR REGRESSIONS REACH THE LEARNING PATH (contained-self-development 8.20). On 09-28 four
+// OPERATOR REGRESSIONS REACH THE LEARNING PATH (contained-self-development 8.20). Four
 // autonomous landings passed their own check (three were even closed landed_verified) and were reverted
 // by the operator. The only trace was regressed_by on the gap, read by the picker hold alone: the
 // settlement stayed `held`, the posterior counted a success and no lesson reached the drafter. This

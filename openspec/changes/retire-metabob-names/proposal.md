@@ -59,7 +59,7 @@ Three reader classes need care because a miss there does not fail loudly:
   they must know `SUBSTRATE_API_KEY` before phase 3 removes the old name.
 - **Default fallbacks.** A read such as `process.env.METABOB_ENDPOINT ?? "http://127.0.0.1:8080"` does not
   fail when the name disappears; it falls back, which works on a standalone node and is wrong on a spoke.
-  Such a read counts as a MISS even when it appears to work; the census flags `??`/`||`/`:-` defaults on
+  Such a read counts as a MISS even when it appears to work; the inventory flags `??`/`||`/`:-` defaults on
   these names separately.
 
 **Phase 3: stop emitting the old names inside the substrate.** gen-env, units and acceptance stop
@@ -69,9 +69,9 @@ compatibility shim. The lint is proven by a must-fail fixture (a planted old-nam
 
 ## What This Does Not Change
 
-- The API key prefix `mb-`. Renaming it would invalidate every issued key (user ruling).
+- The API key prefix `mb-`. Renaming it would invalidate every issued key.
 - The cockpit: the `metabob` MCP server, its `mcp__metabob__*` tools and the `metabob-substrate`
-  skill (user ruling). The cockpit plugin itself reads `~/.metabob/config.json`, honours
+  skill. The cockpit plugin itself reads `~/.metabob/config.json`, honours
   `METABOB_CONFIG_PATH` and passes the key on as `METABOB_API_KEY` (plugin 0.2.15, src/config.ts). So on
   the CLIENT side the old path must keep resolving and the cockpit registration keeps its old variable
   names for as long as the cockpit is unchanged; phase 3 retires the old names inside the substrate, not
@@ -86,7 +86,7 @@ compatibility shim. The lint is proven by a must-fail fixture (a planted old-nam
   `substrate-connect.sh`, `connect-merge.sh`, `substrate-install.sh`, acceptance runners, units that
   name the key (development-vessel-seed, service.d/EXEMPT, vessel.d/EXCEPTIONS).
 - Readers: ~3,500 sites; the read-site inventory (`retire-metabob-names/sites.tsv`, regenerated from
-  origin/dev by the census script) is the checklist, and phase 3's lint is its closure.
+  origin/dev by the inventory script) is the checklist, and phase 3's lint is its closure.
 - Operator surfaces: README install inputs name the new variables; the configuration reference gains a
   migration table (old name, new name, phase, what still reads the old one).
 - Risk: a reader missed in phase 2 fails only when phase 3 stops emitting the old name. The lint is the

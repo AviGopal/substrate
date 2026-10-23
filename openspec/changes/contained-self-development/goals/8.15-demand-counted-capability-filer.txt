@@ -5,7 +5,7 @@ old:
   const summary = `Capability gap:
 new:
   const id = `gap-${slug}`;
-  // DEMAND-COUNTED FILING (contained-self-development 8.15). Measured 09-28: 697 open capability gaps named
+  // DEMAND-COUNTED FILING (contained-self-development 8.15). Most open capability gaps named
   // 697 distinct shapes, each demanded by exactly ONE goal (actual_content_before_wc, SUBSTRATE_EXECUTION_ID,
   // ...): intermediate shapes a walk invented, not capabilities. One goal is a walk artifact; a shape becomes
   // real demand when a SECOND distinct goal needs it. The demand ledger is the gap row itself.

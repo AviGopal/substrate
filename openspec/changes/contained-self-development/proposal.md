@@ -1,8 +1,8 @@
 ## Why
 
-The substrate's purpose is self-development; everything else is downstream of it. Today almost
-all of its progress comes from operators prodding it: on 2026-09-27 fifteen changes landed through
-the lane, every one of them an exact edit an operator wrote. When the compose lane or a
+The substrate's purpose is self-development; everything else is downstream of it. Almost
+all of its progress comes from operators prodding it: the changes that land through the lane are
+exact edits an operator wrote. When the compose lane or a
 fundamental of agentic development breaks, the system cannot repair itself, because the thing it
 would edit is the thing that edits. Autonomous operation cannot be tested safely on the live
 fleet as things stand: the learner is untrained (the gap-class posterior sits at α = 1 on every
@@ -31,7 +31,7 @@ approval step, no copied learning state, no operator-authored templates.
   the periphery.
 - **Reopen under containment** at ~$1/h on the system-filed admissible gaps, measuring the
   floor, extraction and reuse parts of the demonstration.
-- **Stage 2, an autonomy node** (a compute-profile node like compose2-live, sharing hub learning
+- **Stage 2, an autonomy node** (a compute-profile node, sharing hub learning
   state through discovery, sole holder of `autonomous_pick`), converging from a branch named by a
   shape rather than an env constant. Only then: branch landing with ref-aware verification on
   the node that runs the branch.

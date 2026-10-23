@@ -5,7 +5,7 @@ old:
 new:
       // A step whose predicate is the PARENT's own check cannot be verified alone: one step will not
       // flip it, so a generic step "satisfied" it in prose while the parent's check stayed failing
-      // (the relevance-sink step landed a size check, 04b3e9c, with divergence still 1).
+      // (the relevance-sink step landed a size check, with divergence still 1).
       const parentEr = meta.evidence_resolve as { shape?: unknown; input?: unknown } | undefined;
       const childEr = f.evidence_resolve as { shape?: unknown; input?: unknown } | undefined;
       const sameAsParent = (typeof f.verify_shape === "string" && f.verify_shape === meta.verify_shape)

@@ -5,7 +5,7 @@ old:
     for (const g of ungroundable) admitted.push(g);
 new:
   // Under containment (the autonomyScope record requires falsifier classes) a target-less gap is
-  // never autonomous work: failing open onto them spent node 1's only slot on leaked test-fixture
+  // never autonomous work: failing open onto them spent a node's only slot on leaked test-fixture
   // gaps (falsifier-merge/pair/c2/heal-*), each refusal minting another -narrowed child.
   const containedAdmission = ((await autonomyScope()).requireFalsifierClasses ?? []).length > 0;
   if (admitted.length === 0 && !containedAdmission) {

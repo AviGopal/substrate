@@ -1,6 +1,6 @@
 ## 0. Measurement (done)
 
-- [x] 0.1 Lint `validation/scripts/image-convergence-surface.test.sh`: red, 31 tooling paths plus the 502-file federation tree; positive control passes (e9ce7e69).
+- [x] 0.1 Lint `validation/scripts/image-convergence-surface.test.sh`: red, 31 tooling paths plus the 502-file federation tree; positive control passes.
 - [x] 0.2 Gap `the-convergence-surface-is-narrower-than-the-baked-surface-so-landed-tooling-fixes-need-an-image-recreate`, armed on the lint's label.
 
 ## 1. Tier A: tooling (deployment lane + coordinator)
@@ -16,7 +16,7 @@
 
 - [ ] 2.0 Prerequisite: the image gives the shadow sandbox's nobody an executable bun (bun under `/opt/bun`, `/root/.bun` a symlink to it). Until nodes run such an image, a bun-based fixture can only report "cannot judge", so the fixture lands after the recreate.
 - [ ] 2.1 Fixture `validation/scripts/gate/fixtures/federation-relay-large-frames.sh`: the candidate relay on a random loopback port, with three fixture-owned nodes (DCUtR and AutoNAT off, AssemblyScript cipher) and two circuits. A 200-byte control runs first, then 1 MiB on both circuits at once in 16 KiB writes. A run that sent no frame of 1200 bytes or more is "cannot judge". The candidate transport server is not run: by default it calls live loopback services, and the sandbox shares the node's network.
-- [ ] 2.2 Mutation proof, side by side, on `relay.ts`: FAIL at af119736^, PASS at af119736, with the control passing on both (measured 5 of 5 each, as nobody under env -i). The lib (542e712 vs 69256d9) is not the variable: it is not in the converged tree (see 2.6), and swapping it does not change the result.
+- [ ] 2.2 Mutation proof, side by side, on `relay.ts`: FAIL before the cipher fix, PASS after it, with the control passing on both (as nobody under env -i). The lib is not the variable: it is not in the converged tree (see 2.6), and swapping it does not change the result.
 - [ ] 2.3 Add it under `fixture_paths` (ordinary under gate-policy).
 - [x] 2.4 pull-sync converges `/usr/local/share/substrate/super-repo/scripts/substrate` from `accepted/`, keeping last-good (coordinator). `converge_tier_b`, every gated tick: only from the accepted gate, only while `gate/coverage.json` `tier_b.fixtures` names a fixture the accepted corpus holds, and held while a probe window is open or the relay's dependencies differ from the image's. Image-owned files (`node_modules/`, the relay's `package.json` and `bun.lock`) are never touched. Changed files are staged and verified, the files they replace kept as last-good, then renamed in one by one. A unit restarts only when its loaded set (manifest entry plus relative imports) changed, and converges only when it comes back ready, started after the swap, on bytes that hash to the accepted set; otherwise last-good is restored and that tree is refused until the accepted tree changes. Proven by `validation/scripts/pull-sync-tier-b-converges-baked-tree.test.sh`.
 - [ ] 2.5 Verify by effect: a relay change judged by the fixture goes live on a canary without a recreate; loaded-blob hash plus the large-frame check.

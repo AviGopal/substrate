@@ -47,8 +47,7 @@ The live `autonomyScope` record is authoritative over the seed.
   operator-written constant (`COMPOSE_LESSON_GUIDANCE`, `src/drafter/lessons.ts`) (VERIFIED). A
   hollow draft that lands writes no lesson.
 - **The model call stays inside the core.** `llmCallWithFailover` (:708, called at :7682) makes
-  the call (VERIFIED). Model choice already has its own bandit (openspec change
-  `2026-05-23-llm-resolver-model-mab`).
+  the call (VERIFIED). Model choice already has its own bandit.
 
 ### The check writer
 

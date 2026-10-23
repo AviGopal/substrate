@@ -1,9 +1,8 @@
-# 2026-05-22 — Failure-Mode Autonomous Loop (development-vessel)
+# Failure-Mode Autonomous Loop (development-vessel)
 
 ## Motivation
 
-The failure-mode validation harness (`validation/scripts/failure-mode-harness.ts`,
-landed 2026-05-22) reads the 63-mode failure matrix from
+The failure-mode validation harness reads the 63-mode failure matrix from
 `validation/failure-modes/scenarios/` and reports per-cycle how many
 scenarios end as `gap` — i.e. no existing or emergent activity addresses
 them. The cycle-0 baseline against canary returned **6/6 gaps**, confirming
@@ -19,8 +18,7 @@ activity that, given a failure-mode report, autonomously drafts and
 registers candidate closing-activity templates. Per development-vessel
 discipline (`repos/development-vessel/CLAUDE.md`), this activity belongs
 in development-vessel as a seed template, NOT in minibob's embedded
-templates. The execution path is ias-executor-ts (per
-`openspec/changes/2026-05-19-ias-executor-as-canonical-host`).
+templates. The execution path is ias-executor-ts.
 
 ## Proposal
 

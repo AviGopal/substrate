@@ -1,20 +1,20 @@
 ## 0. Measurement
 
-- [x] 0.1 Read-site census from origin/dev of every repo (2026-10-07): 3,514 sites; super-repo 1,821
+- [x] 0.1 Read-site inventory from origin/dev of every repo; the super-repo holds about half
       (tests/validation 1,208, scripts 303, docs 264, units 5, .claude hooks 4, CI 1), development-vessel
       621, deployment 410, activity-api 179, workbench 113, terminal 85, 20 more vessel repos.
 - [x] 0.2 Scope boundary measured: the cockpit plugin (out of scope) reads `~/.metabob/config.json`,
       `METABOB_CONFIG_PATH` and `METABOB_API_KEY` itself, so the client-side old path and the cockpit's
       env names stay.
-- [x] 0.3 Census script `validation/scripts/metabob-census.sh` (724fa6e5): repo, file, line, names, a
+- [x] 0.3 The read-site inventory script under `validation/scripts/`: repo, file, line, names, a
       default-fallback column (?? / || incl. bracket access, ${X:-} ${X-} ${X:=}, .get(X, d), .get(X) or, destructuring
-      defaults) and kind. origin/dev 2026-10-07: 3,512 sites, 387 fallback reads (263 in code).
+      defaults) and kind. Fallback reads are counted separately, most of them in code.
 
 ## 1. Producers emit both names (deployment lane)
 
-- [x] 1.1 `secret-scope-names.sh` (cafdd281): per-unit secret NAMES from EnvironmentFile=, Environment= and
-      PassEnvironment= (never values). Baselines captured on node1, compose2 and pubspoke; the hub's by a user-run read.
-- [x] 1.2 gen-env (9fc83539, seed-identity writeFleetKey): accept `SUBSTRATE_API_KEY` / `SUBSTRATE_ENDPOINT` as inputs (new wins, conflict logged
+- [x] 1.1 `secret-scope-names.sh`: per-unit secret NAMES from EnvironmentFile=, Environment= and
+      PassEnvironment= (never values). Baselines captured on every node; the hub's by a user-run read.
+- [x] 1.2 gen-env (, seed-identity writeFleetKey): accept `SUBSTRATE_API_KEY` / `SUBSTRATE_ENDPOINT` as inputs (new wins, conflict logged
       by name), write both names in every rendered file. The persisted store keeps ONE copy, under the retiring
       name (seed-identity rewrites it on minting, and a second stored copy would drift from it); the alias is
       always derived from it. seed-identity's rewrites set both rendered names. SUBSTRATE_API_KEY is excluded
@@ -40,7 +40,7 @@
       path (validation/scripts/client-config-layout.test.sh).
 - [x] 1.5 By effect on every node: both names present with equal values (compared by hash inside the
       container, never printed); the store holds the key under exactly ONE name; scope-name diff = the alias
-      only, on the same units; the hub through a user-run read. Met on 2026-10-08 on pubspoke, compose2, node1
+      only, on the same units; the hub through a user-run read. Met on every node
       and the hub without waiting for a boot. Each node got a quiet-gated alias render that byte-copies the
       retiring name's line into the alias and swaps the file atomically, only once the node's installed gen-env
       rendered the same alias, so the next boot reproduces it. gen-env is not re-run live, because it truncates
@@ -50,9 +50,9 @@
 
 ## 2. Readers move (super-repo directly; vessels through the substrate)
 
-**Deferred (user ruling, 2026-10-07).** Phase 2 waits until the learning-loop items queued ahead of it are done:
+**Deferred.** Phase 2 waits until the learning-loop items queued ahead of it are done:
 the leaf org fix, coherence-recover, and view-liveness. No phase-2 goal is minted until then. Phase 1 finishes
-first: the alias is rendered node by node (pubspoke, compose2, node1, hub), each after 9fc83539 is accepted and
+first: the alias is rendered node by node (each spoke and node, then the hub), each after the gen-env change is accepted and
 the installed gen-env has converged, with the 1.5 report after each. Nothing reads the new names before phase 2,
 so the deferral leaves every node on the old names with the alias present and unused.
 
@@ -65,7 +65,7 @@ removes it with the old name.
 - [ ] 2.1 Super-repo scripts, units, .claude hooks, docs (README install inputs; configuration reference
       migration table).
 
-Readers already on the new name, moved early by the 2026-10-07 security harm-stop (the presence-only
+Readers already on the new name, moved early by a security harm-stop (the presence-only
 X-Internal-Api-Key path). Each reads `SUBSTRATE_API_KEY` first, then `METABOB_API_KEY`, then a legacy name, so
 the migration table lists them as done. Because the phase-1 alias is byte-copied they behave the same as before;
 if a later change sets only one name, they follow the new-name-wins rule.
@@ -80,7 +80,7 @@ if a later change sets only one name, they follow the new-name-wins rule.
       shell-containment and write-containment, development-vessel write-containment) move in ONE step;
       by effect after each converges, a lane write through local-tools still lands. local-tools
       script-runner.ts's output redaction (by the key's value) moves in the same step, or it goes empty.
-- [ ] 2.3b Default-fallback reads (`??`, `||`, `:-` on these names) listed by the census and each moved
+- [ ] 2.3b Default-fallback reads (`??`, `||`, `:-` on these names) listed by the inventory and each moved
       explicitly; a fallback that "works" counts as a miss.
       By effect, seeded concept writes are still credentialed after the rename. Activities that call
       substrate-local endpoints through `http_fetch` get their key attached by that resolver, which reads the
@@ -113,7 +113,7 @@ if a later change sets only one name, they follow the new-name-wins rule.
       - CI workflows that push to a legacy organisation's repositories are retired, not left dormant: a
         workflow that only fires on a branch the fleet does not use is untested code with a credential.
       - Install hints and docs that point at the legacy install domain are removed with the rest of the names.
-- [ ] 2.4 Census re-run: zero old-name READS outside the compatibility shim and the migration table.
+- [ ] 2.4 Inventory re-run: zero old-name READS outside the compatibility shim and the migration table.
 
 ## 3. Stop emitting old names inside the substrate
 

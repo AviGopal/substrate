@@ -1,9 +1,9 @@
-## Context (measured 2026-09-27)
+## Context
 
 - The landing branch is the literal `"dev"` at every layer (cutover :1916, :2045, :2056/2060,
   :2444, :2471/2477; admission pre-check gap-to-feature :1562). The autonomous/directed trigger
   does not reach the cutover (`isDirected` exists only in feature-compose :3748).
-- A branch push today would leak onto live: step 9 mirrors into node 1's `/vessels` on any
+- A branch push would leak onto live: step 9 mirrors into a node's `/vessels` on any
   `pushed`; the land-time runtime sync is only rolled back when nothing was pushed; pull-sync's
   divergence self-heal pushes `HEAD:$BRANCH`; the non-fast-forward retry rebases onto
   `origin/dev` and falls back to a host-sync intent that pushes to dev.
@@ -13,14 +13,14 @@
 - `gateLanding` sees remote URL and branch, not paths. `push-policy.json` is node-local.
 - Admissible work: 61 of 2,340 open gaps have an edit site and a class1/class2 falsifier; ~53 are
   workable (development-vessel 29, goal-host 24).
-- 97% of open gaps are not fixable as filed; the gap-class posterior has α = 1 on essentially
-  every class; landing → verified closure converted at ~5% on 2026-09-24.
+- Most open gaps are not fixable as filed; the gap-class posterior is uninformed on almost
+  every class; few landings convert to a verified closure.
 
 ## Decisions
 
 1. **Containment by scope first, by branch later.** Branch landing needs ~12 edits across the
    landing core plus a verification rewrite, on the path every repair must land through; its
-   first failure mode is the lane refusing its own repair (the 2026-09-24 deadlock class). Scope
+   first failure mode is the lane refusing its own repair (the drift-gate deadlock class). Scope
    containment is one shape and two readers, reversible by editing a record.
 2. **`autonomyScope` is a pool shape read through discovery**, like `spendEnvelope`, not a
    push-policy field: push-policy is a node-local file and the scope must bind every node.
@@ -36,7 +36,7 @@
    already reads `maintenanceLease` over HTTP); `BRANCH` env remains only a bootstrap fallback.
 6. **Promotion is an activity**, never an operator approval; its grade is durability (law 7).
 7. **Crystallization is measured, never seeded**: ribosome extraction and reuse on system-filed
-   work, with the 2026-09-18 proof's measures.
+   work, with the measures of the earlier proof.
 
 ## Refused patterns (and the law each would break)
 

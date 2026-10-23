@@ -1,8 +1,7 @@
 # Host-independent join — a substrate of any vessel inventory joins the common discovery+identity network with one anchor, and stays routable when punchthrough is unavailable
 
-**Date:** 2026-09-12
 **Vessels:** discovery-vessel (`src/index.ts` `/bootstrap`, registration replication), `scripts/substrate/federation-relay/federation-transport-server.ts` (startup gate, relay re-acquisition), `scripts/substrate/gen-env.sh` (anchor precedence, hub peer wiring)
-**Stage:** SPEC — grounded in a live probe of `substrate-live` on 2026-09-12, plus a code trace of the join path
+**Stage:** SPEC — grounded in a live probe of a running substrate, plus a code trace of the join path
 **Predecessor:** the relay-findability-replication change (kept in history). Its operator-ratified decision — *"the relay won't always be available due to networking conditions, so internally a direct connection should be equivalent to a punchthrough"* — is the governing decision here. **Three of its four approach items never landed.** This change implements them and adds the two defects the live probe surfaced.
 
 ## The objective, restated as invariants
@@ -11,7 +10,7 @@
 2. **Host independence.** No joining path may depend on a host IP, a host workspace, or a hand-carried address. The single anchor is a discovery endpoint; everything else is read from it at use time (law 1), and the anchor itself must be expressible without knowing the host it lands on.
 3. **Routability without punchthrough.** Reachability degrades in this order and never below the last rung: direct dial → DCUtR hole-punch → permanently-relayed circuit. A NAT that blocks punchthrough must cost latency, not reachability.
 
-## Live probe (2026-09-12, `substrate-live`, up 2 days, healthy)
+## Live probe
 
 Every number below is from the running system, not from a document.
 
@@ -54,7 +53,7 @@ Consequence: a stale host address in a host-workspace file silently deleted the 
 if (!RELAY) { console.error('[fed-transport] ERROR: set RELAY_MULTIADDR or point …'); process.exit(1) }
 ```
 
-The transport already *announces* direct listen addresses alongside the circuit — the 2026-07-19 decision partially landed (`:326` "registration rows must announce the node's DIRECT listen…", `:524` and `:647` "circuit first, then direct listen addrs — direct ≡ punchthrough"). But none of that code can ever run on a substrate without a relay, because the process exits before constructing the node.
+The transport already *announces* direct listen addresses alongside the circuit — the predecessor's decision partially landed (`:326` "registration rows must announce the node's DIRECT listen…", `:524` and `:647` "circuit first, then direct listen addrs — direct ≡ punchthrough"). But none of that code can ever run on a substrate without a relay, because the process exits before constructing the node.
 
 This makes the bootstrap **circular**. Discovery derives `relay_multiaddrs` from *registered circuit multiaddrs* when `RELAY_MULTIADDR` is unset (`discovery/src/index.ts:164-170`); circuits exist only once a transport reserves; the transport refuses to start without an anchor. A standalone substrate — the default inventory — therefore can never originate an overlay:
 
@@ -65,7 +64,7 @@ $ curl -s http://localhost:18100/bootstrap
 
 Invariant 3 says the relay is the *last* rung, not the entry condition. A relay-less transport is a fully useful peer on a LAN or a single host: it dials directly, it is dialed directly, and it acquires a circuit later if one appears.
 
-### Defect C — `/bootstrap`, the one public join door, serves host-dependent anchors (2026-07-19 item 3, still open)
+### Defect C — `/bootstrap`, the one public join door, serves host-dependent anchors (the predecessor's item 3)
 
 The response above is what a remote joiner receives. `identity_endpoint` is `http://127.0.0.1:8101` — on the joiner's machine that names the joiner's *own* loopback — and `discovery_endpoint` is empty. Verified that this is not a Host-header artifact:
 
@@ -135,7 +134,7 @@ class reports.
 
 `docs/FEDERATION.md` carries a measured warning: all nine spoke vessels mirrored into the hub, while the spoke resolving `llmCompletion` / `activityTemplate` from the hub returned `found:false`. The filter is `discovery/src/index.ts:267-274` — a peer row survives only with a non-empty `libp2p_multiaddr` **or** a non-loopback endpoint — and hub vessels register as `http://127.0.0.1:<port>` with neither. The documented cure (`SUBSTRATE_ADVERTISE_HOST`) is a host IP, so it satisfies the filter by violating invariant 2.
 
-### Defect E — registration does not replicate (2026-07-19 item 1, still open)
+### Defect E — registration does not replicate (the predecessor's item 1)
 
 ```
 $ grep -n 'replicat\|forwardRegister\|propagat' repos/discovery-vessel/src/*.ts
@@ -148,15 +147,15 @@ Findability remains hub-star: spoke→hub by query-time fan-out, hub→spoke by 
 
 Ordered so each step is independently verifiable and the earlier ones unblock the later ones.
 
-1. **Ungate the transport startup (Defect B).** Remove the `process.exit(1)` on a missing relay. Construct the libp2p node with direct listeners, register with the direct addrs it already knows how to announce, and re-attempt relay reservation on a backoff — adopting a circuit whenever one becomes discoverable and refreshing the hub mirror **on acquisition**, not only on the 120s tick (this is 2026-07-19 item 2, "loud reservation", which the same edit delivers). A relay-less transport is a healthy transport; the relay is an upgrade.
+1. **Ungate the transport startup (Defect B).** Remove the `process.exit(1)` on a missing relay. Construct the libp2p node with direct listeners, register with the direct addrs it already knows how to announce, and re-attempt relay reservation on a backoff — adopting a circuit whenever one becomes discoverable and refreshing the hub mirror **on acquisition**, not only on the 120s tick. A relay-less transport is a healthy transport; the relay is an upgrade.
 
 2. **Make the join anchor request-derived (Defect C).** `/bootstrap` must answer with anchors derived, in precedence order, from (a) explicit `*_PUBLIC_URL` env, (b) **the request's own origin** — the scheme/host/port the client demonstrably just reached us on, which is by construction routable *from that client*, (c) the registered rows for identity/discovery. Never loopback, never empty: when no honest anchor can be produced, say so in the body rather than returning a 200 that reads as success. Request-derived is the host-independent default `PUBLIC_IP` was standing in for.
 
-   This **supersedes** item 3 of the 2026-07-19 proposal (derive from registered rows, or return a `not-a-join-door` marker); keep the refusal half, replace the derivation half. Two implementation constraints the implementing goal must honour: the response is a function of the request, so it must not be cached across clients (`Vary: Host` at minimum), and behind a TLS-terminating proxy the derivation must read `X-Forwarded-Proto` / `X-Forwarded-Host` rather than the raw connection origin. The Host header is client-controlled, which is harmless here — a client that lies about the host it reached us on only misdirects itself — but it is the reason the value can never be shared between clients.
+   This **supersedes** item 3 of the predecessor proposal (derive from registered rows, or return a `not-a-join-door` marker); keep the refusal half, replace the derivation half. Two implementation constraints the implementing goal must honour: the response is a function of the request, so it must not be cached across clients (`Vary: Host` at minimum), and behind a TLS-terminating proxy the derivation must read `X-Forwarded-Proto` / `X-Forwarded-Host` rather than the raw connection origin. The Host header is client-controlled, which is harmless here — a client that lies about the host it reached us on only misdirects itself — but it is the reason the value can never be shared between clients.
 
 3. **Anchor precedence must not let a host file outrank the substrate (Defect A).** `/workspace/.substrate-secrets` must not silently override `/etc/substrate/env` for routing anchors, and a `HUB_DISCOVERY_URL` that fails its `/bootstrap` probe must degrade to local discovery rather than killing the process — step 1 makes that degradation survivable. A pinned hub address becomes a *hint*, checked at use time, never a precondition.
 
-4. **Symmetric dialability (Defect D).** Hub-native vessels get per-vessel mirror rows carrying the hub's *own* transport circuit, the same contract spoke vessels get — so the dialability filter passes on reachability the peer actually has, not on an advertised host IP. **Part of this mechanism already exists and is merely dark for want of a circuit:** the `SELF_MIRROR` branch no longer disables the mirror wholesale — it now skips only the transport's own anchor row and still publishes the per-vessel rows (`registerAtHub`'s `...(SELF_MIRROR ? [] : [{ vesselId: HUB_VESSEL_ID …}])`, landed in `5bbe50f9`). What remains is to verify it end-to-end once step 1 lets a circuit exist. The constraints to honour are in the transport's own comments — the `SELF_MIRROR` definition block, no ping-pong on mutual mirrors and prefer-direct-over-mirror ordering (the `_fedHop` block in `proxyToLocalOwner`), and the silent-disappearing-mirror failure documented above `currentCircuit`. Read all three before touching the guard.
+4. **Symmetric dialability (Defect D).** Hub-native vessels get per-vessel mirror rows carrying the hub's *own* transport circuit, the same contract spoke vessels get — so the dialability filter passes on reachability the peer actually has, not on an advertised host IP. **Part of this mechanism already exists and is merely dark for want of a circuit:** the `SELF_MIRROR` branch no longer disables the mirror wholesale — it now skips only the transport's own anchor row and still publishes the per-vessel rows (`registerAtHub`'s `...(SELF_MIRROR ? [] : [{ vesselId: HUB_VESSEL_ID …}])`, landed in). What remains is to verify it end-to-end once step 1 lets a circuit exist. The constraints to honour are in the transport's own comments — the `SELF_MIRROR` definition block, no ping-pong on mutual mirrors and prefer-direct-over-mirror ordering (the `_fedHop` block in `proxyToLocalOwner`), and the silent-disappearing-mirror failure documented above `currentCircuit`. Read all three before touching the guard.
 
 5. **Registration replication (Defect E).** `POST /register` propagates to `PEER_DISCOVERY_ENDPOINTS` — bounded fan-out, deduped by `libp2p_peer_id`, TTL'd, idempotent last-writer-wins upsert — so dialing in *is* being findable, rather than being pullable by whoever happens to point back. Give a hub a non-empty default `PEER_DISCOVERY_ENDPOINTS` so hub-side fan-out exists.
 
@@ -239,13 +238,12 @@ still returns no matches (Defect E); a hub's `PEER_DISCOVERY_ENDPOINTS` is still
 explicit-only (`gen-env.sh:986`); `repos/libp2p-federation-transport/federation-hub-e2e.ts`
 exists.
 
-**Changed — the unit is worse than measured.** The transport is still parked in
+**The restart counter.** The transport is still parked in
 `activating`, but `systemctl show -p NRestarts` now reads **32**, not 23. Read the
 counter from `show`, not from `is-active`: `is-active` can transiently print `active`
 mid-restart while `ActiveState=activating`, `SubState=auto-restart`.
 
-**Changed — two repairs are landed in the working tree but not yet in the running image,
-so the oracle still reports their classes as failing.** Approach step 1's `process.exit(1)`
+**Repairs reach the oracle only through the image.** Approach step 1's `process.exit(1)`
 gate is gone from `federation-transport-server.ts`, replaced by a documented
 direct-only warning; and the hardcoded peer endpoint is deleted from
 `scripts/substrate/units/discovery-vessel.service.d/federation-peering.conf`. Neither is
@@ -254,7 +252,7 @@ operator scripts as documentation examples (`deploy-hub-pull.sh`, `bootstrap-rem
 which the probe does not flag — only the shipped unit drop-in mattered.
 
 **Line anchors have drifted, and will keep drifting.** `federation-transport-server.ts` is
-under active edit; cite symbols, treat numbers as a snapshot. As of this writing:
+under active edit; cite symbols, treat numbers as a snapshot. At the probe:
 
 | Cited as | Now | Anchor |
 |---|---|---|
@@ -300,7 +298,7 @@ measurement rather than a record of intent.
 formulations, identical refusal: `grounding window (0 BYTES) contains none of the target
 file(s)`. The refusal is *correct* — compose confirms the file exists, sees it absent from
 an empty window, and declines a blind edit. The defect is upstream, in the grounding
-builder, and is filed as `fed:compose-grounding-window-empty-for-discovery-index`. The
+builder, and is filed as a gap. The
 change was not hand-landed: doing so would have converted a measurable lane defect into an
 invisible one.
 

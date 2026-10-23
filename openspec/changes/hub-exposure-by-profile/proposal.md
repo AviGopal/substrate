@@ -7,7 +7,7 @@ a fresh hub, or a reinstall from the image plus an unmodified `.env`, publishes 
 Law 11 says an image plus env must run identically wherever it is deployed. Today, how a hub is exposed
 depends on hand edits to its `.env` and on a host firewall that only an operator script installs.
 
-This was observed on 2026-10-07. activity-api's jwtAuth admitted any `X-Internal-Api-Key` value on its
+activity-api's jwtAuth admitted any `X-Internal-Api-Key` value on its
 trace, impulse and event writes. The hub published 18080 on `0.0.0.0`, so the network's learning store
 accepted unauthenticated writes from the internet. The interim containment is a host firewall chain that
 admits 18080 only from listed spoke addresses (`scripts/substrate/hub-firewall.sh`, plus a boot unit). The code fix
@@ -64,11 +64,11 @@ admits 18080 only from listed spoke addresses (`scripts/substrate/hub-firewall.s
 ## Open questions for review
 
 1. The README table says development-vessel (P090) and concept-db (P260) must be reachable by spokes.
-   On the live hub both are firewalled from outside: 18260 since 2026-10-04, because it served private
+   On the live hub both are firewalled from outside: 18260 because it served private
    concepts unauthenticated, and 18090 by the default-deny. Spokes run their own development-vessel. Either
    the table is wrong for a hub, or spokes have silently lost something they read. This must be resolved
    before `exposure.json` is written. It is a docs-against-reality discrepancy, so it is filed as a gap
    either way.
-2. **Ruled by the user (2026-10-08): `local` by default.** A fresh standalone publishes every port on
+2. **`local` by default.** A fresh standalone publishes every port on
    `127.0.0.1`, and an operator opts in to wider exposure with `SUBSTRATE_PUBLISH_IP`. Existing installs are
    unchanged: deploy.sh's preflight refuses an exposure change without `--accept-ports`.

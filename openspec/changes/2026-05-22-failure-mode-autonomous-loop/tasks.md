@@ -45,14 +45,14 @@ Per dev-vessel discipline: VERIFY → DEBUG → SPEC (this doc) → DEV.
 
 ## DEV-5: End-to-end smoke test against canary ✓
 
-- [x] Cycle-2 harness run (2026-05-22): 3 autonomous proposals from
+- [x] Cycle-2 harness run: 3 autonomous proposals from
       `make_activity_autonomous` via `draft-gap-closing-activity` template.
       Proposals in `validation/failure-modes/proposals/` with
       `authored_by: "make_activity_autonomous"`: fp-11, fp-12, fm-17.
-- [x] Cycle-3 harness run (2026-05-22): 6 autonomous proposals (fp-11,
+- [x] Cycle-3 harness run: 6 autonomous proposals (fp-11,
       fp-12, fm-17, fm-43, fm-44, fp-15) — autonomous count doubled.
       `proposals_by_author.make_activity_autonomous = 6`.
-- [x] progression-driver.ts ran for cycle-3 (2026-05-22). Cycle-3 summary
+- [x] progression-driver.ts ran for cycle-3. Cycle-3 summary
       written to `validation/failure-modes/cycles/cycle-3.json`.
       debt=5 (2 operator-blocked + 3 subagent), gap_count_decreasing=false.
       Note: gap count unchanged (6→6) because operator has not yet promoted
@@ -64,7 +64,7 @@ Per dev-vessel discipline: VERIFY → DEBUG → SPEC (this doc) → DEV.
 
 - [x] Update the failure-mode progression note (kept in history) to mark the
       "draft-gap-closing-activity exists" item complete. DONE — PROGRESSION.md
-      updated during cycle-2 run (2026-05-22); cycles/cycle-2.json documents
+      updated during cycle-2 run; cycles/cycle-2.json documents
       the `draft-gap-closing-activity exists` gap as closed.
 - [x] Add a note to the relevant cycle-N.json in `cycles/` describing
       the first autonomous proposal observed. DONE — cycles/cycle-2.json notes[0]:

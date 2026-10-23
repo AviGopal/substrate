@@ -4,7 +4,7 @@ old:
 export async function sweepPendingLandVerifications(): Promise<{ checked: number; closed: number }> {
 new:
 // FALSIFIED AUTONOMOUS LANDING (contained-self-development 8.4a). The sweep measured a
-// single landing 'present' and did nothing: three autonomous landings on 09-27 left their
+// single landing 'present' and did nothing: three autonomous landings left their
 // gap's defect in place, two passed the prose judge, and the system recorded none of it — the
 // only verdict was the operator's. This records the system's own verdict, without reverting:
 // the gap's predicate still reports the defect AFTER the edited vessel restarted onto the

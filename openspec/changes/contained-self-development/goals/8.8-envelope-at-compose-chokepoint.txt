@@ -5,7 +5,7 @@ old:
 new:
   // SPEND ENVELOPE AT THE CHOKEPOINT (contained-self-development). gap-to-feature checks the envelope
   // for auto-picks only; a caller naming a gap started an undirected land:true compose every 10
-  // minutes while autonomy was paused (09-27 14:55-15:25, db_performance_slow_queries). No
+  // minutes while autonomy was paused. No
   // undirected compose lands while the envelope refuses; directed and non-landing composes are unaffected.
   if (!isDirected && (pointer as { land?: boolean }).land !== false) {
     const { spendEnvelopeAllows } = await import("./gap-to-feature.js");

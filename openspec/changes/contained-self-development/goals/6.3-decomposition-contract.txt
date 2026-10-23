@@ -5,7 +5,7 @@ export interface LocalizeResult {
 new:
 // DECOMPOSITION CONTRACT (contained-self-development 6.3). The investigation step used to dispatch
 // a free-text "investigate and decompose" walk whose output was another gap with no falsifier
-// (384 runs, 4 closures). Every verifiable gap left on 2026-09-27 was design-sized: autonomous
+// (384 runs, 4 closures). Every remaining verifiable gap was design-sized: autonomous
 // single-file drafts on them were refused as incomplete, wrong-file, DESTROY-TO-SATISFY or a
 // hollow literal write. This gives the step a structured output: one bounded LLM call proposes
 // 1-3 single-file steps, each validated deterministically before it is written as a child gap

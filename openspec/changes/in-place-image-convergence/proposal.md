@@ -6,17 +6,17 @@ Today that holds for vessel code and about 17 tooling paths, but not for the res
 
 - 31 tooling paths from `scripts/` never converge, among them `substrate-status`, `substrate-doctor`,
   `substrate-connect`, `reseed-restart` and the entrypoint. A fix to any of them waits for an image recreate.
-- The federation transport and relay run from a 502-file baked copy of `scripts/substrate`, pinned on purpose
-  (e1c06f60), so the noise-cipher fix (af119736, 69256d9) went live only through a recreate wave.
-- The base runtime (SurrealDB, bun, OS packages) changes only with an image. On 2026-10-03 the SurrealDB
-  2.3.3 → 2.3.10 upgrade took a recreate per local node and three hand-run attempts on the hub.
+- The federation transport and relay run from a baked copy of `scripts/substrate`, pinned on purpose,
+  so the noise-cipher fix went live only through a recreate wave.
+- The base runtime (SurrealDB, bun, OS packages) changes only with an image. A SurrealDB
+  upgrade took a recreate per local node and three hand-run attempts on the hub.
 
-Measured by `validation/scripts/image-convergence-surface.test.sh` (e9ce7e69): red today, 819 baked files,
-288 with an installer.
+Measured by `validation/scripts/image-convergence-surface.test.sh`: red: most baked files
+have no in-place installer.
 
 ## What Changes
 
-The design has three tiers, each with a different treatment. They were ruled on by the user on 2026-10-03 and
+The design has three tiers, each with a different treatment. They are decided, and
 reviewed by qa.
 
 **Tier A: tooling converges in place, staged, and only where a gate fixture exercises it.**
@@ -38,8 +38,8 @@ reviewed by qa.
   run that sent none is "cannot judge", never a pass. It is time-bounded, uses no egress, and kills every
   process it spawns. The candidate transport server is not run: by default it calls live loopback services,
   and the shadow sandbox shares the node's network.
-- Mutation proof before it counts: FAIL with `relay.ts` at af119736^, PASS at af119736, side by side. The
-  lib pair (542e712, 69256d9) named earlier is not the variable: the lib is not in the converged tree, and
+- Mutation proof before it counts: FAIL with `relay.ts` before the cipher fix, PASS after it, side by side. The
+  lib pair named earlier is not the variable: the lib is not in the converged tree, and
   swapping it does not change the result.
 - The fixture needs a bun that the sandbox's nobody can execute. The image provides one from the change that
   adds it; the fixture lands only after nodes run that image.
@@ -74,7 +74,7 @@ reviewed by qa.
 
 - There is no host-side updater, and no container recreates itself. The narrow "recreate me on digest X"
   affordance stays unbuilt.
-- CI install acceptance stays the authority for public `:dev`. Its large-frame check (a8bd1e74, b871bdbb) is
+- CI install acceptance stays the authority for public `:dev`. Its large-frame check is
   the image-level witness for Tier B.
 - Staged-fleet-rollout's fleet channel remains the long-term staging mechanism. Tier A's enforced canary order
   is an interim it later subsumes.
