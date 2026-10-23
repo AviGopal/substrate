@@ -57,7 +57,7 @@ The system is building a **topology of the informational state** by alternating 
 
 ## Pointer-as-Shape: The Bootstrap Principle
 
-**The pointer is the shape of an impulse.** All resolution and all learning are keyed on the pointer. Without a pointer, no other primitive has a learnable address — no resolver knows what to dispatch on, no Thompson posterior has a key, no trace has a co-occurrence signal.
+**The pointer carries the shape of an impulse:** its shape is `metadata.shape` when set, otherwise the pointer's `type`. All resolution and all learning are keyed on that shape. Without a pointer, no other primitive has a learnable address — no resolver knows what to dispatch on, no Thompson posterior has a key, no trace has a co-occurrence signal.
 
 This is the bootstrap concept: pointer-as-shape is what makes everything else addressable. Resolvers dispatch on `pointer.type`. Activity matching compares `inputSchema.required` shapes against the pointer types in the available pool. Impulse-relevance posteriors are keyed on `(activity, pointer-shape)`. Composition edges are typed by output-shape → input-shape compatibility.
 

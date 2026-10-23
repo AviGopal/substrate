@@ -57,7 +57,7 @@ The substrate is built from:
 {
   id: "error-log",
   pointer: { type: "file", path: "error.log" },
-  metadata: { shape: "error_log" },   // shape lives on metadata, not at top level
+  metadata: { shape: "error_log" },   // the shape: metadata.shape when set, else pointer.type
   loaded: false,                       // lazy: content is absent until a resolver loads it
   budget: 2000
 }

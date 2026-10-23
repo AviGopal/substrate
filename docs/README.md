@@ -19,8 +19,8 @@ the root [`CLAUDE.md`](../CLAUDE.md), which also enumerates the agent cockpit's 
 ## 1. Ontology — what is real
 
 **Purpose:** fix the vocabulary of things that exist, so every other document composes
-rather than redefines. There are four primitives — impulse, pointer, resolver, vessel —
-and a shape is a routing-and-reasoning key, never a schema. A document that introduces a
+rather than redefines. There are four primitives — impulse, pointer, resolver, vessel — and
+an activity is derived from them; a shape is a routing-and-reasoning key, never a schema. A document that introduces a
 fifth primitive is drift; a document that describes an existing primitive under a new name
 splits the concept graph and costs the drafter a correct recall.
 
