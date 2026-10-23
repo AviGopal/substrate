@@ -12,8 +12,9 @@
 #   mkdir -p .git-hooks && cp <path-to-this-file> .git-hooks/pre-commit
 #   chmod +x .git-hooks/pre-commit
 #
-# Rules apply only to NEWLY ADDED or RENAMED-INTO files. Modifying existing
-# tracked files is never blocked.
+# Placement rules apply only to NEWLY ADDED or RENAMED-INTO files. Modifying
+# existing tracked files is never blocked by placement. The secrets scan runs on
+# every commit, a modify-only one included.
 #
 # What this enforces:
 #   - Vessel root holds only project metadata (package.json, tsconfig, README,
@@ -116,7 +117,8 @@ is_asset_path() {
 
 mapfile -t STAGED < <(git diff --cached --name-only --diff-filter=AR)
 
-[[ ${#STAGED[@]} -eq 0 ]] && exit 0
+# No early exit when nothing was added: a modify-only commit still gets the
+# secrets scan below.
 
 violations=()
 
