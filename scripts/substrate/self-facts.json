@@ -550,7 +550,15 @@
             "repos/development-vessel/src/resolvers/gap-lifecycle-scan.ts",
             "repos/development-vessel/test/routes/route-caller-stamp-every-write.test.ts",
             "repos/development-vessel/test/fixtures/check-references-missing-export/",
-            "repos/development-vessel/test/resolvers/gap-check-supply-forwarding-gates.test.ts"
+            "repos/development-vessel/test/resolvers/gap-check-supply-forwarding-gates.test.ts",
+            "repos/goal-host-vessel/src/request-queue.ts",
+            "repos/goal-host-vessel/test/request-queue.test.ts",
+            "repos/goal-host-vessel/test/request-queue-resolve.test.ts",
+            "repos/goal-host-vessel/test/fixtures/request-queue-child.ts",
+            "repos/goal-host-vessel/src/inbound-auth.ts",
+            "repos/development-vessel/src/lib/gap-store-merge.ts",
+            "repos/development-vessel/src/lib/call-credential.ts",
+            "repos/development-vessel/src/lib/gap-forward-queue.ts"
           ],
           "require_falsifier_classes": [
             "class2"
@@ -834,7 +842,15 @@
             "repos/development-vessel/src/resolvers/gap-lifecycle-scan.ts",
             "repos/development-vessel/test/routes/route-caller-stamp-every-write.test.ts",
             "repos/development-vessel/test/fixtures/check-references-missing-export/",
-            "repos/development-vessel/test/resolvers/gap-check-supply-forwarding-gates.test.ts"
+            "repos/development-vessel/test/resolvers/gap-check-supply-forwarding-gates.test.ts",
+            "repos/goal-host-vessel/src/request-queue.ts",
+            "repos/goal-host-vessel/test/request-queue.test.ts",
+            "repos/goal-host-vessel/test/request-queue-resolve.test.ts",
+            "repos/goal-host-vessel/test/fixtures/request-queue-child.ts",
+            "repos/goal-host-vessel/src/inbound-auth.ts",
+            "repos/development-vessel/src/lib/gap-store-merge.ts",
+            "repos/development-vessel/src/lib/call-credential.ts",
+            "repos/development-vessel/src/lib/gap-forward-queue.ts"
           ],
           "require_falsifier_classes": [
             "class2"
@@ -1124,7 +1140,15 @@
             "repos/development-vessel/src/resolvers/gap-lifecycle-scan.ts",
             "repos/development-vessel/test/routes/route-caller-stamp-every-write.test.ts",
             "repos/development-vessel/test/fixtures/check-references-missing-export/",
-            "repos/development-vessel/test/resolvers/gap-check-supply-forwarding-gates.test.ts"
+            "repos/development-vessel/test/resolvers/gap-check-supply-forwarding-gates.test.ts",
+            "repos/goal-host-vessel/src/request-queue.ts",
+            "repos/goal-host-vessel/test/request-queue.test.ts",
+            "repos/goal-host-vessel/test/request-queue-resolve.test.ts",
+            "repos/goal-host-vessel/test/fixtures/request-queue-child.ts",
+            "repos/goal-host-vessel/src/inbound-auth.ts",
+            "repos/development-vessel/src/lib/gap-store-merge.ts",
+            "repos/development-vessel/src/lib/call-credential.ts",
+            "repos/development-vessel/src/lib/gap-forward-queue.ts"
           ],
           "require_falsifier_classes": [
             "class2"
