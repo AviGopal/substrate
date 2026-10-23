@@ -1095,7 +1095,7 @@ Two properties of this shape are load-bearing and carry to the next one. First, 
 
 ### Unified Execution Path
 
-Unified execution path is the design: goal-shaped and activity-template-shaped pointers resolve through the standard impulse → resolver dispatch, with the activity resolver running the activity to resolve the pointer.
+In the unified design, goal-shaped and activity-template-shaped pointers resolve through the standard impulse → resolver dispatch, with the activity resolver running the activity to resolve the pointer. Nested dispatch already works this way; top-level execution does not, as follows.
 
 Top-level execution enters in-process: the goal host builds a template, calls its own `runTemplate`, and that calls `executor.execute(template)` on the `ActivityExecutor` it owns. Nested dispatch follows the target path — the `activity` resolver takes an inline template or a template id, runs the child on the same runtime, and links it by parent execution id and composition chain — so the target shape is demonstrated one level down. In the unified design the host emits a `goal`-shaped impulse (and downstream an `activity_template`-shaped impulse) and the executor is dispatched as the resolver for that shape pair, collapsing the distinction between "top-level" and "nested" execution. A new in-process execution entry point is a regression, not a neutral choice.
 
