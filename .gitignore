@@ -292,9 +292,8 @@ validation/human-participation/witness-excluded/
 /history.txt
 /run_scan.js
 /mitosis-applied-host-sync*.jsonl
-# Run logs the metabob pre-commit activities write next to their definitions.
-/.metabob/traces/*
-!/.metabob/traces/.gitkeep
+# Local state the metabob tooling writes in a checkout (session metadata, run logs).
+/.metabob/
 # A relay's libp2p private key (relay.js writes it to its working directory; the
 # "pub" in the name is misleading). Never commit one.
 scripts/substrate/federation-relay/.relay-*key*.protobuf

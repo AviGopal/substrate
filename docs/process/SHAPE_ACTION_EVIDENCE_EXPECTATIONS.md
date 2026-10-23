@@ -102,8 +102,7 @@ evidence — a single report can be made to look good by choosing the goals.
 **Source:** `validation/scripts/stratified-harness.ts`, whose report lands under
 `validation/results/` and whose per-cell fields include `floor_pass` and `passable_cell_count`;
 compared against a prior report with
-`bun run validation/scripts/compare-reports.ts --stratified <before> <after>`, or against a
-pinned baseline under `validation/baselines/`. Per-cell optimality trend is one of `closing`,
+`bun run validation/scripts/compare-reports.ts --stratified <before> <after>`. Per-cell optimality trend is one of `closing`,
 `stable`, or `regressing`, computed only when a prior report is supplied via `--baseline`.
 
 ## Claim 6 — Substrate-authored improvement commits
