@@ -296,3 +296,12 @@ validation/human-participation/witness-excluded/
 # "pub" in the name is misleading). Never commit one.
 scripts/substrate/federation-relay/.relay-*key*.protobuf
 *.protobuf
+
+# Compiler output next to the shared packages' TypeScript sources. Packages are run from
+# source or built into dist/ by the image; a committed .js sibling shadows its .ts source
+# for any `./x.js` import. The two conformance fixtures below are hand-made bundles.
+/packages/**/*.js
+/packages/**/*.js.map
+/packages/**/*.d.ts
+/packages/**/*.d.ts.map
+!/packages/interaction-conformance/fixtures/P12/*-dist/bundle.js
