@@ -189,7 +189,7 @@ scripts/substrate/workspace/
 
 # ── Ephemeral substrate runtime + benchmark outputs ──
 /workspace/
-/validation/results/*.json
+/validation/results/
 /validation/activity-reuse-benchmark-*.json
 # stray root scratch file
 /disrupt-application.md

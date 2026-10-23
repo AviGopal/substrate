@@ -366,8 +366,8 @@ If the answer is "the property would no longer hold", closure for that
 property is open. A closure audit walks
 each property and runs substrate-only resolvers to attempt it, taking
 `--without=<property>` to simulate the absence of a specific external
-dependency. It writes `validation/state/closure-status.json` and exits non-zero
-while any tested property is still open.
+dependency. It reports a closure status and exits non-zero while any tested
+property is still open.
 
 **Recurrence.** Run on a rhythm rather than a fixed timer (`CLAUDE.md` law 5).
 The script enumerates seven closure properties, each expressed as the external
