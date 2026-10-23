@@ -2956,13 +2956,6 @@
       "reason": "unreached",
       "fixtures": []
     },
-    "/usr/local/share/substrate/active-scripts/auto-describe-resolvers.d.ts": {
-      "src": "scripts/substrate/auto-describe-resolvers.d.ts",
-      "src_blob": "18a1ab63544f359a1824da49479c63c4b5556b1d",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
-    },
     "/usr/local/share/substrate/active-scripts/auto-describe-resolvers.ts": {
       "src": "scripts/substrate/auto-describe-resolvers.ts",
       "src_blob": "e151aa90492ad76877d9796f2facc1cf2342bbe2",
@@ -2977,23 +2970,9 @@
       "reason": "unreached",
       "fixtures": []
     },
-    "/usr/local/share/substrate/active-scripts/autonomy-metrics.d.ts": {
-      "src": "scripts/substrate/autonomy-metrics.d.ts",
-      "src_blob": "b5f68ad42a1a70b407b27b2b7b1f79aceb0009cf",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
-    },
     "/usr/local/share/substrate/active-scripts/autonomy-metrics.ts": {
       "src": "scripts/substrate/autonomy-metrics.ts",
       "src_blob": "c4d08810d2ead2416ca79f9228335315f0aa2efa",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
-    },
-    "/usr/local/share/substrate/active-scripts/autonomy-status.d.ts": {
-      "src": "scripts/substrate/autonomy-status.d.ts",
-      "src_blob": "5217f384945c7634e976e8eac595b90c733be7bb",
       "level": "none",
       "reason": "unreached",
       "fixtures": []
@@ -3005,23 +2984,9 @@
       "reason": "unreached",
       "fixtures": []
     },
-    "/usr/local/share/substrate/active-scripts/coherence-metric.d.ts": {
-      "src": "scripts/substrate/coherence-metric.d.ts",
-      "src_blob": "2fa8a45cbf7a2a29ac39e8b2094ad30cfea825f8",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
-    },
     "/usr/local/share/substrate/active-scripts/coherence-metric.ts": {
       "src": "scripts/substrate/coherence-metric.ts",
       "src_blob": "a7fddd654da2b462ff806fd5294da39f8696bc10",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
-    },
-    "/usr/local/share/substrate/active-scripts/coherence-recover.d.ts": {
-      "src": "scripts/substrate/coherence-recover.d.ts",
-      "src_blob": "8b42fd07d3989248328699fd506e7a96fa7b39c8",
       "level": "none",
       "reason": "unreached",
       "fixtures": []
@@ -3033,23 +2998,9 @@
       "reason": "unreached",
       "fixtures": []
     },
-    "/usr/local/share/substrate/active-scripts/compose-drift-tick.d.ts": {
-      "src": "scripts/substrate/compose-drift-tick.d.ts",
-      "src_blob": "757778572cd4165976cf2885f3023a7e6ad51b2f",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
-    },
     "/usr/local/share/substrate/active-scripts/compose-drift-tick.ts": {
       "src": "scripts/substrate/compose-drift-tick.ts",
       "src_blob": "4b121bd297a2e7ad26004c69cd10165d673c09d9",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
-    },
-    "/usr/local/share/substrate/active-scripts/compose-teacher.d.ts": {
-      "src": "scripts/substrate/compose-teacher.d.ts",
-      "src_blob": "19e8de9d75029a7d171e8848dc2be15ac70b7137",
       "level": "none",
       "reason": "unreached",
       "fixtures": []
@@ -3061,23 +3012,9 @@
       "reason": "unreached",
       "fixtures": []
     },
-    "/usr/local/share/substrate/active-scripts/composition-edge-reconcile.d.ts": {
-      "src": "scripts/substrate/composition-edge-reconcile.d.ts",
-      "src_blob": "e09e6b90736e12ba0af4f147d48882fe24744240",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
-    },
     "/usr/local/share/substrate/active-scripts/composition-edge-reconcile.ts": {
       "src": "scripts/substrate/composition-edge-reconcile.ts",
       "src_blob": "a188907015b8c2d1cba8fb4be5ffe0f4724ce4f9",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
-    },
-    "/usr/local/share/substrate/active-scripts/concept-db-bench.d.ts": {
-      "src": "scripts/substrate/concept-db-bench.d.ts",
-      "src_blob": "782cb07d0ce56592f62d06c147cc7f65d35eb536",
       "level": "none",
       "reason": "unreached",
       "fixtures": []
@@ -3089,23 +3026,9 @@
       "reason": "unreached",
       "fixtures": []
     },
-    "/usr/local/share/substrate/active-scripts/db-contention-check.d.ts": {
-      "src": "scripts/substrate/db-contention-check.d.ts",
-      "src_blob": "875638e94e4d200321392fff63e27ac05270bec6",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
-    },
     "/usr/local/share/substrate/active-scripts/db-contention-check.ts": {
       "src": "scripts/substrate/db-contention-check.ts",
       "src_blob": "11bbc44b2b63a15e99247f9d8456d7a4a18bf0ca",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
-    },
-    "/usr/local/share/substrate/active-scripts/db-maintenance-tick.d.ts": {
-      "src": "scripts/substrate/db-maintenance-tick.d.ts",
-      "src_blob": "ee65d905d80a8ad078eeefdf11d0acc60ab8d726",
       "level": "none",
       "reason": "unreached",
       "fixtures": []
@@ -3117,23 +3040,9 @@
       "reason": "unreached",
       "fixtures": []
     },
-    "/usr/local/share/substrate/active-scripts/efficiency-failure-tick.d.ts": {
-      "src": "scripts/substrate/efficiency-failure-tick.d.ts",
-      "src_blob": "2600b6ace6670b380b85b086df75d2bf762bd0a5",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
-    },
     "/usr/local/share/substrate/active-scripts/efficiency-failure-tick.ts": {
       "src": "scripts/substrate/efficiency-failure-tick.ts",
       "src_blob": "e61122a5fd507edb025101e63b2ddc97ad02dc79",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
-    },
-    "/usr/local/share/substrate/active-scripts/funnel-drain.d.ts": {
-      "src": "scripts/substrate/funnel-drain.d.ts",
-      "src_blob": "fd285bb4248771d029a0c3d1535aa1de0512ddf1",
       "level": "none",
       "reason": "unreached",
       "fixtures": []
@@ -3145,23 +3054,9 @@
       "reason": "unreached",
       "fixtures": []
     },
-    "/usr/local/share/substrate/active-scripts/gap-compose-tick.d.ts": {
-      "src": "scripts/substrate/gap-compose-tick.d.ts",
-      "src_blob": "f72a4531da6954995450c727d0bacd5e94d8cf58",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
-    },
     "/usr/local/share/substrate/active-scripts/gap-compose-tick.ts": {
       "src": "scripts/substrate/gap-compose-tick.ts",
       "src_blob": "11fe2513d191b5e5c720774bec20566ea1085e98",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
-    },
-    "/usr/local/share/substrate/active-scripts/gap-store-census-tick.d.ts": {
-      "src": "scripts/substrate/gap-store-census-tick.d.ts",
-      "src_blob": "14de099d7d7bc669c46a69d7de246b250358fed7",
       "level": "none",
       "reason": "unreached",
       "fixtures": []
@@ -3173,23 +3068,9 @@
       "reason": "unreached",
       "fixtures": []
     },
-    "/usr/local/share/substrate/active-scripts/identical-failure-run-tick.d.ts": {
-      "src": "scripts/substrate/identical-failure-run-tick.d.ts",
-      "src_blob": "d92aa24caa968edcbfbd528aafd22f7c0a8bca08",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
-    },
     "/usr/local/share/substrate/active-scripts/identical-failure-run-tick.ts": {
       "src": "scripts/substrate/identical-failure-run-tick.ts",
       "src_blob": "cbf092ba18b109c9cb7e02f78173bbd6265ed412",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
-    },
-    "/usr/local/share/substrate/active-scripts/import-operator-memory.d.ts": {
-      "src": "scripts/substrate/import-operator-memory.d.ts",
-      "src_blob": "d3fe0af1d838c9e9c35840156193e2096f0da2f2",
       "level": "none",
       "reason": "unreached",
       "fixtures": []
@@ -3201,23 +3082,9 @@
       "reason": "unreached",
       "fixtures": []
     },
-    "/usr/local/share/substrate/active-scripts/ingest-docs-as-concepts.d.ts": {
-      "src": "scripts/substrate/ingest-docs-as-concepts.d.ts",
-      "src_blob": "fb4341d87d3622d2948a5c084c163a861f4d4a29",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
-    },
     "/usr/local/share/substrate/active-scripts/ingest-docs-as-concepts.ts": {
       "src": "scripts/substrate/ingest-docs-as-concepts.ts",
       "src_blob": "9beabafb896b7a1ab3904bdf543ffda875f9c85e",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
-    },
-    "/usr/local/share/substrate/active-scripts/joint-liveness-tick.d.ts": {
-      "src": "scripts/substrate/joint-liveness-tick.d.ts",
-      "src_blob": "6df8e40b80509ab618a64f2bd5fa19ae4531096f",
       "level": "none",
       "reason": "unreached",
       "fixtures": []
@@ -3229,23 +3096,9 @@
       "reason": "unreached",
       "fixtures": []
     },
-    "/usr/local/share/substrate/active-scripts/learning-liveness-probe.d.ts": {
-      "src": "scripts/substrate/learning-liveness-probe.d.ts",
-      "src_blob": "834d560536a54f74933b779546d4a2d625c83935",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
-    },
     "/usr/local/share/substrate/active-scripts/learning-liveness-probe.ts": {
       "src": "scripts/substrate/learning-liveness-probe.ts",
       "src_blob": "07026560b6df0119300f9b48342f7b0388952b2b",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
-    },
-    "/usr/local/share/substrate/active-scripts/learning-loop-selftest-tick.d.ts": {
-      "src": "scripts/substrate/learning-loop-selftest-tick.d.ts",
-      "src_blob": "ef197009f290caa169b18c6dc3312c43c115b1e1",
       "level": "none",
       "reason": "unreached",
       "fixtures": []
@@ -3264,23 +3117,9 @@
       "reason": "unreached",
       "fixtures": []
     },
-    "/usr/local/share/substrate/active-scripts/mirror-memory-note.d.ts": {
-      "src": "scripts/substrate/mirror-memory-note.d.ts",
-      "src_blob": "829c719d26aacddef131e77aea7877f875ce5f5b",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
-    },
     "/usr/local/share/substrate/active-scripts/mirror-memory-note.ts": {
       "src": "scripts/substrate/mirror-memory-note.ts",
       "src_blob": "81b7f5ea3a2edabe12ecc2e106bb93905023cf76",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
-    },
-    "/usr/local/share/substrate/active-scripts/model-reality-audit.d.ts": {
-      "src": "scripts/substrate/model-reality-audit.d.ts",
-      "src_blob": "962f3080952698cd936606f8912f8d0d493414ed",
       "level": "none",
       "reason": "unreached",
       "fixtures": []
@@ -3292,23 +3131,9 @@
       "reason": "unreached",
       "fixtures": []
     },
-    "/usr/local/share/substrate/active-scripts/observe-orthogonal-refresh.d.ts": {
-      "src": "scripts/substrate/observe-orthogonal-refresh.d.ts",
-      "src_blob": "2c3b3aef01530b9484f9a946bb97a28d8a56e88a",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
-    },
     "/usr/local/share/substrate/active-scripts/observe-orthogonal-refresh.ts": {
       "src": "scripts/substrate/observe-orthogonal-refresh.ts",
       "src_blob": "0e06c928e14350af040f1306b804740736e408bf",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
-    },
-    "/usr/local/share/substrate/active-scripts/operator-goal-generator.d.ts": {
-      "src": "scripts/substrate/operator-goal-generator.d.ts",
-      "src_blob": "7d53f31c4f8a98fa97cf5d935cf9e43ada820695",
       "level": "none",
       "reason": "unreached",
       "fixtures": []
@@ -3320,37 +3145,9 @@
       "reason": "unreached",
       "fixtures": []
     },
-    "/usr/local/share/substrate/active-scripts/operator-goal-signal.d.ts": {
-      "src": "scripts/substrate/operator-goal-signal.d.ts",
-      "src_blob": "c9762de99016e53bb9de926aec4cf3ef05568765",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
-    },
     "/usr/local/share/substrate/active-scripts/operator-goal-signal.ts": {
       "src": "scripts/substrate/operator-goal-signal.ts",
       "src_blob": "5be8f1ec41ec178fff1e680d4e6be73e0bd9d58c",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
-    },
-    "/usr/local/share/substrate/active-scripts/performance-status.d.ts": {
-      "src": "scripts/substrate/performance-status.d.ts",
-      "src_blob": "4e4c05b576e175cc541d06a8e9319b3adf126fa3",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
-    },
-    "/usr/local/share/substrate/active-scripts/performance-status.ts": {
-      "src": "scripts/substrate/performance-status.ts",
-      "src_blob": "17b5d377b56a05c4cadb515b723b8daca762586c",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
-    },
-    "/usr/local/share/substrate/active-scripts/rhythm-conduct-tick.d.ts": {
-      "src": "scripts/substrate/rhythm-conduct-tick.d.ts",
-      "src_blob": "e34c7edbf82335f65703495e83bddd1ae8ac45c6",
       "level": "none",
       "reason": "unreached",
       "fixtures": []
@@ -3362,13 +3159,6 @@
       "reason": "unreached",
       "fixtures": []
     },
-    "/usr/local/share/substrate/active-scripts/rhythm-seed-tick.d.ts": {
-      "src": "scripts/substrate/rhythm-seed-tick.d.ts",
-      "src_blob": "b54138b8b605d3b39d0c642efdc0ec1114d5b817",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
-    },
     "/usr/local/share/substrate/active-scripts/rhythm-seed-tick.ts": {
       "src": "scripts/substrate/rhythm-seed-tick.ts",
       "src_blob": "f1be4b3ab4a235f9d967a9fc5bac1175d28a13a9",
@@ -3376,23 +3166,9 @@
       "reason": "unreached",
       "fixtures": []
     },
-    "/usr/local/share/substrate/active-scripts/runtime-drift-tick.d.ts": {
-      "src": "scripts/substrate/runtime-drift-tick.d.ts",
-      "src_blob": "e814273850c0407cece42f438681b542b0f743dd",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
-    },
     "/usr/local/share/substrate/active-scripts/runtime-drift-tick.ts": {
       "src": "scripts/substrate/runtime-drift-tick.ts",
       "src_blob": "f965ef438737c79eadb3377dfae706ec218cbdc7",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
-    },
-    "/usr/local/share/substrate/active-scripts/seed-concepts.d.ts": {
-      "src": "scripts/substrate/seed-concepts.d.ts",
-      "src_blob": "fe567c1194033a32c17b8b4ffa911e4d4372d1d7",
       "level": "none",
       "reason": "unreached",
       "fixtures": []
@@ -3411,23 +3187,9 @@
       "reason": "unreached",
       "fixtures": []
     },
-    "/usr/local/share/substrate/active-scripts/self-development-trend.d.ts": {
-      "src": "scripts/substrate/self-development-trend.d.ts",
-      "src_blob": "c82228198bad3c6856465d32baad4cb43f55913f",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
-    },
     "/usr/local/share/substrate/active-scripts/self-development-trend.ts": {
       "src": "scripts/substrate/self-development-trend.ts",
       "src_blob": "e07dc96d068f35abe515fb616a4757643683a39a",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
-    },
-    "/usr/local/share/substrate/active-scripts/self-operational-health.d.ts": {
-      "src": "scripts/substrate/self-operational-health.d.ts",
-      "src_blob": "8e8eb28a9d9f814ad477610f37b61c735130791a",
       "level": "none",
       "reason": "unreached",
       "fixtures": []
@@ -3439,23 +3201,9 @@
       "reason": "unreached",
       "fixtures": []
     },
-    "/usr/local/share/substrate/active-scripts/self-repair-operational.d.ts": {
-      "src": "scripts/substrate/self-repair-operational.d.ts",
-      "src_blob": "dfbc5613e89413b25929a03b19687d6293d6db9e",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
-    },
     "/usr/local/share/substrate/active-scripts/self-repair-operational.ts": {
       "src": "scripts/substrate/self-repair-operational.ts",
       "src_blob": "3e81a278967920ec896bee762259aa34b78d11b7",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
-    },
-    "/usr/local/share/substrate/active-scripts/spectral-gap.d.ts": {
-      "src": "scripts/substrate/spectral-gap.d.ts",
-      "src_blob": "e815f639285a98caaf0f9c6fe4b056a0d6264484",
       "level": "none",
       "reason": "unreached",
       "fixtures": []
@@ -3467,23 +3215,9 @@
       "reason": "unreached",
       "fixtures": []
     },
-    "/usr/local/share/substrate/active-scripts/surgical-gap-scan.d.ts": {
-      "src": "scripts/substrate/surgical-gap-scan.d.ts",
-      "src_blob": "d0174e3e53cb7de9b2d59979bd16fad6d4f03cf8",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
-    },
     "/usr/local/share/substrate/active-scripts/surgical-gap-scan.ts": {
       "src": "scripts/substrate/surgical-gap-scan.ts",
       "src_blob": "77af40427e102490d64dc7a9328268cf4a3ca6ef",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
-    },
-    "/usr/local/share/substrate/active-scripts/trace-store-health-check.d.ts": {
-      "src": "scripts/substrate/trace-store-health-check.d.ts",
-      "src_blob": "657d2ccd9aa3db3202a51b518357d093836c72fc",
       "level": "none",
       "reason": "unreached",
       "fixtures": []
@@ -3495,13 +3229,6 @@
       "reason": "unreached",
       "fixtures": []
     },
-    "/usr/local/share/substrate/active-scripts/typecheck-scenario-gen.d.ts": {
-      "src": "scripts/substrate/typecheck-scenario-gen.d.ts",
-      "src_blob": "9eff58393285c95fe050b302e9315ff90570be6d",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
-    },
     "/usr/local/share/substrate/active-scripts/typecheck-scenario-gen.ts": {
       "src": "scripts/substrate/typecheck-scenario-gen.ts",
       "src_blob": "0f2670c88e1f30c9189456a87c54b4d446e7fd10",
@@ -3509,23 +3236,9 @@
       "reason": "unreached",
       "fixtures": []
     },
-    "/usr/local/share/substrate/active-scripts/validate-build.d.ts": {
-      "src": "scripts/substrate/validate-build.d.ts",
-      "src_blob": "1ed248fa9d8d28a3718d00003dbd6d59171eb728",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
-    },
     "/usr/local/share/substrate/active-scripts/validate-build.ts": {
       "src": "scripts/substrate/validate-build.ts",
       "src_blob": "f065bdafed8103d434c1a8cbf1029ffb800998ef",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
-    },
-    "/usr/local/share/substrate/active-scripts/validator-liveness-tick.d.ts": {
-      "src": "scripts/substrate/validator-liveness-tick.d.ts",
-      "src_blob": "cd11576ab6ab4ac91e6d195daca27ad7423ddf31",
       "level": "none",
       "reason": "unreached",
       "fixtures": []
@@ -3540,13 +3253,6 @@
     "/usr/local/share/substrate/active-scripts/vessels.inventory.json": {
       "src": "scripts/substrate/vessels.inventory.json",
       "src_blob": "b35ce1b4248b09a1fd1fb4ceb04f81b1fe9e26b4",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
-    },
-    "/usr/local/share/substrate/active-scripts/watchdog-tick.d.ts": {
-      "src": "scripts/substrate/watchdog-tick.d.ts",
-      "src_blob": "b4b3669337334b4e6eddd1839f63cf844b98d3db",
       "level": "none",
       "reason": "unreached",
       "fixtures": []
