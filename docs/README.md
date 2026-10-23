@@ -1,14 +1,16 @@
 # Documentation index
 
-Every document under `docs/` is an **expectation the substrate holds about itself**, not
-prose about the substrate. The tree is a runtime input: `scripts/substrate/ingest-docs-as-concepts.ts`
+These documents describe how the substrate works and what it is held to. They have two
+readers: you, and the substrate itself. `scripts/substrate/ingest-docs-as-concepts.ts`
 splits each Markdown file into sections and writes them into concept-db, where the code-authoring
-path reads them back at drafting time. The contract that governs this is `DOC_INGESTION.md`
+path reads them back at drafting time, so each document is also an expectation the system checks
+its own changes against. The contract that governs this is `DOC_INGESTION.md`
 under *For agents and contributors* below — read it before authoring or restructuring anything here.
 
 This index is organised by the nine architectural purposes the substrate must manifest to
 stay stable and keep growing. A document appears under exactly one purpose: the one it is
-load-bearing for. The canonical entry points, if you read only three, are
+load-bearing for. New here? Start with the root README's [walk-through of one goal](../README.md#a-goal-end-to-end), and keep the
+[Glossary](GLOSSARY.md) open. The canonical references, if you read only three, are
 `IMPULSE_ACTIVITY_FOUNDATION.md` (what is real), `SUBSTRATE_AS_SOFTWARE.md` (how a goal
 becomes work), and `SUBSTRATE_AS_DYNAMICS.md` (how evidence becomes selection), each linked
 under its purpose below. Behavioural guidance for agents working in this repository lives in

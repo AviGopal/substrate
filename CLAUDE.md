@@ -292,9 +292,8 @@ state persists in the container volume — back it up before destructive resets.
 Never hand-edit the database; schema changes are migrations applied on unit
 start.
 
-**Validation:** the failure-mode harness
-(`bun run validation/scripts/failure-mode-harness.ts`) plus a confirming
-dispatch whose trace you inspect.
+**Validation:** `substrate-status` for the fleet's readiness level, plus a
+confirming dispatch whose trace you inspect.
 
 ## Repository conventions
 

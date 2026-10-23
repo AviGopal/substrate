@@ -2,19 +2,19 @@
 
 **A development system that learns from its own executions. You give it goals in plain language; it finds and runs the steps that reach them, traces every step, judges afterwards whether each goal was actually reached, and turns the pathways that reach into reusable templates. It runs the same loop on its own code.**
 
-> **Start here.** A substrate is a fleet of *vessels* running in one container. You give it a goal in plain language. It walks backward over a graph of data *shapes* to find steps that reach the goal, and runs those steps through *resolvers*: deterministic, pattern or LLM. Every step is traced. Afterwards it judges whether the goal was actually reached, not merely whether the process exited cleanly, and from those verdicts it learns which pathways reach. It applies the same loop to its own code: it drafts changes, verifies them and lands them.
+> **Start here.** A substrate is a fleet of *vessels*, services that each bundle the capabilities that live next to their data, running in one container. You give it a goal in plain language. It walks backward over a graph of data *shapes*, the kinds of data each step consumes and produces, to find steps that reach the goal, and runs those steps through *resolvers*, the functions that do the work: deterministic, pattern or LLM. Every step is traced. Afterwards it judges whether the goal was actually reached, not merely whether the process exited cleanly, and from those verdicts it learns which pathways reach. It applies the same loop to its own code: it drafts changes, verifies them and lands them.
 >
-> - **See it work:** [A goal, end to end](#a-goal-end-to-end), one illustrative goal from request to verdict.
+> - **See it work:** [A goal, end to end](#a-goal-end-to-end), one goal from request to verdict.
 > - **What it is:** [Overview](#overview) and [Core concepts](#core-concepts) below. The canonical definition is [`docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md).
 > - **Run one:** [Quick start](#quick-start) (one command), part of [Installation](#installation), the only place setup commands appear.
 > - **Use one as a person:** [`docs/HUMAN_SURFACE.md`](docs/HUMAN_SURFACE.md).
 > - **Read next:** [`docs/README.md`](docs/README.md), the documentation index, grouped by what each document is for.
 >
-> **Agents working in this repository** start from [`CLAUDE.md`](CLAUDE.md), the operating manual: the laws, the dispatch loop and the operator role. When this README and CLAUDE.md disagree, CLAUDE.md wins. When either disagrees with the running substrate, the running substrate wins.
+> **Agents working in this repository** start from [`CLAUDE.md`](CLAUDE.md), the operating manual: the laws, the dispatch loop and the operator role. When a document disagrees with the running substrate, the running substrate wins.
 
 ## A goal, end to end
 
-An illustrative goal, sent from the agent cockpit (a person types the same sentence into the human surface):
+An example goal, sent from the agent cockpit (a person types the same sentence into the human surface):
 
 ```
 mcp__metabob__run_goal_async  goal="list the HTTP routes activity-api serves, and which of them require authentication"
@@ -31,7 +31,7 @@ mcp__metabob__run_goal_async  goal="list the HTTP routes activity-api serves, an
 
 **How reach is judged.** After execution, a judge reads the produced output against the goal and asks whether the goal was reached. A clean exit is not enough: a run that completes but produces something other than what was asked is `reached:false`. On `reached:false` the walk penalises that approach, excludes it, and tries a different one, within a bounded number of attempts. A verdict you record with `provide_feedback` is kept in the verification corpus that the judge is checked and calibrated against.
 
-**What it learns.** The verdict is what grades the activities that ran, and a pathway that reached is recorded against the goal. The design expects a later goal with the same intent to run over that pathway directly, and a similar goal to reuse it and walk only the difference: other inputs at the start, or another output shape at the end.
+**What it learns.** The verdict is what grades the activities that ran, and a pathway that reached is recorded against the goal. A later goal with the same intent should run over that pathway directly, and a similar goal should reuse it and walk only the difference: other inputs at the start, or another output shape at the end.
 
 **Code changes are goals too.** A goal that names a source file in one of the vessel repositories and describes the change is routed to a composer that drafts the edit, checks that it typechecks, and lands it as a traced commit, which is then judged like any other goal.
 
@@ -522,7 +522,7 @@ docker exec <container> substrate-pull-sync
 docker exec <container> vessel-ctl sync <vessel>     # git pull --ff-only + mirror + restart
 
 # validate against the local substrate:
-bun run validation/scripts/failure-mode-harness.ts
+docker exec <container> substrate-status --wait usable
 mcp__metabob__run_goal  goal="verify the change works"
 ```
 

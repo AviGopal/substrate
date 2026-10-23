@@ -103,6 +103,32 @@ Foundation: IMPULSE_ACTIVITY_FOUNDATION §"Minimum Self-Stable Set".
 | **`vessel_id`** | the vessel (instance) that executed; doubles as pod/instance id | structural vs operational vessel: SUBSTRATE_AS_SOFTWARE §2.1 |
 | **goal execution path** | curated activity sequence achieving a goal; `path_activities`, `path_signature`, `endpoint_output_shapes` | table `goal_execution_paths` |
 
+### 6.1 Operating terms
+
+The words used for how the running system behaves and is operated.
+
+| Term | Definition | Source / aliases |
+|---|---|---|
+| **walk** | goal execution: backward-chaining over the shape graph from the goal's target shapes, choosing producers by learned posterior, binding data shape to shape, then judging whether the goal was reached | `CLAUDE.md`; [`SUBSTRATE_AS_SOFTWARE.md`](architecture/SUBSTRATE_AS_SOFTWARE.md) |
+| **reached** | the judge's verdict that a goal was actually achieved, read from the produced output; the honest outcome of a dispatch | distinct from **`status`**, which is only the template's exit status |
+| **hollow completion** | `status: completed` with `reached: false`: the process exited cleanly but did not do what was asked | |
+| **satisfier reach** | `status: failed` with `reached: true`: a step satisfied the goal although the template exited with a failure | walk tier `satisfier` in [`GOAL_EXECUTION_PATHS_SCHEMA.md`](architecture/GOAL_EXECUTION_PATHS_SCHEMA.md) |
+| **gap** | an observed shortfall against an expectation, filed in the gap store and closed only when the closure is verified | shape `substrateGap` |
+| **gap triple** | the measure of progress: gap close rate, latency from detection to close, and durability (a closed gap does not reappear in another form) | `CLAUDE.md` law 7 |
+| **feature compose** | the code-change path: a goal naming a source file is drafted, typecheck-verified and landed as a traced commit | `feature_compose` (development-vessel); "the drafter" |
+| **mitosis cutover** | how a substrate-authored change lands in a running vessel: applied to a staged copy, verified, then committed, pushed and restarted | [`SUBSTRATE_AS_SOFTWARE.md`](architecture/SUBSTRATE_AS_SOFTWARE.md) |
+| **ribosome** | extraction of a reusable activity template from an execution that reached (see §5) | ribosome-vessel |
+| **boredom** | idle-time selection: when the substrate is not busy, it chooses what to do from current conditions such as open gaps and due rhythms | boredom-vessel; `CLAUDE.md` law 5 |
+| **rhythm** | a time-shaped impulse in the pool that the selector reads to pace recurring work, in place of timers | `timeShapedRhythm` |
+| **docs-align** | the loop that checks landed code against the documents that expect it, and files drift as gaps | `docs-align-scan`, `doc_drift_fix` |
+| **concept-db** | the store of concepts: typed knowledge units with relevance scores, including each ingested document section | concept-db vessel |
+| **memoryNote** | the substrate's own memory store; operator-side memory files are a cache of it | development-vessel |
+| **pull-sync** | the timer that converges each running vessel to its repository's `origin/dev`: fast-forward pull, mirror, health-gated restart | `substrate-pull-sync` |
+| **profile** | which vessels a container runs, named by the data it holds: `standalone`, `hub`, `hub-minimal`, `spoke`, `surface`, `compute` | [README § Installation](../README.md#installation) |
+| **hub / spoke** | a hub holds a network's learning state and the compute next to it; a spoke runs its own vessels and resolves the hub's shapes through discovery | federation: [`FEDERATION.md`](FEDERATION.md) |
+| **cockpit** | the agent-facing tool surface (the metabob MCP server) through which agents dispatch goals and read verdicts | `CLAUDE.md` |
+| **S1 → S2 → S3** | the operator trajectory: operator-authored development, then substrate-authored development under supervision, then a system that resists harmful intervention with cited evidence | `CLAUDE.md` § The operator role |
+
 ## 7. Deprecated & pruned terms
 
 Do not use in new docs; listed so older docs remain readable.
