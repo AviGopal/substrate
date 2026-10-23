@@ -19,7 +19,6 @@ The Activity API provides backend services for:
 
 ## Base URL
 
-- **Development:** `http://activity-api.activity-system.svc.cluster.local:8080`
 - **Ingress:** `http://localhost:18080` (host-mapped; resolve the live address through discovery)
 
 ## Authentication
@@ -78,10 +77,6 @@ Deep health check verifying Redis and SurrealDB connectivity.
   }
 }
 ```
-
-**Kubernetes Integration:**
-- 503 signals K8s to remove pod from load balancer
-- Used for liveness and readiness probes
 
 ---
 
@@ -1012,74 +1007,6 @@ Extract multiple executions from a session into template sequence.
 
 ---
 
-### 9. Session Management
-
-#### POST /v2/session
-
-Create new session.
-
-**Request Body:**
-```json
-{
-  "project_id": "devbob",
-  "user_id": "user-uuid",
-  "metadata": {
-    "source": "dashboard",
-    "initial_goal": "Fix boredom activities"
-  }
-}
-```
-
-**Response 201:**
-```json
-{
-  "session_id": "session-uuid",
-  "session_token": "token-for-auth",
-  "created_at": "2026-03-23T17:30:00Z",
-  "expires_at": "2026-03-24T17:30:00Z"
-}
-```
-
----
-
-#### GET /v2/session
-
-Get current session info.
-
-**Response 200:**
-```json
-{
-  "session_id": "session-uuid",
-  "project_id": "devbob",
-  "user_id": "user-uuid",
-  "created_at": "2026-03-23T17:30:00Z",
-  "last_activity": "2026-03-23T17:30:00Z",
-  "expires_at": "2026-03-24T17:30:00Z"
-}
-```
-
----
-
-## Performance Targets
-
-**Response Times:**
-- Health check: P50 < 50ms, P99 < 200ms
-- Template retrieval (cached): P50 < 20ms, P99 < 100ms
-- Template retrieval (uncached): P50 < 150ms, P99 < 500ms
-- Impulse resolution: P50 < 100ms, P99 < 300ms
-- Execution trace storage: P50 < 200ms, P99 < 800ms
-- Thompson Sampling recommendation: P50 < 150ms, P99 < 400ms
-
-**Throughput:**
-- 100 req/s sustained per replica
-- 200 req/s burst per replica
-
-**Availability:**
-- 99.9% uptime (excluding planned maintenance)
-- Graceful degradation when dependencies unavailable
-
----
-
 ## Error Responses
 
 **Standard Error Format:**
@@ -1135,75 +1062,10 @@ Get current session info.
 
 ## Database Schema
 
-**SurrealDB Tables Used:**
-- `activity_templates` - Template definitions
-- `variant_performance_metrics` - Thompson Sampling data
-- `activity_execution_traces` - Full execution history
-- `impulse_data` - Stored impulses
-- `composition_records` - Activity dependencies
-- `impulse_relevance_metrics` - Learning data
-- `tool_usage_patterns` - Tool usage analytics
-- `execution_sequences` - Sequential patterns
-- `boredom_queue` - Autonomous task queue
-- `vessel_registry` - Active vessels
-
 **See:** [`SCHEMA_OWNERSHIP.md`](SCHEMA_OWNERSHIP.md) for which vessel owns which tables and where their schema files live
 
 ---
 
 ## Deployment
 
-**Helm Chart:** `helm/charts/activity-api`
-
-**Environment Variables:**
-```bash
-SURREALDB_URL=http://surrealdb.activity-system.svc.cluster.local:8000
-SURREALDB_NAMESPACE=activity-system
-SURREALDB_DATABASE=learning_loop
-SURREALDB_USERNAME=root
-SURREALDB_PASSWORD=<secret>
-REDIS_URL=redis://redis-valkey.activity-system.svc.cluster.local:6379
-PORT=8080
-LOG_LEVEL=INFO
-CORS_ORIGINS=*
-```
-
-**Health Probes:**
-```yaml
-livenessProbe:
-  httpGet:
-    path: /health
-    port: 8080
-  initialDelaySeconds: 10
-  periodSeconds: 10
-
-readinessProbe:
-  httpGet:
-    path: /health
-    port: 8080
-  initialDelaySeconds: 5
-  periodSeconds: 5
-```
-
----
-
-## Migration Notes
-
-**From Python RPC API:**
-- All v2 endpoints maintain compatibility
-- Response formats identical
-- WebSocket events added (new feature)
-- Performance improved (Node.js → Bun)
-
-**Breaking Changes:**
-- None (fully backward compatible)
-
----
-
-## Change Log
-
-**1.0.0** (2026-03-23)
-- Initial contract based on operational implementation
-- Documented all existing endpoints
-- Added WebSocket event streaming
-- Established performance targets
+activity-api runs as a unit inside the substrate container; setup, configuration and the port table live in [README § Installation](../README.md#installation).

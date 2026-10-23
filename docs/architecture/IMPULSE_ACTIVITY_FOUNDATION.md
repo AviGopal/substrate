@@ -68,9 +68,9 @@ When this document refers to a "shape" in the abstract, the concrete artifact is
 
 ---
 
-## Minimum Self-Stable Set (Hypothesis Under Test)
+## Minimum Self-Stable Set
 
-A system is **self-stable** if it can describe and modify itself using only its own primitives. The conjectured minimum set is four primitives:
+A system is **self-stable** if it can describe and modify itself using only its own primitives. The minimum set is four primitives:
 
 1. **Impulse** — substrate. A pointer plus metadata plus (lazily resolved) body.
 2. **Pointer** — shape. The bootstrap key for resolution and learning.
@@ -86,7 +86,7 @@ A system is **self-stable** if it can describe and modify itself using only its 
 - **Ribosome** = a resolver: trace-shaped → template-shaped.
 - **Thompson posterior** = an impulse of shape `thompson_posterior`, advertised through discovery by activity-api and resolved on the standard `POST /v2/impulses/resolve` path.
 
-This is a **hypothesis under test**, not a declaration. The minimum is tested by observing what breaks — places where one of the four primitives fails to express something the system needs. Each break is data about whether the minimum is correct or whether something must be added, and the record so far shows two ways a break resolves. It can be *closed by giving the missing thing a shape*: per-variant Thompson posteriors were reachable only as REST responses, and lifting them onto `thompson_posterior` made them routable, composable, and observable like any other impulse. Or it can *persist as a privileged side channel*: top-level activity execution still enters through an in-process executor call rather than impulse → resolver dispatch (see "Unified Execution Path" below), and that asymmetry is the standing evidence, not a settled question.
+The minimum is tested by observing what breaks — places where one of the four primitives fails to express something the system needs. Each break is data about whether the minimum is correct or whether something must be added, and the record so far shows two ways a break resolves. It can be *closed by giving the missing thing a shape*: per-variant Thompson posteriors were reachable only as REST responses, and lifting them onto `thompson_posterior` made them routable, composable, and observable like any other impulse. Or it can *persist as a privileged side channel*: top-level activity execution still enters through an in-process executor call rather than impulse → resolver dispatch, and that asymmetry is the standing evidence, not a settled question.
 
 The minimum may include primitives in informational state that lack shapes; those gaps surface as forced REST endpoints, hardcoded routing, or non-impulse state shared between subsystems. We treat each such case as evidence about the minimum.
 
@@ -988,7 +988,7 @@ forwarding layer.
 Authority to emit a `resolutionAction` is gated by four
 reversibility tiers (dry-run, reversible, semi-reversible,
 irreversible) and earned via Thompson promotion. The substrate's
-Phase 1 ships a small allowlist of reversible resolvers (rate-limit
+initial allowlist is a few reversible resolvers (rate-limit
 an erroring resolver, quarantine a malformed-responding vessel,
 refuse an invalid peer, reject an overbudget resolution) under
 operator-issued standing attestations; everything else is
@@ -1008,23 +1008,8 @@ ingest, detector activities classify, resolver activities (gated by
 the four tiers) act. No separate detection plane, no parallel
 control mechanism.
 
-> **Status: specified, not implemented.** The section above describes an
-> *unlanded proposal*, not running behavior. Of the ten shapes its four
-> families name, nine are absent from the discovery registry —
-> `securityFinding`, `anomalyFinding`, `resolutionProposal`,
-> `resolutionAction`, `resolutionRefused`, `auditEvent`, `fileBaseline`,
-> `behaviorBaseline`, `peerBaseline`; only `interventionRefused` is
-> advertised. The cited spec is a normative requirements document sitting
-> in `openspec/changes/`, and no proposal in that directory has ever been
-> archived.
->
-> The load-bearing consequence for a reader is that **a detector has no
-> resolution channel to emit into**. Detect-without-remediate is therefore
-> structural here, not the designed proposal-only gate the four
-> reversibility tiers describe: a component that reports a finding and
-> takes no action is not waiting on Thompson promotion, it has nowhere to
-> send a proposal. Read this section as design intent and verify any
-> specific claim against `registry_query` before relying on it.
+> The shapes this section names are the expectation; `registry_query` shows which of them a
+> running substrate advertises, and a detector can only act through the ones it does.
 
 ### Topology Discovery Is the Purpose
 
@@ -1110,29 +1095,27 @@ Input impulses for Activity C
 
 The trace records each transformation. Learning extracts patterns. New activities emerge. The system develops itself.
 
----
+## Where the minimum set has been tested
 
-## Known Gaps (System Not Yet Self-Stable)
-
-The entries below are evidence about the minimum set. Each names a place where the four-primitive hypothesis proved insufficient — a privileged side channel, a piece of learnable state without a shape, or an arm of the duality that does not carry what its name implies. Closed entries are kept alongside open ones on purpose: a repair that worked is the reusable pattern for the next break of the same class, and deleting it leaves only the failures on record.
+The entries below are evidence about the minimum set. Each names a place where the four primitives proved insufficient — a privileged side channel, a piece of learnable state without a shape, or an arm of the duality that does not carry what its name implies. Closed entries are kept alongside open ones on purpose: a repair that worked is the reusable pattern for the next break of the same class, and deleting it leaves only the failures on record.
 
 ### Class-(b) Shape Gap: `thompson_posterior`
 
-**Closed.** This entry is retained as the worked example of a class-(b) repair. The α/β/sample_count posterior data lives in activity-api and was originally reachable only through REST (`variantMetricsSummary`, `GET /v2/activities/:id/variant-scores`). The structural fix was to give the data a shape rather than a second endpoint: activity-api advertises `thompson_posterior` through discovery and resolves it on `POST /v2/impulses/resolve`, keyed by `activity_variant_id` (`activity_id` is also accepted), optionally narrowed by `shape_signature` or `context_bucket`, returning `alpha`, `beta`, `sample_count`, `success_count`, `failure_count`. The REST handlers remain as a compatibility surface.
+The worked example of a class-(b) repair. The α/β/sample_count posterior data lives in activity-api and was originally reachable only through REST (`variantMetricsSummary`, `GET /v2/activities/:id/variant-scores`). The structural fix was to give the data a shape rather than a second endpoint: activity-api advertises `thompson_posterior` through discovery and resolves it on `POST /v2/impulses/resolve`, keyed by `activity_variant_id` (`activity_id` is also accepted), optionally narrowed by `shape_signature` or `context_bucket`, returning `alpha`, `beta`, `sample_count`, `success_count`, `failure_count`. The REST handlers remain as a compatibility surface.
 
 Two properties of the repair are load-bearing and should carry to the next one. First, the shape reads the **durable accumulated posterior** — the same store the selector samples — rather than recounting rows in the execution table. A recount ignores the chain-credit fan-out and decay deltas the posterior updater applies, so it reports a number that provably diverges from what the loop learned; a shape that returns a plausible-but-different value is worse than no shape, because nothing downstream can tell it is wrong. Second, a signature-scoped read has no durable per-signature table behind it, so it aggregates and reports how many signatures contributed rather than implying a precision it does not have. Likely follow-on shapes along the same line: `composition_edge_posterior`, `shape_relevance_posterior`.
 
 ### Unified Execution Path
 
-**Open.** Unified execution path is the chosen direction: goal-shaped and activity-template-shaped pointers should resolve through the standard impulse → resolver dispatch, with the activity resolver running the activity to resolve the pointer.
+Unified execution path is the chosen direction: goal-shaped and activity-template-shaped pointers should resolve through the standard impulse → resolver dispatch, with the activity resolver running the activity to resolve the pointer.
 
 Expect the current behavior instead. Top-level execution enters in-process: the goal host builds a template, calls its own `runTemplate`, and that calls `executor.execute(template)` on the `ActivityExecutor` it owns. Nested dispatch is already on the target path — the `activity` resolver takes an inline template or a template id, runs the child on the same runtime, and links it by parent execution id and composition chain — so the gap is at the top level only, and the target shape is already demonstrated to work one level down. When the refactor lands, the host emits a `goal`-shaped impulse (and downstream an `activity_template`-shaped impulse) and the executor is dispatched as the resolver for that shape pair, collapsing the distinction between "top-level" and "nested" execution. Until then, treat a new in-process execution entry point as a regression rather than a neutral choice.
 
 **Async dispatch.** `POST /run-goal` on goal-host-vessel (in-container port 8210) returns `202 Accepted` immediately with `{ dispatchId, status: "running" }` and runs the walk asynchronously; a goal identical to one already in flight is coalesced onto the running `dispatchId` instead of starting a redundant walk, so a caller that retries does not multiply work. Callers observe the outcome by polling `GET /executions/:dispatchId` or subscribing to the activity-api WebSocket for `task.completed` / `execution:succeeded` events. There is no blocking form of this route — the synchronous surface is `/resolve`. Code that treats a `/run-goal` response as a finished result is reading a dispatch receipt as an answer.
 
-### Forward-Arm Breakage: F-39 (resolved)
+### Forward-Arm Breakage
 
-**Closed, with a residue worth knowing.** The forward arm's write depends on `templateId` crossing the lifecycle boundary. When `lifecycle:task:completed` omitted it, the learning-signal writer's structural check rejected the empty string by truthiness and the write failed on every validator-dispatch iteration. The repair was two-sided, and both sides matter: the engine populates `templateId: template.id` on every `lifecycle:task:completed` emit, and the writer treats a missing or empty `templateId` (or an empty impulse-id list) as a no-op instead of throwing, so a malformed payload degrades one best-effort signal rather than failing the execution around it.
+The forward arm's write depends on `templateId` crossing the lifecycle boundary. When `lifecycle:task:completed` omitted it, the learning-signal writer's structural check rejected the empty string by truthiness and the write failed on every validator-dispatch iteration. The repair was two-sided, and both sides matter: the engine populates `templateId: template.id` on every `lifecycle:task:completed` emit, and the writer treats a missing or empty `templateId` (or an empty impulse-id list) as a no-op instead of throwing, so a malformed payload degrades one best-effort signal rather than failing the execution around it.
 
 The residue: the writer counts that no-op as a *succeeded* signal in its result impulse, so the result cannot distinguish "wrote the relevance records" from "had nothing to write". This is the general hazard of learning-signal paths — nothing downstream fails when one stops, and the only symptom is a posterior that quietly stops moving. Expect any such path to need instrumentation that makes its *absence* observable, not just its errors; an error-only view of a silent path reports health it has not measured.
 
@@ -1141,7 +1124,7 @@ The residue: the writer counts that no-op as a *succeeded* signal in its result 
 The following terms appear in older documents and should be removed when encountered. They have no code path:
 
 - **"Improvisation Outcome"** — superseded by variance + failure-mode tracking.
-- **"Trailblazing"** — never implemented; remains only in archived docs.
+- **"Trailblazing"** — never implemented; remains only in history.
 
 The active replacement is the failure-mode taxonomy (`verifier_negative`, `budget_exhausted`, `safety_breach`, `cascading`, `user_abort`, `prediction_disagreement`, and the untyped `execution_error`; see [`../learning/FAILURE_MODES.md`](../learning/FAILURE_MODES.md)) plus posterior variance, which together capture what these older terms gestured at. The full deprecated-term list (these plus the drifted state names and "The Two Primitives") is [`../GLOSSARY.md`](../GLOSSARY.md) §7.
 

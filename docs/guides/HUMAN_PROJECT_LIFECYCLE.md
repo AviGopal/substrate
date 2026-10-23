@@ -3,10 +3,9 @@
 ## Scope and completion contract
 
 This document defines the expected human interaction surface for configuring,
-deploying, using, observing, and maintaining a project. It is a design contract,
-not a claim that every interaction is implemented; how far the running system meets
-it is measured against the contract and recorded as evidence under
-`validation/reports/`, not here. The surface should let a person state intent, supply access, act on a host when
+deploying, using, observing, and maintaining a project. It is a design contract:
+the running system is measured against it, not described here.
+The surface should let a person state intent, supply access, act on a host when
 necessary, and evaluate outcomes without translating goals into vessel names,
 shape vocabulary, or internal file paths.
 

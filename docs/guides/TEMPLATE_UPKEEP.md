@@ -155,5 +155,4 @@ Properties such an activity should hold:
 
 - [`../impulse-types/LEARNING_LOOP_WRITE_RESOLVERS.md`](../impulse-types/LEARNING_LOOP_WRITE_RESOLVERS.md) — the write/destructive resolver contract
 - deprecation semantics and recommend-path filtering are handled via `activityTemplate_deprecate` (see `../impulse-types/LEARNING_LOOP_WRITE_RESOLVERS.md`)
-- [`./ACTIVITY_TASK_CONTEXT_PROPAGATION.md`](./ACTIVITY_TASK_CONTEXT_PROPAGATION.md) — how task JSON sees the impulses `impulse-resolve` produces
 - [`../shapes/README.md`](../shapes/README.md) — shape catalog and evolution semantics

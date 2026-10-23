@@ -1,6 +1,6 @@
 # Human participation: behavior and evidence contract
 
-Status: behavior and evidence contract. It states what a participation pathway must do and
+This is a behavior and evidence contract. It states what a participation pathway must do and
 how that is judged; whether a running pathway meets it, and whether it makes the surface
 more usable for people, is measured rather than asserted here. Operator-authored work on a
 pathway is not evidence of the substrate improving its own interface.

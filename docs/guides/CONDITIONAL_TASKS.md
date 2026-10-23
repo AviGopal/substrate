@@ -1,15 +1,12 @@
 # Conditional Tasks
 
-**Applies to:** any executor implementing `evaluateTaskCondition`.
-**Source (historical):** `evaluateTaskCondition` in the retired CLI's executor. The expression syntax, pseudo-operators, and `{{impulse:id}}` semantics described here are authoritative for activity template authoring regardless of which executor runs them.
+**Applies to:** the execution engine in `ias-executor-ts` (`evaluateConditionalGate` in `src/engine.interpolation.ts`, called from `src/engine.ts` before a task's resolver runs).
 
-A task can declare a condition that gates whether it runs this invocation. When the condition evaluates to truthy, the task executes; when falsy, the task is skipped (with status `skipped`, not `failed`) and the skip is recorded in the trace.
-
-Before `6d66c5b`, every conditional in every template silently skipped — the evaluator read a field name no template actually wrote (`conditional.if` only), compiled pseudo-operators as JavaScript (`"x contains 'y'"` is a syntax error), and didn't know how to substitute impulse references. The fix below landed a functioning evaluator.
+A task can declare a condition that gates whether it runs this invocation. When the condition evaluates to true, the task executes; when false, the task is skipped (with status `skipped`, not `failed`) and the skip is recorded in the trace.
 
 ## Declaring a conditional
 
-Either key is accepted; prefer `expression` for new templates since every current built-in template uses it:
+`conditional` may be a boolean, a string expression, or an object whose `expression` is a string or a boolean. Prefer the object form, which the built-in templates use:
 
 ```jsonc
 {
@@ -22,35 +19,31 @@ Either key is accepted; prefer `expression` for new templates since every curren
 }
 ```
 
-Equivalent with the older key:
-
-```jsonc
-"conditional": { "if": "{{impulse:confirm_plan}} contains 'revise'" }
-```
+Any other form (an object with no `expression`, a number) is a malformed gate: the task is recorded as failed and the execution fails with `UNRESOLVABLE_GATE`.
 
 ## What the expression can reference
 
-| Reference | Source | Notes |
-|---|---|---|
-| `{{variables.<name>}}` | Activity variables | Merged from embedded defaults + `--var` overrides |
-| `{{task.<taskId>.<field>}}` | Prior task result | e.g. `{{task.show_state.success}}` |
-| `{{impulse:<id>}}` | Impulse store | Sync `store.get` — only impulses already materialized earlier in this execution. Missing ids substitute to `""`. |
+| Reference | Source |
+|---|---|
+| `{{impulse:<slot>}}` | The content of an impulse already in this execution's store |
+| `{{lifecycle.<path>}}` | The data of the lifecycle impulse that triggered the execution |
+| `{{variables.<path>}}` or `{{<path>}}` | Accumulated variables: request-level variables plus projections of prior tasks |
 
-`{{impulse:id}}` resolution is synchronous by design — impulses produced by earlier tasks in the same execution are already in memory (see [materializeOutputImpulses](./ACTIVITY_TASK_CONTEXT_PROPAGATION.md#4-materializeoutputimpulses--the-deterministic-llm-output-boundary)), so there's no async load step. Substituting missing ids to `""` means `{{impulse:x}} exists` correctly returns `false` instead of blowing up the eval.
+A reference that cannot be resolved fails the gate loudly (`UNRESOLVABLE_GATE`): the task is recorded as failed and the execution fails. An unresolvable gate never silently runs or silently skips.
 
-## Pseudo-operators
+## Operators
 
-Rewritten before evaluation so templates don't have to be hand-compiled JavaScript:
+An expression is one or more clauses joined by ` AND `; the first false clause makes the whole gate false. A clause is either a comparison or a bare operand:
 
-| In the expression | Compiled to | Meaning |
-|---|---|---|
-| `X contains 'Y'` | `X.includes('Y')` | substring / array membership |
-| `X not-contains 'Y'` | `!X.includes('Y')` | negated substring / non-membership |
-| `{{impulse:X}} exists` | `!!({{impulse:X}})` | truthy impulse content |
-| `OR` | `\|\|` | logical or |
-| `AND` | `&&` | logical and |
+| Clause | Meaning |
+|---|---|
+| `X contains 'Y'` | X includes the substring Y |
+| `X not-contains 'Y'` | X does not include Y |
+| `X == Y`, `X === Y` | string equality after substitution |
+| `X != Y`, `X !== Y` | string inequality after substitution |
+| `X` | true unless X is empty, `false`, `0`, `null`, `undefined` or `[]` |
 
-Everything else evaluates as JavaScript via `new Function`, so comparisons (`==`, `!=`, `<`, `>=`), numeric/string literals, and parentheses work as written.
+Operands are compared as strings after substitution, with one layer of matching quotes stripped. There is no `OR`, no numeric comparison and no JavaScript evaluation.
 
 ## Examples
 
@@ -61,29 +54,21 @@ Everything else evaluates as JavaScript via `new Function`, so comparisons (`==`
 // Run unless the assessor declared the goal achieved
 "conditional": { "expression": "{{impulse:assess_progress}} not-contains 'achieved'" }
 
-// Two-way gate — either branch can unlock
-"conditional": { "expression": "{{variables.applyChanges}} AND {{impulse:decideUpdate}} exists" }
-
-// Loop guard from a counter variable
-"conditional": { "expression": "{{variables.iteration}} < 5" }
+// Both must hold: a variable flag and a produced decision
+"conditional": { "expression": "{{variables.applyChanges}} AND {{impulse:decideUpdate}}" }
 ```
 
 ## Evaluation semantics
 
-- **Missing evaluable string.** If `conditional` is present but neither `if` nor `expression` contains a non-empty string, the evaluator **emits a warn and treats the task as always-run** rather than silently skipping. This is a design choice: a malformed conditional is almost always an authoring bug, and silent-skip turns the bug into an invisible one.
-- **Eval failure** (syntax error after rewrite, reference error, etc.) → caught, logged as a warn, task is **skipped**. This preserves trace integrity: every execution still produces a coherent record.
-- **Truthy** → task runs normally.
-- **Falsy** → task is marked `skipped`; its `outputImpulses` are **not** materialized (since it produced nothing); dependent conditions that reference `{{impulse:<thisId>}}` will see empty string.
+- **True** → the task runs normally.
+- **False** → the task is recorded as skipped with reason `conditional_false`. A later task that lists it in `dependencies` is skipped too (`dependency_skipped`), since its own gate would reference slots the skipped task never filled.
+- **Malformed or unresolvable** → the task is recorded as failed and the execution fails with `UNRESOLVABLE_GATE`, so the fault is measured rather than hidden.
 
 ## Authoring tips
 
-- **Pin references to impulses, not tasks,** when the downstream gate cares about a specific piece of produced text. `{{impulse:propose_next_step}}` is stable; `{{task.propose_next_step.output}}` works but is noisier when the task also emits structured metadata.
-- **Always provide a `default` on human-gated predecessors** (per [INTERACTIVE_ACTIVITIES](./INTERACTIVE_ACTIVITIES_AND_HUMAN_RESOLVER.md#non-tty-fallback-semantics)), so off-TTY runs produce a defined value the conditional can branch on rather than an empty impulse that collapses every downstream gate.
-- **Favor `exists` and `contains`** over `==` for human-produced strings. Exact-match against free-form human answers is fragile; substring checks survive small rewordings.
+- **Pin references to impulses** when the downstream gate cares about a specific piece of produced text: `{{impulse:propose_next_step}}` is stable.
+- **Favor `contains`** over `==` for human-produced strings. Exact-match against free-form human answers is fragile; substring checks survive small rewordings.
+- **Declare `dependencies`** on tasks whose gates read a predecessor's output, so a skipped predecessor skips them instead of failing the execution on an unresolvable reference.
 
 ## Related
 
-- [`./ACTIVITY_TASK_CONTEXT_PROPAGATION.md`](./ACTIVITY_TASK_CONTEXT_PROPAGATION.md) §4 — how `{{impulse:id}}` references become reliable via `materializeOutputImpulses`.
-- [`./INTERACTIVE_ACTIVITIES_AND_HUMAN_RESOLVER.md`](./INTERACTIVE_ACTIVITIES_AND_HUMAN_RESOLVER.md) — every built-in interactive template uses conditionals to branch on human answers.
-- `build-and-execute` — canonical multi-conditional template.
-- `human-guided-orchestrator` — the other heavy conditional user.

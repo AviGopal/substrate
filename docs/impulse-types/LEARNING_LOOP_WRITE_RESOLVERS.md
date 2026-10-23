@@ -1,11 +1,7 @@
 # Learning-Loop Write Resolvers
 
-**Applies to:** `activity-api` v1.5.0+ (last reviewed 2026-06-24; contract unchanged)
+**Applies to:** `activity-api`
 **Case handlers:** `repos/activity-api/src/routes/impulses.ts`
-
-> **Note (2026-06-24):** the repo was renamed `metabob-activity-api` → `activity-api`
-> in the `@metabob` → `@avigopal` namespace migration. The `*_write` resolver contract
-> below is current and unchanged since v1.5.0.
 
 The activity-api exposes its learning-loop writes (execution traces, feedback, composition edges, relevance, tool usage, variants, …) as impulse shapes that activities can invoke through `POST /v2/impulses/resolve`. The goal is locality: an activity that needs to record a trace or a feedback signal does not need to know which REST endpoint owns that write — it just resolves the right shape.
 
@@ -101,7 +97,7 @@ The pattern is documented inline in `requireAuthenticated` and `executeAsAuth` h
 ## Example — record an execution trace
 
 ```bash
-curl -X POST https://activity.metabob.com/v2/impulses/resolve \
+curl -X POST http://127.0.0.1:18080/v2/impulses/resolve \
   -H "Authorization: ApiKey $METABOB_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{

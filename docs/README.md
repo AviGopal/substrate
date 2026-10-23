@@ -56,7 +56,6 @@ load-bearing point.
   - [Improvisation, failure modes, checkpoints, rollbacks](architecture/sequences/04-improvisation-failure-modes.md)
   - [Hook registration and behavior injection](architecture/sequences/05-hooks-behavior-injection.md)
 - [Conditional Tasks](guides/CONDITIONAL_TASKS.md) — gating a task on an expression, and why a skip is not a failure.
-- [Activity Task Context Propagation](guides/ACTIVITY_TASK_CONTEXT_PROPAGATION.md) — how a later task sees what an earlier one produced.
 - [Activity-Level Executor Hooks](specs/activity-level-executor-hooks.md) — the injection points around a task.
 - [HTTP API v2 Activity Contract](API_V2_ACTIVITY.md) — the activity-api request/response surface the walk writes through.
 
@@ -137,7 +136,6 @@ cockpit's tool surface is enumerated in the root `CLAUDE.md` linked at the top o
 - [Human goals, evidence, and learning](architecture/EXPLICABILITY_SURFACE.md) — the interaction contract for how a surface shows a person what was asked, what came back and the evidence behind it, with an offline prototype.
 - [Human participation](architecture/HUMAN_PARTICIPATION.md) — the behaviour and evidence contract for a human's questions, answers and feedback reaching the substrate as shaped exchanges.
 - [Workbench Chain-Based UX Design](architecture/WORKBENCH_CHAIN_UX_DESIGN.md) — the chain vocabulary of the workbench surface, a contract for any surface that edits chains (the workbench itself is a separate repository, not part of the running fleet).
-- [Interactive Activities and the Human Resolver](guides/INTERACTIVE_ACTIVITIES_AND_HUMAN_RESOLVER.md) — dispatching a task to a human as a resolver and waiting on the answer.
 
 ## 8. Operations and bootstrap
 

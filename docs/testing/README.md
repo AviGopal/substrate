@@ -1,6 +1,6 @@
 # Testing Documentation
 
-This directory contains documentation for testing and verifying the metabob-devbob system.
+This directory contains documentation for testing and verifying the substrate.
 
 ## Documents
 
@@ -27,12 +27,9 @@ This directory contains documentation for testing and verifying the metabob-devb
 
 ---
 
-## Primary Validation Harnesses (2026-05-27)
+## Primary Validation Harnesses
 
 ```bash
-# Failure-mode classification (63 modes)
-bun run validation/scripts/failure-mode-harness.ts
-
 # Thompson learning + MRR (dense search)
 bun run validation/scripts/stratified-harness.ts
 ```

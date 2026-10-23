@@ -7,9 +7,9 @@ This guide describes the analytics panels in the activity dashboard and how to r
 
 > **Foundation alignment.** Two-direction learning duality: `impulseRelevance` (forward arm — P(success | activity X resolves pointer of shape Y)) and slot-binding/Thompson recommendations (reverse arm — P(success | activity X chosen given pool {A,B,C})) must stay symmetric. *(`thompson_posterior` is now a resolvable shape; see [`docs/impulse-types/thompson_posterior.md`](../impulse-types/thompson_posterior.md). Pre-fix traces remain skewed and should be excluded from retroactive analysis.)* Read the impulse-relevance and convergence panels with arm symmetry in mind: a stalled forward arm makes the reverse arm's "convergence" misleading. Note also migration 128 (2026-05): `times_failed` was silently dropped by the SCHEMAFULL table before that migration, so failure counts predating it undercount.
 
-## Panels added in April 2026
+## Learning-loop panels
 
-Four panels were added to turn execution traces into actionable signal. Each panel is a thin view over data already emitted by the executing vessel (`goal-host-vessel`; earlier by a CLI since retired), which is deprecated) and recorded by `metabob-activity-api` — the dashboard doesn't compute new metrics, it surfaces existing ones.
+Four panels turn execution traces into actionable signal. Each panel is a thin view over data already emitted by the executing vessel (`goal-host-vessel`) and recorded by `activity-api` — the dashboard doesn't compute new metrics, it surfaces existing ones.
 
 ### ImpulseRelevanceDashboard
 
@@ -82,11 +82,11 @@ For a single execution trace:
 - An execution that failed: go here first. Selection attribution tells you if it was a bad template choice vs. bad luck. Task waterfall tells you where in the sequence it broke.
 - An execution that succeeded but was expensive: the waterfall exposes whether one task dominated total cost.
 
-## Panels already present before April 2026
+## Other panels
 
-For completeness — these existed and are still relevant:
+For completeness:
 
-- **ActivityStream** — live feed of ongoing executions (now includes execution-explainability drilldown inline, added in `9e01fed`)
+- **ActivityStream** — live feed of ongoing executions (includes the execution-explainability drilldown inline)
 - **CompositionVisualization** — graph of activity-calls-activity relationships
 - **ExecutionHistory** — paginated trace table with filters
 - **CodeVariants** — diff view of A/B-tested code variants
@@ -107,14 +107,13 @@ Stop at the first panel that tells you something actionable. Don't walk the whol
 
 ## Data sources (for debugging)
 
-All four new panels read from `metabob-activity-api`:
+The learning-loop panels read from `activity-api`:
 
 | Panel | Endpoint(s) |
 |-------|-------------|
 | ImpulseRelevanceDashboard | `GET /v2/activities/impulse-relevance` |
 | ToolUsageDashboard | `GET /v2/activities/tool-usage` |
-| ConvergenceOverview | `GET /v2/activities/convergence` (via `useConvergence`) |
-| ExecutionExplainability | `GET /v2/activities/execution-traces/:id` + attribution fields |
+| ExecutionExplainability | `GET /v2/activities/execution-traces/:executionId` + attribution fields |
 
 If a panel is empty, check the endpoint with curl before assuming the dashboard is broken. The most common failure mode is the `impulse_relevance_metrics` table being empty for a newly-created activity — it needs executions before it shows signal.
 

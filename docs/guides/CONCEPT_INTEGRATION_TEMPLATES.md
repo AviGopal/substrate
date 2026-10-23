@@ -1,6 +1,5 @@
 # Concept Integration Templates
 
-**Landed:** Super-repo commit `6bb1993` (2026-04-23)  
 **Source:** `templates/concept/` directory  
 **Vessel:** `repos/concept-db` (advertises shapes); activities call shapes through `POST /v2/impulses/resolve`
 
@@ -8,7 +7,7 @@
 
 The `concept`, `conceptGraph`, `relatedConcepts`, `conceptUsageStats`, and `conceptSequence` shapes are **owned by the concept-db vessel**. Concept-db is the system's text-formatted, labeled knowledge graph: it is the vessel that contributes the "context/concept" learning parameter to the decentralized learning loop. Other vessels (activity-api, the implicit Thompson Sampling vessel) contribute their own learning parameters independently — there is no central learning store. Treat anything below as a description of what concept-db chooses to advertise; templates consume those shapes through the standard `POST /v2/impulses/resolve` path that any vessel-owned shape uses.
 
-> Note: the system's minimum self-stable set (Impulse, Pointer, Resolver, Vessel) is a working hypothesis. The concept shapes here are derived — `concept` is an impulse with a pointer of shape `concept` resolved by concept-db. They are not primitives.
+> Note: the system's minimum self-stable set is the four primitives: impulse, pointer, resolver, vessel. The concept shapes here are derived — `concept` is an impulse with a pointer of shape `concept` resolved by concept-db. They are not primitives.
 
 ## Overview
 
@@ -20,7 +19,7 @@ Concept-db advertises five impulse shapes that model reusable knowledge extracte
 - `conceptUsageStats` — How often a concept has been referenced vs. ignored (success rate, last-used date, load count)
 - `conceptSequence` — A time-ordered list of concepts appearing in a goal's execution trace
 
-Until commit `6bb1993`, no templates consumed these shapes — concept-db registered them and nothing asked for them. Three new templates close the loop, demonstrating the full impulse-driven cycle: extract → store → consume.
+Three templates consume these shapes and close the loop, demonstrating the full impulse-driven cycle: extract → store → consume.
 
 ## Template 1: `prime-context-for-task` (tool, category)
 
@@ -235,6 +234,5 @@ Together, they demonstrate the three core patterns:
 ## Related
 
 - [`../architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](../architecture/IMPULSE_ACTIVITY_FOUNDATION.md) — Core impulse model
-- [`ACTIVITY_TASK_CONTEXT_PROPAGATION.md`](./ACTIVITY_TASK_CONTEXT_PROPAGATION.md) — Impulse pool propagation and shape-aware selection
 - [`../architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](../architecture/IMPULSE_ACTIVITY_FOUNDATION.md) — Extended template-level impulse declaration patterns and the unified impulse-driven architecture
 - `repos/concept-db` (submodule) — Concept-db vessel and shape advertisement
