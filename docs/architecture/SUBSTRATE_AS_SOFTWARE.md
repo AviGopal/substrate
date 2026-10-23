@@ -71,16 +71,13 @@ mechanism to the substrate unit that runs it.
 
 ## 1. The frame: three states, two motions
 
-There is **one** three-state triad. The canonical names are **Informational /
-Transient / Observational**; the deprecated aliases `Instructional` / `Functional`
-(with Transient invariant) name the same states under an older build-software
-framing and are retained only for reading older docs.
+There is **one** three-state triad: **Informational / Transient / Observational**.
 
-| Canonical state | Deprecated alias | What it is |
+| State | Also called | What it is |
 |---|---|---|
-| **Informational** | *Instructional* (Vessel / blueprint) | the durable structure: vessel code **and** learned content — shapes, posteriors, composition topology, goal-paths; for a learning system the weights are as load-bearing as the code |
-| **Transient** | *Process-of-Becoming* (the becoming) | the execution in flight: an impulse being resolved, a binding being chosen, a trajectory stepping |
-| **Observational** | *Functional* (Instance / artifact) | the recorded outcome: traces, validation results, realized artifacts — load-bearing because it is *observed* and fed back, not merely produced |
+| **Informational** | the vessel, the blueprint | the durable structure: vessel code **and** learned content — shapes, posteriors, composition topology, goal-paths; for a learning system the weights are as load-bearing as the code |
+| **Transient** | the becoming | the execution in flight: an impulse being resolved, a binding being chosen, a trajectory stepping |
+| **Observational** | the instance, the artifact | the recorded outcome: traces, validation results, realized artifacts — load-bearing because it is *observed* and fed back, not merely produced |
 
 **Use Informational / Transient / Observational everywhere.**
 
@@ -167,7 +164,7 @@ and goal-path learning (step 8e), the steps that define what "success" means.
 | Step | MDP (rule) | DEC (structure) | DYNAMICS (flow) | REPRESENTATION | NETWORK (protocol) | FLEET (boundary) |
 |---|---|---|---|---|---|---|
 | **0 Goal arrives** | reward target: goal = direction `g`; reward = residual `r_t=‖g−Π_{span(V_t)}g‖` (§1.1) | goal-impulse = a 0-cochain / target potential; residual Hodge-decomposes (§1.4) | external drive the slow flow must reduce | a **target direction** in the shape-axis span (§1); intent = the unexplained residual (§4) | "dispatch a remote goal": goal-impulse + attestation + budget (§9 mode 2) | produced by operator-as-vessel; crosses as recorded recall (§4,§6) |
-| **1 Selection** | policy `π(a\|s)`: Thompson `argmax θ_{s,a}` over `A(s)`; **state-conditioned** (C6) | sampling against `⋆`; `applicable(s)` = coboundary support at current 0-cochain (§0,§2) | the **fast variable** at quasi-equilibrium (§0,§1) | choosing a **tangent direction** in `A(s)`; signature = local frame (§0,§1) | local — single-owner, no crossing | reads authored+learned-durable (Informational) |
+| **1 Selection** | policy `π(a\|s)`: Thompson `argmax θ_{s,a}` over `A(s)`; **state-conditioned** | sampling against `⋆`; `applicable(s)` = coboundary support at current 0-cochain (§0,§2) | the **fast variable** at quasi-equilibrium (§0,§1) | choosing a **tangent direction** in `A(s)`; signature = local frame (§0,§1) | local — single-owner, no crossing | reads authored+learned-durable (Informational) |
 | **2 Impulse resolution** | observing a sample of `P(s′\|s,a)`; tier = determinism of `P` (delta for deterministic) (§4.3) | **restriction map** applied locally; tier = sharpness of the edge's stalk map = `⋆₁` precision (§0.2,§1.3) | resolving a sharp (fast) vs noisy direction (§0, resolver row) | output decomposes **tangent ⊕ normal**; tier = directional-certainty band (§3; **and §4 here**) | "resolve a remote impulse": pointer + scope-attestation + budget → resolved impulse, metadata-first (§9 mode 1) | ephemeral runs local **or remote**; only the *resolution* crosses (§4,§9) |
 | **3 Binding / slot-fill** | reverse arm `P(activity\|pool-signature)` (§4.6) | `input_shapes ⊆ available_shapes` — **lattice/Tarski** layer, not linear (§1.5) | reverse-arm timescale; arm-symmetry = on-manifold condition (§1) | applicability containment `A(s)={a:input_shapes(a)⊆shapes(s)}` (§1,§7 L1) | local binding | ephemeral |
 | **4 Resolver dispatch** | the action `a` executing; vessel = independent action subspace (§8) | the hyperedge fires; "resolvers live where data lives" = sparsity of `L` (§2) | a discrete action step on the complex | discrete-action hop in open representation (§5) | the capstone: **work does not move; resolution crosses** — capability-addressed, scope-attenuated (§9) | cross-container dispatch = recall-out / record-back; ephemeral stays remote (§1,§4) |
@@ -430,7 +427,7 @@ observe-and-drain half firing) is an operational fact, not an architectural one.
   `apply_proposal_as_patch` (development-vessel), the **mitosis cutover**
   (commit→push origin/dev→restart with typecheck-evidence), `funnel-drain` (fires the
   funnel entry on a steady cadence so the boredom selector doesn't starve it). The
-  honest residual boundary: the substrate can author *surgical* edits and whole
+  boundary: the substrate can author *surgical* edits and whole
   net-new vessels via feature-compose, but feature-authoring breadth is the
   S1→S2 frontier.
 - **Self-assembly / composition / topology growth.** *Owner:* DEC §0.2–§0.3 — a
@@ -449,8 +446,7 @@ observe-and-drain half firing) is an operational fact, not an architectural one.
   (restart-if-hung), and the author-time typecheck **rollback** inside feature-compose.
   In-flight goal recovery (§3.2) is the per-goal form.
 
-  **Two tiers, and the distinction is load-bearing — this section previously read as a
-  contradiction.** It states that detection and resolution *are activities* and that a
+  **Two tiers, and the distinction is load-bearing.** This section states that detection and resolution *are activities* and that a
   fixed externally-scheduled recipe is the wrong shape, and then describes a fixed
   externally-scheduled recipe. Both are right, for different tiers, and a reader who
   collapses them will either rebuild the reflex as an activity (and deadlock it) or leave
@@ -535,8 +531,7 @@ Following the discipline of the companion charts.
 
 **Canonical decisions (this doc's authority; deferred to elsewhere):**
 
-- Three-state triad = **Informational / Transient / Observational**; `Instructional` /
-  `Functional` are deprecated aliases. → §1
+- Three-state triad = **Informational / Transient / Observational**. → §1
 - The four primitives are the **authored-durable** software layer; the system's
   load-bearing state is the **learned-durable** group. → §4.2
 - `resolver_tier` is a coarse binning of a continuous learned directional uncertainty;

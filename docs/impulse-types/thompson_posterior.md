@@ -139,4 +139,4 @@ The following are recorded here because they shape how the posterior model is ex
 
 ## Compatibility
 
-The REST endpoint `GET /v2/activities/:id/variant-scores` predates this shape, still exists, and is not deprecated. `variantMetricsSummary` remains the cross-variant aggregate; `thompson_posterior` is the variant-precise read.
+The REST endpoint `GET /v2/activities/:id/variant-scores` serves the same data over REST and is supported. `variantMetricsSummary` remains the cross-variant aggregate; `thompson_posterior` is the variant-precise read.

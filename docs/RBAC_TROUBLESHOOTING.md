@@ -126,7 +126,7 @@ User is authenticated to org A but querying data owned by org B.
 
 #### B. Missing org_id on Record
 
-Legacy data may not have org_id set.
+A record written without an org_id is invisible to tenant-scoped reads.
 
 ```surql
 -- Find records without org_id
@@ -289,10 +289,10 @@ curl ... | jq '.data.expires_at'
 
 #### C. Wrong Key Format
 
-Current HMAC API keys use the `mb_` prefix with dash-separated segments:
+HMAC API keys use the `mb_` prefix with dash-separated segments:
 ```
 Valid:   mb_local-orgabc-userabc-key01-<hmac32hex>
-Invalid: mk_prefix_abc123...   (old format — no longer issued)
+Invalid: mk_prefix_abc123...   (not a key format identity-vessel issues)
 Invalid: abc123...             (no prefix)
 ```
 
@@ -340,8 +340,8 @@ SELECT * FROM init_migrations;
 
 **Fix:** Most schemas are migrations applied when the owning vessel's unit starts, so restarting
 that vessel is the remedy; see [SCHEMA_OWNERSHIP.md](SCHEMA_OWNERSHIP.md) for which vessel owns
-which tables. (activity-api's older `sql/migrate.ts` runner is not the substrate's schema
-path; SCHEMA_OWNERSHIP says why.)
+which tables. (activity-api's `sql/migrate.ts` runner is not the substrate's schema path;
+SCHEMA_OWNERSHIP says why.)
 
 ```bash
 # Apply on unit start
@@ -430,7 +430,7 @@ curl -s -H "Authorization: ApiKey $API_KEY" \
   http://localhost:18080/v2/activities/templates | jq '.templates | length'
 ```
 
-> **Removed pattern:** activity-api no longer issues tokens via `/v2/auth/apikey`. Pass the HMAC API key directly as `Authorization: ApiKey <key>` to activity-api; identity-vessel validates it internally.
+> Pass the HMAC API key directly as `Authorization: ApiKey <key>` to activity-api; identity-vessel validates it.
 
 ### 3. Check Vessel Logs
 

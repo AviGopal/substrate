@@ -296,9 +296,9 @@ The write path refuses defensively: an edge with a missing or blank parent or ch
 - **`scaffold`** — either endpoint matches a scaffold marker (`compose-`, `genuine-edge-probe`), or the pair is unproven.
 - **`genuine`** — only with empirical evidence: at least 5 executions with at least 3 successes, or a demonstrated shape flow from the parent's outputs into the child's inputs.
 
-Read-time callers that supply no evidence get the legacy node-name verdict, which is why the honest genuine-count comes from write-path callers that pass recurrence or shape-flow evidence.
+Read-time callers that supply no evidence get the node-name verdict, which is why the honest genuine-count comes from write-path callers that pass recurrence or shape-flow evidence.
 
-**Note on a retired table.** The older `composition_edge` table, its `fn::update_composition_edge` helper, its writer and reader routes, and the `compositionEdge_write` impulse shape were all removed. The live surface is the sibling table `activity_composition_graph`, served by `POST /v2/activities/composition` and read back at `/composition/graph`, `/composition/successors`, `/composition/state-transitions` and `/composition/impulse-success`.
+**The composition table.** Composition learning lives in `activity_composition_graph`, served by `POST /v2/activities/composition` and read back at `/composition/graph`, `/composition/successors`, `/composition/state-transitions` and `/composition/impulse-success`.
 
 ### Recursive Execution Tracking
 
@@ -604,7 +604,7 @@ The reason the split is drawn there rather than anywhere else is latency and loc
 - `llm_resolution_log` — LLM dispatch records.
 - `code_variants` — code-variant rows for the edit family.
 
-**Retired:** `composition_edge` and its account-id back-compat view were removed with their routes and helper function. Composition learning reads and writes `activity_composition_graph`.
+**Composition edges:** composition learning reads and writes `activity_composition_graph`, the one composition table.
 
 ### Correct Separation
 

@@ -73,7 +73,7 @@ to prefer whatever exits cleanly.
 - [Resolver Tracking](architecture/RESOLVER_TRACKING.md) — recording which resolver served each impulse so selection is learned, not configured.
 - [`thompson_posterior` shape](impulse-types/thompson_posterior.md) — the posterior itself, as a resolvable shape.
 - [Learning-Loop Write Resolvers](impulse-types/LEARNING_LOOP_WRITE_RESOLVERS.md) — the write side of the loop, shape by shape.
-- [Activity Template Lifecycle and Deprecation](guides/ACTIVITY_LIFECYCLE_DEPRECATION.md) — how an arm is retired without discarding a working posterior.
+- [Activity Template Lifecycle and Deprecation](guides/ACTIVITY_LIFECYCLE_DEPRECATION.md) — how an arm leaves selection without discarding a working posterior.
 - [Template Upkeep Pipeline](guides/TEMPLATE_UPKEEP.md) — how template drift is observed and corrected through the loop itself.
 - [Dashboard Analytics](guides/DASHBOARD_ANALYTICS.md) — reading the learning loop from its analytics panels.
 - [Substrate framing vs. the LLM literature](architecture/LITERATURE_COMPARISON.md) — where this learning model sits against published agent research.
@@ -150,7 +150,7 @@ which the acceptance run executes, and every document here links there rather th
 restating a launch.
 
 - [Local single-container substrate](SUBSTRATE.md) — the operating reference: inventory and topology selection, `vessel-ctl`, the iteration loop, retention, and troubleshooting.
-- [Advanced configuration](operations/CONFIGURATION_SURFACE.md) — every variable beyond the install inputs, by tier; the channel that delivers each and the moment it is read; the precedence chain; the migration table for retired names.
+- [Advanced configuration](operations/CONFIGURATION_SURFACE.md) — every variable beyond the install inputs, by tier; the channel that delivers each and the moment it is read; the precedence chain; the table of alias names and the names they map to.
 - [Live Development Guide](LIVE_DEVELOPMENT.md) — developer-only: hot-reload iteration on one vessel's source, not a way to run the fleet.
 - [TypeScript Vessel Template](architecture/TYPESCRIPT_VESSEL_TEMPLATE.md) — the invariants a new vessel must satisfy, including shape-dispatch agreement.
 

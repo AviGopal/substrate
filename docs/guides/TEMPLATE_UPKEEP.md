@@ -30,7 +30,7 @@ activityTemplate_update / _deprecate (write)   ← the correction
 
 Shapes in this system are **learned** semantic types that emerge from template authorship and execution traces — not a fixed canonical vocabulary. The utility reports what is in use without enforcing an allow-list.
 
-- **`observeShapes()`** — scans both the paradigm `activity` table and the legacy `activity_template` view/table, degrading gracefully if either is absent. Returns per-template and per-task shape sets.
+- **`observeShapes()`** — scans both the paradigm `activity` table and the `activity_template` view/table, degrading gracefully if either is absent. Returns per-template and per-task shape sets.
 - **`findAliasClusters()`** — conservative heuristic: normalized equality, bounded Levenshtein distance, guarded substring containment. Minimizes false merges. Surfaces probable alias groups like `{gitDiff, git_diff, GitDiff}` or `{errorLog, error_log}`.
 
 **Deliberately descriptive:** no validation, no rejection, no gatekeeping. Downstream consumers decide what to do with drift signals.
@@ -41,7 +41,7 @@ Shapes in this system are **learned** semantic types that emerge from template a
 **Route:** advertised; resolve via `POST /v2/impulses/resolve` with pointer `{ type: "templateAuditReport", ... }`.
 **Location:** `repos/activity-api/src/routes/template-audit.ts` (`runTemplateAuditReport`), dispatched from the `templateAuditReport` case in `src/routes/impulses.ts`.
 
-Authenticated callers only — the dispatch case early-rejects anonymous requests before any query runs. It reads templates (deduplicated across paradigm + legacy sources) and returns a per-template deficiency report. Fields flagged:
+Authenticated callers only — the dispatch case early-rejects anonymous requests before any query runs. It reads templates (deduplicated across both sources) and returns a per-template deficiency report. Fields flagged:
 
 - Missing or migration-044-default `input_shapes` / `output_shapes`
 - Missing `tags`
@@ -108,7 +108,7 @@ Already documented in [`../impulse-types/LEARNING_LOOP_WRITE_RESOLVERS.md`](../i
 - Both emit an `upkeepAuditLog` impulse with before/after diff and reason.
 - Unauthenticated callers get 401 before any SQL runs. On a **global-scope** template an admin caller passes straight through; a non-admin caller must supply auditable `evidence` — `validateEvidenceGate` (in `src/routes/impulses.ts`) requires a non-empty `reason` for an update, and for a deprecate additionally requires Thompson posteriors whose winner mean beats the loser by a configured delta over a minimum sample count. Evidence that does not clear the gate is rejected as `insufficient_evidence` rather than silently applied; the substrate's own posteriors are the intended safety mechanism, in place of an operator-only restriction. The 403 in these cases is for a different condition — a non-global template belonging to another org. An existence check is deliberately split from the permission check so a missing template returns 404 rather than conflating the two.
 
-**`retired` is updatable in both directions, on purpose.** It is the operative lifecycle flag — selection, shape discovery and the template listing all filter on it — and for a period nothing could clear it: deprecation set it and no impulse, endpoint or service unset it. A lifecycle decision that can only be made one way is not a managed lifecycle, and the only recourse left was hand-editing the database, which this repo forbids. Restoring an arm is the safe direction (it returns a producer to the candidate pool rather than removing one), so it sits with the ordinary write-scope updates rather than behind the evidence gate that guards deprecation. The failure that motivated this: an automated sweep retired working arms on a miscomputed success rate, and there was no supported way to give them back.
+**`retired` is updatable in both directions, on purpose.** It is the operative lifecycle flag — selection, shape discovery and the template listing all filter on it. A lifecycle decision that can only be made one way is not a managed lifecycle, and the only recourse would be hand-editing the database, which this repo forbids. Restoring an arm is the safe direction (it returns a producer to the candidate pool rather than removing one), so it sits with the ordinary write-scope updates rather than behind the evidence gate that guards deprecation, and an arm retired on a wrong reading can always be given back.
 
 ## Design notes
 
@@ -128,7 +128,7 @@ A dedicated REST API would have bypassed all four.
 
 The same four-task pattern applied to execution traces rather than template metadata. Its resolver surface is live — `executionTraceList` reads candidates, `activityExecutionTrace_delete` is the destructive write, `upkeepAuditLog` is the record — and a runbook lives in the activity-api submodule at `repos/activity-api/docs/testing/CLEANUP_UPKEEP_RUNBOOK.md`.
 
-The activity template itself, like §4's, is absent. It once shipped through `repos/activity-api/sql/migrations/078-register-cleanup-templates.surql`; that migration's insert blocks were removed and it is retained as a numbered no-op, because re-running it on every redeploy inserted rows with no explicit ids and so minted duplicate records each time. **Templates do not belong in migrations** — a migration is applied repeatedly and a template insert without a stable id is not idempotent. Template ownership belongs with the vessel that serves them and with ribosome extraction.
+The activity template itself, like §4's, is absent. **Templates do not belong in migrations** — a migration is applied repeatedly, and a template insert without a stable id is not idempotent, so it would mint a duplicate record on every redeploy. Template ownership belongs with the vessel that serves them and with ribosome extraction.
 
 The shape the flow takes:
 

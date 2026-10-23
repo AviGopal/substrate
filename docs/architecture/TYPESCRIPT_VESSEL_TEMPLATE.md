@@ -193,20 +193,6 @@ And for the **local single-container substrate** (the primary development target
 scripts/substrate/units/<vessel>.service   # Type=simple Bun unit; EnvironmentFile + PORT/VESSEL_ID env
 ```
 
-The **downstream** Helm chart (canary/production only) lives in the deployment repo:
-
-```
-repos/deployment/
-├── charts/<vessel>/
-│   ├── Chart.yaml
-│   ├── values.yaml                # apiKey.secretName + config.discovery + config.observer
-│   └── templates/
-│       ├── deployment.yaml        # METABOB_API_KEY via secretKeyRef; POD_NAME via fieldRef
-│       ├── service.yaml
-│       └── configmap.yaml
-└── helmfile.yaml.gotmpl           # needs: activity-system/discovery-vessel
-```
-
 ---
 
 ## The pieces
@@ -238,7 +224,7 @@ interface Config {
   // Discovery-vessel client
   discovery: {
     enabled: boolean;
-    endpoint: string;              // local substrate: http://127.0.0.1:8100 (host: http://localhost:18100); canary: discovery-vessel .svc.cluster.local
+    endpoint: string;              // in-container: http://127.0.0.1:8100 (host: http://localhost:18100)
     vesselId: string;              // generateVesselId() — reads VESSEL_ID then POD_NAME/HOSTNAME
     vesselName: string;
     heartbeatIntervalMs: number;   // 60000
@@ -281,7 +267,6 @@ Singleton class exposing `isEnabled()`, `register()`, `heartbeat()`, `deregister
   "auth_scheme": "ApiKey",
   "resolve_timeout_ms": 30000
 }
-// downstream canary/production substitutes the .svc.cluster.local endpoint and a per-pod vesselId.
 ```
 
 `metadata.environment` is derived, not configured: the client's `detectEnvironment()` helper reports `k8s-cluster` when `KUBERNETES_SERVICE_HOST` is set and `docker` when `DOCKER_CONTAINER` is set, otherwise `local`. The single-container substrate sets neither, so its vessels register as `local`. `metadata.port` is the vessel's own `config.port` (from `PORT`); the registered `endpoint` is a separate value — `getEndpoint()` returns `VESSEL_ENDPOINT` when the unit sets it, and otherwise builds a cluster-DNS URL — so keep the unit's `PORT` and `VESSEL_ENDPOINT` in step, as the substrate units that set both do.
@@ -394,10 +379,8 @@ Useful for: invalidating caches when records change, auto-linking related entiti
 
 ## Deployment wiring
 
-> **Local development runs on the single-container substrate, not Helm.**
-> Vessels run as **systemd units** inside the `substrate-live` docker container;
-> there is no Kubernetes, no Istio, and no Helm in the local loop. Helm applies only
-> to the **downstream** canary/production substrates. Mirror the framing in
+> Vessels run as **systemd units** inside the substrate container, the same way on
+> every profile. Mirror the framing in
 > [`docs/SUBSTRATE.md`](../SUBSTRATE.md). When you build a new vessel,
 > wire it as a substrate unit first — that is where you iterate.
 
@@ -447,8 +430,8 @@ Notes:
 - **Secrets drop-in.** Every vessel unit also gets the shared
   `<unit>.service.d/10-secrets-out-of-reach.conf` symlink (checked by
   `validation/scripts/vessel-secrets-dropin.test.sh`).
-- **`After=` discovery-vessel + identity-vessel** is the unit-level analogue
-  of the Helm `needs:` clause; it orders startup so discovery and auth are up first.
+- **`After=` discovery-vessel + identity-vessel** orders startup so discovery and
+  auth are up first.
 - **Only per-vessel values belong in the unit.** Peer endpoints are fleet-wide, so they
   live in `/etc/substrate/env` (written by `scripts/substrate/gen-env.sh`) rather than
   being repeated per unit. The vessel reads them from env — local-tools reads
@@ -475,34 +458,9 @@ Every unit restarts the same way, core or dynamic — activity-api,
 identity-vessel, discovery-vessel and surrealdb included:
 `docker exec <container> vessel-ctl restart <vessel>`.
 
-### Downstream path: Helm wiring (canary / production only)
-
-> Everything below applies to the **downstream** K8s substrates, not local work.
-
-The chart and helmfile must plumb:
-
-1. **`METABOB_API_KEY`** via `secretKeyRef` → `{{ .Values.apiKey.secretName }}` / `{{ .Values.apiKey.secretKey }}`. Default secret name: `<vessel>-api-keys`.
-2. **`POD_NAME`** via `valueFrom.fieldRef.fieldPath: metadata.name` — feeds the vessel's `generateVesselId()` helper so each replica gets a stable ID.
-3. **`DISCOVERY_ENABLED`**, **`DISCOVERY_VESSEL_ENDPOINT`**, and the heartbeat/retry envs matching `config.discovery`.
-4. **`OBSERVER_ENABLED`** and the reconnect envs (if the vessel uses the observer).
-5. **`needs:`** includes `activity-system/discovery-vessel` so helmfile orders the deploy correctly.
-
-**Secret provisioning is intentionally out-of-tree.** The chart references the secret by name but doesn't create it. Steps to activate a new vessel:
-
-1. Add a `<vessel>` block to `scripts/generate-secrets.sh` in the deployment repository (a separate repository, not a submodule of this super-repo)
-2. Edit the sops-encrypted canary secrets file (requires the Age key), adding `<vessel>.apiKey`
-3. Register the key in the identity-vessel seed so activity-api accepts it
-4. Either add `templates/secret.yaml` to the chart (mirroring an existing vessel chart) or create the secret imperatively in the `activity-system` namespace
-
-Without these the pod starts but registration stays unauthenticated (and the Secret reference may block pod start entirely if absent).
-
-**Concrete example:** the deployment repository's `charts/concept-db/` plus its release block in `helmfile.yaml.gotmpl`.
-
----
-
 ## Substrate identity resolution
 
-A vessel must run identically wherever it is deployed, which means it cannot carry a map of where its peers live. The rule that follows is narrow: env supplies only bootstrap material — a credential, a port, an identity, and the endpoint of the one service that can name the others — and everything else is resolved at runtime. The subsections below give the pattern, its inverse, and the places in the tree that still violate it.
+A vessel must run identically wherever it is deployed, which means it cannot carry a map of where its peers live. The rule that follows is narrow: env supplies only bootstrap material — a credential, a port, an identity, and the endpoint of the one service that can name the others — and everything else is resolved at runtime. The subsections below give the pattern and its inverse.
 
 ### The minimum-bootstrap-credential pattern
 
@@ -518,23 +476,11 @@ If a vessel has `http://activity-api.activity-system.svc.cluster.local:8080` or 
 
 The correct default, when the endpoint env var is unset, is the in-container loopback address of the peer (`http://127.0.0.1:8100` for discovery, `http://127.0.0.1:8080` for activity-api) or a loud startup failure — never a cluster DNS name inherited from someone else's deployment.
 
-### Known gap
-
-Several vessels retain hardcoded cluster-DNS or public-hostname defaults that pre-date this pattern:
-
-- `repos/identity-vessel/src/services/trace.ts` — `.svc.cluster.local` activity-api default
-- `repos/identity-vessel/src/services/jwt.ts` — public issuer default
-- `repos/identity-vessel/src/services/keyGeneration.ts` — public issuer default
-- `repos/identity-vessel/src/services/discovery-client.ts` — constructs `.svc.cluster.local` endpoints
-- `repos/discovery-vessel/src/middleware/auth.ts` — public identity-vessel default
-
-Each is overridden by an env var in the substrate container, so the system is held closed by env-var discipline rather than by the pattern itself — which is exactly the fragile arrangement the pattern exists to remove. New vessels MUST follow the pattern. These migrate as they undergo their next significant revision.
-
 ---
 
 ## What NOT to do
 
-Each of the following has cost real debugging time, and they share a shape: the vessel starts, passes its health check, and is wrong in a way that only shows up later or elsewhere. Read them as failure modes to recognise, not merely as style rules.
+The following share a shape: the vessel starts, passes its health check, and is wrong in a way that only shows up later or elsewhere. Read them as failure modes to recognise, not merely as style rules.
 
 ### Don't register against activity-api's `/v2/vessels/register`
 
@@ -574,7 +520,6 @@ Before cutting the first release:
 - [ ] **Substrate unit** at `scripts/substrate/units/<vessel>.service` (`After=`/`Wants=` discovery-vessel + identity-vessel; `EnvironmentFile=/etc/substrate/env`; fixed `PORT`/`VESSEL_ID`)
 - [ ] **Host-port mapping** added to the fleet declaration (`docker-compose.yml` ports, derived from `SUBSTRATE_PORT_PREFIX`, and the port table in README § Installation); vessel reachable at `http://localhost:18xxx/health`
 - [ ] Validated against the local substrate (`http://localhost:18080`) via `docker exec <container> vessel-ctl restart <vessel>` + a confirming dispatch
-- [ ] *(downstream only)* Helm chart mounts `METABOB_API_KEY` via `secretKeyRef` and `POD_NAME` via `fieldRef`; helmfile `needs:` includes `activity-system/discovery-vessel`; secret provisioning documented in the vessel's `CLAUDE.md` (no API keys in values.yaml)
 
 ---
 

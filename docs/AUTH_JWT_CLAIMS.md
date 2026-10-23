@@ -58,12 +58,11 @@ Three parts separated by dots:
 }
 ```
 
-### Instance authentication is retired
+### Instance authentication
 
-A per-instance record-auth token format existed for a retired CLI. Instances authenticate with an
-ordinary API key, exactly as in §API Key Authentication above. The signin routes for the old format
-remain mounted and answer `410 Gone`: a tombstone that names the removed method is a better signal
-than a bare `404`, and it stays until telemetry shows no callers.
+Instances authenticate with an ordinary API key, exactly as in §API Key Authentication above. The
+instance sign-in routes answer `410 Gone`, naming the method to use instead: an informative refusal
+rather than a bare `404`.
 
 ## Claim Descriptions
 
@@ -187,7 +186,7 @@ SurrealDB validates tokens automatically when using ACCESS:
 // Token is validated and $auth is populated
 await db.authenticate(token);
 
-// Now queries use $auth for PERMISSIONS
+// Queries now run under $auth for PERMISSIONS
 const results = await db.query('SELECT * FROM activity_template');
 ```
 

@@ -89,7 +89,7 @@ can steer global Bayesian posteriors toward a target distribution by
 strategic replication/deletion of true observations, achieving
 "surgical poisoning where only targeted inferences are corrupted."
 
-**Substrate alignment.** The H1–H4 cryptographic hardening stack
+**Substrate alignment.** The cryptographic hardening stack
 (two-sided traces, pubkey identity, signed scope attestations, quorum
 ratification) is in the spirit of current FL defense literature but more
 ambitious. The Bayesian incentive mechanism in arXiv:2507.12439 — each
@@ -444,8 +444,8 @@ The actionable consequence: predictions 9.1, 9.3, and 9.4 can be
 operationalized substrate-internally via metrics already adjacent to
 existing observables (per-cell variance export, `interventionRefused`
 impulse counters, spectral analyzer over the co-firing graph).
-Predictions 9.2 and 9.5 are federation-dependent and gate on H1–H4
-hardening; they become runnable experiments once federation is wired.
+Predictions 9.2 and 9.5 are federation-dependent and gate on that
+hardening; they are runnable experiments over a federated substrate.
 
 ## Primary sources
 

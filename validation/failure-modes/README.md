@@ -14,8 +14,7 @@ We have lift when the system keeps spinning **on its own** through:
 
 ## Matrix Origins
 
-Scenarios are drawn from the **63-mode failure matrix** developed in
-conversation on 2026-05-22, organized by:
+Scenarios are drawn from the **63-mode failure matrix**, organized by:
 
 | Axis 1: Execution Stage | Axis 2: Information State | Axis 3: Outcome Class |
 |---|---|---|
@@ -30,8 +29,7 @@ conversation on 2026-05-22, organized by:
   These are the **corrosive** modes — silent corruption of the Thompson
   posterior — and the matrix prioritizes them.
 
-See `MATRIX.md` for the full mode catalog. Each scenario file declares
-which mode it instantiates.
+Each scenario file declares which mode it instantiates.
 
 ## Why False Positives Get Top Billing
 
@@ -71,8 +69,8 @@ mode is a known gap and feeds the next round of make-activity hypotheses.
 ```
 validation/failure-modes/
 ├── README.md             # this file
-├── MATRIX.md             # full 63-mode catalog with stage × info-state × outcome
 ├── schema.json           # JSON schema for scenario files
+├── vessel-scenarios/     # scenarios whose answer is a new vessel
 └── scenarios/
     ├── fp-11-silent-semantic-failure.json
     ├── fp-12-partial-success.json
@@ -84,17 +82,13 @@ validation/failure-modes/
 
 ## Running
 
-```bash
-# Run a single scenario:
-METABOB_API_KEY=<key> bun run validation/scripts/failure-mode-harness.ts \
-  --scenario validation/failure-modes/scenarios/fp-11-silent-semantic-failure.json
-
-# Run all scenarios; emit aggregate report:
-METABOB_API_KEY=<key> bun run validation/scripts/failure-mode-harness.ts \
-  --scenarios validation/failure-modes/scenarios/ \
-  --label "2026-05-22 baseline" \
-  --out validation/results/2026-05-22-failure-mode-report.json
-```
+The `development-vessel:harness-run-matrix` activity scores the scenarios through the
+`failure_mode_matrix_score` resolver and writes its report under `validation/results/`
+(`<date>-harness-auto.json` by default). The development-vessel registry-change observer
+runs it after every successful execution that can change the activity set: the
+`draft-gap-closing-activity`, `prune-activity` and `replace-activity` templates, and any
+execution whose output carries `activityRegistryChange`. It can also be dispatched as a
+goal through the cockpit.
 
 Reports record per-scenario:
 
@@ -115,42 +109,17 @@ Reports record per-scenario:
 - **stratified-harness.ts** — coverage matrix for shape × novelty × depth.
   Failure-mode harness extends to a coverage matrix for **stage × outcome
   class**.
-- **test-audit-loop** — audits whether tests are representative and aligned
-  with the six IAL success criteria. Failure-mode scenarios register via
-  the same `ensureTestRegistration` mechanism so every scenario gets audited
-  for representativeness and goal-alignment.
-
-## Migration to Activity-Driven Harness
-
-As of 2026-05-23, the harness is no longer triggered exclusively by a human operator
-running `failure-mode-harness.ts` by hand. The `development-vessel` lifecycle observer
-now fires `harness-run-matrix` automatically whenever a qualifying
-`execution_completed` WS event arrives (template ids: `draft-gap-closing-activity`,
-`prune-activity`, `replace-activity`, or any output carrying `activityRegistryChange`).
-
-**Current state (transitional):**
-- `validation/scripts/failure-mode-harness.ts` — original script; still runnable manually
-  and by CI.
-- `harness-run-matrix` activity (development-vessel seed) — the new automated path.
-  Calls the same `failure_mode_matrix_score` resolver. Writes an `out_path` shim file
-  so the existing `progression-driver.ts` can consume it without modification.
-- `validation/scripts/progression-driver.ts` — reads the shim file; unchanged.
-
-**Migration path (follow-up work, out of scope for harness-as-lifecycle-participant):**
-When the system reaches Phase 27+, the progression-driver will be updated to read
-the `failureModeReport` directly from activity-api (via impulse pointer), eliminating
-the disk-file shim entirely.
 
 ## Continuous Operation
 
-Once seeded, scenarios run on the weekly harness schedule. The system's
+Scenarios are re-scored as the activity set changes. The system's
 boredom-operation mode is expected to:
 
 1. Read the previous report's `gap` entries
 2. Generate hypothesis activities via `make-activity`
 3. Validate hypotheses against the trace corpus
 4. Ship winners (template registration via `activityTemplate_update`)
-5. Re-run the same scenarios next week and watch the gap close
+5. Re-score the same scenarios and watch the gap close
 
-Lift is proven when the report's `gap` count strictly decreases week-over-week
+Lift is proven when the report's `gap` count strictly decreases run over run
 **without anyone writing the recovery code by hand**.

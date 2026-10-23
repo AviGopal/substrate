@@ -19,8 +19,7 @@
 >   implementation detail, and `resolver_tier` as binned directional certainty.
 >
 > **Term registry**: [`../GLOSSARY.md`](../GLOSSARY.md) fixes canonical spellings
-> and lists deprecated aliases. Where a name here drifted (the three states; "The
-> Two Primitives"), the glossary and the canonical notes below are authoritative.
+> and is authoritative on names.
 
 ---
 
@@ -39,9 +38,7 @@ By recording the full trace of how inputs transform to outputs, we learn pattern
 ## Three States, Two Motions
 
 > **Canonical triad.** These three — **Informational / Transient / Observational** —
-> are the canonical state names. The "Relating to the Three-State Ontology" section
-> below describes the *same triad* under older names (Instructional / Functional);
-> those are deprecated aliases. Durability bridge: [`SUBSTRATE_AS_SOFTWARE.md`](SUBSTRATE_AS_SOFTWARE.md).
+> are the canonical state names. Durability bridge: [`SUBSTRATE_AS_SOFTWARE.md`](SUBSTRATE_AS_SOFTWARE.md).
 
 The system rotates through three states, each with a single rotation:
 
@@ -103,14 +100,13 @@ dual-parse conformance prerequisite are tracked in
 
 ---
 
-## The Two Primitives
+## Impulses and Activities
 
-> **Canonical.** "The Two Primitives" (impulse + activity) is the legacy
-> framing. The canonical minimum set is **four** — impulse, pointer, resolver,
-> vessel — from which **activity is derived** ("an impulse of shape
+> The minimum set is **four** primitives — impulse, pointer, resolver, vessel —
+> and **activity is derived** from them ("an impulse of shape
 > `activity_template`"). See the "Minimum Self-Stable Set" section and
-> [`../GLOSSARY.md`](../GLOSSARY.md) §3. Read this section as the introduction to
-> the two *most visible* primitives, not the closed set.
+> [`../GLOSSARY.md`](../GLOSSARY.md) §3. This section introduces the two most
+> visible: impulses and activities.
 
 ### Impulses: Data In Any Form
 
@@ -357,7 +353,7 @@ The model is open. Different vessels own different parts of the learned topology
 |---|---|
 | activity-api | Trace patterns, template Thompson posteriors, composition-edge α/β, impulse-relevance scores |
 | concept-db | Concept usage counts, conceptGraph relationships, conceptSequence patterns (text-formatted data, labeled knowledge graph leveraging impulse learning) |
-| Thompson Sampling implicit vessel | α/β/sample_count posteriors, readable as the `thompson_posterior` shape and through the older REST surface |
+| Thompson Sampling implicit vessel | α/β/sample_count posteriors, readable as the `thompson_posterior` shape and through REST |
 | (future) any new vessel | Any parameters its resolvers learn from observed traces |
 
 Vessels can advertise new shape-typed parameters as they learn them. The system's openness means a new vessel can join the network and contribute learning signal without coordination — provided it advertises its shapes through discovery and emits its updates as impulses.
@@ -631,8 +627,6 @@ When irrelevance_score >= relevance_score, skip it (saves tokens/cost).
 ## Improvisation: Wing It With Recording
 
 When no activity matches with sufficient confidence, the system can improvise. Improvisation MUST be recorded.
-
-> **Note**: Older documents used the terms **"Improvisation Outcome"** and **"Trailblazing"** for what is now handled by the failure-mode taxonomy plus posterior variance. Those terms have no current code path and should be replaced where encountered. See "Known Gaps → Class-(c) Terms Pruned".
 
 ### When to Improvise
 
@@ -936,7 +930,7 @@ repository's history).
 
 The invariant that survives: no vessel above the discovery layer
 learns about substrates as routing targets. Substrate identity
-surfaces only as a discovery-vessel pubkey (per H2) and as a
+surfaces only as a discovery-vessel pubkey and as a
 `foreign_provenance` annotation on cross-substrate impulses. From
 inside any reasoning vessel, the system is still "vessels and
 shapes" — the reachable subgraph is just larger.
@@ -1041,25 +1035,19 @@ Minting is the **justified exception**, not the default: legitimate only when it
 
 This model is the operational implementation of the three-state ontology.
 
-> **Canonical naming.** This is the **same triad** as "Three States, Two
-> Motions" above — not a second ontology. The names below drifted: **Instructional
-> → Informational** and **Functional → Observational** (Transient is invariant), as
-> the framing matured from "building software" to "running a learning system" and
-> the scope of each state widened. The canonical names are **Informational /
-> Transient / Observational**; `Instructional` and `Functional` are deprecated
-> aliases kept only for reading older docs. The durability bridge (why these are
-> the right three) is [`SUBSTRATE_AS_SOFTWARE.md`](SUBSTRATE_AS_SOFTWARE.md) §1–§2;
+> This is the **same triad** as "Three States, Two Motions" above. The durability
+> bridge (why these are the right three) is [`SUBSTRATE_AS_SOFTWARE.md`](SUBSTRATE_AS_SOFTWARE.md) §1–§2;
 > the term registry is [`../GLOSSARY.md`](../GLOSSARY.md) §1.
 
-### Instructional State (Vessel) — *canonical: Informational State*
+### Informational State (Vessel)
 
-The vessel IS the instructional state: the capacity to execute, the blueprint, the potential.
+The vessel IS the informational state: the capacity to execute, the blueprint, the potential.
 
 - Activity templates define what CAN happen
 - Impulse pointers reference data that CAN be loaded
 - Resolvers provide capabilities that CAN be invoked
 
-### Transient State (Process-of-Becoming) — *canonical: Transient State*
+### Transient State
 
 Execution IS the transient state: the active transformation, the becoming.
 
@@ -1068,9 +1056,9 @@ Execution IS the transient state: the active transformation, the becoming.
 - State transitioning from before to after
 - This is where the work happens
 
-### Functional State (Instance) — *canonical: Observational State*
+### Observational State (Instance)
 
-The outcome IS the functional state: the realized result, the actualized artifact.
+The outcome IS the observational state: the realized result, the actualized artifact.
 
 - Output impulses created
 - Files modified
@@ -1097,36 +1085,27 @@ The trace records each transformation. Learning extracts patterns. New activitie
 
 ## Where the minimum set has been tested
 
-The entries below are evidence about the minimum set. Each names a place where the four primitives proved insufficient — a privileged side channel, a piece of learnable state without a shape, or an arm of the duality that does not carry what its name implies. Closed entries are kept alongside open ones on purpose: a repair that worked is the reusable pattern for the next break of the same class, and deleting it leaves only the failures on record.
+The entries below are evidence about the minimum set. Each names a place where the four primitives must carry what a privileged side channel otherwise would: learnable state that needs a shape, or an arm of the duality that must carry what its name implies. Each states the pattern that keeps its class closed.
 
 ### Class-(b) Shape Gap: `thompson_posterior`
 
-The worked example of a class-(b) repair. The α/β/sample_count posterior data lives in activity-api and was originally reachable only through REST (`variantMetricsSummary`, `GET /v2/activities/:id/variant-scores`). The structural fix was to give the data a shape rather than a second endpoint: activity-api advertises `thompson_posterior` through discovery and resolves it on `POST /v2/impulses/resolve`, keyed by `activity_variant_id` (`activity_id` is also accepted), optionally narrowed by `shape_signature` or `context_bucket`, returning `alpha`, `beta`, `sample_count`, `success_count`, `failure_count`. The REST handlers remain as a compatibility surface.
+The worked example of a class-(b) pattern. The α/β/sample_count posterior data lives in activity-api, and it is reachable as a shape rather than only as an endpoint: activity-api advertises `thompson_posterior` through discovery and resolves it on `POST /v2/impulses/resolve`, keyed by `activity_variant_id` (`activity_id` is also accepted), optionally narrowed by `shape_signature` or `context_bucket`, returning `alpha`, `beta`, `sample_count`, `success_count`, `failure_count`. The REST handlers remain as a compatibility surface.
 
-Two properties of the repair are load-bearing and should carry to the next one. First, the shape reads the **durable accumulated posterior** — the same store the selector samples — rather than recounting rows in the execution table. A recount ignores the chain-credit fan-out and decay deltas the posterior updater applies, so it reports a number that provably diverges from what the loop learned; a shape that returns a plausible-but-different value is worse than no shape, because nothing downstream can tell it is wrong. Second, a signature-scoped read has no durable per-signature table behind it, so it aggregates and reports how many signatures contributed rather than implying a precision it does not have. Likely follow-on shapes along the same line: `composition_edge_posterior`, `shape_relevance_posterior`.
+Two properties of this shape are load-bearing and carry to the next one. First, the shape reads the **durable accumulated posterior** — the same store the selector samples — rather than recounting rows in the execution table. A recount ignores the chain-credit fan-out and decay deltas the posterior updater applies, so it reports a number that provably diverges from what the loop learned; a shape that returns a plausible-but-different value is worse than no shape, because nothing downstream can tell it is wrong. Second, a signature-scoped read has no durable per-signature table behind it, so it aggregates and reports how many signatures contributed rather than implying a precision it does not have. Likely follow-on shapes along the same line: `composition_edge_posterior`, `shape_relevance_posterior`.
 
 ### Unified Execution Path
 
-Unified execution path is the chosen direction: goal-shaped and activity-template-shaped pointers should resolve through the standard impulse → resolver dispatch, with the activity resolver running the activity to resolve the pointer.
+Unified execution path is the design: goal-shaped and activity-template-shaped pointers resolve through the standard impulse → resolver dispatch, with the activity resolver running the activity to resolve the pointer.
 
-Expect the current behavior instead. Top-level execution enters in-process: the goal host builds a template, calls its own `runTemplate`, and that calls `executor.execute(template)` on the `ActivityExecutor` it owns. Nested dispatch is already on the target path — the `activity` resolver takes an inline template or a template id, runs the child on the same runtime, and links it by parent execution id and composition chain — so the gap is at the top level only, and the target shape is already demonstrated to work one level down. When the refactor lands, the host emits a `goal`-shaped impulse (and downstream an `activity_template`-shaped impulse) and the executor is dispatched as the resolver for that shape pair, collapsing the distinction between "top-level" and "nested" execution. Until then, treat a new in-process execution entry point as a regression rather than a neutral choice.
+Top-level execution enters in-process: the goal host builds a template, calls its own `runTemplate`, and that calls `executor.execute(template)` on the `ActivityExecutor` it owns. Nested dispatch follows the target path — the `activity` resolver takes an inline template or a template id, runs the child on the same runtime, and links it by parent execution id and composition chain — so the target shape is demonstrated one level down. In the unified design the host emits a `goal`-shaped impulse (and downstream an `activity_template`-shaped impulse) and the executor is dispatched as the resolver for that shape pair, collapsing the distinction between "top-level" and "nested" execution. A new in-process execution entry point is a regression, not a neutral choice.
 
 **Async dispatch.** `POST /run-goal` on goal-host-vessel (in-container port 8210) returns `202 Accepted` immediately with `{ dispatchId, status: "running" }` and runs the walk asynchronously; a goal identical to one already in flight is coalesced onto the running `dispatchId` instead of starting a redundant walk, so a caller that retries does not multiply work. Callers observe the outcome by polling `GET /executions/:dispatchId` or subscribing to the activity-api WebSocket for `task.completed` / `execution:succeeded` events. There is no blocking form of this route — the synchronous surface is `/resolve`. Code that treats a `/run-goal` response as a finished result is reading a dispatch receipt as an answer.
 
-### Forward-Arm Breakage
+### Forward-Arm Write
 
-The forward arm's write depends on `templateId` crossing the lifecycle boundary. When `lifecycle:task:completed` omitted it, the learning-signal writer's structural check rejected the empty string by truthiness and the write failed on every validator-dispatch iteration. The repair was two-sided, and both sides matter: the engine populates `templateId: template.id` on every `lifecycle:task:completed` emit, and the writer treats a missing or empty `templateId` (or an empty impulse-id list) as a no-op instead of throwing, so a malformed payload degrades one best-effort signal rather than failing the execution around it.
+The forward arm's write depends on `templateId` crossing the lifecycle boundary. Both sides carry it: the engine populates `templateId: template.id` on every `lifecycle:task:completed` emit, and the writer treats a missing or empty `templateId` (or an empty impulse-id list) as a no-op instead of throwing, so a malformed payload degrades one best-effort signal rather than failing the execution around it.
 
-The residue: the writer counts that no-op as a *succeeded* signal in its result impulse, so the result cannot distinguish "wrote the relevance records" from "had nothing to write". This is the general hazard of learning-signal paths — nothing downstream fails when one stops, and the only symptom is a posterior that quietly stops moving. Expect any such path to need instrumentation that makes its *absence* observable, not just its errors; an error-only view of a silent path reports health it has not measured.
-
-### Class-(c) Terms Pruned
-
-The following terms appear in older documents and should be removed when encountered. They have no code path:
-
-- **"Improvisation Outcome"** — superseded by variance + failure-mode tracking.
-- **"Trailblazing"** — never implemented; remains only in history.
-
-The active replacement is the failure-mode taxonomy (`verifier_negative`, `budget_exhausted`, `safety_breach`, `cascading`, `user_abort`, `prediction_disagreement`, and the untyped `execution_error`; see [`../learning/FAILURE_MODES.md`](../learning/FAILURE_MODES.md)) plus posterior variance, which together capture what these older terms gestured at. The full deprecated-term list (these plus the drifted state names and "The Two Primitives") is [`../GLOSSARY.md`](../GLOSSARY.md) §7.
+The writer counts that no-op as a *succeeded* signal in its result impulse, so the result cannot distinguish "wrote the relevance records" from "had nothing to write". This is the general hazard of learning-signal paths — nothing downstream fails when one stops, and the only symptom is a posterior that quietly stops moving. Any such path needs instrumentation that makes its *absence* observable, not just its errors; an error-only view of a silent path reports health it has not measured.
 
 ---
 
@@ -1188,6 +1167,6 @@ When implementing any feature, verify alignment with this foundation:
 
 This document is the synthesis point. It absorbs what were once separate treatments of the three-state model, vessel design, the impulse system, and ribosome extraction; those predecessors are not carried in the tree, and this foundation is the single place their content is maintained.
 
-Where a topic needs more depth than the foundation gives it, the continuations are the four companion lenses named at the top of this document — the MDP lens for the learning rule, the DEC lens for the structure, the dynamics lens for behavior in time, and the software lens for durability — and [`../GLOSSARY.md`](../GLOSSARY.md) fixes the vocabulary and lists deprecated aliases.
+Where a topic needs more depth than the foundation gives it, the continuations are the four companion lenses named at the top of this document — the MDP lens for the learning rule, the DEC lens for the structure, the dynamics lens for behavior in time, and the software lens for durability — and [`../GLOSSARY.md`](../GLOSSARY.md) fixes the vocabulary.
 
 All other architecture documents should derive from and align with this foundation. Where one of them disagrees with the running system, the running system is authoritative and the disagreement is a gap to file, not a doc to quietly reword.

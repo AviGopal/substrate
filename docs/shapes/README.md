@@ -62,8 +62,7 @@ not exist, however plausible the name.
 Names are camelCase for the activity-api families (`activityExecutionTrace`,
 `executionTraceList`, `traceAggregateReport`). Snake_case names appear in the
 tree — `shape_gap_resolution`, `test_audit_report`, `goal_verification_label` —
-because families were added at different times, and they are correct exactly as
-advertised. The pointer type is the advertised string, verbatim; there is no
+and they are correct exactly as advertised. The pointer type is the advertised string, verbatim; there is no
 normalisation step that would forgive a case difference.
 
 Beyond casing: name the data the shape returns, not the query that produced it.
@@ -158,20 +157,20 @@ The trace delete is a hard delete of rows within the caller's own tenant scope,
 bounded by a `limit`, and it defaults to a dry run — `dryRun: false` is what
 makes it actually delete. Deprecating a template
 is almost always the right move over editing one in place — an edited template
-carries a posterior earned by a body that no longer exists. See
+carries a posterior earned by a different body. See
 [`../guides/TEMPLATE_UPKEEP.md`](../guides/TEMPLATE_UPKEEP.md).
 
 `analysisResult`, `cochangeSuggestions`, `impactAnalysis`,
 `codebaseSearch`, and `problemCluster` still have cases in activity-api's
-router, but each answers 410 Gone with a pointer to the analysis resolver. They
-were a proxy path that violated "resolvers live where the data lives"; they are
-marked `@shape-dispatch:private` and are not advertised.
+router, but each answers 410 Gone with a pointer to the analysis resolver, because
+resolvers live where the data lives. They are marked `@shape-dispatch:private` and
+are not advertised.
 
 ## Code analysis shapes
 
 No running producer. `source_code`, `error_log`, `problem_detection`, `code_quality`,
-`code_annotation` and `cpg_query_result` were served by analysis-vessel, which is retired from
-the fleet: its inventory entry is marked `"retired": true`, so every profile masks its unit. A
+`code_annotation` and `cpg_query_result` belong to analysis-vessel, which is not in the running
+fleet: its inventory entry is marked `"retired": true`, so every profile masks its unit. A
 resolve of these shapes finds no producer in discovery (`registry_query` shows what is served).
 
 ## Concept and memory shapes

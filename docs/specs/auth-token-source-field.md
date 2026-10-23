@@ -62,7 +62,7 @@ this — they trust the caller's identity for tenant scoping.
 
 The gap appears as soon as a vessel needs a *different* credential:
 
-- **react-renderer** (when it lands) renders user-scoped UI state and
+- **A user-scoped UI vessel** renders user-scoped UI state and
   needs the user's JWT so `$auth.user_id` in SurrealDB resolves to the
   end user, not goal-host-vessel.
 - **identity-vessel**, when called from a vessel acting on behalf of a
@@ -304,7 +304,7 @@ the call hit the network with the wrong credential and getting a confusing
 
 Once `user_identity` exists, vessel A holding a user JWT will inevitably
 need to call vessel B "as the user." The cases to design for: goal-host-vessel →
-react-renderer (one hop, originator holds the JWT); goal-host-vessel → vessel A
+a user-scoped UI vessel (one hop, originator holds the JWT); goal-host-vessel → vessel A
 → vessel B where A's resolver itself calls B (multi-hop); deeper chains
 of intermediates.
 
@@ -349,11 +349,10 @@ single-use nonces, or are outside the trust domain advertise
 
 The decision factor: forwarding is what the system can already support
 (JWKS verification exists, no identity-vessel changes required).
-Minting requires an identity-vessel API addition (§5.9) that has not
-landed; defaulting to mint would brick every `user_identity` consumer
-until that work ships. Forwarding plus metadata headers is enough to
-unblock react-renderer and per-user audit reads. Minting lands later
-as a mode change without touching the field surface.
+Minting requires an identity-vessel API addition (§5.9); defaulting to
+mint without it would break every `user_identity` consumer. Forwarding
+plus metadata headers covers user-scoped UI and per-user audit reads,
+and minting is a mode change that does not touch the field surface.
 
 ### 5.4 Contract additions for delegation
 
@@ -511,7 +510,7 @@ not be caught by review; it has to be enforced mechanically.
 Identity-vessel must, at minimum, gain a mint endpoint to support
 `auth_delegation_mode: "mint"`. The endpoint is **not in the initial
 implementation order** of this spec — forwarding mode covers the first
-consumers (react-renderer, per-user audit reads). When the first
+consumers (user-scoped UI, per-user audit reads). When the first
 mint-mode vessel is needed, the work is:
 
 ```
@@ -555,7 +554,7 @@ In `src/types.ts`: add the types and defaults alongside
 `RegisterRequest`, and `VesselCapability`.
 
 `src/registry.ts` stores both fields and applies defaults at write time
-when absent (older clients always get values back). `src/resolvers.ts`
+when absent (a client that omits them still gets values back). `src/resolvers.ts`
 includes both fields in `vesselCapability` and `vesselRegistry`
 payloads. `src/server.ts` rejects (with warning) any incoming request on
 discovery's own endpoints that carries `X-User-JWT` or a JWT-shaped
@@ -614,7 +613,7 @@ annotation, no behavior change. Both of these carry it:
   "caller_identity"` for service-to-service. The mint endpoint (§5.9)
   is a separate API surface on identity-vessel itself, not part of the
   discovery contract.
-- **react-renderer**: `auth_token_source: "user_identity"`,
+- **A user-scoped UI vessel**: `auth_token_source: "user_identity"`,
   `auth_delegation_mode: "forward"`. UI state is per-user; cluster
   trust domain sufficient.
 - **per-user audit-vessel (hypothetical)**: `auth_token_source:
@@ -629,7 +628,7 @@ annotation, no behavior change. Both of these carry it:
 | activity-api               | `ApiKey`              | `caller_identity`   | (n/a; absent)          | Same as concept-db                         |
 | discovery-vessel           | `none`                | (absent → default)  | (n/a)                  | No auth on resolve                         |
 | identity-vessel            | `ApiKey` (likely)     | `caller_identity`   | (n/a; absent)          | Mint endpoint is separate API surface      |
-| react-renderer             | `Bearer`              | `user_identity`     | `forward`              | One-hop user UI                            |
+| user-scoped UI vessel      | `Bearer`              | `user_identity`     | `forward`              | One-hop user UI                            |
 | audit-vessel (hypothetical)| `Bearer`              | `user_identity`     | `mint`                 | Audience-bound, replay-resistant           |
 
 ---
@@ -711,7 +710,7 @@ leakage classes that review will not catch.
   picked up the §6.3 changes simply ignores both fields and runs the
   existing chain — every vessel wants `caller_identity`, which is
   what that build produces. New vessels needing `user_identity` will
-  fail to authenticate against older callers, which is the right failure
+  fail to authenticate against callers that do not send it, which is the right failure
   mode (the new vessel is not yet supported by that caller).
 - **Receivers without delegation-chain awareness.** A vessel that
   doesn't yet read the delegation headers simply ignores them.

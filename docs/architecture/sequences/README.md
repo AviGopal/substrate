@@ -315,7 +315,7 @@ One rule separates them: **goal-host-vessel decides and executes; activity-api r
 
 5. **Failure is typed.** `verifier_negative` and `safety_breach` take a full β; `budget_exhausted` a half; `cascading` and `user_abort` none. Undifferentiated penalties would make the posterior a measure of difficulty.
 
-6. **Composition edges are derived, not declared.** `activity_composition_graph` is reconciled from traces, and `genuine` requires recurrence with success or a demonstrated shape flow. The older `composition_edge` table and its routes were retired; nothing should point at them.
+6. **Composition edges are derived, not declared.** `activity_composition_graph` is reconciled from traces, and `genuine` requires recurrence with success or a demonstrated shape flow.
 
 ## Diagram Format
 

@@ -224,14 +224,14 @@ Rules:
 
 - Nothing ambient: no launcher reads `~/.metabob`, `gh`, or another container's environment.
 - Precedence at boot: explicit env > `.env` > persisted secret > default. An input that
-  conflicts with its deprecated alias fails the launch.
+  conflicts with its alias name fails the launch.
 - `HUB_DISCOVERY_URL` or `PEER_MULTIADDR` without `DISCOVERY_ENDPOINT` fails the launch; the
   system does not guess a role.
-- A deprecated name alias that conflicts with `SUBSTRATE_NAME` fails at boot, before
+- An alias name that conflicts with `SUBSTRATE_NAME` fails at boot, before
   anything is written. On a new volume, so does a partial one (for example
   `SUBSTRATE_CONTAINER=lab` without both volume names), so a new container can never attach
-  to another fleet's volumes; an install already running on its volumes is warned instead. The old names and their
-  replacements are listed in the [configuration reference's migration table](docs/operations/CONFIGURATION_SURFACE.md#migration-retired-names).
+  to another fleet's volumes; an install already running on its volumes is warned instead. The alias names and the
+  names they map to are listed in the [configuration reference's name table](docs/operations/CONFIGURATION_SURFACE.md#migration-retired-names).
 - Changing an install input means `docker compose up -d` (recreate, volumes kept). Changing
   runtime policy never needs a restart.
 
@@ -486,7 +486,7 @@ the unscoped form rewrites every GitHub URL and breaks anonymous cloning everywh
 | Change an install input or profile | re-run the install command with the new input; or edit `.env`, then `docker compose up -d` | recreate; volumes, installed vessels and secrets kept |
 | Choose which revision a node runs | set `SUBSTRATE_UPDATE_CHANNEL` in `.env`: `canary` (the default) runs `dev`, `fleet` runs what canaries verified, `hold` keeps what runs. Then re-run the install command | `fleet` and `hold` nodes consume and do not land (landing is turned off; the gap-store holder must stay `canary`, except on a throwaway acceptance install declared with `SUBSTRATE_ACCEPTANCE=1`, which may `hold`). `substrate-status` shows the channel and whether pull-sync enforces it; until it does, every node follows `dev` |
 | Move a fleet launched another way (a raw `docker run`, an old lane) onto the manifest | `docker stop -t 360 <c> && docker rm <c>`, then the install command for its role with `--adopt` | its volumes are kept: learning state, issued keys, secrets and federation id |
-| Keep one vessel on an extra host port (e.g. a page URL people already use) | a `docker-compose.override.yml` in the fleet directory adding `ports: ["127.0.0.1:<port>:<container port>"]` to service `substrate` | compose merges port lists, so it adds a mapping beside the derived one; it cannot remove or narrow one. The deprecated per-port inputs (`HUMAN_SURFACE_PORT` …) are refused alongside a prefix |
+| Keep one vessel on an extra host port (e.g. a page URL people already use) | a `docker-compose.override.yml` in the fleet directory adding `ports: ["127.0.0.1:<port>:<container port>"]` to service `substrate` | compose merges port lists, so it adds a mapping beside the derived one; it cannot remove or narrow one. The per-port inputs (`HUMAN_SURFACE_PORT` …) are refused alongside a prefix |
 | Add or remove one vessel at runtime | `docker exec <c> vessel-ctl install <v>` / `uninstall <v>` | persisted in the workspace; survives recreate |
 | Issue or revoke keys | `docker exec <c> substrate-key issue <name>` / `revoke <id>` | hub-issued keys join spokes |
 | Point a client elsewhere | re-run `substrate-connect` against that fleet | one config home (`~/.substrate/config.json`, linked from `~/.metabob/config.json`); the cockpit's override is `METABOB_CONFIG_PATH` |

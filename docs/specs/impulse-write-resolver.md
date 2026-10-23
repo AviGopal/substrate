@@ -258,7 +258,7 @@ The reasoning, restated: concept-db's resolvers (read and write) emit data that 
 
 **concept-db is a consumer of `impulse`, not its owner.** It runs against the shared learning-loop database, where activity-api owns the table and holds the authoritative SCHEMAFULL definition with tenant-isolation PERMISSIONS. concept-db reads and writes rows through `repos/concept-db/src/resolvers/impulse.ts`; it does not define the table's shape.
 
-This distinction is load-bearing, and it was learned the hard way. An earlier version of concept-db's migration declared `DEFINE TABLE impulse SCHEMAFULL` without `IF NOT EXISTS`. On apply it clobbered activity-api's definition — stripping the tenant-isolation PERMISSIONS and racing activity-api's schema on every concept-db restart. **Never write an unguarded `DEFINE TABLE` for a table another vessel owns in a shared database.**
+This distinction is load-bearing. An unguarded `DEFINE TABLE impulse SCHEMAFULL` in concept-db's migration would overwrite activity-api's definition on every concept-db restart, stripping the tenant-isolation PERMISSIONS. **Never write an unguarded `DEFINE TABLE` for a table another vessel owns in a shared database.**
 
 ### Schema
 

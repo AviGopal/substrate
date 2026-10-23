@@ -1,8 +1,8 @@
 # Glossary — canonical terms for the substrate
 
-> The single term registry for this repo. Where a term drifted across docs, the
-> **canonical** spelling is fixed here and prior spellings are listed as
-> *deprecated aliases*. This file does not re-derive concepts — it points at the
+> The single term registry for this repo. Each term has one **canonical** spelling
+> here; other spellings are listed beside it as aliases to avoid. This file does not
+> re-derive concepts — it points at the
 > source-of-truth doc that owns each one.
 >
 > **Source-of-truth map.** Ontology (the four primitives impulse/pointer/resolver/vessel,
@@ -22,7 +22,7 @@
 One triad, canonical names **Informational / Transient / Observational**. Full
 treatment + the durability bridge: `SUBSTRATE_AS_SOFTWARE.md` §1.
 
-| Canonical | Definition | Deprecated aliases |
+| Canonical | Definition | Avoid |
 |---|---|---|
 | **Informational state** | the durable structure — vessel/resolver **code** *and* learned content (shapes, posteriors, topology, goal-paths) | *Instructional state*, "the structure (i)" |
 | **Transient state** | the execution in flight — an impulse being resolved, a binding being chosen | *Process-of-Becoming*, "the becoming (t)" |
@@ -56,8 +56,8 @@ Foundation: IMPULSE_ACTIVITY_FOUNDATION §"Minimum Self-Stable Set".
 | **resolver** | a function from pointer → content; lives where the data is | tiers are a binning of its *directional certainty* (§5); implicit resolvers live inside executors |
 | **vessel** | a collection of activities and resolvers | **two senses** — *structural* (code) vs *operational* (running service instance); see SUBSTRATE_AS_SOFTWARE §2.1 |
 
-> Deprecated framing: "**The Two Primitives**" (impulse + activity). The canonical
-> minimum set is these **four**; activity is *derived* (§4).
+> The minimum set is these **four**; activity is *derived* (§4). Impulse and activity are
+> not "the two primitives".
 
 ## 4. Derived constructs
 
@@ -65,11 +65,11 @@ Foundation: IMPULSE_ACTIVITY_FOUNDATION §"Minimum Self-Stable Set".
 |---|---|---|
 | **activity** | a constrained state transition linking input-impulse sets to output-impulse sets; concretely "an impulse of shape `activity_template`" | FOUNDATION; *derived, not a primitive* |
 | **shape** | the pointer's `type` + metadata, viewed as a **learned type**; observed/refined/pruned from traces, not declared in a global registry | FOUNDATION; "pointer-as-shape", `ImpulseShape` |
-| **trace** / **execution trace** | the recorded set of impulses (in / intermediate / out) + state transition + outcome for one execution | canonical DB table: **`activity_execution_traces`** (plural); impulse shape: **`activityExecutionTrace`**; deprecated table aliases: `execution`, `activity_execution_trace` (singular) |
+| **trace** / **execution trace** | the recorded set of impulses (in / intermediate / out) + state transition + outcome for one execution | canonical DB table: **`activity_execution_traces`** (plural); impulse shape: **`activityExecutionTrace`**; avoid the table names `execution` and `activity_execution_trace` (singular) |
 | **trajectory** | one path through the composition graph; structurally identical to an activity, differing only in granularity | FOUNDATION |
 | **composition graph** | the graph of templates connected by input/output shapes; discovered through execution, not designed | edges carry α/β posteriors |
 | **lifecycle event / hook** | an impulse of shape `lifecycle:*` broadcast to subscribed meta-activities | emitted at well-known points, mostly by the execution engine (the `emit` helper in `ias-executor-ts/src/engine.ts`) — among them `lifecycle:task:preBinding` (before slot binding), `lifecycle:task:completed`, `lifecycle:execution:succeeded`, `lifecycle:gap:classified` — and also from resolvers (e.g. `lifecycle:llm:dispatched` in the LLM-prompt resolver). Treat the emit sites, not this list, as the live set |
-| **state signature** | the canonical state key for contextual selection: `state_signature` (available-shape multiset, canonicalized) | `state_signature`; its sorted-dedup shape-array core is the **shape signature** (`ShapeSignature`); "state-space signature" (idiom 9) is a deprecated alias |
+| **state signature** | the canonical state key for contextual selection: `state_signature` (available-shape multiset, canonicalized) | `state_signature`; its sorted-dedup shape-array core is the **shape signature** (`ShapeSignature`); avoid "state-space signature" (idiom 9) |
 | **budget** | resource ceiling for loading an impulse (tokens / bytes / rows / time) | "resource budget" |
 
 ## 5. Learning-loop terms
@@ -129,43 +129,42 @@ The words used for how the running system behaves and is operated.
 | **cockpit** | the agent-facing tool surface (the metabob MCP server) through which agents dispatch goals and read verdicts | `CLAUDE.md` |
 | **S1 → S2 → S3** | the operator trajectory: operator-authored development, then substrate-authored development under supervision, then a system that resists harmful intervention with cited evidence | `CLAUDE.md` § The operator role |
 
-## 7. Deprecated & pruned terms
+## 7. Use these terms
 
-Do not use in new docs; listed so older docs remain readable.
+Write the term on the right. The term on the left names nothing in the running system.
 
-| Dead / deprecated term | Status | Use instead |
-|---|---|---|
-| **trailblazing** | pruned (never canonical; superseded) | the **failure-mode taxonomy** + variant creation on failure |
-| **improvisation outcome** | pruned | posterior variance + failure mode |
-| **Instructional state** | deprecated alias | **Informational state** |
-| **Functional state** | deprecated alias | **Observational state** |
-| **process-of-becoming** | deprecated alias (live docs) | **Transient state** / "the becoming" |
-| **"The Two Primitives"** | deprecated framing | the **four** primitives (activity is derived) |
-| **`resolver_tier` as a fixed kind** | deprecated reading | a binning of **directional certainty** (§5) |
-| table `execution` / `activity_execution_trace` | deprecated table aliases | **`activity_execution_traces`** |
+| Avoid | Use |
+|---|---|
+| **trailblazing** | the **failure-mode taxonomy** + variant creation on failure |
+| **improvisation outcome** | posterior variance + failure mode |
+| **Instructional state** | **Informational state** |
+| **Functional state** | **Observational state** |
+| **process-of-becoming** | **Transient state** / "the becoming" |
+| **"The Two Primitives"** | the **four** primitives (activity is derived) |
+| **`resolver_tier` as a fixed kind** | a binning of **directional certainty** (§5) |
+| table `execution` / `activity_execution_trace` | **`activity_execution_traces`** |
 
-### 7.1 Retired names
+### 7.1 Names to avoid
 
-Product-era names carried over from before the substrate had its own identity. They are
-supersessions, not synonyms: a new document, shape, repo, package, or identifier must never
-introduce one, and encountering one in older material means the surrounding claim is worth
-re-checking against the running system.
+These names are not synonyms for anything in the codebase. A new document, shape, repo,
+package, or identifier never introduces one, and a claim that uses one is worth checking
+against the running system.
 
-| Retired name | Status | Use instead |
-|---|---|---|
-| `metabob-*` as a prefix | retired across the codebase | the vessel's own name — e.g. `metabob-activity-api` → **`activity-api`** |
-| `@metabob/*` packages | retired namespace | **`@avigopal/*`** — e.g. `@metabob/cpg-inference` → `@avigopal/cpg-inference` |
-| `metabob-devbob` (super-repo) | retired | **`substrate`** |
-| `minibob`, `MiniBob` | **removed, not renamed** | nothing — the CLI it named is gone. Its instance auth is retired; the signin routes answer `410 Gone` deliberately |
-| `devbob` | retired | **`substrate`** — the self-developing deployment, not a separate agent |
+| Avoid | Use |
+|---|---|
+| `metabob-*` as a prefix | the vessel's own name — e.g. `metabob-activity-api` → **`activity-api`** |
+| `@metabob/*` packages | **`@avigopal/*`** — e.g. `@metabob/cpg-inference` → `@avigopal/cpg-inference` |
+| `metabob-devbob` (super-repo) | **`substrate`** |
+| `minibob`, `MiniBob` | nothing; no such component exists, and its signin routes answer `410 Gone` by design |
+| `devbob` | **`substrate`** — the self-developing deployment, not a separate agent |
 
-**One surviving exception:** the **metabob MCP server** keeps its name. It is the agent-facing
-cockpit — the tool surface an operator's agent calls into — and its tool identifiers
-(`mcp__metabob__*`) are a published interface, not internal drift.
+**One name stays:** the **metabob MCP server**. It is the agent-facing cockpit — the tool
+surface an operator's agent calls into — and its tool identifiers (`mcp__metabob__*`) are a
+published interface.
 
-**A tombstone outlives the thing it marks.** Where a retired name appears in a refusal path — a
-`410 Gone` body naming the removed method — that is a deliberate signal, not residue. Deleting it
-degrades an informative refusal into a bare `404`. Retire such a route on telemetry showing no
+**A refusal that names an avoided term is deliberate.** Where one appears in a refusal path — a
+`410 Gone` body naming a method that does not exist — it is a signal, not residue. Deleting it
+turns an informative refusal into a bare `404`. Remove such a route on telemetry showing no
 callers, not on a name sweep.
 
 ## 8. The cross-lens dictionary (pointer)

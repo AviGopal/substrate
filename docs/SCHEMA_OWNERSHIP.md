@@ -73,11 +73,11 @@ The canonical model is four tables defined in
 | `impulse` | Impulse records with pointer and metadata |
 | `vessel` | Vessel registry rows |
 
-Around that core sit two other groups. **Compatibility views** map legacy names
-onto the canonical tables so older queries keep working:
+Around that core sit two other groups. **Compatibility views** map alias names
+onto the canonical tables so queries written against them keep working:
 `sql/schemas/026-activity-template-alias.surql` defines `activity_template` as a
 view over `activity`, and `sql/schemas/022-paradigm-compat-views-v3.surql`
-defines the `v_paradigm_*` family. **Legacy and specialised tables** —
+defines the `v_paradigm_*` family. **Specialised tables** —
 `activity_execution_traces`, `variant_performance_metrics`,
 `goal_execution_paths`, `activity_composition_graph`, `composition_edge`,
 `tool_usage`, `execution_sequences`, `impulse_relevance_metrics` and the rest of
@@ -85,11 +85,10 @@ defines the `v_paradigm_*` family. **Legacy and specialised tables** —
 files as the authoritative list; the set changes as migrations land, and a
 table's owner is always the repo whose `.surql` defines it.
 
-`minibob_instance` is a tombstone. `sql/000-auth-schema.surql` defines it and
-`sql/migrations/052-deprecate-minibob-instance.surql` makes it read-only —
-`FOR create, update, delete NONE` — because the CLI it authenticated is retired
-and its callers present API keys validated by identity-vessel instead. The table
-survives so historical rows remain auditable, not because anything writes it.
+`minibob_instance` is read-only. `sql/000-auth-schema.surql` defines it and
+`sql/migrations/052-deprecate-minibob-instance.surql` sets
+`FOR create, update, delete NONE`; callers present API keys validated by
+identity-vessel. The table is kept so its rows remain auditable; nothing writes it.
 
 ## Identity and tenancy tables
 
@@ -142,7 +141,7 @@ like; do not treat it as a live migration source.
 
 Two facts fix its status. `Dockerfile.substrate` copies no part of
 the deployment repository into the substrate image, so those files are not present in a
-running container. And `repos/activity-api/sql/migrate.ts` — the older runner
+running container. And `repos/activity-api/sql/migrate.ts` — a second runner
 that applies this core layer before the activity schemas — locates it through
 `METABOB_PROTO_PATH`, which nothing under `scripts/` sets. The substrate's
 schema path is `repos/activity-api/scripts/init-database.ts`, which applies only
@@ -182,7 +181,7 @@ apply, and treat the row layout as the owner's to change without notice.
    `sql/migrations/` for activity-api, `sql/core/` for concept-db — with a
    numeric prefix, since both runners apply files in sorted order.
 3. **Scope it.** New tables use `$token.org_id` for org isolation.
-   `$auth.org_id` appears in older files and silently excludes API-key callers;
+   `$auth.org_id` appears in some files and silently excludes API-key callers;
    see [`RBAC_GUIDE.md`](RBAC_GUIDE.md) for when `$auth` is still correct.
 4. **Index the scope column** and whatever the queries filter on.
 5. **Make it re-appliable** — `DEFINE ... IF NOT EXISTS`, or `OVERWRITE` when

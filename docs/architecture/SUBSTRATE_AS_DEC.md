@@ -229,7 +229,7 @@ Sources: [Lim]; [Jiang–Lim–Yao–Ye]; [Schaub et al.].
 
 ### 1.5 The typed-shape gate is lattice-theoretic, not linear
 
-One honesty correction the linear Hodge story glosses. The applicability
+One qualification the linear Hodge story glosses. The applicability
 predicate `input_shapes ⊆ available_shapes` is **order-theoretic (set
 containment), not linear**. Linear cellular-sheaf cohomology ([Hansen & Ghrist
 2019]) supplies the right *vocabulary* — `H⁰` = globally-consistent states, `H¹`

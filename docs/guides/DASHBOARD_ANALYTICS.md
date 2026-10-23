@@ -5,7 +5,7 @@ super-repo, so the component paths below are named by role rather than by path.
 
 This guide describes the analytics panels in the activity dashboard and how to read them. If you're debugging a learning-loop regression, this is where you look before digging into raw traces.
 
-> **Foundation alignment.** Two-direction learning duality: `impulseRelevance` (forward arm — P(success | activity X resolves pointer of shape Y)) and slot-binding/Thompson recommendations (reverse arm — P(success | activity X chosen given pool {A,B,C})) must stay symmetric. *(`thompson_posterior` is now a resolvable shape; see [`docs/impulse-types/thompson_posterior.md`](../impulse-types/thompson_posterior.md). Pre-fix traces remain skewed and should be excluded from retroactive analysis.)* Read the impulse-relevance and convergence panels with arm symmetry in mind: a stalled forward arm makes the reverse arm's "convergence" misleading. Note also migration 128 (2026-05): `times_failed` was silently dropped by the SCHEMAFULL table before that migration, so failure counts predating it undercount.
+> **Foundation alignment.** Two-direction learning duality: `impulseRelevance` (forward arm — P(success | activity X resolves pointer of shape Y)) and slot-binding/Thompson recommendations (reverse arm — P(success | activity X chosen given pool {A,B,C})) must stay symmetric. *(The posterior is readable as the `thompson_posterior` shape; see [`docs/impulse-types/thompson_posterior.md`](../impulse-types/thompson_posterior.md).)* Read the impulse-relevance and convergence panels with arm symmetry in mind: a stalled forward arm makes the reverse arm's "convergence" misleading.
 
 ## Learning-loop panels
 

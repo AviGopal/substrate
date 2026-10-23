@@ -95,7 +95,7 @@ treated:
 
 The bootstrap path enforces the premise. Identity refuses to boot on an unset or
 publicly-known API-key secret unless the insecure-development override is set explicitly,
-and environment generation refuses to fall back to the legacy public default on an existing
+and environment generation refuses to fall back to the public development default on an existing
 datastore — because two substrates that both fell back would silently share one trust
 space, which is exactly the namespace collision the rule exists to prevent. A deliberate
 rotation is expressed by naming previous secrets explicitly, never auto-derived.
@@ -161,13 +161,13 @@ loopback-normalised host:port. In that case `registerAtHub` omits the transport'
 row, but it still registers the per-vessel rows, so hub-native vessels are advertised with
 the circuit for inbound peer dials and do appear `@`-qualified in the hub's own registry.
 Expect those rows when debugging apparent duplicates on a hub; the startup log line still
-announces the mirror as disabled, which no longer describes what `registerAtHub` does.
+announces the mirror as disabled, which does not describe what `registerAtHub` does.
 
 Withdrawal crosses the boundary as explicitly as advertisement does. Each mirror tick
 diffs the ids it registered last tick against the ids it registers this tick and DELETEs
 the difference from the hub registry, rather than letting a departed vessel ride out the
-hub's TTL — for that window every peer would otherwise see a producer that no longer
-exists, select it (a mirror row advertises both the shape and a live circuit), dial in, and
+hub's TTL — for that window every peer would otherwise see a producer that has gone,
+select it (a mirror row advertises both the shape and a live circuit), dial in, and
 receive "no producer" from a substrate that was never at fault. The deletion is reached
 only after both of the mirror's guards, which is what keeps it safe: with no live circuit
 the tick returns early, so a dropped reservation — our reachability problem, not the

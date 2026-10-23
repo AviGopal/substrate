@@ -460,7 +460,7 @@ This sequence spans two vessels with a clean split: `goal-host-vessel` decides a
 - `impulse_relevance_metrics` — impulse→activity relevance used by the relevancy boost.
 - `thompson_selection_log`, `context_thompson_scores` — selection audit and context-conditioned scores.
 
-**Retired:** the `composition_edge` table and its `fn::update_composition_edge` helper were removed along with their writer and reader routes. Anything describing composition learning should point at `activity_composition_graph`.
+**Composition edges:** composition learning reads and writes `activity_composition_graph`, the one composition table.
 
 ### Correct Separation
 

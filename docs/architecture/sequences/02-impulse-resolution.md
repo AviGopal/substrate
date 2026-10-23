@@ -88,7 +88,7 @@ sequenceDiagram
     Sink-->>Exec: POST /v2/activities/execution-traces
 ```
 
-## Decomposition: Resolver Tracking (Phase 10)
+## Decomposition: Resolver Tracking
 
 Resolution is recorded on the task record, not in a side channel. Every `ExecutionTaskRecord` the engine emits carries the identity and tier of the resolver that ran, the shapes that went in and came out, and the files the resolver touched.
 
@@ -304,7 +304,7 @@ after cost accrues:
 
 Bounding of individual resolver payloads is the producing vessel's responsibility — a shell resolver bounds its own output, a search resolver bounds its own result set — so the bound is visible in the produced impulse rather than applied invisibly by the executor. Anything a consumer must know about a bound belongs in the impulse's metadata, which is exactly what the metadata-first formatting above surfaces.
 
-## State Transition Tracking (P3.2)
+## State Transition Tracking
 
 What the trace records is **attribution**, not a before/after filesystem diff. Each task reports the paths it wrote, the paths it created, and the material locators it read; the trace as a whole reports the shapes seeded into the pool and the shapes produced. Together these answer "what did this run touch, and what did it turn into" without requiring the executor to hash a working tree.
 
@@ -421,7 +421,7 @@ Resolution spans three vessels with one rule between them: the executing vessel 
 - Host the WebSocket broadcast bus that other vessels subscribe to.
 - Register itself with discovery-vessel and heartbeat, so it is discovered like any other producer.
 
-**What it does not do:** it does not own resolver dispatch, does not resolve shapes it never advertised, and is not a fallback for arbitrary pointers. Its legacy `/v2/vessels/*` endpoints are deprecated in favour of discovery-vessel.
+**What it does not do:** it does not own resolver dispatch, does not resolve shapes it never advertised, and is not a fallback for arbitrary pointers. Vessel registration and lookup go through discovery-vessel.
 
 ### Discovery-Vessel (Capability Registry)
 

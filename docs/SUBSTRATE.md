@@ -507,8 +507,8 @@ The volume copy is what the fleet obeys; the image copy is the build default.
 the paths.
 
 > Both boot and `apply` call the same `apply-llm-arms` for the rendered arms.
-> One copy on purpose: the arm-selection logic lived only in the entrypoint, and
-> that is exactly why changing which arms run used to require a restart.
+> One copy on purpose: arm selection that lived only in the entrypoint would make
+> changing which arms run require a restart.
 
 `deregister` is the fifth vessel verb: it removes a vessel from discovery without
 touching its unit, for taking a vessel out of rotation while leaving it running.
@@ -720,12 +720,10 @@ from the environment because it bounds a destructive operation:
 | `TRACE_STORE_HOT_WINDOW_DAYS` | recency window kept in full | `3` |
 | `TRACE_STORE_RESERVOIR_PER_ACTIVITY` | stratified sample kept per activity outside the hot window | `25` |
 
-> **These are what `gen-env` pins, not what the code falls back to.** The column
-> used to carry activity-api's in-code defaults — `TRACE_STORE_CAP` `50000` — and
-> no fleet has ever run that number, because `gen-env` writes `150000` into
-> `/etc/substrate/env` on every boot and the code default only applies when the
-> variable is absent. Documenting a fallback that is always shadowed reads as
-> current configuration and is off by 3×. Confirm on the fleet you actually have:
+> **These are what `gen-env` pins, not what the code falls back to.** activity-api's
+> in-code defaults (for example `TRACE_STORE_CAP` `50000`) apply only when the variable is
+> absent, and `gen-env` writes `150000` into `/etc/substrate/env` on every boot, so a fleet
+> runs the pinned value. Confirm on the fleet you actually have:
 >
 > ```bash
 > docker exec <container> grep -E '^TRACE_STORE_' /etc/substrate/env
@@ -821,7 +819,7 @@ Federation concepts (hub vs. peers, the relay, firewall ports) live in [`docs/FE
 
 Beyond the baked-in core, `vessels.manifest.json` declares **runtime-installable** vessels. The fleet definition files live ON THE VOLUME at `/workspace/substrate/fleet/` (seeded from image defaults at first boot, substrate-writable — the substrate can alter its own membership); readiness, doctor, self-recovery, pull-sync and vessel-ctl all read the volume copies.
 
-`vessel-ctl` ships **in the image** (`/usr/local/bin/vessel-ctl`) and is fully self-contained: `install` clones the vessel's repo into `/workspace/git/vessels/<name>` on demand, mirrors it into the live `/vessels` runtime, renders the unit via the shared `render-unit` template, and enables it — no host checkout, no docker-cp from a host workspace. Rendered units carry an `ExecStopPost` discovery-deregister so any clean stop leaves the registry immediately (crash death falls back to the 5-min TTL). Self-recovery membership is **derived** from the fleet files at read time — install/uninstall no longer mutates any script.
+`vessel-ctl` ships **in the image** (`/usr/local/bin/vessel-ctl`) and is fully self-contained: `install` clones the vessel's repo into `/workspace/git/vessels/<name>` on demand, mirrors it into the live `/vessels` runtime, renders the unit via the shared `render-unit` template, and enables it — no host checkout, no docker-cp from a host workspace. Rendered units carry an `ExecStopPost` discovery-deregister so any clean stop leaves the registry immediately (crash death falls back to the 5-min TTL). Self-recovery membership is **derived** from the fleet files at read time — install/uninstall mutates no script.
 
 ```bash
 docker exec <container> vessel-ctl list                            # installable vessels

@@ -54,7 +54,7 @@ METABOB_API_KEY=<key> bun run validation/scripts/reuse-harness.ts [--baseline <d
 ```
 
 The `--label` tag is embedded in the JSON report for tracking. `--baseline <date>` loads a
-prior report (e.g. `--baseline 2026-05-12`) and shows deltas inline.
+prior report by its date (`--baseline <YYYY-MM-DD>`) and shows deltas inline.
 
 Report is written to `validation/results/{ISO_DATE}-reuse-report.json`.
 

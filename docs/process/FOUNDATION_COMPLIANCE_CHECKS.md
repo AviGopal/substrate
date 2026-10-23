@@ -15,7 +15,7 @@
 
 The `foundation-compliance` validator is the gate that stands between
 substrate-authored spec proposals (output of the `propose-spec`
-activity, per closure-replacement-suite §B / §F) and admission into
+activity) and admission into
 the openspec change tree. Without a comprehensive predicate set, the
 validator can only spot-check three indicative violations and let the
 rest through. That makes substrate self-development unsafe: any
@@ -70,8 +70,8 @@ detail }`. Aggregation rules are in §C.
 - **Shape** — concrete artifact is `pointer.type` plus its metadata
   (FND §37–§45). Shapes are not declared in a global registry; they
   are advertised by vessels via `config.discovery.shapes`.
-- **Indicative checks** — the three checks pinned by
-  closure-replacement-suite R6.4 (cite-foundation, declared
+- **Indicative checks** — the three checks pinned as
+  the core set (cite-foundation, declared
   input/output shapes, shape advertised by owning vessel). They are
   FC-001, FC-007, and FC-005 below; all other checks expand the set.
 
@@ -141,7 +141,7 @@ Twenty checks total. Severity legend:
 
 **Check ID:** FC-005
 **Title:** New shapes advertised by an owning vessel
-**Foundation citation:** FND §43, §226–§289 ("Vessels"); closure-replacement-suite R6.4(c).
+**Foundation citation:** FND §43, §226–§289 ("Vessels").
 **Invariant:** Every new shape declared in the spec MUST appear in some owning vessel's `config.discovery.shapes` array (or its source-of-truth equivalent in the vessel's discovery contract).
 **Substrate-evaluable predicate:** Extract the set of new shape identifiers declared in `design_md` / `specs_md` (markdown table rows, `Shape:` headings, fenced TypeScript blocks of the form `type FooShape = { ... }`). For each, confirm the proposal text names an owning vessel AND either (a) lists the shape under that vessel's `config.discovery.shapes` block in the proposal, or (b) declares a tasks-level requirement that the vessel be updated to advertise it.
 **Example violation:** "Introduce `cargoManifest` shape" with no vessel taking ownership.
@@ -163,7 +163,7 @@ Twenty checks total. Severity legend:
 
 **Check ID:** FC-007
 **Title:** Activity input/output shapes explicit
-**Foundation citation:** FND §126–§174 ("Activities"); closure-replacement-suite R6.4(b).
+**Foundation citation:** FND §126–§174 ("Activities").
 **Invariant:** Every new activity declared in the spec MUST have an explicit `input_shapes` (or `inputSchema.required`) and `output_shapes` (or `outputSchema.produces`) declaration. `input_shapes` MAY be empty; `output_shapes` MUST be non-empty (FND requires every activity to produce at least one output shape — otherwise the trace cannot feed the learning loop).
 **Substrate-evaluable predicate:** Parse activity declarations from design tables and tasks.md. For each, confirm presence of both fields. Empty `input_shapes` is allowed (FND notes inputs are optional by default); empty/missing `output_shapes` is rejected.
 **Example violation:** A new activity "`audit-traces`" with no `output_shapes` declaration.
@@ -237,20 +237,20 @@ Twenty checks total. Severity legend:
 
 **Check ID:** FC-013
 **Title:** External dependencies declare substrate-resident replacement
-**Foundation citation:** FND §263 (backend is not universal resolver); `2026-04-26-impulse-activity-loop` §27.3.j (substrate-closure-properties); closure-replacement-suite §F.
+**Foundation citation:** FND §263 (backend is not universal resolver).
 **Invariant:** A proposal that introduces or expands a dependency on an external tool (operator-memory, slash-skills, subagents, github-actions, operator-shell, operator-spec-authoring, or any other external service) MUST name the substrate-resident replacement OR explicitly state that the dependency is permanent and justify it.
-**Substrate-evaluable predicate:** Scan proposal/design for references to external tools (matching the list in closure-audit script §G). For each reference that is not a bootstrap-only acknowledgement, confirm presence of either (a) a named replacement vessel/activity/shape that takes over the responsibility post-bootstrap, or (b) an explicit "permanent dependency" paragraph with justification.
+**Substrate-evaluable predicate:** Scan proposal/design for references to external tools (matching the external-tool list the closure audit uses). For each reference that is not a bootstrap-only acknowledgement, confirm presence of either (a) a named replacement vessel/activity/shape that takes over the responsibility post-bootstrap, or (b) an explicit "permanent dependency" paragraph with justification.
 **Example violation:** "Proposal uses operator-shell for every deployment step" with no `deploy-substrate` activity (or equivalent) named as replacement.
-**Example pass:** "Bootstrap-only: uses operator-shell during initial install; replaced by `deploy-substrate` activity post-bootstrap (closure-replacement-suite §B)."
+**Example pass:** "Bootstrap-only: uses operator-shell during initial install; replaced by `deploy-substrate` activity post-bootstrap."
 **Severity:** REQUIRED
 
 ---
 
 **Check ID:** FC-014
 **Title:** Closure-replacement contract consistency
-**Foundation citation:** closure-replacement-suite spec §R1–§R10.
-**Invariant:** A proposal that modifies a closure replacement named in closure-replacement-suite (e.g. `verify-merge-candidate`, `propose-spec`, `apply-spec`, `archive-spec`, `cleanup-docs`, `review-pr`, `audit-security`, `deploy-substrate`, `cron-dispatch`) MUST update the named contract rather than introducing a parallel surface.
-**Substrate-evaluable predicate:** For each activity-id named in closure-replacement-suite §B / §C, if the proposal mentions or modifies behaviour in that domain, verify the activity is referenced by id rather than re-declared under a new id.
+**Foundation citation:** the substrate's closure properties.
+**Invariant:** A proposal that modifies a closure replacement, a substrate activity that takes over from an external tool (e.g. `verify-merge-candidate`, `propose-spec`, `apply-spec`, `archive-spec`, `cleanup-docs`, `review-pr`, `audit-security`, `deploy-substrate`, `cron-dispatch`) MUST update the named contract rather than introducing a parallel surface.
+**Substrate-evaluable predicate:** For each activity-id that is a closure replacement, if the proposal mentions or modifies behaviour in that domain, verify the activity is referenced by id rather than re-declared under a new id.
 **Example violation:** A proposal introducing a new `run-tests-and-merge` activity that duplicates `verify-merge-candidate`.
 **Example pass:** A proposal that extends `verify-merge-candidate` by adding a new check task to its existing contract.
 **Severity:** RECOMMENDED
@@ -403,9 +403,9 @@ promote them to §B as the substrate's parsing capacity grows.
 
 ### O-004 — Closure-property impact estimation
 
-**Foundation citation:** closure-replacement-suite §R7–§R10 (closure-audit).
+**Foundation citation:** the closure audit.
 
-**Why operator-only:** Whether a proposal *strengthens* or *weakens* the substrate's closure relative to a given external tool requires synthetic-removal evaluation under the closure-audit harness. Foundation-compliance can name the dependency (FC-013); it cannot run the audit. The closure-audit script (closure-replacement-suite §G) runs independently and complements foundation-compliance.
+**Why operator-only:** Whether a proposal *strengthens* or *weakens* the substrate's closure relative to a given external tool requires synthetic-removal evaluation under the closure-audit harness. Foundation-compliance can name the dependency (FC-013); it cannot run the audit. The closure-audit script runs independently and complements foundation-compliance.
 
 ### O-005 — Foundation-amendment soundness
 

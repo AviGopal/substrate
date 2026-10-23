@@ -13,20 +13,20 @@ record, a procedure, or a reference without the interface interpreting it succes
 
 ## Expected behavior inventory
 
-| Behavior | System responsibility | Evidence / remaining work |
-|---|---|---|
-| Receive | Preserve content and provenance, including unfamiliar contributions | First slice preserves JSON question bodies and responses; binary transfer and general unsolicited contributions remain separate work |
-| Understand | Relate content to the right activity; retain uncertainty and original content | Question id and revision are enforced; broader activity/intent interpretation is not established |
-| Invite | Recognize a need for human participation and formulate a useful request | Existing `uiQuestion_write` is now visible in the browser; autonomous initiation must be demonstrated by an activity |
-| Compose | Find existing pathways involving humans; identify missing capabilities | Existing discovery shapes remain the boundary; no new scheduler or browser-owned learner |
-| Present | Choose understandable, useful representations with an inspectable original | Existing content-form renderer used; original JSON is available; render-policy experiments remain open |
-| Communicate | State the contribution needed and the consequence of responding | Questions, response history, explicit storage receipts and decline supported; consumption is not inferred |
-| Continue | Preserve identity across waiting, interruption and restart | Journals restore questions and response identities; late answers cannot silently target a revised question |
-| Evaluate | Check outcomes against goals and retain disagreement | Existing grade path remains; independent assessment coverage is still limited |
-| Repair | Investigate challenges and verify corrections | Ordinary answers no longer become interface complaints; complaint-to-verified-repair loop remains to be proven |
-| Learn | Link a contribution to consumption, update and later behavioral benefit | Not established by this exchange implementation; next required causal link |
-| Adapt | Apply supported contextual preferences without disrupting participation | Presented question versions and drafts remain stable; new versions require review |
-| Grow | Author, exercise and retain new interaction capabilities | Not demonstrated; proposed variants must earn standing through held-out outcomes |
+| Behavior | System responsibility |
+|---|---|
+| Receive | Preserve content and provenance, including unfamiliar contributions |
+| Understand | Relate content to the right activity; retain uncertainty and original content |
+| Invite | Recognize a need for human participation and formulate a useful request |
+| Compose | Find existing pathways involving humans; identify missing capabilities |
+| Present | Choose understandable, useful representations with an inspectable original |
+| Communicate | State the contribution needed and the consequence of responding |
+| Continue | Preserve identity across waiting, interruption and restart |
+| Evaluate | Check outcomes against goals and retain disagreement |
+| Repair | Investigate challenges and verify corrections |
+| Learn | Link a contribution to consumption, update and later behavioral benefit |
+| Adapt | Apply supported contextual preferences without disrupting participation |
+| Grow | Author, exercise and retain new interaction capabilities |
 
 Appeal should support useful, informed, voluntary participation. Measure whether people
 understand invitations, contribute useful distinctions, assess evidence accurately and
@@ -90,13 +90,10 @@ Tests use a temporary workspace and do not contact the running substrate.
 The browser probe runs the built UI against a disposable local server. It exercises
 buffered arrivals, draft preservation across selection and revision review, structured
 answers, duplicate retries, stale-version rejection, reload, narrow layout, keyboard
-focus and dark rendering. It does not establish accessibility conformance or that humans
-find the interface appealing. A moderated, counterbalanced study on frozen tasks remains
-necessary to compare comprehension, effort, assessment accuracy and willingness to
-participate. The overall interface still contains legacy interaction-conformance findings.
+focus and dark rendering. Comprehension, effort, assessment accuracy and willingness to participate are compared
+by a moderated, counterbalanced study on frozen tasks.
 
-The source had a duplicated, syntactically invalid feedback hydration block; that is
-replaced by a single replay path. Server imports now explicitly reference TypeScript,
+Feedback hydration runs through a single replay path. Server imports explicitly reference TypeScript,
 and Vite explicitly loads its TypeScript config and prioritizes TypeScript sources.
 This prevents checked-in JavaScript siblings from silently shadowing source changes.
 

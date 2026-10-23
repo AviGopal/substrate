@@ -18,32 +18,14 @@ them, and there is no `POST /v2/activities/lifecycle-subscribers` ranker on
 activity-api. §3.3 below describes that ranked runtime as design, not as
 behaviour a reader can observe.
 
-**Audience**: a reviewer who wants to understand why an execution host's
-foundation doc can claim an "activity lifecycle with hooks" that the host
-never fires, and how to wire it without inventing a parallel mechanism
-alongside the existing impulse–activity system.
+**Audience**: a reviewer who wants to understand how activity lifecycle hooks work in the
+execution host without a parallel mechanism alongside the impulse–activity system.
 
 ---
 
 ## 1. Problem
 
-The foundation doc asserts an "activity lifecycle" with hooks for
-`pre-execution`, `post-execution`, `on-failure`, `on-state-change`,
-and `periodic`. Nothing in the executor invokes them. Infrastructure
-is split across three orphaned files:
-
-| File | Status |
-| --- | --- |
-| A hook registry with cache and state-snapshot dispatch | Fired for one trigger only. Every other trigger was defined in the type and never emitted. |
-| A namespace-style hook system | `register()` and its before/after dispatchers were never called from non-test code. |
-| Verification hooks layered on that system | Exported and never invoked; the validation they re-implemented already lived elsewhere. |
-
-The diagnostic that established this: the hook-registry symbols had no
-callsites in the execution path, the namespace-style dispatchers had no
-callers outside test code, and the verification hooks had none at all. A
-registry nothing dispatches into is indistinguishable from an absent one.
-
-The cost of this gap: every template that wants setup or teardown
+Without hooks, every template that wants setup or teardown
 encodes it as the first or last task. A context-priming template
 spends its first and last tasks on context-loading and
 relevance-recording that are cross-cutting concerns around the one task
@@ -344,13 +326,11 @@ rather than recurses when a subscriber chain would exceed its depth bound.
 A fourth guard is narrower but load-bearing: a template never fires on an
 event it itself emitted.
 
-### What was removed
+### One hook mechanism
 
-The parallel hook registry, the namespace-style before/after dispatchers, and
-the verification hooks that duplicated validation were all dropped rather than
-ported. None had a live caller. The subscription model replaces them: a hook
-is an activity like any other, executed through the ordinary path — and once
-ranking lands, graded like any other.
+There is no separate hook registry and no before/after dispatchers. A hook is an
+activity like any other, subscribed through the model above and executed through
+the ordinary path — and once ranking is wired, graded like any other.
 
 ## 5. Open questions
 

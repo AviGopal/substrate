@@ -72,9 +72,9 @@ For each concept, POSTs to concept-db's usage-tracking endpoint with `outcome: "
 
 ### Key Design Points
 
-- **Impulses at template level** — Following the Unified Impulse-Driven Architecture pattern (see CLAUDE.md §Unified Impulse-Driven Architecture), the top-level `impulses[]` array lets the executor pre-resolve shapes before any task runs. Executors that don't yet support this array ignore it gracefully; executors that do get lazy-loading for free.
+- **Impulses at template level** — The top-level `impulses[]` array lets the executor pre-resolve shapes before any task runs. An executor that does not read the array ignores it; one that does gets lazy loading.
 - **Closed-loop feedback** — Task 3 closes the loop: contexts used feed usage stats that adjust relevance for the next run.
-- **Schema coexistence** — This template uses camelCase field names (matching `demonstrate-activity-system.json`); the older `library-learning/generate-library-activities.json` uses snake_case. Schema unification is out of scope.
+- **Schema coexistence** — This template uses camelCase field names, matching `demonstrate-activity-system.json`.
 
 ---
 
@@ -115,7 +115,7 @@ For each candidate, outputs:
 }
 ```
 
-Stores the list as a `memo` impulse with id `candidates-{{traceId}}`. Does not POST to concept-db yet.
+Stores the list as a `memo` impulse with id `candidates-{{traceId}}`. This task writes nothing to concept-db.
 
 **Task 2: `dedupe-against-existing-graph` (LLM)**
 

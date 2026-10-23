@@ -65,15 +65,15 @@ below explains what it cannot see.
 
 ## Migration: retired names
 
-Retired names and lanes fall into four groups: aliases still honoured, names already
-ignored, lanes removed, and wrappers deprecated but still working.
+Each name below has a replacement. Some are honoured as aliases, some are ignored, and three
+wrappers translate their inputs into the install path.
 
-**Aliases still honoured.** These take effect during migration. A name alias that
+**Aliases honoured.** A name alias that
 conflicts with its replacement fails the launch before anything is written, and so does a
-partial set of the exact-name aliases on a new volume; on a volume an earlier boot already
-used, a partial set is warned about and boots as before.
+partial set of the exact-name aliases on a new volume; on a volume a boot has
+already used, a partial set is warned about and boots.
 
-| Retired | Replacement | What happens when it is set |
+| Name | Replacement | What happens when it is set |
 |---|---|---|
 | `SUBSTRATE_CONTAINER`, `WORKSPACE_VOLUME`, `SURREAL_VOLUME` | `SUBSTRATE_NAME` | honoured as exact names; gen-env warns on each |
 | `LIVE_NAME` | `SUBSTRATE_NAME` | honoured; `make up` and gen-env warn |
@@ -82,22 +82,14 @@ used, a partial set is warned about and boots as before.
 | `ENABLED_ROLES=hub` + a hand-listed `ENABLED_EXTRA_VESSELS` | `PROFILE=hub` | honoured: both still refine the unit set |
 | `MITOSIS_DIRECT_PUSH` as the autonomy switch | push capability (`SUBSTRATE_GIT_PAT` + `SUBSTRATE_REPO_OWNER`) + `pushPolicy` | honoured only as the kill switch (`0` stops autonomous landing) |
 
-**Names already ignored.** Setting these changes nothing; the launcher that used to read
-them says so.
+**Names ignored.** Setting these changes nothing, and the launcher says so.
 
-| Retired | Replacement |
+| Name | Replacement |
 |---|---|
-| `METABOB_CONFIG` | `METABOB_CONFIG_PATH` (`ui-only-up.sh` prints a note that the old name is ignored) |
+| `METABOB_CONFIG` | `METABOB_CONFIG_PATH` (`ui-only-up.sh` prints a note that the name is ignored) |
 
-**Lanes removed.** These are commands and processes, not names; nothing warns about them.
-
-| Retired | Replacement |
-|---|---|
-| `make run-live`, `run`, `run-detach`, `run-live-obsidian`, raw `docker run` recipes, `configure-local.sh` | the install page's sequences |
-| a host relay process on its own port | the in-container relay on `P333` (`RELAY_PORT` keeps an existing hub's port) |
-
-**Wrappers deprecated but still working.** `scripts/substrate/deploy-hub.sh`,
-`deploy-hub-pull.sh` and `deploy-remote.sh` translate their old inputs into an `.env` and
+**Wrappers.** `scripts/substrate/deploy-hub.sh`,
+`deploy-hub-pull.sh` and `deploy-remote.sh` translate their inputs into an `.env` and
 run `scripts/substrate/deploy.sh`, which runs the launch manifest on another host over
 ssh. The replacement for all of them is the install command run on the target host.
 
@@ -119,9 +111,8 @@ variables but a **method**: what channel delivers a value, what beats what, and 
 assertions can be re-measured rather than believed.
 
 Everything here is reproducible with `scripts/substrate/config-surface-probe.sh`. Where a
-number appears, the command that produced it appears beside it. Numbers drift; the prior
-hand-written audit's findings went stale in *both* directions within days — one defect fixed,
-one still live, nothing reporting either.
+number appears, the command that produced it appears beside it. Numbers drift, so the
+command is the claim and any number is only what it printed when run.
 
 ---
 
@@ -280,8 +271,8 @@ network* (one endpoint), *where does my data live* (volume, ports). Frozen by na
 fail closed, cannot be graded.
 
 **Tier 1 — behavioural.** Everything else. Under law 1 these should be shaped impulses read
-at use time, observable in the trace of the execution that consumed them. Today they are env,
-which is why the surface is as large as it is: **the size of the config surface is a direct
+at use time, observable in the trace of the execution that consumed them. Where they are env,
+that is why the surface is as large as it is: **the size of the config surface is a direct
 measure of unfinished derivation and unfinished shaping.**
 
 What determines whether a Tier-1 variable *can* move:
@@ -301,21 +292,21 @@ documents why*.
 
 ## 4. Scale, and what the measurement cannot see
 
-| Dimension | Count | How |
-|---|---|---|
-| Names emitted into `/etc/substrate/env` | **72–80 — conditional, not a constant** | `grep -cE '^[A-Z_]' /etc/substrate/env` after a boot. **Emission depends on what you supplied** (an absent provider key emits no arm), so this is a range and the command cannot reproduce a single number. A fixed count was carried here once and disagreed with `config-surface-baseline.txt` in the same repo. |
-| Names offered by each launch lane | per lane | `config-surface-probe.sh` (the cross-lane differential) |
-| Distinct names read across vessels and packages | ~451 | dot + bracket + helper forms, `sort -u` |
-| Names in unit `Environment=` lines | 52 (48 unique to that channel) | §1 |
-| `.service.d` drop-in files | 34 total, 10 carrying `Environment=` | `grep -l Environment= …/*.service.d/*.conf` |
-| Names documented in `scripts/substrate/.env.example` | 15 (none uncommented) | `grep -oE '^#? ?[A-Z_][A-Z0-9_]*=' … \| sort -u` |
-| `_ENV_SUPPLIED` provenance snapshot | 33 | `gen-env.sh` |
+| Dimension | How |
+|---|---|
+| Names emitted into `/etc/substrate/env` | `grep -cE '^[A-Z_]' /etc/substrate/env` after a boot. **Emission depends on what you supplied** (an absent provider key emits no arm), so this is a range and the command cannot reproduce a single number. A fixed count was carried here once and disagreed with `config-surface-baseline.txt` in the same repo. |
+| Names offered by each launch lane | `config-surface-probe.sh` (the cross-lane differential) |
+| Distinct names read across vessels and packages | dot + bracket + helper forms, `sort -u` |
+| Names in unit `Environment=` lines | §1 |
+| `.service.d` drop-in files | `grep -l Environment= …/*.service.d/*.conf` |
+| Names documented in `scripts/substrate/.env.example` | `grep -oE '^#? ?[A-Z_][A-Z0-9_]*=' … \| sort -u` |
+| `_ENV_SUPPLIED` provenance snapshot | `gen-env.sh` |
 
 **The scanner's own blind spots**, stated because a count presented without them invites
 false conclusions:
 
 - `process.env["FOO"]` bracket form is dominant in six vessels. **A dot-only grep misses
-  roughly 40% of the fleet.**
+  a large share of the fleet's reads.**
 - Helper forms — `parseEnvInt('NAME', …)`, `envOr("NAME", …)` — are invisible to both. The
   `TRACE_*` family is read exclusively this way.
 - `concept-db` calls `parseEnvInt(key, …)` with a **caller-supplied** key. Those reads cannot
@@ -334,14 +325,14 @@ distinction as "a zero read through a filter measures the filter".
 This is the most consequential category, because a default only applies when a variable is
 *unset*, which is exactly the state "point at a hub and go" depends on.
 
-| Variable | Distinct defaults | Worst pair |
-|---|---|---|
-| `SURREALDB_URL` | 5 | `localhost:8000` vs a Kubernetes service DNS name vs `ws://…` |
-| `SURREALDB_PASSWORD` | 4 | **`changeme` vs `root`** — two vessels reaching the same database with different default credentials. The originally-cited pair (activity-api vs relevance-sink) has since been repaired; `relevance-sink-vessel/src/index.ts` now defaults to `changeme`. The class is still live — e.g. `development-vessel/src/resolvers/orphaned-org-write-scan.ts` defaults to `root`. **Re-derive the instances before citing them; do not quote this row as current.** |
-| `DISCOVERY_ENDPOINT` | 4 | `discovery-vessel:8080` (wrong port for this fleet) and `localhost:8765` (a port used nowhere else) |
-| `ACTIVITY_API_ENDPOINT` | 4 | includes activity-api pointing at its **own** wrong port |
-| `GOAL_HOST_VESSEL_ENDPOINT` | 2 | `:8210` in 12 sites; `:8090` — the dev-vessel port — in one |
-| `FED_HEALTH_PORT` | 2 | `8401` in the in-container transport and its three consumers; `8402` in the **host-side Obsidian sidecar** (`libp2p-federation-transport/src/sidecar.ts`), a separate program reading the same name. One variable, two programs, two defaults — export it for one and the other silently moves. (Do not read this row as "the server disagrees with its consumers": the server agrees with them. Also distinct: `OBSIDIAN_PASSTHROUGH_HEALTH_PORT`, which also defaults to `8402` but is a different name.) |
+| Variable | Example of divergent defaults |
+|---|---|
+| `SURREALDB_URL` | `localhost:8000` vs a Kubernetes service DNS name vs `ws://…` |
+| `SURREALDB_PASSWORD` | **`changeme` vs `root`** — two vessels reaching the same database with different default credentials. For example, `development-vessel/src/resolvers/orphaned-org-write-scan.ts` defaults to `root`. |
+| `DISCOVERY_ENDPOINT` | `discovery-vessel:8080` (wrong port for this fleet) and `localhost:8765` (a port used nowhere else) |
+| `ACTIVITY_API_ENDPOINT` | includes activity-api pointing at its **own** wrong port |
+| `GOAL_HOST_VESSEL_ENDPOINT` | `:8210` in most sites; `:8090` — the dev-vessel port — in one |
+| `FED_HEALTH_PORT` | `8401` in the in-container transport and its three consumers; `8402` in the **host-side Obsidian sidecar** (`libp2p-federation-transport/src/sidecar.ts`), a separate program reading the same name. One variable, two programs, two defaults — export it for one and the other silently moves. (Do not read this row as "the server disagrees with its consumers": the server agrees with them. Also distinct: `OBSIDIAN_PASSTHROUGH_HEALTH_PORT`, which also defaults to `8402` but is a different name.) |
 
 Adjacent hazards of the same kind:
 
@@ -381,29 +372,28 @@ What it reports, and why each exists:
 | `DROPPED` | a lane passes a name gen-env never emits — delivered to nothing |
 | `HARDCODED` | the name is emitted but your value was replaced by a literal |
 | cross-lane differential | two lanes that claim to launch the same thing and do not |
-| `UNOFFERED` | `scripts/substrate/.env.example` documents the name and this lane never passes it — the axis the other rows cannot reach, because every one of them starts from what a lane *already* passes. Both autonomy kill switches hid here |
-| `MANGLED` | the name is emitted and the value still carries the sentinel marker, but is not byte-identical to what was supplied — a value CORRUPTED in transit. Scoped to names documented as JSON, because gen-env legitimately *derives* many values and an unscoped byte-comparison reports nine false positives |
+| `UNOFFERED` | `scripts/substrate/.env.example` documents the name and this lane never passes it — the axis the other rows cannot reach, because every one of them starts from what a lane *already* passes. |
+| `MANGLED` | the name is emitted and the value still carries the sentinel marker, but is not byte-identical to what was supplied — a value CORRUPTED in transit. Scoped to names documented as JSON, because gen-env legitimately *derives* many values and an unscoped byte-comparison reports false positives |
 | `PHANTOM` | a persisted read with no matching write |
 
-Sentinels for names documented as JSON are **JSON**, quotes included. They were all
-alphanumeric, which made the probe structurally unable to observe a quoting defect — and
-one was live: values were emitted with a raw `NAME="${VAR}"` wrap and no escaping, so a
-documented JSON value reached its consumer as invalid JSON and was swallowed by a warning.
-A probe that only supplies easy inputs measures how the system handles easy inputs.
+Sentinels for names documented as JSON are **JSON**, quotes included. An alphanumeric
+sentinel cannot observe a quoting defect, such as a raw `NAME="${VAR}"` wrap with no escaping
+that delivers a documented JSON value to its consumer as invalid JSON. A probe that only
+supplies easy inputs measures how the system handles easy inputs.
 
-**A probe that cannot run must say so, never produce a number.** Three ways this one lied
-before it was trusted, each now guarded in the script:
+**A probe that cannot run must say so, never produce a number.** The script guards three
+ways a probe like this one misleads:
 
-1. A swallowed daemon-side `mounts denied` reported every lane as emitting **zero** names — a
-   harness failure wearing the costume of the most alarming possible finding. stderr is now
+1. A swallowed daemon-side `mounts denied` would report every lane as emitting **zero** names —
+   a harness failure wearing the costume of the most alarming possible finding. stderr is
    kept and an empty emission set is a fatal error, because gen-env either fails closed
    (writing nothing *and* exiting non-zero) or writes ~72 names. Zero with a clean exit is
    impossible.
-2. The sentinel check counted the probe's own abstentions — the provider key and nine
-   endpoints it deliberately does not fake — as discarded values. Ten false positives, all
-   plausible. It now judges only names that actually carried a sentinel.
-3. It executed the image's baked `gen-env` while grepping the worktree's, comparing two
-   revisions and attributing the difference to the substrate.
+2. A sentinel check that counts the probe's own abstentions (the provider key and the
+   endpoints it deliberately does not fake) reports discarded values that are not. It judges
+   only names that actually carried a sentinel.
+3. Executing the image's baked `gen-env` while grepping the worktree's compares two revisions
+   and attributes the difference to the substrate; the probe runs one revision for both.
 
 The third is the general form and the one worth carrying: **when a check reads one artifact
 and exercises another, its findings describe the gap between them, not the system.**
@@ -413,12 +403,8 @@ and exercises another, its findings describe the gap between them, not the syste
 ## 7. Why a script and not a pasted command
 
 A check nothing invokes cannot be trusted when it passes, because it is never observed
-failing. The hand-written audit this supersedes
-(an earlier configuration-surface audit, kept in history) was a `docker run` pasted into prose; its
-`VLLM_*` finding was fixed and its advertise-variable finding stayed live, and nothing
-reported either.
+failing. A command pasted into prose is exactly such a check.
 
-The remaining step, unbuilt: this probe is a script, so it is still only as good as the habit
-of running it. Under law 2 the check belongs to an **activity** the loop can grade — at which
+This probe is a script, so it is only as good as the habit of running it. Under law 2 the check belongs to an **activity** the loop can grade — at which
 point the configuration surface finally acquires the feedback the first paragraph says it
 lacks.
