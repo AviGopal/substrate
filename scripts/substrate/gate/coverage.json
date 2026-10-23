@@ -2888,10 +2888,17 @@
     },
     "/usr/local/bin/substrate-key": {
       "src": "scripts/substrate/substrate-key.sh",
-      "src_blob": "861528715f26f2f01407560f141f648e96b6eadf",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
+      "src_blob": "54fbb1ee4f80bbb9dc6a41c924af6e36f69d6b93",
+      "level": "behaviour",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "substrate-key-admin-persist.sh"
+      ],
+      "evidence": {
+        "accepted": "0dc22435f44c0149ec4f6fc2cdd94650a3f2208f",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "27c427e11d156068c231792d72e99a2a2d9d475e"
+      }
     },
     "/usr/local/bin/substrate-manifest": {
       "src": "scripts/substrate/substrate-manifest.sh",
