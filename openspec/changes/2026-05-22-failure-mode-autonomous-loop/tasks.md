@@ -62,7 +62,7 @@ Per dev-vessel discipline: VERIFY → DEBUG → SPEC (this doc) → DEV.
 
 ## DEV-6: Documentation ✓
 
-- [x] Update `validation/failure-modes/PROGRESSION.md` to mark the
+- [x] Update the failure-mode progression note (kept in history) to mark the
       "draft-gap-closing-activity exists" item complete. DONE — PROGRESSION.md
       updated during cycle-2 run (2026-05-22); cycles/cycle-2.json documents
       the `draft-gap-closing-activity exists` gap as closed.

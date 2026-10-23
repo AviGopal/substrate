@@ -414,7 +414,7 @@ and exercises another, its findings describe the gap between them, not the syste
 
 A check nothing invokes cannot be trusted when it passes, because it is never observed
 failing. The hand-written audit this supersedes
-(`validation/findings/config-surface-audit.md`) was a `docker run` pasted into prose; its
+(an earlier configuration-surface audit, kept in history) was a `docker run` pasted into prose; its
 `VLLM_*` finding was fixed and its advertise-variable finding stayed live, and nothing
 reported either.
 

@@ -1,7 +1,7 @@
 # Substrate-Narration Protocol
 
-An operator-side validation methodology. Gap accumulation lives at
-`validation/gaps/`.
+An operator-side validation methodology. The gaps it surfaces accumulate in the
+gap store (shape `substrateGap`), never in the repository.
 
 The protocol is in force at every point on the S1 → S2 → S3 trajectory, and what
 it measures shifts as the operator's role does. Early on, gaps mark what the
@@ -75,8 +75,8 @@ A description that draws on any of those is a **gap**.
 
 ## §C. Description record format
 
-Each operator description attempt produces one Markdown record under
-`validation/gaps/<gap-id>-<slug>.md` — YAML frontmatter carrying the
+Each operator description attempt produces one record, filed to the gap store —
+YAML frontmatter carrying the
 machine-readable fields, then prose. Records are appended; existing records are
 not rewritten (a recurrence is noted by bumping `recurring_count` and
 `last_observed`).
@@ -112,7 +112,7 @@ The body carries the narration itself, under these headings:
 One description record may surface several gaps. Each entry under
 `### Operator-side gaps:` is its own gap-record candidate, and gaps recur across
 multiple description records. The record is the unit of WORK; the gap is the
-unit of ACCUMULATION, tracked in `validation/gaps/INDEX.md`.
+unit of ACCUMULATION, tracked in the gap store.
 
 ## §D. Gap categories
 
@@ -167,10 +167,9 @@ the substrate-side activities that consume gap records as evidence.
 ## §F. Workflow
 
 1. **Operator starts a narrator**.
-   The narrator subscribes to activity-api `/ws`, writes JSONL event logs
-   under `validation/observations/events-<YYYY-MM-DD>.jsonl`, and snapshots
-   the substrate's knowledge surface every 5 minutes under
-   `validation/observations/snapshots/`.
+   The narrator subscribes to activity-api `/ws`, writes JSONL event logs,
+   and snapshots the substrate's knowledge surface every 5 minutes, both
+   outside the repository: they are runtime state, never committed.
 
 2. **Operator selects events of interest**. Not every event needs
    narration — the protocol is sampling-based. Reasonable triggers:
@@ -193,17 +192,16 @@ the substrate-side activities that consume gap records as evidence.
    - `GET /registry/stats` (vessel inventory)
 
 4. **Operator attempts the description** using ONLY what those queries
-   returned plus the snapshot at `validation/observations/snapshots/`. Any
+   returned plus the latest snapshot. Any
    reach outside that → a gap, logged per §C.
 
-5. **Operator writes the description record** to
-   `validation/gaps/<gap-id>-<slug>.md`, per §C.
+5. **Operator files the description record** to the gap store, per §C.
 
-6. **Operator updates `validation/gaps/INDEX.md`** — increments
+6. **Operator updates the gap store** — increments
    `recurring_count` for any gap that matches an existing entry; creates
    a new row otherwise.
 
-7. **Periodic review**: the bridge-priority list is `INDEX.md` sorted by
+7. **Periodic review**: the bridge-priority list is the open gaps sorted by
    `recurring_count × gap_severity`. The top of the list is the highest-
    leverage substrate-side work.
 

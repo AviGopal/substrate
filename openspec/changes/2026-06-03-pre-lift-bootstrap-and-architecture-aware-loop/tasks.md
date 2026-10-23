@@ -3,7 +3,7 @@
 ## Stage 0 — Architecture-as-data foundation
 
 - [ ] **0.1** Ingest `docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md` as concepts via existing `ingest-doc-as-concepts` template. Each section becomes a `source_type: "architectural_pattern_principle"` concept with `severity` field (advisory|guidance|structural).
-- [ ] **0.2** Ingest the session's architectural insight findings (validation/findings/*) similarly. Concept-db gains operator-articulated insights as queryable data.
+- [ ] **0.2** Ingest the session's architectural insight findings (kept in history) similarly. Concept-db gains operator-articulated insights as queryable data.
 - [ ] **0.3** Verify concept-db returns these via `concept_search_by_source(source_type="architectural_pattern_principle")`.
 - [ ] **0.4** Author `architectural_principles_index` concept that catalogues which principles each horizon-detector should consult. Self-documenting + extensible.
 
@@ -73,7 +73,7 @@ Each detector follows the immunity pattern (single resolver, no LLM, no iteratio
 
 ## Stage 3 — Empirical verification
 
-Observation pass 2026-06-03. Full report: `validation/findings/stage-3-observation-2026-06-03/observation.md`.
+Observation pass 2026-06-03. The full report is kept in history.
 
 - [~] **3.1** PARTIAL — 2 of 4 detectors emit substrateGap (pattern-scan: 3, distribution: 1). Responsibility + lifecycle are data-gapped or descriptive-only. All 4 dispatchable via light-dispatch.
 - [ ] **3.2** GAP — vessel_responsibility_audit ran on 20 vessels but `principles_fetched_total: 0`. Blocked by Stage 0 ingestion.
