@@ -156,7 +156,17 @@ case "$cmd" in
     # An admin-scoped mint is the substrate's own mint credential, not just
     # another peer key — persist it so this surface keeps working across the
     # next boot. See persist_admin_key() for the incident this prevents.
-    if has_admin_scope "$scopes"; then persist_admin_key "$key"; fi
+    # SEC-5 guard: the persisted SUBSTRATE_ADMIN_KEY is the operator's recovery credential and MUST NOT
+    # expire — persisting an expiring admin-scoped key locks admin out (issue/list/revoke) when it
+    # expires (incident 2026-10-22). So only a NON-EXPIRING admin mint becomes the
+    # persisted credential; an expiring admin key is issued and returned, not persisted.
+    if has_admin_scope "$scopes"; then
+      if [[ -n "$days" ]]; then
+        echo "[substrate-key] NOT persisting SUBSTRATE_ADMIN_KEY: '$name' is admin-scoped but expires in $days day(s); the operator credential must not expire (persisting it would lock admin out at expiry — SEC-5). Re-issue WITHOUT an expiry to set the operator credential." >&2
+      else
+        persist_admin_key "$key"
+      fi
+    fi
     echo "The full key is shown ONCE and never stored — save it now." >&2
     echo "$key"
     ;;
