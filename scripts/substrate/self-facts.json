@@ -912,8 +912,6 @@
             "repos/goal-host-vessel/test/satisfier-trace-flush-order.test.ts",
             "repos/development-vessel/src/lib/evaluator-tree.ts",
             "repos/development-vessel/src/resolvers/check-supply-admission.ts",
-            "repos/development-vessel/src/resolvers/composer-interruption-sweep.ts",
-            "repos/goal-host-vessel/src/goal-target-inference.ts",
             "repos/concept-db/tests/write-shapes.test.ts",
             "repos/development-vessel/src/judge/",
             "repos/development-vessel/test/ratchet/",
@@ -1122,7 +1120,6 @@
             "repos/development-vessel/test/resolvers/gap-check-supply-dispatch-outcome.test.ts",
             "repos/development-vessel/test/resolvers/goal-reach-link-filed.test.ts",
             "repos/development-vessel/test/resolvers/goal-deficiency.test.ts",
-            "repos/development-vessel/src/resolvers/source-code.ts",
             "repos/goal-host-vessel/src/capability-demand.ts",
             "repos/goal-host-vessel/test/capability-demand.test.ts",
             "repos/goal-host-vessel/test/named-unadvertised-target.test.ts",
@@ -1148,7 +1145,18 @@
             "repos/goal-host-vessel/src/inbound-auth.ts",
             "repos/development-vessel/src/lib/gap-store-merge.ts",
             "repos/development-vessel/src/lib/call-credential.ts",
-            "repos/development-vessel/src/lib/gap-forward-queue.ts"
+            "repos/development-vessel/src/lib/gap-forward-queue.ts",
+            "repos/development-vessel/test/judge-split/pin-arm-decomposition.test.ts",
+            "repos/development-vessel/test/judge-split/pin-arm-gate-closed.test.ts",
+            "repos/development-vessel/test/judge-split/pin-bump-close-settles.test.ts",
+            "repos/development-vessel/test/judge-split/pin-compose-graders.test.ts",
+            "repos/development-vessel/test/judge-split/pin-hopeless-floor-pickskip.test.ts",
+            "repos/development-vessel/test/judge-split/pin-live-producer-probe.test.ts",
+            "repos/development-vessel/test/judge-split/pin-owner-route.test.ts",
+            "repos/development-vessel/test/judge-split/pin-pick-skeleton.test.ts",
+            "repos/development-vessel/test/judge-split/pin-sweep-trigger.test.ts",
+            "repos/goal-host-vessel/test/judge-consistency/heldout.test.ts",
+            "repos/goal-host-vessel/test/judge-consistency/verdict-consistency.test.ts"
           ],
           "require_falsifier_classes": [
             "class2"
