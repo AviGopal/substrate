@@ -1,7 +1,6 @@
 # Substrate-Narration Protocol
 
-An operator-side validation methodology. Operational tooling lives at
-`validation/scripts/substrate-narrator.ts`; gap accumulation lives at
+An operator-side validation methodology. Gap accumulation lives at
 `validation/gaps/`.
 
 The protocol is in force at every point on the S1 → S2 → S3 trajectory, and what
@@ -167,10 +166,7 @@ the substrate-side activities that consume gap records as evidence.
 
 ## §F. Workflow
 
-1. **Operator starts the narrator**:
-   ```bash
-   bun run validation/scripts/substrate-narrator.ts
-   ```
+1. **Operator starts a narrator**.
    The narrator subscribes to activity-api `/ws`, writes JSONL event logs
    under `validation/observations/events-<YYYY-MM-DD>.jsonl`, and snapshots
    the substrate's knowledge surface every 5 minutes under
@@ -225,7 +221,7 @@ The narration protocol doubles as the channel through which operator actions are
 - **Commits from the operator's git author identity** that modify substrate vessel source files — detected by comparing `git log --author` against the set of operator-known identities versus the substrate's own author. In-container commits are made as `Substrate Autonomous <substrate-autonomous@substrate.local>` (overridable by `SUBSTRATE_GIT_AUTHOR_NAME` / `SUBSTRATE_GIT_AUTHOR_EMAIL`), so a commit touching `repos/development-vessel/src/` under an operator identity is an intervention while the same change under the substrate's identity is substrate-authored.
 - **Direct `docker exec` commands** that mutate substrate state without going through the activity system — for example, manually editing `/etc/substrate/env`, running a SurrealDB SQL statement directly, or modifying a unit file.
 - **Writes to `validation/state/` files** by the operator — lift-status updates, coordination file edits, manual gap overrides. These are actions against substrate-measured signals.
-- **Forced closure gate passes** — any edit to `validation/scripts/closure-audit.ts` or a coordination file that makes a gate pass by assertion rather than by the substrate earning the pass.
+- **Forced closure gate passes** — any edit to a closure audit or a coordination file that makes a gate pass by assertion rather than by the substrate earning the pass.
 
 Each intervention should be classified into one of three categories:
 

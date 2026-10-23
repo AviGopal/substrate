@@ -1,8 +1,8 @@
 # Human goals, evidence, and learning
 
 Status: interaction contract, with an [offline prototype](./prototypes/explicability.html)
-and a companion [participation contract](./HUMAN_PARTICIPATION.md). The prototype uses
-invented examples. It makes no claims about evaluation results.
+and a companion [participation contract](./HUMAN_PARTICIPATION.md). The prototype runs
+offline on sample content.
 
 ## Purpose
 
@@ -38,8 +38,8 @@ These are semantic mappings, not declarations of new registered shapes. Use exis
 discovery contracts where available; identify absent capabilities explicitly.
 
 There is already a concrete seed in human-surface-vessel:
-[`RenderPolicy`](../../repos/human-surface-vessel/src/store.ts) carries token overrides,
-content-form preferences and evidence expansion settings; [`surfaceIntent`](../../repos/human-surface-vessel/src/surface-intent.ts)
+`RenderPolicy` (human-surface-vessel) carries token overrides,
+content-form preferences and evidence expansion settings; `surfaceIntent` (human-surface-vessel)
 translates supported instructions into policy changes and retains unparsed demand.
 That makes some presentation choices variable. It does not, by itself, prove learned
 selection, durable retention, or the ability to author new interaction procedures.

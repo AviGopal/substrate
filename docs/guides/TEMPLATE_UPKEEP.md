@@ -126,7 +126,7 @@ A dedicated REST API would have bypassed all four.
 
 ## Sibling upkeep flow: stale-trace cleanup
 
-The same four-task pattern applied to execution traces rather than template metadata. Its resolver surface is live — `executionTraceList` reads candidates, `activityExecutionTrace_delete` is the destructive write, `upkeepAuditLog` is the record — and a runbook lives in the activity-api submodule at [`repos/activity-api/docs/testing/CLEANUP_UPKEEP_RUNBOOK.md`](../../repos/activity-api/docs/testing/CLEANUP_UPKEEP_RUNBOOK.md).
+The same four-task pattern applied to execution traces rather than template metadata. Its resolver surface is live — `executionTraceList` reads candidates, `activityExecutionTrace_delete` is the destructive write, `upkeepAuditLog` is the record — and a runbook lives in the activity-api submodule at `repos/activity-api/docs/testing/CLEANUP_UPKEEP_RUNBOOK.md`.
 
 The activity template itself, like §4's, is absent. It once shipped through `repos/activity-api/sql/migrations/078-register-cleanup-templates.surql`; that migration's insert blocks were removed and it is retained as a numbered no-op, because re-running it on every redeploy inserted rows with no explicit ids and so minted duplicate records each time. **Templates do not belong in migrations** — a migration is applied repeatedly and a template insert without a stable id is not idempotent. Template ownership belongs with the vessel that serves them and with ribosome extraction.
 

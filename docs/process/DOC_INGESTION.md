@@ -13,8 +13,8 @@ The ingester is `scripts/substrate/ingest-docs-as-concepts.ts`. The primary cons
 ## What gets ingested
 
 The walk covers `docs/**`, the root `CLAUDE.md`, and each `repos/<vessel>/CLAUDE.md` and
-`repos/<vessel>/README.md` — the same watched set the alignment scan uses. `docs/archive/`
-is excluded from the walk, as are `node_modules`, `.git`, `dist`, and any dotted entry.
+`repos/<vessel>/README.md` — the same watched set the alignment scan uses. An `archive/` directory under `docs/`
+would be excluded from the walk, as are `node_modules`, `.git`, `dist`, and any dotted entry.
 Only `.md` files are read.
 
 A document is split into sections on level-2 and level-3 headings (`##` and `###`). Text

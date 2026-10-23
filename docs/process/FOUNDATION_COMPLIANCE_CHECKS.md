@@ -427,7 +427,7 @@ promote them to §B as the substrate's parsing capacity grows.
 
 Closure checks verify that the substrate is not load-bearing on the seven external stateful dependencies enumerated in the substrate closure properties. Unlike FC-001..FC-020, which test individual code artifacts for foundation alignment, CC checks are system-level: they test whether removing an external tool breaks a substrate property.
 
-The closure-audit script runs CC-001..CC-007 nightly and emits a `closureStatusReport` impulse. Three consecutive green runs across all seven checks are a hard prerequisite for lift approval.
+A closure audit evaluates CC-001..CC-007. Three consecutive green runs across all seven checks are a hard prerequisite for lift approval.
 
 ---
 

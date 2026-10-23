@@ -36,9 +36,9 @@ Grounding for the model these shapes implement:
 
 A vessel advertises shapes in one place and dispatches them in another, and the
 two must agree. For activity-api that is the `discovery.shapes` array in
-[`repos/activity-api/src/config.ts`](../../repos/activity-api/src/config.ts) and
+`repos/activity-api/src/config.ts` and
 the `switch (pointer.type)` cases in
-[`repos/activity-api/src/routes/impulses.ts`](../../repos/activity-api/src/routes/impulses.ts).
+`repos/activity-api/src/routes/impulses.ts`.
 Advertising a shape with no case produces a shape the registry promises and the
 vessel then answers 404 `use_vessel_discovery` on, because the router's default
 branch treats any unrecognised pointer type as somebody else's data. A case with

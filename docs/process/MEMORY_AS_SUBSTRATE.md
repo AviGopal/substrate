@@ -151,14 +151,10 @@ accumulated while the substrate was down.
 
 ## Verifying memory closure
 
-`validation/scripts/closure-audit.ts` probes seven `(property, external tool)`
+The closure audit probes seven `(property, external tool)`
 pairs — operator memory, slash-command skills, subagent dispatch, GitHub Actions
 CI, operator shell access, operator spec-authoring, and push-away — and returns
 a per-pair verdict.
-
-```bash
-bun run validation/scripts/closure-audit.ts --without=operator-memory
-```
 
 Memory closure is green when the substrate answers from `memoryNote` alone. The
 independent confirmation is a recall test: with the operator cache directory

@@ -8,7 +8,7 @@
 > §"Minimum Self-Stable Set": **impulse**, **pointer**, **resolver**, **vessel**.
 >
 > **Purpose**: the substrate reads its own documentation. `scripts/substrate/ingest-docs-as-concepts.ts`
-> walks `docs/**` (excluding `docs/archive/`) and mints one concept per section,
+> walks `docs/**` (an `archive/` directory there would be skipped) and mints one concept per section,
 > keyed `"<relpath>#<slug(heading)>"`. This file ingests as `shape=docSection`;
 > only `docs/architecture/**` ingests as `shape=architecturePrinciple` and is
 > dense-searched into the code-authoring prompt. So this document's job is to hold
@@ -363,7 +363,7 @@ template is hollow: it splits selection traffic while carrying no evidence.
 **Definition.** A self-containment check: for each property required by
 substrate operation, ask "what would happen if external tool X were removed?"
 If the answer is "the property would no longer hold", closure for that
-property is open. The audit script `validation/scripts/closure-audit.ts` walks
+property is open. A closure audit walks
 each property and runs substrate-only resolvers to attempt it, taking
 `--without=<property>` to simulate the absence of a specific external
 dependency. It writes `validation/state/closure-status.json` and exits non-zero
@@ -510,8 +510,8 @@ escalation template
 (`repos/ias-executor-ts/src/templates/escalation/create-shape-provider-goal.json`),
 not the forge. Inside the vessels the forge template is registered
 (`repos/ias-executor-ts/src/templates/index.ts`) but not dispatched; the runs that
-do exist are operator-run — `validation/scripts/test-22-forge-and-paths.ts` loads
-the template file and executes it directly against `VesselForgeHost`.
+do exist are operator-run: they load
+the template file and execute it directly against `VesselForgeHost`.
 Routing the no-producer-at-all case to it is described as intent in a comment on
 the `shape_producer_inventory` case in `repos/activity-api/src/routes/impulses.ts`
 and is not wired into `slot-binding`. Post-lift, the substrate is expected to

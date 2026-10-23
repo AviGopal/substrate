@@ -4,12 +4,12 @@
 dependencies on goal-host-vessel (dispatch, walk state, utterance routing) and
 development-vessel (validators, gap store).
 
-**Consolidates and extends:**
-[`do-anything-surface`](../do-anything-surface/proposal.md),
-[`human-surface-stack`](../human-surface-stack/proposal.md) and its
-[`render-learning.md`](../human-surface-stack/render-learning.md),
-[`surface-render-contract`](../surface-render-contract/proposal.md),
-[`surface-participation-loop`](../surface-participation-loop/proposal.md).
+**Consolidates and extends** the earlier changes, kept in history:
+`do-anything-surface`,
+`human-surface-stack` and its
+`render-learning.md`,
+`surface-render-contract`,
+`surface-participation-loop`.
 This is not a fifth parallel design. It keeps what those changes settled, builds the part of
 `render-learning.md` that never ran, and reopens one ruling, named below.
 
