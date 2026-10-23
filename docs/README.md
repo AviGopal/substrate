@@ -10,10 +10,10 @@ under *For agents and contributors* below — read it before authoring or restru
 This index is organised by the nine architectural purposes the substrate must manifest to
 stay stable and keep growing. A document appears under exactly one purpose: the one it is
 load-bearing for. New here? Start with the root README's [walk-through of one goal](../README.md#a-goal-end-to-end), and keep the
-[Glossary](GLOSSARY.md) open. The canonical references, if you read only three, are
-`IMPULSE_ACTIVITY_FOUNDATION.md` (what is real), `SUBSTRATE_AS_SOFTWARE.md` (how a goal
-becomes work), and `SUBSTRATE_AS_DYNAMICS.md` (how evidence becomes selection), each linked
-under its purpose below. Behavioural guidance for agents working in this repository lives in
+[Glossary](GLOSSARY.md) open. To run and operate one, read [`SUBSTRATE.md`](SUBSTRATE.md). The
+canonical reference for what is real is `IMPULSE_ACTIVITY_FOUNDATION.md`; the formal lenses
+(`SUBSTRATE_AS_SOFTWARE.md`, `SUBSTRATE_AS_DYNAMICS.md` and the others) are deeper reading,
+each linked under its purpose below. Behavioural guidance for agents working in this repository lives in
 the root [`CLAUDE.md`](../CLAUDE.md), which also enumerates the agent cockpit's tool surface.
 
 ## 1. Ontology — what is real

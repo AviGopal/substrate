@@ -51,6 +51,8 @@ The substrate is built from:
 
 ### Core concepts
 
+In plain terms: a **vessel** is a service; an **impulse** is a reference to a piece of data, with metadata; a **shape** is the type key that routes it; an **activity** is a reusable, graded procedure; a **resolver** is the function that does one step's work; the **walk** is the planner that chains activities from a goal back to what is already known; the **ribosome** turns a run that reached its goal into a reusable activity. The [glossary](docs/GLOSSARY.md) has the full list.
+
 **Impulses** — data in any form (text, structured data, signals, commands) with metadata for reasoning. Lazy-loaded pointers; reasoners see the shape/summary, resolvers load content:
 
 ```typescript
@@ -80,7 +82,14 @@ The substrate is built from:
 
 ## How development works: dispatch through the substrate
 
-The default development loop is **not** "hand-edit a file and run tests." It is to **dispatch the change as a goal** so it runs as a traced activity and feeds the learning loop. The agent-facing dispatch surface is the **metabob-mcp** cockpit — `mcp__metabob__run_goal` for short one-shot goals, `mcp__metabob__run_goal_async` for anything non-trivial (both reach `goal-host-vessel`). There is no supported command-line dispatch client: goals go through the MCP cockpit, or directly to `POST /run-goal` on goal-host if you are scripting against the HTTP surface.
+The default development loop is **not** "hand-edit a file and run tests." It is to **dispatch the change as a goal** so it runs as a traced activity and feeds the learning loop. The agent-facing dispatch surface is the **metabob-mcp** cockpit — `mcp__metabob__run_goal` for short one-shot goals, `mcp__metabob__run_goal_async` for anything non-trivial (both reach `goal-host-vessel`). Goals can also be sent over plain HTTP, with an API key issued by `substrate-key issue` (see *Usage patterns*):
+
+```bash
+curl -s -X POST http://127.0.0.1:18210/run-goal \
+  -H "Authorization: ApiKey $KEY" -H 'Content-Type: application/json' \
+  -d '{"goal": "list the HTTP routes activity-api serves"}'      # → { "dispatchId": … }
+curl -s http://127.0.0.1:18210/executions/<dispatchId> -H "Authorization: ApiKey $KEY"   # read reached, not status
+```
 
 ```
 mcp__metabob__run_goal  goal="fix the failing tests in activity-api"
