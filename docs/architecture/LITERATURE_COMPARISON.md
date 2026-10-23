@@ -10,13 +10,10 @@
 >
 > The survey draws on arXiv, USENIX, NeurIPS proceedings, and primary
 > blog/repo sources. Citations are by arXiv id and venue where possible.
-> It is a reading of a moving literature: a later result can overturn any
-> alignment or divergence claimed here, so check a claim's citation
-> before relying on it.
 
 ## Summary
 
-The substrate's framing is **ahead of deployed practice** in three areas:
+The substrate's framing **differs from deployed practice** in three areas:
 per-cell Bayesian decision-making over LLM-mediated action spaces; the
 three-scale recursive composition pattern; and the granularity of its
 measurement suite. It is **vulnerable** in two: the strong
@@ -319,8 +316,8 @@ negative transfer (TIES interference) — all corroborated.
 mature federation = mutual push-away with cited evidence, not consensus.
 Multi-agent literature finds the *opposite* default: sycophancy-driven
 convergence and mode collapse when push-away mechanisms are absent.
-This is coherent (push-away requires explicit refusal mechanisms) but
-not yet validated anywhere.
+This is coherent (push-away requires explicit refusal mechanisms) and
+is one of the predictions of §9.
 
 ## 8. Measurement frameworks
 
@@ -438,7 +435,7 @@ AgentProcessBench, and the Mirage paper are **established results**
 with multiple independent sources.
 
 Claims about the substrate's specific predictions (push-away inversion,
-spectral poisoning detection, d* transition) are **speculative**. The
+spectral poisoning detection, d* transition) are **predictions**. The
 substrate's framing is internally consistent and lineage-aligned with
 active research, but the falsifiable predictions in §9 are not yet
 operationalized in any published benchmark.

@@ -385,7 +385,7 @@ Inside it run as many loops as there are horizons. Examples:
 - credit (each graded outcome back into selection);
 - gap improvement (detect → arm → select → compose → land → verify → close → credit the choice);
 - deployment (accept → converge → observe);
-- loops on horizons not yet built.
+- loops on longer horizons, as they are added.
 
 Each is **the same cycle**, select → act → trace → grade → update, applied to its own
 shapes on its own timescale. That generalizes the two timescales of

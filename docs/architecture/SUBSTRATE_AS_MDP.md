@@ -144,7 +144,7 @@ strictly, a *contextual bandit* — actions score immediate reward
 without a bootstrapped next-state value. The Bayesian Q-learning of
 [Dearden et al.] is a different algorithm: a Normal-Gamma posterior over
 Q-values updated by TD/Bellman bootstrap. The 'Q-learning / MDP'
-language here is structural-aspirational; the load-bearing mechanism is
+language here is a structural lens; the load-bearing mechanism is
 bandit-shaped. See §12.)
 
 ### 2.1 Conjugate update = natural gradient in Beta information geometry
@@ -1094,7 +1094,7 @@ proved.
 Several of the frontier gaps above do not need theory invented from
 scratch — the RL/learning literature already ships mechanisms that
 close the distance between the implemented mechanism and the
-aspiration. Each entry below is absorbable through **existing
+full framing. Each entry below is absorbable through **existing
 primitives** (a resolver, a selection-layer refinement, an
 evidence-fold rule, a dispatcher change, a background learning job
 over the trace store, a validator refinement) — no new tier, no new
@@ -1190,14 +1190,14 @@ which is why the scorecard discipline survives their absorption.
 This appendix records, in one place, the framing-level caveats the
 inline notes above point to. The document's RL/MDP vocabulary is a
 deliberate structural lens; these entries mark where that lens is
-aspirational rather than literal, so the math can be imported with its
+structural rather than literal, so the math can be imported with its
 guarantees rather than just its shape.
 
 ### 12.1 Bandit vs MDP
 
 The load-bearing mechanism is a contextual Beta-Bernoulli
 Thompson-sampling bandit with heuristic chain-credit smearing; the
-MDP / Q-learning / n-step-TD vocabulary is structural-aspirational.
+MDP / Q-learning / n-step-TD vocabulary is a structural lens.
 Actions score immediate reward without a bootstrapped next-state value,
 so there is no Bellman backup in the strict sense. The
 O(√(T log T)) regret bound the doc cites ([Agrawal & Goyal]) is itself a

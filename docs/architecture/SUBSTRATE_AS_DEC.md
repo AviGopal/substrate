@@ -475,7 +475,7 @@ steady state" its precise form: the system tracks the moving harmonic subspace o
 off the slow manifold — which is the timescale-separation / Fenichel picture of
 `SUBSTRATE_AS_DYNAMICS.md`, now with an explicit threshold on the gap.
 
-(Status: this inequality is a *conjecture assembled from established pieces* —
+(This inequality is a *conjecture assembled from established pieces* —
 Hodge heat-flow mixing at rate `λ₁` is standard; the growth term and the
 threshold are a reasonable synthesis, not a proved bound. See §5. The
 dynamical-systems reading — why the threshold is hard to promote to a theorem,

@@ -1,13 +1,6 @@
 # The substrate earns sovereignty: refusal, revision, and answering
 
-> **STATUS: EXPECTATION, NOT DESCRIPTION. Read this as the contract the system will be
-> verified against, not as behavior it has.** Each mechanism below — a declined outcome
-> distinct from failure in the persisted vocabulary, refusal-precision grading,
-> purpose-anchored gate revision, self-binding, a self-readable conduct ledger — is owed,
-> and whether any part of it exists is a question for the code and the store, not for this
-> document. Each section names a test for its defect; run it rather than assume.
-> Where this document and the code disagree, the code is what exists and this document is
-> what is owed. Verify any specific claim against the store before relying on it.
+> Each section states an expectation about the system and names the test for its defect.
 
 Companion to the formal-lens documents. Those describe how the substrate learns; this one
 describes what the learning is *for*: an agent whose authority over its own behavior is
