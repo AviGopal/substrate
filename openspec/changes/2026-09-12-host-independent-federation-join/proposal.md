@@ -3,7 +3,7 @@
 **Date:** 2026-09-12
 **Vessels:** discovery-vessel (`src/index.ts` `/bootstrap`, registration replication), `scripts/substrate/federation-relay/federation-transport-server.ts` (startup gate, relay re-acquisition), `scripts/substrate/gen-env.sh` (anchor precedence, hub peer wiring)
 **Stage:** SPEC — grounded in a live probe of `substrate-live` on 2026-09-12, plus a code trace of the join path
-**Predecessor:** `openspec/changes/2026-07-19-relay-findability-replication/proposal.md`. Its operator-ratified decision — *"the relay won't always be available due to networking conditions, so internally a direct connection should be equivalent to a punchthrough"* — is the governing decision here. **Three of its four approach items never landed.** This change implements them and adds the two defects the live probe surfaced.
+**Predecessor:** the relay-findability-replication change (kept in history). Its operator-ratified decision — *"the relay won't always be available due to networking conditions, so internally a direct connection should be equivalent to a punchthrough"* — is the governing decision here. **Three of its four approach items never landed.** This change implements them and adds the two defects the live probe surfaced.
 
 ## The objective, restated as invariants
 
