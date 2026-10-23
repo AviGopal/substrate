@@ -46,7 +46,7 @@ Bar charts and a ranked table for each tool resolver (`bash`, `git`, `file_read`
 
 **How to use it:**
 - LLM-tier tools dominating invocation counts → check whether a deterministic tier could replace them. Pattern-matching or a cached bash output may suffice.
-- A tool with high latency and high frequency is a compounding bottleneck — same evidence-based-refactoring pattern as in `RUNTIME_ACTIVITY_TRACING.md`.
+- A tool with high latency and high frequency is a compounding bottleneck: refactor where the evidence points.
 - A tool with high failure rate concentrated in one activity → that activity's task config is likely wrong (flag name, working dir, timeout).
 
 ### ConvergenceOverview
@@ -121,5 +121,4 @@ If a panel is empty, check the endpoint with curl before assuming the dashboard 
 ## Related
 
 - `IMPULSE_ACTIVITY_FOUNDATION.md` — the learning loop these panels visualize
-- `RUNTIME_ACTIVITY_TRACING.md` — how runtime traces feed these dashboards
 - `RESOLVER_TRACKING.md` — the resolver-level data model backing ToolUsageDashboard

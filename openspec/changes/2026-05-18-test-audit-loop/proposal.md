@@ -16,7 +16,7 @@ the loop ends.
 
 The asymmetry is jarring: the impulse-activity loop already audits system outputs
 via the validator-dispatch meta-activity
-(`openspec/changes/archive/2026-04-26-validators-and-failure-modes/specs/failure-mode-taxonomy/spec.md:67`)
+(the failure-mode taxonomy of the archived validators-and-failure-modes change)
 and stratifies failures by type; it has no analogue for test outputs. Tests are
 exempt from the same scrutiny they enforce on the rest of the system.
 

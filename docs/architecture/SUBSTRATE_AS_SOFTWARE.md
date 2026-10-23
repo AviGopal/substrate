@@ -266,8 +266,7 @@ The identical step structure governs **application runtime**, not just developme
 goals: an HTTP request is an input impulse, a route handler is an activity, the
 functions it calls are resolvers, and the meta-trace levels are L1 `goal_resolve` /
 L2 `activity_execute` / L3 per-resolver `impulse_resolutions`. Same model, same
-infrastructure, **different timescale** (milliseconds vs minutes). See
-[`RUNTIME_ACTIVITY_TRACING.md`](RUNTIME_ACTIVITY_TRACING.md). The walk in §3 is
+infrastructure, **different timescale** (milliseconds vs minutes). The walk in §3 is
 timescale-invariant; this chart's durability classification applies unchanged at
 either scale.
 
@@ -684,4 +683,4 @@ topology.**
 - **[OTel]** OpenTelemetry, *Trace Semantic Conventions* — span/trace model and semantic attributes for distributed tracing. — *verification: carried.*
 - **[Miller]** Miller, M. S., *Robust Composition: Towards a Unified Approach to Access Control and Concurrency Control*, PhD thesis, Johns Hopkins University, 2006. — *verification: carried.*
 - Companion charts: [`SUBSTRATE_AS_MDP.md`](SUBSTRATE_AS_MDP.md), [`SUBSTRATE_AS_DEC.md`](SUBSTRATE_AS_DEC.md), [`SUBSTRATE_AS_DYNAMICS.md`](SUBSTRATE_AS_DYNAMICS.md), [`SUBSTRATE_AS_REPRESENTATION.md`](SUBSTRATE_AS_REPRESENTATION.md), [`SUBSTRATE_AS_NETWORK.md`](SUBSTRATE_AS_NETWORK.md), [`SUBSTRATE_AS_FLEET.md`](SUBSTRATE_AS_FLEET.md).
-- Execution detail: [`IMPULSE_ACTIVITY_FOUNDATION.md`](IMPULSE_ACTIVITY_FOUNDATION.md), [`GOAL_EXECUTION_PATHS_SCHEMA.md`](GOAL_EXECUTION_PATHS_SCHEMA.md), [`RUNTIME_ACTIVITY_TRACING.md`](RUNTIME_ACTIVITY_TRACING.md), [`RESOLVER_TRACKING.md`](RESOLVER_TRACKING.md).
+- Execution detail: [`IMPULSE_ACTIVITY_FOUNDATION.md`](IMPULSE_ACTIVITY_FOUNDATION.md), [`GOAL_EXECUTION_PATHS_SCHEMA.md`](GOAL_EXECUTION_PATHS_SCHEMA.md), [`RESOLVER_TRACKING.md`](RESOLVER_TRACKING.md).

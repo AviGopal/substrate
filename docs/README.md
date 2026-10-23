@@ -71,7 +71,6 @@ to prefer whatever exits cleanly.
 
 - [The substrate is a slow–fast dynamical system](architecture/SUBSTRATE_AS_DYNAMICS.md) — the learning dynamics on a growing complex.
 - [Failure modes](learning/FAILURE_MODES.md) — the failure taxonomy the schema defines (six typed members plus the untyped `execution_error`), why the store must be counted before reasoning from it, and the outcome-conditional posterior step sizes.
-- [Runtime Activity Tracing](architecture/RUNTIME_ACTIVITY_TRACING.md) — a design for per-request meta-trace levels, deliberately left uninstalled until the trace working set is bounded.
 - [Resolver Tracking](architecture/RESOLVER_TRACKING.md) — recording which resolver served each impulse so selection is learned, not configured.
 - [`thompson_posterior` shape](impulse-types/thompson_posterior.md) — the posterior itself, as a resolvable shape.
 - [Learning-Loop Write Resolvers](impulse-types/LEARNING_LOOP_WRITE_RESOLVERS.md) — the write side of the loop, shape by shape.
@@ -172,7 +171,6 @@ so can never be trusted when it passes.
 - [Shape→Action→Evidence Expectations](architecture/SHAPE_ACTION_EVIDENCE_EXPECTATIONS.md) — falsifiable expectations with named metrics and floors.
 - [The qualification envelope](QUALIFICATION.md) — the tasks, faults, budgets and escalation conditions the substrate must handle without operator hands, and the metrics that judge it.
 - [The learning-loop selftest](validation/LEARNING_LOOP_SELFTEST.md) — a probe with known ground truth that follows one execution through every learning seam.
-- [External Validation](guides/EXTERNAL_VALIDATION.md) — validation as a resolver; it predates the failure-mode taxonomy, so its error-type tables are not the live penalty path.
 - [Substrate-Narration Protocol](SUBSTRATE_NARRATION_PROTOCOL.md) — the operator-side narration and gap-accumulation methodology.
 - [Testing documentation](testing/README.md) — index of the verification material.
 - [Quick Verification Guide](testing/QUICK_VERIFICATION_GUIDE.md) — the short path to confirming a running substrate behaves, starting from the five-level `substrate-status` verdict.

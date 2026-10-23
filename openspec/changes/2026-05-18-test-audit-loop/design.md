@@ -94,8 +94,8 @@ Four tasks, dispatched in order:
 | 4 | review_alignment_claim          | llm                               | llm             |
 
 Tasks 1–3 emit `validation_result` impulses per the existing
-`validator-activity-convention` (archive at
-`openspec/changes/archive/2026-04-26-validators-and-failure-modes/specs/validator-activity-convention/spec.md`).
+`validator-activity-convention` (from the archived validators-and-failure-modes
+change, kept in history).
 Task 4 emits a `validation_result` with `passed: true|false` and a
 `plausibility_rationale` field; the LLM call is a single Haiku-tier completion
 budgeted at `≤ $0.05`.

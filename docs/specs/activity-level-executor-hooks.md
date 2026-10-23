@@ -87,8 +87,7 @@ selection.
 6. **Trace integration is automatic.** Hook activations show up in
    execution traces as nested activity invocations (composition
    pattern, already supported via `parent_execution_id` and
-   `composition_chain` — see
-   [`../architecture/RUNTIME_ACTIVITY_TRACING.md`](../architecture/RUNTIME_ACTIVITY_TRACING.md)).
+   `composition_chain`).
    No new trace field.
 7. **Failure semantics fall out naturally.** Hook activities are just
    activities — each has its own retry/failure handling. The executor
