@@ -4331,7 +4331,16 @@ EOF
           # invariant, yet the gate charged it to a later commit and refused a commit measured, at the
           # same commit and its parent under identical conditions, to add zero failing tests.
           # A name that already fails at the parent RIGHT NOW is not this commit's regression.
-          PARENT_REF="$(git -C "$d" rev-parse --verify --quiet "${HEAD}^" 2>/dev/null || true)"
+          #
+          # THE REFERENCE IS THE LAST CONVERGED COMMIT, NOT THE IMMEDIATE PARENT. A refused commit's
+          # failure is present at its child too, so a child judged against HEAD^ read 0 attributable and
+          # installed the regression its parent was refused for (213 -> 214 refused at A; B on A then
+          # "0 attributable" against A's 214, converged). The candidate converges the whole batch since
+          # last-good, so last-good is what it is judged against. No pin, or a pin that is not an
+          # ancestor of HEAD: the top commit's parent, as before (the batch rule above uses the same fallback).
+          PARENT_REF="$(cat "$LAST_GOOD_DIR/$v" 2>/dev/null || true)"
+          { [ -n "$PARENT_REF" ] && [ "$PARENT_REF" != "$HEAD" ] && git -C "$d" merge-base --is-ancestor "$PARENT_REF" "$HEAD" 2>/dev/null; } \
+            || PARENT_REF="$(git -C "$d" rev-parse --verify --quiet "${HEAD}^" 2>/dev/null || true)"
           if [ -n "$PARENT_REF" ]; then
             # BOTH SIDES IN A WORKTREE, NOT ONE OF EACH. Comparing candidate-in-clone against
             # parent-in-worktree would reintroduce the confound in a new place: the two runs sit
@@ -4354,7 +4363,7 @@ EOF
               OVL_NEW="$(comm -23 <(printf '%s\n' "$C_NAMES" | sort -u) <(printf '%s\n' "$P_NAMES" | sort -u) 2>/dev/null || true)"
               CONF_SET="$(comm -12 <(printf '%s\n' "$CONF_SET" | sort -u) <(printf '%s\n' "$OVL_NEW" | sort -u) 2>/dev/null || true)"
               CONFIRMED="$(printf '%s' "$CONF_SET" | grep -c . || true)"
-              log "$v: overlay comparison ${PARENT_REF:0:10} -> ${HEAD:0:10} under identical conditions — $(printf '%s' "$P_NAMES" | grep -c . || true) failing at parent, $(printf '%s' "$C_NAMES" | grep -c . || true) at candidate, ${CONFIRMED:-0} attributable to this commit"
+              log "$v: overlay comparison ${PARENT_REF:0:10} (last converged, or the parent) -> ${HEAD:0:10} under identical conditions — $(printf '%s' "$P_NAMES" | grep -c . || true) failing at parent, $(printf '%s' "$C_NAMES" | grep -c . || true) at candidate, ${CONFIRMED:-0} attributable to this commit"
             else
               # UNUSABLE, NOT CLEAN. A run with no passing tests means the measurement failed
               # (missing deps, timeout), not that the tree was healthy. Subtracting on that basis
