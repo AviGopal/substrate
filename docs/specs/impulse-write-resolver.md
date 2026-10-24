@@ -444,7 +444,6 @@ Where each piece lives:
    - `conceptSignatureUpsert_write`: idempotent — second call returns `created: false`, same id.
    - `impulse` table: insert, org-filtered select, TTL cleanup, lifecycle event emission.
 
-8. **Docs** — outstanding. A `docs/impulse-types/CONCEPT_DB_WRITE_RESOLVERS.md` mirroring `docs/impulse-types/LEARNING_LOOP_WRITE_RESOLVERS.md` does not exist: contract, write-shapes table, auth context, examples, when-to-use-vs-MCP-tool, plus the `impulse` table's purpose and audit story. The shapes also want listing in `docs/shapes/README.md`.
 
 ### The execution host
 
