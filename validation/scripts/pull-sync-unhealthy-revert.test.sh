@@ -83,12 +83,14 @@ cat > "$T/mirror-wrapper" <<EOF
 echo "MIRROR \$*" >> "$CALLS"
 exec bash "$T/real-mirror.sh" "\$@"
 EOF
-# the historic lie: exits 0, ignores any ref, ships the clone's HEAD
+# the historic lie: exits 0, ignores any ref, ships the clone's HEAD (its whole mirrored tree, src and the
+# tracked ui/dist, so the convergence install of HEAD itself verifies and the lie is met at the revert)
 cat > "$T/lying-mirror" <<EOF
 #!/usr/bin/env bash
 echo "MIRROR \$*" >> "$CALLS"
 git -C "\$2/\$1" reset -q --hard HEAD
 rm -rf "$R/src"; cp -r "\$2/\$1/src" "$R/src"
+rm -rf "$R/ui/dist"; mkdir -p "$R/ui"; cp -r "\$2/\$1/ui/dist" "$R/ui/dist"
 exit 0
 EOF
 chmod +x "$T/stub/"* "$T/mirror-wrapper" "$T/lying-mirror"

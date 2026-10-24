@@ -4643,15 +4643,43 @@ EOF
   RUNTIME_NONTEST="$(content_hash_nontest "$RUNTIME_DIR/$v")"; CLONE_NONTEST="$(content_hash_nontest "$d")"
   log "$v: content ${RUNTIME_HASH:0:10} -> ${CLONE_HASH:0:10} (git ${HEAD:0:10}) — mirroring into $RUNTIME_DIR"
   # Gated: the ACCEPTED mirror-to-live, never /usr/local/bin's (the literal stays for the slice tests).
-  if ! { if [ -n "${PULLSYNC_ACCEPTED_DIR:-}" ]; then bash "$MIRROR_BIN" "$v" "$CLONE_DIR"; else /usr/local/bin/mirror-to-live "$v" "$CLONE_DIR"; fi; }; then
+  # INSTALL THE GATED SHA, NOT THE CLONE'S HEAD OF THE MOMENT. The clone moves during a tick (a cutover
+  # commits into it), so a plain mirror copied whatever HEAD was by then: the gate judged one sha and an
+  # ungated later one was installed. HEAD is passed as the expected sha AND the ref, so mirror-to-live
+  # copies exactly that commit from a throwaway worktree, as the revert paths already do.
+  mirror_gated() { if [ -n "${PULLSYNC_ACCEPTED_DIR:-}" ]; then bash "$MIRROR_BIN" "$v" "$CLONE_DIR" "$1" "$1"; else /usr/local/bin/mirror-to-live "$v" "$CLONE_DIR" "$1" "$1"; fi; }
+  if ! mirror_gated "$HEAD"; then
     log "$v: mirror failed — skipping"; failed=$((failed+1)); continue
   fi
+  # A MIRROR THAT DID NOT LAND IS A FAILURE, NOT A LOG LINE. "mirror exited 0 but live != clone" used to be
+  # logged and the tick moved on, leaving an unverified tree live. The live tree is checked against the GATED
+  # sha's own tree (revert_target_hashes, as the owed-restart revert does); a mismatch is retried once from
+  # that sha, and if it persists the last-good tree is restored and the candidate is not converged. The
+  # attempt marker is written only on a verified install: written before, a failed one would read as
+  # "already attempted" next tick and suppress the retry for good.
+  MM_WHY=""
+  if ! revert_target_hashes "$d" "$HEAD" "$RUNTIME_DIR/$v"; then MM_WHY="$RT_WHY"
+  elif [ "$RT_LIVE" != "$RT_WANT" ]; then
+    log "$v: !!! MIRROR MISMATCH — mirror exited 0 but live ($RT_LIVE) != the gated ${HEAD:0:10}'s tree ($RT_WANT); retrying from the gated sha"
+    if ! mirror_gated "$HEAD"; then MM_WHY="the retry's mirror-to-live failed"
+    elif ! revert_target_hashes "$d" "$HEAD" "$RUNTIME_DIR/$v"; then MM_WHY="$RT_WHY"
+    elif [ "$RT_LIVE" != "$RT_WANT" ]; then MM_WHY="live $RT_LIVE != ${HEAD:0:10}'s tree $RT_WANT after a retry"; fi
+  fi
+  if [ -n "$MM_WHY" ]; then
+    MM_RESTORE="no last-good to restore"
+    if [ -n "$PREV_GOOD" ]; then
+      if mirror_gated "$PREV_GOOD" && revert_target_hashes "$d" "$PREV_GOOD" "$RUNTIME_DIR/$v" && [ "$RT_LIVE" = "$RT_WANT" ]; then
+        MM_RESTORE="restored last-good ${PREV_GOOD:0:10}, verified"
+      else MM_RESTORE="restoring last-good ${PREV_GOOD:0:10} FAILED"; fi
+    fi
+    log "$v: !!! MIRROR MISMATCH — ${HEAD:0:10} did not land ($MM_WHY); $MM_RESTORE; NOT converging (no restart, last-good unchanged)"
+    echo "$(content_hash "$RUNTIME_DIR/$v" "$d")" > "$MARKER_DIR/$v.runtime-sha" 2>/dev/null || true
+    emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-mirror-mismatch-$v\",\"category\":\"systematic_failure\",\"source\":\"substrate_detected\",\"summary\":\"pull-sync mirrored $v at ${HEAD:0:10} but the live tree did not match that commit's tree ($MM_WHY); $MM_RESTORE. Not converged; the next tick retries from the gated sha.\",\"status\":\"open\"}}}}"
+    failed=$((failed+1)); continue
+  fi
   echo "$CLONE_HASH" > "$MARKER"
-  # Record what is MEASURABLY live, not what was meant to land: a mirror that exits 0
-  # but does not fully land would otherwise read as foreign content next tick and be
-  # quarantined and gapped as someone else's write when it is pull-sync's own partial one.
+  # Record what is MEASURABLY live, not what was meant to land (the verified tree above).
   _rt_after="$(content_hash "$RUNTIME_DIR/$v" "$d")"
-  [ "$_rt_after" = "$CLONE_HASH" ] || log "$v: mirror exited 0 but live (${_rt_after:0:10}) != clone (${CLONE_HASH:0:10})"
   echo "$_rt_after" > "$MARKER_DIR/$v.runtime-sha" 2>/dev/null || true
   rm -f "$MARKER_DIR/$v.reverted" 2>/dev/null || true
 

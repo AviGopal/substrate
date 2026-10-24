@@ -41,6 +41,7 @@ bad() { echo "FAIL - $*"; FAILS=$((FAILS+1)); }
   sed -n '/^content_hash() {/,/^}/p' "$SCRIPT"
   sed -n '/^test_only_range() {/,/^}/p' "$SCRIPT"
   sed -n '/^content_hash_nontest() {/,/^}/p' "$SCRIPT"
+  sed -n '/^revert_target_hashes() {/,/^}/p' "$SCRIPT"
   echo 'run_slice() {'
   echo 'for v in "$VESSEL"; do'
   awk '/^  PREV_GOOD="\$\(cat "\$LAST_GOOD_DIR\/\$v"/{on=1} on{print} on && /^  echo "\$HEAD" > "\$LAST_GOOD_DIR\/\$v"$/{exit}' "$SCRIPT"

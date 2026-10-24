@@ -40,6 +40,7 @@ bad() { echo "FAIL - $*"; FAILS=$((FAILS+1)); }
   sed -n '/^test_only_range() {/,/^}/p' "$SCRIPT"
   sed -n '/^content_hash_nontest() {/,/^}/p' "$SCRIPT"
   sed -n '/^drift_quarantine() {/,/^}/p' "$SCRIPT"
+  sed -n '/^revert_target_hashes() {/,/^}/p' "$SCRIPT"
   echo 'run_slice() {'
   echo 'for v in "$VESSEL"; do'
   echo '  MARKER="$MARKER_DIR/$v.sha"; LAST="$(cat "$MARKER" 2>/dev/null || true)"'
