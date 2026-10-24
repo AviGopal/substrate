@@ -646,8 +646,8 @@ published image rather than the running container.
 ## Validating after a change
 
 ```bash
-# Failure-mode harness smoke test
-bun run validation/scripts/failure-mode-harness.ts
+# Readiness: waits for the fleet's usable level
+docker exec <container> substrate-status --wait usable
 
 # Full stratified harness (longer; run before pushing a substantial change)
 bun run validation/scripts/stratified-harness.ts

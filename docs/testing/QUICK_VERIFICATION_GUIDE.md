@@ -44,9 +44,6 @@ export METABOB_API_KEY="$(jq -r .metabob.apiKey "$CFG")"
 These are the authoritative test entry points:
 
 ```bash
-# Failure-mode harness — validates the failure-mode classifications
-bun run validation/scripts/failure-mode-harness.ts
-
 # Stratified harness — measures Thompson learning + MRR
 bun run validation/scripts/stratified-harness.ts
 
@@ -338,9 +335,6 @@ curl -H "Authorization: ApiKey $METABOB_API_KEY" \
 # Thompson check
 curl -H "Authorization: ApiKey $METABOB_API_KEY" \
   "$ACTIVITY_API_URL/v2/activities/templates/TEMPLATE_ID" | jq '.metrics | {thompson_alpha, thompson_beta}'
-
-# Failure-mode harness
-bun run validation/scripts/failure-mode-harness.ts
 
 # Stratified harness (MRR + Thompson)
 bun run validation/scripts/stratified-harness.ts
