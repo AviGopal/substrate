@@ -3826,7 +3826,7 @@ EOF
       echo "env $("$BUN_BIN" --version 2>/dev/null || echo none) ${TEST_TIMEOUT_SECONDS:-${SUITE_WALL_S:-240}} ${TEST_KILL_GRACE_SECONDS:-30} ${PROTECTED_TEST_TIMEOUT_SECONDS:-120}"
     } | md5sum | cut -d' ' -f1
   }
-  TG_NEED_FILE="$MARKER_DIR/$v.testgate-need"
+  TG_NEED_FILE="$MARKER_DIR/$v.testgate-need"; TG_REMEASURE=""
   GV_T0=$(date +%s)
   PROT_COST_S=$(( ${PROTECTED_TEST_TIMEOUT_SECONDS:-120} + ${TEST_KILL_GRACE_SECONDS:-30} ))
   testgate_budget_defer() { # <the run that would start> <its worst case, s> [<cause, when not the budget: host contention>]
@@ -3843,7 +3843,8 @@ EOF
     _tn_need=$(( $(date +%s) - GV_T0 + $2 )); _tn_key="${TG_KEY:-$(testgate_key)}"
     { read -r _tn_okey _tn_oneed _tn_os < "$TG_NEED_FILE"; } 2>/dev/null || true
     case "$_tn_oneed" in ''|*[!0-9]*) _tn_oneed=0 ;; esac
-    [ "$_tn_okey" = "$_tn_key" ] && [ "$_tn_oneed" -gt "$_tn_need" ] && _tn_need="$_tn_oneed"
+    # A forced re-measure (TG_REMEASURE, below) replaces the old need: that old need was the reason it ran.
+    [ -z "${TG_REMEASURE:-}" ] && [ "$_tn_okey" = "$_tn_key" ] && [ "$_tn_oneed" -gt "$_tn_need" ] && _tn_need="$_tn_oneed"
     echo "$_tn_key $_tn_need ${TG_SKIPS:-0}" > "$TG_NEED_FILE" 2>/dev/null || true
     if [ -n "${3:-}" ]; then log "$v: TEST GATE DEFERRED — $1 not started: $3 (deferral $BD_N at ${HEAD:0:10}); the candidate holds, never converges ungated"; else log "$v: TEST GATE DEFERRED — $1 needs up to ${2}s but ${_gl}s remain (gate budget ${GATE_BUDGET_SECONDS}s, capped by the unit's TimeoutStartSec ${UNIT_TIMEOUT_S:-3600}s less ${GATE_UNIT_MARGIN_S:-${QUIESCE_MARGIN_S:-120}}s from the tick's start); NOT converging ${HEAD:0:10} this tick (consecutive budget deferral $BD_N of this candidate, bound $BD_MAX); it gates FIRST next tick with a fresh budget"; fi
     if [ "$BD_N" -ge "$BD_MAX" ]; then
@@ -3885,7 +3886,18 @@ EOF
     # A slow re-measure cadence (shaped): an unchanged key is still measured again after this many
     # consecutive skips, so a suite that became faster is not skipped forever on an old measurement.
     tuning_param pull_sync.testgate_skip_recheck_ticks 6; _tg_recheck="$TP_VALUE"
-    if [ "$_tg_okey" = "$TG_KEY" ] && [ "$(gate_left)" -lt "$_tg_need" ] && [ "$_tg_skips" -lt "$_tg_recheck" ]; then
+    # A NEED NO TICK CAN MEET IS NOT A REASON TO SKIP. Observed: one slow attempt under load recorded a need
+    # (3492 s) above the most any tick can give (the gate budget, capped by TimeoutStartSec less the margin);
+    # every tick then skipped it, and since a deferral never lowers a need, the estimate could never come
+    # down: a fixed point, the candidate never installed. So above that maximum the gate RUNS within the
+    # time left (each run still starts only if its worst case fits), and whatever it measures replaces the
+    # old need. A run killed at its wall is not a result: the candidate holds, never converges ungated.
+    _tg_max=$(( ${UNIT_TIMEOUT_S:-3600} - ${GATE_UNIT_MARGIN_S:-${QUIESCE_MARGIN_S:-120}} ))
+    [ "$GATE_BUDGET_SECONDS" -lt "$_tg_max" ] && _tg_max="$GATE_BUDGET_SECONDS"
+    if [ "$_tg_okey" = "$TG_KEY" ] && [ "$_tg_need" -gt "$_tg_max" ]; then
+      TG_REMEASURE=1
+      log "$v: TEST GATE RE-MEASURE — the last measured attempt at this key needed ${_tg_need}s, more than any tick can give (max gate budget ${_tg_max}s): a skip could never end, so the gate runs now within the $(gate_left)s left and its measurement replaces the old need; the candidate holds, never converges ungated"
+    elif [ "$_tg_okey" = "$TG_KEY" ] && [ "$(gate_left)" -lt "$_tg_need" ] && [ "$_tg_skips" -lt "$_tg_recheck" ]; then
       GV_T0=$(date +%s); TG_SKIPS=$((_tg_skips + 1))
       testgate_budget_defer "its gate (skipped WITHOUT a run: the last measured attempt at this HEAD, outstanding set, dependency identity and test environment needed ${_tg_need}s)" "$_tg_need"
       skipped=$((skipped + 1)); continue
