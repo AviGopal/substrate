@@ -4361,6 +4361,11 @@ EOF
             log "$v: every newly-failing test is tracked by an open gap — converging"
           else
             log "$v: newly-failing tests did not reproduce on re-run — flake, converging (run1 $(printf '%s' "$NEW1" | grep -c . || true) new, run2 $(printf '%s' "$NEW2" | grep -c . || true) new, intersection 0)"
+            # NAME THE FLAKE BEFORE THE BASELINE IS OVERWRITTEN. The line above carried only counts, and
+            # tg_write_failnames below replaces the stored names with this run's, so no later reader could
+            # say which tests flaked: every flake verdict was unattributable, and a test that flakes on
+            # every tick could never be told from fresh noise. First 20 names of each set, cut to 400 chars.
+            log "$v: flake names — run1 new: $(printf '%s\n' "$NEW1" | grep . | head -n 20 | tr '\n' ';' | cut -c1-400); run2 new: $(printf '%s\n' "$NEW2" | grep . | head -n 20 | tr '\n' ';' | cut -c1-400); both: $(comm -12 <(printf '%s\n' "$NEW1" | grep . | sort -u) <(printf '%s\n' "$NEW2" | grep . | sort -u) 2>/dev/null | head -n 20 | tr '\n' ';' | cut -c1-400)"
           fi
           # UNFREEZE THE BASELINE. The refresh used to live only in the no-newly-failing branch
           # below, so any persistently newly-failing name pinned the stored baseline forever and
