@@ -1950,6 +1950,20 @@ revert_target_hashes() {
   rm -rf "$wt"; git -C "$1" worktree prune >/dev/null 2>&1 || true
   return 0
 }
+# restore_last_good <vessel> <clone-dir> <sha>: put <sha>'s tree back on the runtime the way the unhealthy revert
+# does: mirror-to-live materialises the ref (the clone never leaves its branch), the live content must hash to
+# that commit's tree, and what is live afterwards is recorded as pull-sync's own write. 0 when verified; RL_WHY.
+restore_last_good() {
+  RL_WHY=""
+  if [ -z "$3" ]; then RL_WHY="no last-good pin recorded"
+  elif ! { if [ -n "${PULLSYNC_ACCEPTED_DIR:-}" ]; then bash "$MIRROR_BIN" "$1" "$CLONE_DIR" "$3" "$3"; else /usr/local/bin/mirror-to-live "$1" "$CLONE_DIR" "$3" "$3"; fi; }; then
+    RL_WHY="mirror-to-live of ${3:0:10} failed"
+  elif ! revert_target_hashes "$2" "$3" "$RUNTIME_DIR/$1"; then RL_WHY="$RT_WHY"
+  elif [ "$RT_LIVE" != "$RT_WANT" ]; then RL_WHY="live content ${RT_LIVE:0:10} != ${3:0:10}'s tree ${RT_WANT:0:10}"
+  fi
+  echo "$(content_hash "$RUNTIME_DIR/$1" "$2")" > "$MARKER_DIR/$1.runtime-sha" 2>/dev/null || true
+  [ -z "$RL_WHY" ]
+}
 
 # A FEDERATION UNIT RUNS ITS TREE FROM WHERE ITS WorkingDirectory SAYS, and that is usually the IMAGE BAKE
 # (/usr/local/share/substrate/super-repo/...), not this clone. Restarting it after a clone change to
@@ -3969,7 +3983,30 @@ EOF
   # captured through $( ) ~45% of the output was lost, cut inside the end-of-run failure list before the totals
   # (324,504 of ~594,000 bytes, mid-line). The same run redirected to a file keeps its summary. That race was the
   # ~40% "TEST GATE BLIND" rate: exit 1 (a normal red), not a timeout, kill or crash.
-  run_suite() { (cd "$d" && _rs_root="$(mktemp -d "${TMPDIR:-/tmp}/pullsync-root-XXXXXX")" && _rs_out="$(mktemp "${TMPDIR:-/tmp}/pullsync-out-XXXXXX")" && _rs_t0=$(date +%s) && scrubbed_env "$_rs_root" timeout --kill-after="${TEST_KILL_GRACE_SECONDS:-30}" "${TEST_TIMEOUT_SECONDS:-${SUITE_WALL_S:-240}}" "$BUN_BIN" test > "$_rs_out" 2>&1; _rs_rc=$?; cat "$_rs_out"; echo "__PULLSYNC_RC=$_rs_rc wall=$(( $(date +%s) - _rs_t0 ))s"; case "$_rs_rc" in 124|137) log "$v: !!! suite run KILLED at TEST_TIMEOUT_SECONDS=${TEST_TIMEOUT_SECONDS:-${SUITE_WALL_S:-240}} (wall $(( $(date +%s) - _rs_t0 ))s, rc $_rs_rc): not a result" >&2 ;; esac; rm -rf "$_rs_root" "$_rs_out" 2>/dev/null) || true; }
+  # PINNED TO THE HEAD BEING GATED, NOT THE MOVING CLONE. These runs used to execute in the clone itself, and
+  # a cutover commits into the clone: one landing mid-T1 changed the tree under the measurement, so the gate
+  # could judge a mix of two commits and pass the one it never measured. Each run checks HEAD out into a
+  # throwaway worktree (named after the vessel, like the clone) with the clone's node_modules linked in, the
+  # way run_suite_at measures the overlay refs and mirror-to-live installs a ref. A checkout that fails is
+  # an empty result: no countable summary, so the gate holds (BLIND), never passes.
+  run_suite() {
+    local _rs_top _rs_wt _rs_n
+    find "${TMPDIR:-/tmp}" -maxdepth 1 -name 'pullsync-gate-*' -type d -mmin +60 -exec rm -rf {} + 2>/dev/null || true
+    git -C "$d" worktree prune >/dev/null 2>&1 || true
+    _rs_top="$(mktemp -d "${TMPDIR:-/tmp}/pullsync-gate-XXXXXX" 2>/dev/null || true)"; [ -n "$_rs_top" ] || return 0
+    _rs_wt="$_rs_top/$v"
+    if ! git -C "$d" worktree add --detach "$_rs_wt" "$HEAD" >/dev/null 2>&1; then
+      log "$v: !!! cannot check out ${HEAD:0:10} into a worktree to gate it: not a result" >&2; rm -rf "$_rs_top" 2>/dev/null || true; return 0
+    fi
+    [ -d "$d/node_modules" ] && ln -s "$d/node_modules" "$_rs_wt/node_modules" 2>/dev/null || true
+    for _rs_n in ${CD_NESTED:-}; do
+      [ -d "$d/$_rs_n/node_modules" ] && [ -d "$_rs_wt/$_rs_n" ] && [ ! -e "$_rs_wt/$_rs_n/node_modules" ] \
+        && ln -s "$d/$_rs_n/node_modules" "$_rs_wt/$_rs_n/node_modules" 2>/dev/null || true
+    done
+    (cd "$_rs_wt" && _rs_root="$(mktemp -d "${TMPDIR:-/tmp}/pullsync-root-XXXXXX")" && _rs_out="$(mktemp "${TMPDIR:-/tmp}/pullsync-out-XXXXXX")" && _rs_t0=$(date +%s) && scrubbed_env "$_rs_root" timeout --kill-after="${TEST_KILL_GRACE_SECONDS:-30}" "${TEST_TIMEOUT_SECONDS:-${SUITE_WALL_S:-240}}" "$BUN_BIN" test > "$_rs_out" 2>&1; _rs_rc=$?; cat "$_rs_out"; echo "__PULLSYNC_RC=$_rs_rc wall=$(( $(date +%s) - _rs_t0 ))s"; case "$_rs_rc" in 124|137) log "$v: !!! suite run KILLED at TEST_TIMEOUT_SECONDS=${TEST_TIMEOUT_SECONDS:-${SUITE_WALL_S:-240}} (wall $(( $(date +%s) - _rs_t0 ))s, rc $_rs_rc): not a result" >&2 ;; esac; rm -rf "$_rs_root" "$_rs_out" 2>/dev/null) || true
+    git -C "$d" worktree remove --force "$_rs_wt" >/dev/null 2>&1 || true
+    rm -rf "$_rs_top" 2>/dev/null || true; git -C "$d" worktree prune >/dev/null 2>&1 || true
+  }
   # Run the suite at an arbitrary ref, NOW, under this tick's conditions.
   #
   # The stored baseline is a snapshot taken at some earlier tick; test outcomes here depend on
@@ -4589,6 +4626,25 @@ EOF
     RC_FILE="$MARKER_DIR/$v.testgate-refusals"
     RC="$(cat "$RC_FILE" 2>/dev/null || echo 0)"; case "$RC" in ''|*[!0-9]*) RC=0 ;; esac
     RC=$((RC + 1)); echo "$RC" > "$RC_FILE" 2>/dev/null || true
+    # A REFUSED GATE-ONLY PASS RESTORES LAST-GOOD ON THE RUNTIME. The runtime already runs this tree (a cutover
+    # wrote it, ungated), so "refuse and keep last-good" means putting last-good back: the runtime only, never
+    # dev or the clone. The refusal below is still counted and filed, and the next tick gates HEAD again (the
+    # runtime no longer matches it). Last-good is the pin; a pin that IS the refused sha falls back to the last
+    # gated sha.
+    if [ -n "${TG_GATE_ONLY:-}" ]; then
+      TG_RESTORE="$(cat "${LAST_GOOD_DIR:-/nonexistent}/$v" 2>/dev/null || true)"
+      [ "$TG_RESTORE" != "$HEAD" ] || TG_RESTORE="${TG_GATED:-}"
+      [ "$TG_RESTORE" != "$HEAD" ] || TG_RESTORE=""
+      if restore_last_good "$v" "$d" "$TG_RESTORE"; then
+        log "$v: !!! REFUSED GATE-ONLY PASS — the runtime ran ${HEAD:0:10} ungated and the gate refused it: restored last-good ${TG_RESTORE:0:10} on the runtime (verified: live content == its tree); restarting; dev and the clone are untouched"
+        if [ -n "$SELF_UNIT" ] && [ "${SELF_UNIT%.service}" != "$SELF_UNIT" ] && systemctl is-active --quiet "$SELF_UNIT" 2>/dev/null; then
+          systemctl restart "$SELF_UNIT" 2>/dev/null || true
+        fi
+      else
+        log "$v: !!! REFUSED GATE-ONLY PASS — restoring last-good FAILED ($RL_WHY); the runtime still runs the refused ${HEAD:0:10} (pull-sync-revert-failed-$v)"
+        emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-revert-failed-$v\",\"category\":\"service_failure\",\"source\":\"substrate_detected\",\"summary\":\"$v runs ${HEAD:0:10}, written to its runtime outside the test gate, and the gate refused it; restoring last-good ${TG_RESTORE:0:10} FAILED ($RL_WHY), so the refused tree is still live\",\"status\":\"open\"}}}}"
+      fi
+    fi
     # A TEST-ONLY RANGE NEVER TAKES THE STARVATION BREAK. The break exists because
     # indefinite staleness of RUNTIME code is the worse failure. A range that changes only tests
     # (last-good pin .. HEAD, test_only_range) leaves the unit's code byte-identical, so refusing

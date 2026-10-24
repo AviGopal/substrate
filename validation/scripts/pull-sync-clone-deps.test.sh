@@ -169,7 +169,7 @@ line_of() { grep -n "$1" "$CALLS" | head -1 | cut -d: -f1; }
 # ── (a) a declared dependency is missing from the clone ────────────────────────
 setup '{"left-pad":"1.0.0"}'
 run
-I="$(line_of '^INSTALL')"; S="$(line_of '^TEST clone')"
+I="$(line_of '^INSTALL')"; S="$(line_of '^TEST ')"   # the first suite run of the gate (it runs in a worktree of HEAD, not the clone)
 [ -n "$I" ] && ok "(a) bun install ran in the clone" || bad "(a) no install although left-pad is missing from node_modules"
 grep -q "^INSTALL ${d%/} install --silent --no-save" "$CALLS" && ok "(a) install runs in the clone dir with --silent --no-save" || bad "(a) install not run in the clone with --silent --no-save: $(grep '^INSTALL' "$CALLS")"
 [ -n "$I" ] && [ -n "$S" ] && [ "$I" -lt "$S" ] && ok "(a) install precedes the suite" || bad "(a) install did not precede the suite (install=$I suite=$S)"
