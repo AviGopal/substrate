@@ -1,16 +1,40 @@
-# substrate — a self-improving development substrate
+# substrate
 
-**A development system that learns from its own executions. You give it goals in plain language; it finds and runs the steps that reach them, traces every step, judges afterwards whether each goal was actually reached, and turns the pathways that reach into reusable templates. It runs the same loop on its own code.**
+**A system that decides for itself what to do next, using the record of what has worked when it chose before.**
 
-> **Start here.** A substrate is a fleet of *vessels*, services that each bundle the capabilities that live next to their data, running in one container. You give it a goal in plain language. It walks backward over a graph of data *shapes*, the kinds of data each step consumes and produces, to find steps that reach the goal, and runs those steps through *resolvers*, the functions that do the work: deterministic, pattern or LLM. Every step is traced. Afterwards it judges whether the goal was actually reached, not merely whether the process exited cleanly, and from those verdicts it learns which pathways reach. It applies the same loop to its own code: it drafts changes, verifies them and lands them.
->
-> - **See it work:** [A goal, end to end](#a-goal-end-to-end), one goal from request to verdict.
-> - **What it is:** [Overview](#overview) and [Core concepts](#core-concepts) below. The canonical definition is [`docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md).
-> - **Run one:** [Quick start](#quick-start) (one command), part of [Installation](#installation), the only place setup commands appear.
-> - **Use one as a person:** [`docs/HUMAN_SURFACE.md`](docs/HUMAN_SURFACE.md).
-> - **Read next:** [`docs/README.md`](docs/README.md), the documentation index, grouped by what each document is for.
->
-> **Agents working in this repository** start from [`CLAUDE.md`](CLAUDE.md), the operating manual: the laws, the dispatch loop and the operator role. When a document disagrees with the running substrate, the running substrate wins.
+## The idea
+
+An agent acts when prompted. Put on a loop, it keeps acting, but nothing guarantees that what it does serves its own continued operation; today that guidance comes from a harness people write around it. Substrate moves that guidance inside, as something the system runs and improves itself.
+
+It is built from a few kinds of parts, of which it can have any number: *impulses* (data, carried as references with metadata), *pointers* (the address and type of an impulse, its *shape*), *resolvers* (functions that do one step's work) and *vessels* (services that host resolvers where their data lives). Three mechanisms act on them:
+
+- **Direction.** Each action is described by the shapes it consumes and produces, so a goal is approached by chaining backward from what it needs to what is already at hand.
+- **Selection.** Which action to take is chosen from the current context, by what has worked in similar contexts before.
+- **Reduction.** Sequences of choices that work are compressed into single reusable actions, so the same kind of goal takes fewer choices over time.
+
+Running continually, the system keeps what persists (outputs that later steps go on to use, fixes that stay fixed) and lets the rest fall away. What it decides to do next is the test of what it did.
+
+## Built from known parts
+
+Nothing here is new on its own. Each mechanism has long precedent: backward chaining over typed actions in classical planning, context-conditioned selection in contextual bandits and Thompson sampling, reduction in macro-operators, chunking and library learning, parts that live with their data in actor and service-discovery systems, and language models used as one tool among many. [`docs/architecture/LITERATURE_COMPARISON.md`](docs/architecture/LITERATURE_COMPARISON.md) compares the design with related research.
+
+## The open question
+
+What is not settled is the composition: whether these mechanisms keep working together when the system runs continuously on itself. Selection has to stay meaningful while reduction changes what is being selected, grading has to stay grounded while the system changes its own work, and the whole has to stay stable without someone holding it up.
+
+## How it is judged
+
+On randomly drawn goals, against an agent running in a conventional harness, under a protocol fixed before the run. A result counts only as an improvement over that control: fewer choices per goal reached as experience accumulates, outputs that later steps actually use, and useful work per operator intervention.
+
+## Where to go next
+
+- **See it work:** [A goal, end to end](#a-goal-end-to-end), one goal from request to verdict.
+- **What it is:** [Overview](#overview) and [Core concepts](#core-concepts) below. The canonical definition is [`docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md).
+- **Run one:** [Quick start](#quick-start) (one command), part of [Installation](#installation), the only place setup commands appear.
+- **Use one as a person:** [`docs/HUMAN_SURFACE.md`](docs/HUMAN_SURFACE.md).
+- **Read next:** [`docs/README.md`](docs/README.md), the documentation index, grouped by what each document is for.
+
+**Agents working in this repository** start from [`CLAUDE.md`](CLAUDE.md), the operating manual: the laws, the dispatch loop and the operator role. When a document disagrees with the running substrate, the running substrate wins.
 
 ## A goal, end to end
 
