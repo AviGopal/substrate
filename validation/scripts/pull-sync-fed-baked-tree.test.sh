@@ -4,7 +4,7 @@
 #
 # The failure it pins: the transport and relay normally run the IMAGE BAKE (/usr/local/share/substrate/super-repo/...).
 # pull-sync restarted them on every clone change under federation-relay/, which reloaded the old baked file, reported
-# success, and dropped every peer's circuit. Measured on the hub 2026-10-18T02:39:35Z (the 10-13 ingress-auth.ts came
+# success, and dropped every peer's circuit (an older baked ingress-auth.ts came
 # back after the change had landed in the clone).
 #
 # fed_unit_runs_clone (taken from the script itself; systemctl stubbed):

@@ -15,7 +15,7 @@
 # (units/service.d/05-secret-dir-out-of-reach.conf, every unit but the declared
 # writers). A mask on a FILE binds the inode the path named when the unit started,
 # and this script replaces files by rename, so a file-level mask goes stale at the
-# first render and the unit reads the live file (measured 10-02: inode inside the
+# first render and the unit reads the live file (measured: inode inside the
 # vessel == inode outside). A directory overmount does not care what happens inside
 # it. So this script creates the directory once (mkdir, never -p over a symlink),
 # only ever chmods it in place, and never removes, renames or recreates it; a

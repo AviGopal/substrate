@@ -16,7 +16,7 @@
 #      (e) mutants: an always-pass fixture turns (a) green, so (a) detects it; a judge that skips drop-ins is caught by
 #      the fixture's own positive control ("cannot judge").
 #   4. The REAL shadow-eval.sh on a corpus of this fixture + parses.sh: (a) FAIL, the base PASS. federation-relay-large-frames
-#      (needs a baked bun + relay node_modules) and no-self-exec-847025e2 (a 240 s pull-sync tick) are left out of this
+#      (needs a baked bun + relay node_modules) and the no-self-exec fixture (a 240 s pull-sync tick) are left out of this
 #      scratch corpus; they judge other paths.
 #   5. The REAL candidate.sh from a scratch accepted gate: (a) refused, its gate_candidate_refused gap naming
 #      scripts/substrate/units/<path>:<line>: <NAME> (the line to revert), and (b) likewise; (c) with the fixture edited to admit the name is a

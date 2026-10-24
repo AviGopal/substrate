@@ -7,7 +7,7 @@
 # of this vessel's own socket, and false of everything else. systemd holds a
 # Type=simple unit in `activating` until ExecStartPost returns, so for up to ten
 # minutes multi-user.target could not be reached and every unit ordered into it
-# sat in `start waiting`. Measured on a restart 2026-08-08: stateful-ui-vessel,
+# sat in `start waiting`. On a restart, stateful-ui-vessel,
 # boredom-vessel.timer, substrate-pull-sync.timer, self-recovery.timer,
 # obsidian-intake and substrate-ready were all queued behind one vessel
 # uploading ~98 templates. A substrate that takes ten minutes to finish booting
@@ -81,7 +81,7 @@ WorkingDirectory=/vessels/development-vessel
 # one header per line) and no process listing shows it
 # (validation/scripts/resolve-writers-send-credentials.test.sh lints unit Exec lines).
 ExecStart=/bin/bash -c 'for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do curl -sf ${METABOB_ENDPOINT}/health >/dev/null 2>&1 && break || sleep 3; done; for n in $$(seq 1 100); do K=$$(sed -n "s/^METABOB_API_KEY=//p" /etc/substrate/env | head -n1 | tr -cd "A-Za-z0-9._=+/-"); if [ "$$(systemctl show -p ActiveState --value identity-seeder.service 2>/dev/null)" != activating ] && [ -n "$$K" ] && [ "$$(printf "Authorization: ApiKey %%s" "$$K" | curl -s -o /dev/null -w %%{http_code} -m 5 -H @- "${METABOB_ENDPOINT}/v2/activities/templates?limit=1")" = 200 ]; then break; fi; [ "$$n" = 1 ] && echo "[dev-seed] waiting for identity seeding to finish and a key ${METABOB_ENDPOINT} accepts"; sleep 3; done; [ -n "$$K" ] && export METABOB_API_KEY="$$K"; exec /root/.bun/bin/bun /vessels/development-vessel/src/cli.ts seed-templates'
-# Same generous budget the start phase used to carry — the ~98 uploads are
+# A generous start budget — the template uploads are
 # genuinely slow. It is affordable here precisely because nothing waits on it.
 TimeoutStartSec=600
 # A failed seed must not take the vessel with it, and must not retry forever.

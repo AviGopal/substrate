@@ -1,7 +1,7 @@
 [Unit]
 Description=Seed the writable run-dir for substrate timer scripts (self-activation)
-# SELF-ACTIVATION (2026-06-26). Substrate timer scripts historically ran directly
-# from the READ-ONLY host bind path (scripts/substrate/<name>.ts). The Docker-
+# SELF-ACTIVATION. Substrate timer scripts must not run directly
+# from a READ-ONLY host bind path (scripts/substrate/<name>.ts). A Docker-
 # Desktop bind is stale-after-mount: a substrate-AUTHORED new version of a timer
 # script can't take effect until a full container restart remounts the bind.
 #
@@ -25,11 +25,11 @@ RemainAfterExit=yes
 EnvironmentFile=/etc/substrate/env
 # Seed from the super-repo CLONE when present (last-known origin/dev state),
 # else the IMAGE-baked copy — never a host bind path (a baked host path made
-# this unit fail on any machine but the original operator's, 2026-07-02).
+# this unit fail on any machine but the one it was built on).
 # Substrate-authored deltas still accumulate on the volume between boots via
 # activate_substrate_script; each boot re-seeds from committed source.
 # A node with gate state seeds from the ACCEPTED gate, never the clone: the clone's HEAD is an unjudged
-# candidate, and a boot must not make it live (gap every-path-that-changes-running-code-must-pass-the-accepted-gate-first).
+# candidate, and a boot must not make it live: every path that changes running code passes the accepted gate first.
 # Gate state is the predicate substrate-pull-sync.service uses (any of accepted.sha, accepted, history,
 # ledger.jsonl, bootstrapped; the .gate dir itself is pre-created by entrypoint.sh, so it is no signal). With gate
 # state but no usable accepted copy it seeds the image's copy, never the clone: losing one file must not re-open

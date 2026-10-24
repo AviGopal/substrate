@@ -66,9 +66,8 @@ const count = async (q: string): Promise<number | null> => {
   // A malformed/empty result is NOT a genuine zero — it means the count probe
   // is dark (query failed, timed out, or returned an unexpected shape). Return
   // null so downstream renders it as UNKNOWN, never as a false "0". Conflating
-  // failure with zero is exactly what made throughput read 0/175 for 4h on
-  // 2026-06-21 while real throughput was ~1300/hr (the created_at full-scan
-  // timed out / mis-filtered). `count()` returns the genuine 0 only when the
+  // failure with zero makes a timed-out or mis-filtered count read as no
+  // throughput while real throughput is high. `count()` returns the genuine 0 only when the
   // DB explicitly returns count:0.
   return (r && r[0] && typeof r[0].count === "number") ? r[0].count : null;
 };
@@ -78,11 +77,10 @@ let lift: any = { overall_passing: null, template_count: null, vessels_down: nul
 try {
   // FOSSIL PATH. This read was hardcoded to /workspace/substrate-heartbeat.json while the
   // WRITER, substrate-health-tick.ts, writes join(WORKSPACE_ROOT, "substrate-heartbeat.json")
-  // — and WORKSPACE_ROOT is /workspace/git/super-repo. Two different files. Measured
-  // 2026-09-05: the hardcoded path held an Aug 8 snapshot (overall_passing:false, naming three
-  // vessels down that were up), while the writer's path was current to the minute. The lift
-  // gate — the substrate's own "can this be left to develop itself" verdict, whose comment
-  // calls overall_passing "the single source of truth" — had been reading a 28-day-old file.
+  // — and WORKSPACE_ROOT is /workspace/git/super-repo. Two different files: the hardcoded
+  // path holds a stale snapshot while the writer's path is current, so the lift gate — the
+  // substrate's own "can this be left to develop itself" verdict, whose comment calls
+  // overall_passing "the single source of truth" — would read a weeks-old file.
   // Same fossil-vs-live-path class as the gaps.json defect. Resolve against WORKSPACE_ROOT so
   // reader and writer cannot drift apart again; keep the literal only as a fallback.
   const heartbeatPath = `${process.env["WORKSPACE_ROOT"] ?? "/workspace"}/substrate-heartbeat.json`;
@@ -97,7 +95,7 @@ try {
 // Lift-gate flap CONTEXT: the heartbeat records only overall_passing, not which
 // dimension drove a flap. We record the raw trailing-1h inputs that the two
 // flapping dimensions key on, READ-ONLY, so the series can SHOW the dynamics
-// (2026-06-19). These are OBSERVATIONAL — not the authoritative verdict. We do
+//. These are OBSERVATIONAL — not the authoritative verdict. We do
 // NOT recompute confidence_passing/stability_passing here: the resolver filters
 // to active (non-proposed) templates and uses its own windows, so a naive
 // recompute drifts pessimistic (it once read fail while the gate read pass).
@@ -131,7 +129,7 @@ const embedded = await tryNum(() => count("SELECT count() FROM activity WHERE na
 let selector_scored_fraction: number | null = null;
 // The recommend selector probe flaps under trace load (transient timeouts), and
 // a single null reads as a "blind instrument" downstream. Retry once before
-// giving up so a transient miss does not masquerade as a dark probe (2026-06-19).
+// giving up so a transient miss does not masquerade as a dark probe.
 for (let attempt = 0; attempt < 2 && selector_scored_fraction == null; attempt++) {
   try {
     const rec = await (await fetch(`${API}/v2/activities/recommend`, {
@@ -151,9 +149,8 @@ const forward_model = {
 
 // How many of the given parent execution ids exist, in ONE query against `execution`
 // by record id (an id lookup, no scan). This replaced a per-child loop of up to 900
-// `count()` queries against v_paradigm_execution_traces every 20 minutes: on the
-// syzygy hub (1.5M execution rows, the view live) that loop was about 18% of all
-// database time in a 2-minute capture (2026-10-02). Each child counts once, as the
+// `count()` queries against v_paradigm_execution_traces every 20 minutes: on a
+// large hub store that loop is a large share of all database time. Each child counts once, as the
 // loop did: a parent referenced by two children counts for both.
 async function parentsPresent(parentIds: string[]): Promise<number> {
   const ids = [...new Set(parentIds.filter((x) => typeof x === "string" && x.length > 0))];
@@ -176,7 +173,7 @@ try {
     orphan_parent_rate = Math.round((1 - resolved / kids.length) * 1000) / 1000;
   }
 } catch { /* leave null */ }
-// LEADING INDICATOR for the trace-sink retry fix (ias-executor-ts 09c32a0):
+// LEADING INDICATOR for the trace-sink retry fix (ias-executor-ts):
 // orphan rate restricted to recently-created children. The broad rate above is
 // dominated by legacy orphans and moves slowly; this window shows whether NEW
 // compositions are persisting their parents (should fall toward 0 post-fix).
@@ -211,7 +208,7 @@ try {
   const { readdirSync } = await import("node:fs");
   self_alteration.open_proposals = readdirSync("/workspace/proposals").filter((f) => f.endsWith(".json")).length;
 } catch { /* */ }
-// HONEST landing signal (2026-06-18): the `.applied/` count above conflates
+// HONEST landing signal: the `.applied/` count above conflates
 // apply-ATTEMPTS (written on every outcome, success or failure) with real landings
 // and freezes when apply finds "no eligible proposals". The ground truth for a
 // self-development LANDING is a substrate-authored mitosis-cutover commit pushed to
@@ -353,8 +350,8 @@ const LANDINGS_BASIS = "origin/dev; one per gap family; landed = fix commit + ga
 // ── DEC rate-limiters ──
 // Filter on executed_at, NOT created_at: created_at is UNINDEXED on
 // activity_execution_traces (229k+ rows), so the range scan took 2-30s and
-// timed out / mis-counted under load — it read 0/175 tr/hr for 4h on
-// 2026-06-21 while real throughput was ~1300/hr. executed_at IS indexed
+// times out / mis-counts under load, reading near zero while real throughput
+// is high. executed_at IS indexed
 // (idx_activity_executions_executed_at) and correctly populated on recent
 // traces: same window returns in ~195ms with the accurate count.
 const traces_per_hour = await tryNum(() => count("SELECT count() FROM v_paradigm_execution_traces WHERE executed_at > (time::now() - 1h) GROUP ALL;"));
@@ -458,7 +455,7 @@ try {
 // active_vessels = distinct vessels resolving recently (vessel-population breadth).
 let vessel_population: any = { active_vessels: null, attribution_coverage: null, recent_traces: null };
 try {
-  // vessel_id is trace-level (fixed in ias-executor-ts 4aa6ec4: the sink now stamps it
+  // vessel_id is trace-level (the ias-executor-ts trace sink stamps it
   // from VESSEL_ID). resolver_tier is per-TASK (tasks[].resolver_tier), not trace-level,
   // so attribution_coverage measures vessel_id presence — the per-vessel learning signal.
   const tot = await tryNum(() => count("SELECT count() AS count FROM v_paradigm_execution_traces WHERE executed_at > type::datetime(time::now() - 2h) GROUP ALL;"));
@@ -580,7 +577,7 @@ try {
 // latest entry into each snapshot (a) tracks these autonomy-determining quantities
 // in ONE trendable series and (b) keeps them FRESH — previously the viewer read a
 // stale host mirror of spectral-gap.jsonl, overstating λ₁ (0.94 vs live 0.54) and
-// misidentifying the scarcest DEC limiter. Read-only, best-effort. (2026-06-19)
+// misidentifying the scarcest DEC limiter. Read-only, best-effort.
 let spectral: any = null;
 try {
   const sgPath = OUT.replace(/[^/]+$/, "spectral-gap.jsonl");
@@ -599,7 +596,7 @@ try {
       headroom: last.headroom ?? null,
       // GENUINE capability subgraph (lifecycle hooks excluded) — the HONEST connectivity
       // signal. The full-graph headroom above is perverse (grows the hub with activity);
-      // genuine.headroom is what the governor should track. (2026-06-19)
+      // genuine.headroom is what the governor should track.
       genuine: last.genuine ?? null,
     };
   }
@@ -608,7 +605,7 @@ try {
 // ORTHOGONALITY signal (SUBSTRATE_AS_MDP §12.7): mutual coherence of the activity dictionary
 // — the HONEST health metric (rising coherence as the action space grows = orthogonality
 // eroding, the moat dissolving), NOT global λ₂ (mixing = anti-orthogonal). Ingested from the
-// coherence-metric timer's coherence.jsonl. (2026-06-20)
+// coherence-metric timer's coherence.jsonl.
 let coherence: any = null;
 try {
   const cPath = OUT.replace(/[^/]+$/, "coherence.jsonl");

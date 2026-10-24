@@ -10,8 +10,8 @@
  * - G4.1.2: tier-descent — per-cell resolver-tier distribution shifted from
  *   llm toward pattern/deterministic (design §E.2, approximated at cell level
  *   because the prior report stores aggregates, not raw traces). Live traces
- *   do NOT populate `resolver_tier` (verified 2026-07-01: null on 100% of
- *   sampled execution_trace_content rows), so tiers are derived from
+ *   do NOT populate `resolver_tier` (it is null on sampled
+ *   execution_trace_content rows), so tiers are derived from
  *   `resolver_id` when the explicit field is absent and every tier-descent
  *   event is flagged `low_confidence: true` per the Phase-21 gating note in
  *   tasks.md.

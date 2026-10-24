@@ -7,7 +7,7 @@
 # WHY. A unit's InaccessiblePaths= is applied when the unit STARTS and binds whatever
 # the path named then. Two ways that silently stops protecting anything:
 #   - a mask on a FILE that is later replaced by rename covers the dead inode; the
-#     unit opens the live file (measured 10-02: admin.env inode inside a vessel ==
+#     unit opens the live file (measured: admin.env inode inside a vessel ==
 #     inode outside). Hence the directory mask (units/service.d/05-secret-dir-out-of-reach.conf).
 #   - a path that did not exist when the unit started ('-' skips it) stays visible
 #     until that unit restarts.

@@ -11,7 +11,7 @@
 #     relay without a list would cut every spoke's federation. Restricting it is an explicit act.
 #   18080 activity-api: SOURCE-RESTRICTED to ALLOW_18080_SRC (comma-separated IPv4, the attached spokes' egress
 #     addresses; empty = closed to every outside source; IPv6 always denied), or OPEN to every source with
-#     ALLOW_18080_SRC=any (user ruling 2026-10-13: the hub is not walled, protection lives in auth; a token joiner
+#     ALLOW_18080_SRC=any (the hub is not walled, protection lives in auth; a token joiner
 #     must be able to reach the trace store). 9443, its TLS twin, follows the same setting. Both open on IPv4 only. activity-api's jwtAuth admitted any
 #     X-Internal-Api-Key value on its trace, impulse and event writes, so an open 18080 let anyone write the
 #     network's learning store. It cannot simply be closed: every hub-attached spoke derives

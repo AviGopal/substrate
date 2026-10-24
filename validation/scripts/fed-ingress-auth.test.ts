@@ -1,4 +1,4 @@
-// fed-ingress-auth.test.ts — INBOUND AUTHENTICATION ON THE OVERLAY (operator exception, user ruling 2026-10-12).
+// fed-ingress-auth.test.ts — INBOUND AUTHENTICATION ON THE OVERLAY (an operator exception).
 //
 // WHAT IS JUDGED: scripts/substrate/federation-relay/ingress-auth.ts (the pure decision, credential and policy logic) and
 // the wiring pins in federation-transport-server.ts that a refactor could silently undo. Hermetic: no network, no libp2p,

@@ -45,7 +45,7 @@ paths = [
   '''scripts/git-hooks/\.gitleaks\.toml$''',
 ]
 regexes = [
-  # The key-harvest proof (validation/reports/launch-contract-gaps-proof) plants
+  # The key-harvest proof plants
   # a deliberately fake canary credential and prints it verbatim — that verbatim
   # print IS the evidence. Never a real key; the literal CANARY marker is required.
   '''sk-ant-CANARY-[A-Za-z0-9-]+''',
@@ -63,6 +63,6 @@ regexes = [
   # Realignment/synthesis records key every row by a problem-class slug in a JSON
   # "key" field. regexTarget is "line", so an allowlist regex suppresses EVERY finding
   # on a matching line: this one is anchored to a line holding ONLY that field, so a
-  # minified line carrying a real token is still flagged (qa review 2026-09-29).
+  # minified line carrying a real token is still flagged.
   '''^\s*"key":\s*"[a-z][a-z0-9]*(?:-[a-z0-9]+)+",?\s*$''',
 ]

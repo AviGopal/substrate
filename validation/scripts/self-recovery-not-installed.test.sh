@@ -3,8 +3,8 @@
 # only when nothing can run it (scripts/substrate/self-recovery-tick.sh not_installed). Runs the script's own function
 # against a fixture root with csh/csys stubbed. No container, no network.
 #
-# Measured 2026-10-16: human-surface-vessel was baked with its source and enabled at build (since 9c39f411) and running
-# on all three nodes, but on two of them (no /etc render) self-recovery logged "NOT INSTALLED" every tick and skipped it.
+# Observed: human-surface-vessel was baked with its source, enabled at build and running
+# on every node, but where /etc had no render, self-recovery logged "NOT INSTALLED" every tick and skipped it.
 #
 #   (a) MUST-FAIL: baked + enabled + source present, no /etc render -> installed (watched)
 #   (b) control: baked source present but the unit NOT enabled (metric-collector) -> not installed (still waits)

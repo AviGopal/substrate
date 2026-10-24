@@ -89,7 +89,7 @@ fi
 # Reconcile durable dynamic membership. Units rendered by `vessel-ctl install`
 # live in /etc/systemd/system — container filesystem, NOT a volume — so a
 # recreate silently drops every installed unit while the manifest and sources
-# (volumes) survive; the 2026-09-21 lifecycle audit measured exactly this
+# (volumes) survive; the lifecycle audit measured exactly this
 # ("manifest and source persist, but generated service unit disappears").
 # installed.json is the volume-backed desired-membership record vessel-ctl
 # maintains on install/uninstall; re-install its members on every boot.
@@ -150,8 +150,8 @@ if [ "$_ftv_disabled" = 1 ]; then
 # substrate's discovery. Peering mirrors that substrate's libp2p producers into this
 # discovery with endpoint 127.0.0.1:8401 (this node's transport), so without a
 # transport every mirrored arm is an advertised route nothing can serve. Measured
-# 2026-10-03 on node 1: its local llm-resolver was failing and both mirrored
-# llm-resolver@syzygy-hub arms answered "Unable to connect", taking down the LLM leg
+# on a node: its local llm-resolver was failing and both mirrored
+# llm-resolver@hub arms answered "Unable to connect", taking down the LLM leg
 # of the ReAct floor; with the transport up the same arm answered in 0.9 s.
 elif { [ -n "${HUB_DISCOVERY_URL:-}" ] || [ -n "${PEER_MULTIADDR:-}" ] || [ -n "$(echo "${PEER_DISCOVERY_ENDPOINTS:-}" | tr -d '[:space:],"')" ]; } && [ -x /usr/local/bin/vessel-ctl ]; then
   echo "[substrate] spoke federation: enabling federation-transport-vessel (hub=${HUB_DISCOVERY_URL:-none} peer_multiaddr=${PEER_MULTIADDR:-none} peers=${PEER_DISCOVERY_ENDPOINTS:-none})"
@@ -184,8 +184,8 @@ fi
 #   - federation-transport-vessel: already auto-enabled by the block above, since
 #     gen-env now self-anchors a hub (HUB_DISCOVERY_URL=localhost) — without it the
 #     hub can SEE mirrored spoke rows and cannot dial them (forward_failed).
-# Both were manual interventions in the 2026-09-16 network demo
-# (validation/reports/network-demo); this block moves deploy-hub.sh's knowledge
+# Both were manual interventions in the network demo
+# this block moves deploy-hub.sh's knowledge
 # into the boot path. DISABLED_VESSELS still outranks, same as the transport.
 #
 # PROFILE=hub and PROFILE=hub-minimal carry the same promise, and are the form

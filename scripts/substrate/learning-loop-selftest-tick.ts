@@ -14,9 +14,9 @@
  * operator following one execution by hand. This is that walk, automated.
  *
  * WHY BOOTSTRAP TIER AND NOT THE ROTATION. The design document places probe
- * templates on the autonomous rotation. The 2026-09-09 validator census refutes
- * that: 90 of 102 selection-scheduled validators had gone dormant, every survivor
- * being timer-driven. A selftest scheduled by the learning loop it validates is
+ * templates on the autonomous rotation. The validator inventory refutes that:
+ * most selection-scheduled validators go dormant, and the survivors are
+ * timer-driven. A selftest scheduled by the learning loop it validates is
  * the circularity CLAUDE.md already names when it exempts the liveness watchdogs —
  * a check cannot be scheduled by the mechanism it exists to recover. The RUNNER is
  * timer-tier; the PROBES it dispatches still travel the real lanes, which is the
@@ -24,7 +24,7 @@
  *
  * IT ASSERTS, IT DOES NOT REPAIR. Red links are emitted as gaps carrying CLASS-2
  * behavioural predicates (`evidence_resolve` as an object with a `shape`). Class-1
- * literal predicates are not used here on purpose: one was satisfied on 2026-09-10
+ * literal predicates are not used here on purpose: one can be satisfied
  * by the word appearing inside a COMMENT, closing a gap that had repaired nothing.
  *
  * NO LLM IN THE ASSERTION PATH. Every assertion below is a deterministic read of a
@@ -131,7 +131,7 @@ export function evaluate(e: Evidence): Assertion[] {
       ? "no posterior row for the probe's arm: the execution produced no belief to update"
       : moved > 1e-9
         ? `probe arm moved Δα=${(d.alphaAfter - d.alphaBefore).toFixed(4)} Δβ=${(d.betaAfter - d.betaBefore).toFixed(4)}`
-        // A DETERMINISTIC PROBE IS *SUPPOSED* TO MOVE NOTHING (2026-09-10).
+        // A DETERMINISTIC PROBE IS *SUPPOSED* TO MOVE NOTHING.
         // posterior-update.ts skips the write when tierClass === 'all_deterministic':
         // an arm with no stochastic choice has nothing to learn, so the skip is the
         // design working. Measured for this probe: reach_verdict "reached",
@@ -144,7 +144,7 @@ export function evaluate(e: Evidence): Assertion[] {
         // verdict never arrived either is severance the right accusation.
         //
         // THE SKIP IS DOUBLE-DETERMINED, AND A STOCHASTIC ARM ALONE DOES NOT LIFT IT
-        // (2026-09-11). `skipVariantUpdate` is a disjunction:
+        //. `skipVariantUpdate` is a disjunction:
         //   tierClass === 'all_deterministic' || trace.metadata.information_yield === 'idle'
         // and BOTH hold for this probe — the journal reports tier_class
         // "all_deterministic", and every probe execution row carries
@@ -259,7 +259,7 @@ async function main(): Promise<void> {
   // the real gate functions, so its outcome is known by construction and needs no
   // model to judge. Reuse before mint — no new probe shape is required.
   //
-  // DISPATCH AS AN ACTIVITY EXECUTION, NOT AS A RAW RESOLVE (2026-09-10).
+  // DISPATCH AS AN ACTIVITY EXECUTION, NOT AS A RAW RESOLVE.
   // The first live run of this selftest came back RED on trace_write while
   // goal_path was GREEN, which is not a shape a severed trace-writer can produce.
   // The cause was this dispatch: it POSTed the shape to development-vessel's
@@ -331,7 +331,7 @@ async function main(): Promise<void> {
     const meta = JSON.stringify(r["metadata"] ?? {}).toLowerCase();
     return a.includes("gate") && a.includes("probe") || meta.includes(PROBE_TAG);
   });
-  // THE GRADING MARKER IS A TAG, NOT A METADATA FIELD (2026-09-10).
+  // THE GRADING MARKER IS A TAG, NOT A METADATA FIELD.
   // This previously tested metadata.reach_graded === true || metadata.reached !==
   // undefined. NEITHER KEY EXISTS on an execution row. Measured: 0 of 936
   // executions in a 2-hour window carried metadata.reach_verdict, and the real

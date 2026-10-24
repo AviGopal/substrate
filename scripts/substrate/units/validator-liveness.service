@@ -8,7 +8,7 @@ Description=Validator-liveness detector — flags validators that stopped keepin
 # nothing. Read-only except gap emission.
 #
 # Runs from a timer, not from the pool, on purpose: every validator that survived
-# the 2026-09-09 census was timer-driven and every dormant one was Thompson-selected,
+# an inventory found was timer-driven and every dormant one was Thompson-selected,
 # including rhythm_conductor_tick itself. Per CLAUDE.md, a check cannot be scheduled
 # by the mechanism it exists to recover — this is that stated bootstrap-tier exception.
 After=activity-api.service surrealdb.service development-vessel.service

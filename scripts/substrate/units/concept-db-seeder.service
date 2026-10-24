@@ -4,7 +4,7 @@ StartLimitBurst=10
 Description=concept-db concept seeder (Phase-22.S2 seed concepts)
 After=identity-seeder.service concept-db.service
 # identity-seeder first: seeding with the pre-mint bootstrap key writes org-less
-# rows that fail schema validation (observed 2026-07-02 first-boot test).
+# rows that fail schema validation.
 Wants=concept-db.service
 
 [Service]
@@ -19,7 +19,7 @@ ExecStartPre=/bin/sh -c 'i=0; until curl -sf http://127.0.0.1:8260/health > /dev
 ExecStart=/root/.bun/bin/bun /vessels/seed-concepts.ts
 # Self-heal the boot race: the target vessel answers /health before its DB
 # connection is warm, so a too-early seed run fails. on-failure + generous
-# burst lets the oneshot converge without operator help (2026-07-02).
+# burst lets the oneshot converge without operator help.
 Restart=on-failure
 RestartSec=20
 StandardOutput=journal

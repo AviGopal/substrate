@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # pull-sync's per-run suite wall is DERIVED per vessel (scripts/substrate/substrate-pull-sync.sh, the "3-pre. TEST GATE" slice):
 # the last completed full-run wall x 1.5, floored (SUITE_WALL_FLOOR_S, 240 s in production) and capped so the two-run overlay
-# fits the tick; the cap when nothing was measured yet. Measured 2026-10-11 on the hub: development-vessel's suite runs at or
-# past the fixed 240 s there (8 cores), so T1 went BLIND (RC=124) and the overlay parent was killed (pass=none); the candidate
-# was then judged on a stale stored baseline and refused 1/3 for 39 failures that were not its own.
+# fits the tick; the cap when nothing was measured yet. On a slower host, development-vessel's suite runs at or
+# past a fixed 240 s, so T1 goes BLIND (RC=124) and the overlay parent is killed (pass=none); the candidate
+# is then judged on a stale stored baseline and refused for failures that are not its own.
 # Scaled: floor 3 s, a 100 s unit, a 2 s margin, a 1 s grace -> cap (100-2)/4-1 = 23 s; the "300 s suite" is a 6 s stub.
 #   (a) MUST-FAIL: under a fixed 4 s wall the 6 s suite is killed -> TEST GATE BLIND naming killed_at_wall, not converged
 #   (b) MUST-FAIL: cold start (no measurement, no TEST_TIMEOUT_SECONDS) -> the wall is the CAP (a quarter of the budget, so

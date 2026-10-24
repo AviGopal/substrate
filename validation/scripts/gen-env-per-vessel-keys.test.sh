@@ -2,7 +2,7 @@
 # gen-env-per-vessel-keys.test.sh: gen-env must render a per-vessel key (LOCAL_TOOLS / GOAL_HOST / RIBOSOME / CONCEPT_DB
 # *_API_KEY) from the persisted store before falling back to the fleet key. seed-identity writes the dedicated keys it mints
 # to the store, but gen-env never read them back, so from the second boot on every per-vessel key was the fleet key
-# (measured 2026-10-12: node1's and compose2's GOAL_HOST_VESSEL_API_KEY key_id == METABOB_API_KEY's). Protected judge-adjacent
+# (a node's GOAL_HOST_VESSEL_API_KEY key_id equalled METABOB_API_KEY's). Protected judge-adjacent
 # bootstrap test: a red here means a scoped per-vessel key (goal-host's verdict-corpus writer) reverts on the next boot.
 #   (a) MUST-FAIL: a store holding GOAL_HOST_VESSEL_API_KEY renders it (provenance: persisted), not the fleet key
 #   (b) control: absent from the store -> the fleet key, as before (provenance: derived)

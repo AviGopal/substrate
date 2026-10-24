@@ -43,8 +43,7 @@ import os from 'node:os'
 // VM deployment, where announcing a wrong guess would strand every dialer —
 // but it also killed the relay on any hub whose reachability scope is a docker
 // bridge or a LAN, where the interface address IS the right announce address
-// (2026-09-16 network demo: role=hub's relay refused to boot over exactly
-// this). A derived private address is announced loudly so an internet-facing
+// (a role=hub relay must boot there). A derived private address is announced loudly so an internet-facing
 // operator can tell at a glance the env var is still required for them.
 const TCP_PORT = parseInt(process.env.RELAY_TCP_PORT || '30333', 10)
 const WS_PORT = parseInt(process.env.RELAY_WS_PORT || '0', 10) // set e.g. 443 to also offer browser-reachable WSS
@@ -158,7 +157,7 @@ await node.start()
 // timeout). A SUCCESSFUL ping keeps the NAT mapping warm (prevents the half-open)
 // AND proves the peer supports the protocol.
 //
-// SAFETY (learned from the reverted 6ec65736 churn loop): a peer that never runs a
+// SAFETY (learned from a reverted churn loop): a peer that never runs a
 // ping RESPONDER — e.g. a sidecar build without the service — would fail every ping
 // as "unsupported protocol", not "dead". So NEVER close on that: only close a peer
 // that has PONGED at least once (proving it CAN answer) AND then failed >=2 pings in
@@ -205,8 +204,7 @@ const relayMultiaddr = pub.find(m => m.includes(`/tcp/${ANNOUNCE_PORT}/`)) || pu
 console.log('\nRELAY_MULTIADDR=' + relayMultiaddr)
 
 // Persist the anchor where the fleet reads it. Printing the multiaddr to the
-// journal made the OPERATOR the write path: in the 2026-09-16 network demo the
-// value had to be hand-copied into /etc/substrate/env and discovery restarted
+// journal makes the OPERATOR the write path: the value would have to be hand-copied into /etc/substrate/env and discovery restarted
 // before /bootstrap could advertise a relay. When the relay runs INSIDE a
 // substrate container (role=hub), it is the authority for this value — write it
 // to the env file itself (atomic replace, no duplicate lines) so units started

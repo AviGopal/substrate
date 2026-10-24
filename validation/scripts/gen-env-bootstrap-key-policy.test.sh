@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gen-env-bootstrap-key-policy.test.sh: the fleet's bootstrap key is the seed account's password, so gen-env must only
 # ever generate one that identity-vessel's password policy accepts (8+ chars, an upper-case letter, a lower-case letter,
-# a digit), and must replace a PERSISTED bootstrap value that fails it. Measured 2026-10-12 (podman install acceptance):
+# a digit), and must replace a PERSISTED bootstrap value that fails it. In an install acceptance run,
 # a draw with no digit made every seeder retry re-send the same refused password, the fleet never seeded, and because
 # the value was persisted, re-running the installer could not repair it.
 #   (a) the policy predicate: fixtures that lack each class are refused; a conforming value is accepted

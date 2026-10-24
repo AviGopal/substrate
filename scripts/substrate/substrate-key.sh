@@ -67,8 +67,8 @@ SECRETS_FILE="${SECRETS_FILE:-/workspace/.substrate-private/substrate-secrets}"
 # branch. So a key minted through THIS surface did not update THIS surface's own
 # credential.
 #
-# What that cost, measured on syzygy.host 2026-08-26: an active `substrate-admin`
-# key (read,write,admin) minted 2026-07-16 — fifteen days after that substrate's
+# What that cost, measured: an active `substrate-admin`
+# key (read,write,admin) minted well after that substrate's
 # first boot, so not by the seeder — with SUBSTRATE_ADMIN_KEY empty in both files.
 # The plaintext existed exactly once, in the HTTP response on someone's terminal,
 # and was never persisted. When SEC-5 landed, `issue`, `list` and `revoke` all

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # pull-sync installs only COMMITTED glue (scripts/substrate/substrate-pull-sync.sh,
 # stage_committed_glue). Runs the script's own converge_units / converge_fleet_defs
-# against a temp super-repo whose working tree carries the 10-01 breach — an
+# against a temp super-repo whose working tree carries a breach — an
 # uncommitted edit of scripts/substrate/substrate-pull-sync.sh — plus a planted
 # untracked unit and a local commit that origin does not have.
 #

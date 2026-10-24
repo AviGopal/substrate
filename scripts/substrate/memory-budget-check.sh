@@ -2,7 +2,7 @@
 # memory-budget-check.sh — does the fleet's memory budget fit the machine it runs on,
 # and is the OOM killer being pointed at the right unit?
 #
-# MEASURED 2026-08-17. surrealdb.service was OOM-killed at 14:19:58 and stayed dead:
+# MEASURED. surrealdb.service was OOM-killed at 14:19:58 and stayed dead:
 # masked, so Restart=on-failure could not recover it, so activity-api 503'd on every
 # query for hours. The obvious reading — "the DB is unbounded, cap it" — was wrong twice
 # over, and both errors are worth encoding:

@@ -5,7 +5,7 @@
 # have historically failed silently:
 #   1. fleet readiness matrix (substrate-ready --once)
 #   2. SurrealDB root auth      — catches the SURREAL_PASS/datastore drift
-#                                 (regenerated pass vs persisted root user, 2026-07-02)
+#                                 (regenerated pass vs persisted root user)
 #   3. seeded-key auth          — METABOB_API_KEY authenticates against activity-api
 #   4. discovery registry       — registered-vessel count vs a sane floor
 #   5. failed systemd units     — catches silently-dead timers/crash-loops
@@ -59,7 +59,7 @@ fi
 echo "== 1b. datastore disk headroom =="
 # A FULL DISK PRESENTS AS DATABASE-PERFORMANCE PATHOLOGY, AND NOTHING ELSE ALARMED.
 #
-# 2026-08-10: the hub sat at 76G/77G used — 1.1G free — and SurrealDB began timing
+# the hub sat at 76G/77G used — 1.1G free — and SurrealDB began timing
 # out on writes: 28 "query was not executed because it exceeded the timeout" on
 # INSERT INTO execution in a single 20-minute window, with the process never
 # restarting. Everything downstream stopped quietly: ribosome extraction skipped
@@ -114,7 +114,7 @@ IDENTITY_EP="$(csh 'grep -m1 "^IDENTITY_VESSEL_URL=" /etc/substrate/env 2>/dev/n
 
 echo "== 2. SurrealDB root auth =="
 # A masked store is only "lives on the hub" when there IS a hub. On a hubless
-# standalone this branch used to PASS with that rationale — measured 2026-09-15
+# standalone this branch used to PASS with that rationale — measured
 # (validation/reports/wiring-green-vs-miswired-proof): a fleet whose only
 # functional vessel wrote to a store nothing served drew a green check with a
 # false explanation, and the store was never probed anywhere. The discriminator
@@ -384,14 +384,14 @@ else
 fi
 
 echo "== 3c. the substrate can still manage its own keyspace =="
-# SUBSTRATE_ADMIN_KEY is what /v1/jwt/generate's role gate (SEC-5, a9db360)
+# SUBSTRATE_ADMIN_KEY is what /v1/jwt/generate's role gate
 # requires before it will mint the admin JWT that `substrate-key issue|list|revoke`
 # each present. Historically it was written by exactly ONE path —
 # seed-identity.ts's genuine-first-boot branch — so any substrate seeded before
 # that step shipped carries it EMPTY, and key management is unreachable with no
 # way back: the only credential that could mint a replacement is the missing one.
 #
-# Measured on a hub 2026-08-26: an ACTIVE `substrate-admin` row, minted
+# Measured: an ACTIVE `substrate-admin` row, minted
 # out-of-band through /v1/keys/issue (which returns the plaintext once over HTTP
 # and stores only a hash), with the variable empty in both /etc/substrate/env and
 # .substrate-secrets. The fleet was healthy and every other check passed. Nothing
@@ -426,7 +426,7 @@ else
 fi
 
 echo "== 4b. shape resolution round-trip =="
-# Liveness green is not wiring green — measured 2026-09-15
+# Liveness green is not wiring green — measured
 # (validation/reports/wiring-green-vs-miswired-proof): a fleet can be healthy
 # at every port while a registered shape's producer cannot serve it. This is
 # the positive control at the consuming layer: take one shape the LOCAL
@@ -550,7 +550,7 @@ else
 fi
 
 echo "== 7. llm arms answer a real call =="
-# Not /health. Measured 2026-08-10: every local arm reported 200 with
+# Not /health. Measured: every local arm reported 200 with
 # providers=[anthropic] and discovery listed nine servers for llm_completion,
 # while EVERY actual call returned "Your credit balance is too low". The account
 # was unfunded, so no compose could draft anything for hours, and each layer

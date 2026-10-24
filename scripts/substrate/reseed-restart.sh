@@ -21,7 +21,7 @@ log() { echo "[identity-seeder] $*"; }
 
 # Retry loop: identity-vessel answers /health before its SurrealDB connection
 # is up (warm datastores open slowly), so early seed calls 500 with
-# PERSIST_FAILED (observed 2026-07-02 recreate). Transient by nature — retry.
+# PERSIST_FAILED (observed recreate). Transient by nature — retry.
 SEED_OK=0
 for attempt in $(seq 1 10); do
   /root/.bun/bin/bun /vessels/seed-identity.ts; rc=$?
@@ -38,7 +38,7 @@ for attempt in $(seq 1 10); do
   # lost the race it stays disconnected forever (PERSIST_FAILED on every call)
   # and no amount of seeder retries helps. Kick it once mid-retry — a fresh
   # start connects fine once surrealdb is actually up (observed on both the
-  # local and hub recreates, 2026-07-02). Durable fix = reconnect logic in
+  # local and hub recreates). Durable fix = reconnect logic in
   # identity-vessel itself (queued substrate gap).
   if [ "$attempt" = 5 ]; then
     log "restarting identity-vessel (known no-reconnect defect) before further retries"
@@ -61,7 +61,7 @@ fi
 log "METABOB_API_KEY changed (seed minted a new key) — restarting key consumers"
 # Every vessel service sources the key via EnvironmentFile; restart the ones the
 # inventory maps to a repo (i.e. actual vessels, not store/infra), staggered to
-# avoid a thundering herd (lesson 2026-06-21).
+# avoid a thundering herd.
 if command -v jq >/dev/null 2>&1 && [ -f "$INV" ]; then
   UNITS="$(jq -r '.vessels[] | select(.repo != null and (.unit | endswith(".service")) and ((.manifest // false) | not)) | .unit' "$INV")"
   # THE RENDERED LLM ARMS ARE NOT IN THE INVENTORY, BY DESIGN — so an
@@ -86,7 +86,7 @@ fi
 # federation transport kept the pre-seed key for the life of every fresh hub: its local
 # /register and its discovery lookups answered 401, so the hub resolved none of its
 # spokes' registered circuits. Install acceptance failed hub_to_spoke on every run once
-# pull-sync stopped restarting the transport as a side effect (measured 2026-10-02).
+# pull-sync stopped restarting the transport as a side effect.
 # human-surface-vessel (also `manifest`) and units the inventory does not name
 # (metric-collector) were missed the same way. The store and the seed oneshots are
 # left out: the store does not authenticate with the key, and seeders re-run below.

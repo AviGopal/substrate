@@ -4,8 +4,8 @@
 # pull-sync's test gate subtracts a newly-failing test when an OPEN gap's evidence_resolve names its test_file
 # and title, and the test_file is among the files the candidate changed (scripts/substrate/lib/gap-tracked-red.sh).
 # The candidate converges every commit since the last healthy mirror (/workspace/.last-good/<v>), but the gate
-# passed only HEAD^..HEAD. Measured 2026-10-07: development-vessel 1fac31bc added B2's four tracked reds, cf99e54b
-# (an unrelated test) stacked on it before convergence, and the reds then read as new regressions every tick.
+# passed only HEAD^..HEAD. When one commit adds tracked reds and an unrelated commit stacks on it before
+# convergence, the reds then read as new regressions every tick.
 #
 # Runs the REAL tracked-red predicate (gtr_tracked_names / gtr_select from the shared lib) on a fixture gap list,
 # and the REAL file-set lines extracted from substrate-pull-sync.sh (from the batch-base lines, when present, to the

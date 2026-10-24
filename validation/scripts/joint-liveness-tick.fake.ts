@@ -4,7 +4,9 @@
 // (top level) against the fixture:
 //   - the store's /sql: the DB clock, and a newest `execution` / `decision_outcome` row FRESH_SEC old;
 //   - development-vessel's /v2/impulses/resolve: the jointBinding records, the registry observer's
-//     answer (missing_count as the fixture says), substrateGap_write (recorded, answered ok);
+//     answer (missing_count as the fixture says), the fixture instrument a binding's declared check
+//     names (a stand-in: no instrument for those kinds exists yet), substrateGap_write (recorded,
+//     answered ok);
 //   - discovery's /resolve: the vesselRegistry rows.
 // Every request is appended to FAKE_JOINT_LOG; any other request is recorded and refused, so nothing
 // reaches a real service.
@@ -16,6 +18,8 @@ export type JointFixture = {
   registry: Array<{ vesselId: string; endpoint?: string }>;
   /** What the observer's missing_count answers for a vessel_ids read; null leaves the field out. */
   observer_missing: number | null;
+  /** A stand-in instrument for a binding's declared check: resolving `shape` answers `field` = `value` (null leaves it out). */
+  instrument?: { shape: string; field: string; value: number | null };
 };
 
 const FX = process.env.FAKE_JOINT_FIXTURE;
@@ -38,6 +42,9 @@ if (FX) {
       if (p.type === "poolImpulse" && p.shape === "jointBinding") return json({ success: true, body: { impulses: fx.bindings.map((b) => ({ status: "open", body: b })) } });
       if (p.type === "discovery_vessel_registry_observer") {
         return json({ success: true, shape: "discoveryRegistryState", body: { reachable: true, ...(fx.observer_missing === null ? {} : { missing_count: fx.observer_missing }) } });
+      }
+      if (fx.instrument && p.type === fx.instrument.shape) {
+        return json({ success: true, body: { ...(fx.instrument.value === null ? {} : { [fx.instrument.field]: fx.instrument.value }) } });
       }
       if (p.type === "substrateGap_write") return json({ success: true, shape: "substrateGap", body: {} });
       if (p.type === "substrateGap") return json({ success: true, body: { gaps: [] } });

@@ -376,7 +376,7 @@ _llm_guard_needed="$_is_spoke"
 # the surreal datastore on the persisted volume kept the ORIGINAL root
 # password (SurrealDB 2.x ignores --user/--pass once a root user exists in the
 # datastore) — every vessel's DB auth then failed until manual recovery
-# (observed live 2026-07-02). Each secret now independently falls back to the
+# Each secret now independently falls back to the
 # persisted value, so a warm volume always wins over a fresh random.
 # SUBSTRATE_ROOT is defaulted HERE, before anything expands it.
 #
@@ -389,7 +389,7 @@ _llm_guard_needed="$_is_spoke"
 # That was not a corner case. The Makefile's run targets pass it explicitly, so
 # the `make up` path always worked; the raw `docker run` path never did. The
 # raw path is the one the README presents as the canonical checkout-free quick
-# start, and it fails identically on the PUBLISHED image (verified 2026-08-08).
+# start, and it fails identically on the PUBLISHED image.
 # The value below is exactly what the Makefile passes, so both paths agree.
 SUBSTRATE_ROOT="${SUBSTRATE_ROOT:-/workspace/git/super-repo}"
 
@@ -575,7 +575,7 @@ fi
 # accepted if it validates against API_KEY_SECRET *or* any comma-separated secret
 # in API_KEY_SECRET_PREVIOUS. EXPLICIT / persisted opt-in ONLY — never
 # auto-derived. (History: a transitional auto-bridge to 'dev-secret-change-in-
-# production' was added 2026-07-23 when a strong API_KEY_SECRET had been persisted
+# production' was added when a strong API_KEY_SECRET had been persisted
 # AFTER the fleet keys were issued under the legacy public default and never
 # re-issued — a clean recreate then failed every signature. That was resolved at
 # the ROOT by RE-SIGNING the fleet key under the strong secret (persisted
@@ -665,7 +665,7 @@ fi
 # THE BOOTSTRAP KEY IS ALSO THE SEED ACCOUNT'S PASSWORD. seed-identity signs the substrate org up with it, and
 # identity-vessel refuses a password without an upper-case letter, a lower-case letter and a digit (WEAK_PASSWORD, 400).
 # The old draw (32 random alphanumerics, no composition check) missed a class about once in 200 boots: measured
-# 2026-10-12 in the podman install acceptance, where every seeder retry re-sent the same persisted value, seeding
+# in the podman install acceptance, where every seeder retry re-sent the same persisted value, seeding
 # never happened, and the client key stayed the un-prefixed bootstrap value ("Invalid API key prefix"). Because the
 # value was persisted, re-running the installer could not repair it. So: draw until all three classes appear, and
 # replace a PERSISTED bootstrap value that lacks one. That is safe because such a value cannot have opened an account
@@ -696,7 +696,7 @@ fi
 SUBSTRATE_API_KEY="$METABOB_API_KEY"   # the alias: same value, rendered beside the retiring name
 
 # Optional per-vessel keys (D4): explicit env > the persisted store > METABOB_API_KEY.
-# THE STORE WAS NEVER READ (2026-10-12). seed-identity mints a dedicated key per vessel on a genuine first boot and
+# THE STORE WAS NEVER READ. seed-identity mints a dedicated key per vessel on a genuine first boot and
 # writes it to /etc/substrate/env AND the persisted store, but this block fell straight back to METABOB_API_KEY, so
 # from the second boot on every per-vessel key was silently the fleet key: measured on node1 and compose2,
 # GOAL_HOST_VESSEL_API_KEY's key_id equalled METABOB_API_KEY's. Per-vessel attribution was lost, and a key minted for
@@ -770,7 +770,7 @@ case "${SUBSTRATE_UPDATE_CHANNEL:-}" in
       _inv_plan="$(DRY_RUN=1 /usr/local/bin/apply-inventory 2>&1 || true)"
       case "$_inv_plan" in *"would disable: development-vessel.service"*) _dv_selected=0 ;; esac
     fi
-    # The one exception (qa ruling, 2026-10-02): an acceptance install may hold. Its gap
+    # The one exception: an acceptance install may hold. Its gap
     # store is a throwaway nobody else lands into, so there is nothing for a frozen holder
     # to misjudge, and holding is what lets the run judge the image it names rather than
     # whatever dev has moved to by the time boot convergence finishes. It is declared by
@@ -809,7 +809,7 @@ SUBSTRATE_GIT_AUTHOR_EMAIL="${SUBSTRATE_GIT_AUTHOR_EMAIL:-substrate-autonomous@s
 # the internal secrets above: explicit env (docker run -e) > persisted volume
 # (/workspace/.substrate-private/substrate-secrets) > empty. Persisting them means a container
 # RECREATE that does NOT re-pass -e KEY keeps the provider working (the same
-# regression that bit SURREAL_PASS on 2026-07-02). To add a new provider (e.g. a
+# regression that bit SURREAL_PASS). To add a new provider (e.g. a
 # second OpenAI-wire service like chutes), add its *_API_KEY in the THREE marked
 # provider-secret spots: (1) here, (2) the /etc/substrate/env heredoc, (3) the
 # persisted-secrets heredoc — one line each, matching the explicit idiom this
@@ -879,7 +879,7 @@ RUNPOD_COST_PER_MTOK="${RUNPOD_COST_PER_MTOK:-$(persisted_secret RUNPOD_COST_PER
 # heredoc: under `set -u` a bare `docker run` without the Makefile's dozen
 # empty -e passthroughs died with "DISCOVERY_ENDPOINT: unbound variable" —
 # a hidden host/Makefile coupling in what must be a pure docker-run contract
-# (surfaced 2026-07-02 by the first from-scratch container test).
+# (surfaced by the first from-scratch container test).
 DISCOVERY_ENDPOINT="${DISCOVERY_ENDPOINT:-http://127.0.0.1:8100}"
 # Point-and-go role inference (docs/FEDERATION.md, point-and-go join contract):
 # a container is handed exactly {DISCOVERY_ENDPOINT, API_KEY}. If DISCOVERY_ENDPOINT
@@ -1130,7 +1130,7 @@ METABOB_ENDPOINT="${METABOB_ENDPOINT:-$ACTIVITY_API_ENDPOINT}"
 SUBSTRATE_ENDPOINT="$METABOB_ENDPOINT"
 # A multiaddr-only joiner has NO local identity-vessel: role spoke masks it, correctly,
 # because identity belongs on the hub. Defaulting it to loopback:8101 therefore points
-# every local vessel at a port nothing is listening on. MEASURED 2026-09-15: a spoke
+# every local vessel at a port nothing is listening on. MEASURED: a spoke
 # booted with PEER_MULTIADDR + PROFILE=surface_node answered 000 on :8101, discovery
 # returned INVALID_API_KEY reason=identity_unreachable, the transport logged
 # "register -> 401", nothing registered, and there were no rows to mirror to the peer.
@@ -1160,7 +1160,7 @@ IDENTITY_ENDPOINT="${IDENTITY_ENDPOINT:-$IDENTITY_VESSEL_URL}"
 # deploy-hub.sh:170 has hardcoded HUB_DISCOVERY_URL=http://localhost:8100 since
 # the role existed, so every hub launched WITHOUT that script (the raw
 # `docker run -e ENABLED_ROLES=hub` contract) came up unable to dial its own
-# spokes' circuits. Measured 2026-09-16 (validation/reports/network-demo): the
+# spokes' circuits. Measured: the
 # hub resolved a mirrored spoke row and then `forward_failed` on it; installing
 # the transport by hand was one of five interventions the role should have
 # owned. Only when the operator supplied no anchor of their own: an explicit
@@ -1200,8 +1200,8 @@ PEER_CREDENTIALS="${PEER_CREDENTIALS:-$(persisted_secret PEER_CREDENTIALS)}"
 # The map and the keys it names can also live in the volume, in /workspace/.peer-credentials
 # (lines NAME=value: PEER_CREDENTIALS plus each named key), so a peer credential an operator
 # issued survives a recreate. Before this, the only way to load that file was a systemd
-# drop-in written inside the container, and a recreate discarded it: node 1 lost its
-# credential for syzygy and discovery's calls there went back to 401 (2026-10-02).
+# drop-in written inside the container, and a recreate discarded it: a node lost its
+# credential for the hub and discovery's calls there went back to 401.
 # Precedence per value: the launch environment, then the persisted secrets, then this file.
 PEER_CREDENTIALS_FILE="${PEER_CREDENTIALS_FILE:-/workspace/.peer-credentials}"
 _peer_file_val() {
@@ -1848,7 +1848,7 @@ done
 # This file is bind-mounted from the host at /workspace.
 #
 # Written to a TEMP file and merged below — never straight over the real one.
-# The bare overwrite this replaces took the hub down on 2026-08-08: the live file
+# The bare overwrite this replaces took the hub down: the live file
 # had been written by an older revision of the list, so it carried
 # FEDERATION_SIGNING_SECRET and FEDERATION_PEER_AUTH_MODE (absent here) while
 # LACKING API_KEY_SECRET (present here since). API_KEY_SECRET therefore existed

@@ -88,7 +88,7 @@ async function readPosterior(store: string, armId: string): Promise<Posterior | 
   // and systemd reported the learning-liveness probe as FAILED. That is the loudest possible
   // false alarm from the one detector whose job is to say whether credit still flows: "I could
   // not reach the store for a moment" was rendered indistinguishable from "credit stopped".
-  // Observed 2026-08-29 23:26:45, ECONNRESET at this line, unit Failed with result 'exit-code'.
+  // An ECONNRESET at this line otherwise fails the unit with result 'exit-code'.
   //
   // `null` is already the file's word for "unreadable", and BOTH call sites map it to
   // INCONCLUSIVE + exit 2 — which the unit declares as SuccessExitStatus. So catching here needs
@@ -118,7 +118,7 @@ async function readPosterior(store: string, armId: string): Promise<Posterior | 
     alpha, beta,
     n: typeof n === "number" ? n : 0,
     succ: typeof succ === "number" ? succ : 0,
-    // Absent on a pre-2026-08-19 activity-api; treated as "stored" so the probe still
+    // Absent on an older activity-api; treated as "stored" so the probe still
     // runs against an older hub rather than refusing everything. The `n > 0` check
     // below is the backstop for that case.
     source: typeof b["posterior_source"] === "string" ? b["posterior_source"] : "stored",

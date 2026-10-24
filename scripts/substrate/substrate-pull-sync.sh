@@ -30,12 +30,12 @@ PULLSYNC_ARGS=("$@")
 # A re-exec'd tick keeps the ORIGINAL start time: the failing-test generator's budget is
 # measured against the unit timeout, which the exec does not reset.
 if [ "${PULLSYNC_REEXECED:-}" = 1 ] && [ -n "${PULLSYNC_T0:-}" ]; then :; else PULLSYNC_T0="$(date +%s)"; fi
-# THE UNIT'S OWN TimeoutStartSec, READ LIVE (2026-10-06). systemd SIGTERMs the tick at the unit's
+# THE UNIT'S OWN TimeoutStartSec, READ LIVE. systemd SIGTERMs the tick at the unit's
 # TimeoutStartSec, so every budget that must end before that kill (the test gate's, the quiesce and drain
 # waits, the failing-test generator's) is derived from the value systemd will actually enforce, read from
 # systemd at tick start: a drop-in that changes the timeout is honoured, not shadowed by a constant. Only a
 # LOADED unit's value is trusted (an unknown unit reports systemd's 90 s default, which would starve every
-# gate); unreadable, unparseable, zero or infinity -> 3600, the shipped unit file's value (raised from 900 on 2026-10-11, to 3600 on 2026-10-13). UNIT_TIMEOUT_S
+# gate); unreadable, unparseable, zero or infinity -> 3600, the shipped unit file's value (raised from 900, to 3600). UNIT_TIMEOUT_S
 # set in the environment wins (tests, and an operator pinning it).
 unit_timeout_s() {
   local _ut_unit="${PULLSYNC_UNIT:-substrate-pull-sync.service}" _ut_v
@@ -55,7 +55,7 @@ GEN_QUEUE=""
 # PINNED JUDGE (scripts/substrate/gate/). gate-runner (substrate-pull-sync.service's ExecStart)
 # runs THIS file from /workspace/.gate/accepted/ — a `git archive` of the accepted sha — and
 # sets PULLSYNC_ACCEPTED_DIR to that copy. In that mode (the "gated" mode):
-#   - SELF-CONVERGE FIRST no longer installs or execs the pulled pull-sync (the 847025e2
+#   - SELF-CONVERGE FIRST no longer installs or execs the pulled pull-sync (the earlier
 #     run-on-arrival path). A new pull-sync, like any change to a gate path in the accepted
 #     MANIFEST, is a CANDIDATE: candidate.sh (from accepted/) classifies it and shadow-runs the
 #     accepted fixture corpus against it; a pass that soaks N ticks writes promote.request, and
@@ -110,7 +110,7 @@ log() { PASS_LAST_LOG="$*"; echo "[pull-sync $(date -Iseconds)] $*"; }   # PASS_
 # restart a vessel — the mitosis cutover, this script, and a plain `systemctl
 # restart` — and development-vessel in particular hosts feature_compose for the
 # whole fleet, so every restart of it discards in-flight composes for OTHER
-# vessels. Measured 2026-08-11: six restarts in 2h20m and zero isolated-vessel
+# vessels. Measured: six restarts in 2h20m and zero isolated-vessel
 # composes completing, with no way to attribute any of it.
 #
 # The vessel reads this at boot and logs the requester, or logs UNATTRIBUTED when
@@ -143,7 +143,7 @@ restart_breadcrumb() { # vessel reason [in_flight]
 # The owed path bounds how long progress may hold a restart (pull_sync.owed_restart_max_hold_seconds).
 # RA_FRESH=1 says the same thing whatever the age (published progress under the stall bound): the mirror
 # path's quiesce bound reads it, because there the tick budget, not the age, is what ran out.
-# AN OPEN PROBE WINDOW HOLDS EVERY RESTART ON THIS NODE (qa's rule, 2026-10-03: a declared held-out probe
+# AN OPEN PROBE WINDOW HOLDS EVERY RESTART ON THIS NODE (a declared held-out probe
 # window is a maintenance hold; restarts inside one turn environment failures into reach misses). The window
 # is a shaped poolImpulse (shape probeWindow, body {node, from, until, tag, reason}) read at use time from this
 # node's development-vessel, the record vessel-ctl's probe_window_guard reads. Read once per tick.
@@ -288,7 +288,7 @@ tuning_param() {
   fi
 }
 
-# HOST CONTENTION ADMISSION (2026-10-16). The nodes of one substrate can share a host, and each node's pull-sync
+# HOST CONTENTION ADMISSION. The nodes of one substrate can share a host, and each node's pull-sync
 # gates its candidates on its own timer: after one push, measured, all three co-located nodes ran the whole suite
 # at once (host load 35.8), a protected positive control passed its 5 s per-test timeout on one node, and that node
 # REFUSED to converge a correct commit; 11 of 13 suite kills in 50 h overlapped another node's gate. No lock can
@@ -316,7 +316,7 @@ host_contended() {
   HC_WHY="host contended: cpu pressure some avg10=${_hc_a10}% avg60=${_hc_a60}% >= ${_hc_pct}% (pull_sync.testgate_psi_defer_pct)"
   return 0
 }
-# START BY RHYTHM, NOT IN PHASE (2026-10-19). Co-hosted nodes' gates are woken by one push and started their suites
+# START BY RHYTHM, NOT IN PHASE. Co-hosted nodes' gates are woken by one push and started their suites
 # together, so each ran on a host the others loaded: one node's development-vessel suite was KILLED at its wall (TEST GATE
 # BLIND, HELD) while another node's gate ran beside it. No lock can serialize them (no shared mount, see HOST CONTENTION
 # ADMISSION); each node instead waits a START JITTER drawn per tick from 0..N seconds before its first suite run of the
@@ -386,9 +386,9 @@ tracked_fail_names() {
 gtr_try_load || true
 # <<< gap-tracked-red loader
 
-# FAILING-TEST GAP GENERATOR (2026-09-30, user-cleared; qa-reviewed). Its evidence_resolve carries zero_field
+# FAILING-TEST GAP GENERATOR . Its evidence_resolve carries zero_field
 # "requested_not_passing": gap-to-feature admission excludes a class2 check with no measured field as
-# needs_information, so without it every gap filed here was silently inadmissible (found 2026-09-30 12:10).
+# needs_information, so without it every gap filed here was silently inadmissible (found).
 # A non-actionable gap is also filed with operator_hold: admission reads operator_hold but NOT disposition, so a
 # 'needs_information' label alone let an unlocalized assertion gap be picked (12:21); for a stale test its only
 # green is changing src to match an outdated expectation, which op7 cannot see. The pre-land gate (feature-compose
@@ -397,7 +397,7 @@ gtr_try_load || true
 # check-backed gap. The missing generator was the gap. This files check-backed failing_test gaps from the
 # suite output the gate already produced, conservatively:
 #   - only per-file results are read; bun's end-of-run summary REPEATS every failure under the last file
-#     header with no error block, so parsing stops there (qa: 388 rows for 194 failures otherwise);
+#     header with no error block, so parsing stops there (otherwise each failure would be counted twice);
 #   - red on two consecutive ticks (this run AND the previous tick's stored fail set: flake filter);
 #   - environment failures skipped (401/403, connect, auth, port, timeout; case-insensitive): the check
 #     runs under the same scrubbed env, so they could never close;
@@ -434,7 +434,7 @@ gen_failing_test_gaps() {
       if (frame == "" && $0 !~ /node_modules/ && match($0, /src\/[A-Za-z0-9_.\/-]+\.[jt]sx?:[0-9]+/)) { f = substr($0, RSTART, RLENGTH); sub(/:[0-9]+$/, "", f); if (f !~ /\.test\.[jt]sx?$/) frame = f }
     }')"
   [ -n "$rows" ] || return 0
-  # RED ALONE (qa, 2026-09-30). The rows come from the FULL suite, but a gap's own check runs its file ALONE, and
+  # RED ALONE. The rows come from the FULL suite, but a gap's own check runs its file ALONE, and
   # bun's mock.module is process-wide: another file's partial mock can break a later file only in the full run
   # (broadcaster.account-id: 14 fail in the suite, 14/0 alone). A gap for such a name is green on the parent
   # forever: op10 refuses it, excludes it for 6 h, and it never closes. Names already found green ALONE at this
@@ -447,7 +447,7 @@ gen_failing_test_gaps() {
   # Per test FILE: does it use test doubles, and is it a SOURCE-TEXT guard (reads src and asserts on its text)?
   # A TypeError counts as mock/wiring only in a file that actually uses doubles; a source-text guard is always
   # assert-class, because its "fix" rewrites src to match text it asserts, and a guard can be stale on purpose
-  # (2026-09-30: a guard demanded a predicate an operator had removed as a false-close generator).
+  # (: a guard demanded a predicate an operator had removed as a false-close generator).
   flags="{}"
   if [ -n "$dir" ]; then
     while IFS= read -r tf; do
@@ -516,14 +516,14 @@ gen_failing_test_gaps() {
     id="$(printf '%s' "$p" | jq -r '.impulse.pointer.gap.id')"
     ex="$(dev_resolve "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap\",\"id\":\"$id\",\"limit\":1}}}" --max-time 30 2>/dev/null \
        | jq -c 'if (.body.gaps | type) == "array" then ((.body.gaps[0] // {}) | {s: (.status // ""), n: (.classification_metadata.evidence_resolve.input.only_tests // [])}) else {err: true} end' 2>/dev/null || true)"
-    # FAIL CLOSED (qa): an unreadable answer must not read as "no such id", or a CLOSED row would be rewritten open
+    # FAIL CLOSED: an unreadable answer must not read as "no such id", or a CLOSED row would be rewritten open
     # with its closed_reason/falsifier_exercise carried forward. Unknown existence means: not this tick.
     if [ -z "$ex" ] || [ "$(printf '%s' "$ex" | jq -r '.err // false' 2>/dev/null)" != "false" ]; then log "$v: failing-test generator: existence of $id unknown (store read failed); not filing it this tick"; continue; fi
     exs="$(printf '%s' "$ex" | jq -r '.s' 2>/dev/null || true)"
     if [ "$exs" = "open" ]; then log "$v: failing-test generator: $id already open; skipped"; continue; fi
     if [ -n "$exs" ]; then
       # A re-failing name the closed gap named is a RECURRENCE (law-7 durability); a different set in the same
-      # file is the REMAINDER the <=5 cap left out, never fixed, so it must not count as a reappearance (qa).
+      # file is the REMAINDER the <=5 cap left out, never fixed, so it must not count as a reappearance.
       p="$(printf '%s' "$p" | jq -c --arg rid "$id-r$(date -u +%Y%m%d%H%M)" --arg of "$id" --argjson ex "$ex" '.impulse.pointer.gap.id = $rid
           | (if ([.impulse.pointer.gap.classification_metadata.evidence_resolve.input.only_tests[] | . as $n | $ex.n | index($n)] | any(. != null))
              then .impulse.pointer.gap.classification_metadata.recurrence_of = $of
@@ -540,7 +540,7 @@ gen_failing_test_gaps() {
     ao="$(printf '%s\n' "$ao" | sed 's/\x1b\[[0-9;]*m//g; s/ \[[0-9.]*m*s\]$//; s/[[:space:]]*$//')"
     rm -rf "$ar" 2>/dev/null
     # A run that printed no bun summary (unloadable alone, crashed, timed out) proves nothing: neither red nor
-    # polluted. A name is red on "(fail) <name>" and polluted only on POSITIVE "(pass) <name>" (qa).
+    # polluted. A name is red on "(fail) <name>" and polluted only on POSITIVE "(pass) <name>".
     if ! printf '%s\n' "$ao" | command grep -qE '^ *[0-9]+ (pass|fail)$'; then log "$v: failing-test generator: alone run of $tf produced no result; not filing $id, not marking polluted"; continue; fi
     keep="$(printf '%s' "$p" | jq -c --arg ao "$ao" '($ao | split("\n")) as $L | [.impulse.pointer.gap.classification_metadata.evidence_resolve.input.only_tests[] | select(("(fail) " + .) as $x | $L | index($x))]')"
     passed="$(printf '%s' "$p" | jq -r --arg ao "$ao" '($ao | split("\n")) as $L | .impulse.pointer.gap.classification_metadata.evidence_resolve.input.only_tests[] | select(("(pass) " + .) as $x | $L | index($x))')"
@@ -560,7 +560,7 @@ gen_failing_test_gaps() {
 
 # A gap that fails to file is worse than no detector: the condition is real, the
 # log line claims "(substrateGap)", and nothing is queryable afterwards. Observed
-# 2026-08-03: the hub super-repo clone sat DIVERGED for hours, refusing every
+# the hub super-repo clone sat DIVERGED for hours, refusing every
 # pull-sync run and freezing 25 commits out of the runtime, while the gap store
 # held ZERO pull-sync-diverged rows — development-vessel resolves regularly take
 # 8-9s under load, so the old --max-time 8 timed out and `|| true` erased it.
@@ -632,7 +632,7 @@ scrubbed_env() { # throwaway-workspace-root cmd... -> runs cmd under env -i with
     OBSIDIAN_ENDPOINT="$_se_nowhere" OBSIDIAN_LEARN_ENDPOINT="$_se_nowhere"
     OBSIDIAN_PLUGIN_ENDPOINT="$_se_nowhere" OBSIDIAN_PROBE_ENDPOINT="$_se_nowhere"
   )
-  # EVERY STATE DEFAULT THE CODE UNDER TEST NAMES (2026-10-17). Suites credited the LIVE learned state for weeks: the
+  # EVERY STATE DEFAULT THE CODE UNDER TEST NAMES. Suites credited the LIVE learned state for weeks: the
   # close-oracle calibration, the gap-class posteriors (fixture classes at alpha 1000+) and the expectation calibration.
   # Vessel code reads each as `process.env.X ?? "/workspace/..."`, env -i drops every X, and the test's process then
   # writes the live file. So every such default in the tree under test (the caller's cwd, non-test sources) is pointed
@@ -680,7 +680,7 @@ scrubbed_env() { # throwaway-workspace-root cmd... -> runs cmd under env -i with
 # AN OVERWRITE OF CONTENT PULL-SYNC DID NOT WRITE MUST BE RECOVERABLE AND LOUD.
 #
 # The mirror runs toward the clone and has no notion of which side is newer. On
-# 2026-10-02 10:07Z the drift heal restored human-surface-vessel from a clone that
+# the drift heal restored human-surface-vessel from a clone that
 # WAS origin/dev, over a hand-deployed CSRF fix that had never been pushed: the
 # newer code was gone, and nothing said so. "Clone is origin" cannot tell a
 # corrupt draft from an unpushed fix — neither is on origin.
@@ -721,7 +721,7 @@ drift_quarantine() { # vessel -> 0 and DQ_PATH=<copy of $RUNTIME_DIR/<v>>, or 1 
   return 0
 }
 
-# INSTALL ONLY WHAT IS COVERED (in-place-image-convergence 1.3; user ruling 2026-10-19 "Build 1.3 by 10-20T18:00Z").
+# INSTALL ONLY WHAT IS COVERED (in-place-image-convergence 1.3).
 #
 # scripts/substrate/gate/coverage.json says, per baked path, whether an accepted gate fixture exercises it. Until now
 # it was a statement only: this script installed units, tooling and the active-scripts run-dir whatever it said, so a
@@ -790,7 +790,7 @@ cov_skip() { COV_SKIPPED=$((COV_SKIPPED + 1)); log "coverage: NOT converged $1 (
 # Every glue install below (units, the bootstrap-tier scripts, this script itself,
 # mirror-to-live, self-recovery-tick, the fleet definitions, the active-scripts
 # seed) used to copy from the super-repo clone's WORKING TREE. The working tree is
-# not the landing channel — a commit on origin is — and on 10-01 that difference
+# not the landing channel — a commit on origin is — and that difference
 # broke a node: a goal walk's fs_edit wrote an uncommitted change into
 # scripts/substrate/substrate-pull-sync.sh in the live clone (an autonomy-scope
 # excluded path), this script installed it to /usr/local/bin on its next tick,
@@ -927,7 +927,7 @@ owed_hold_bound() {
 }
 trap 'pullsync_glue_cleanup; carry_pass_end; quiesce_release' EXIT
 
-# THE LEAK WATCH'S READER (2026-10-17; law 6). scrubbed_env records each live state file that moved during a scrubbed
+# THE LEAK WATCH'S READER (; law 6). scrubbed_env records each live state file that moved during a scrubbed
 # run in PULL_SYNC_LIVE_STATE_LEDGER, and a ledger nothing reads is hollow. Once per tick (after the vessel loop), the
 # lines appended since the last report are grouped by (file, UTC day) and ONE gap is filed per group; the id carries the
 # day, so a day's repeats update one row. FLAG semantics: nothing is refused, and the summary says the live vessel's own
@@ -1043,8 +1043,8 @@ publish_gate_public() {
 
 # reseed_run_dir_on_promote — gated nodes: the run dir follows the ACCEPTED gate on every tick, not only when the
 # super-repo HEAD moves. converge_units installs units every tick, so a promote that lands with no new commit
-# used to leave units pointing at run-dir files only the new pull-sync copies: on 2026-10-06, d9582c85's
-# memory-budget-check unit exited 127 on node1 and pubspoke for 2.5 h ("No such file") until an unrelated
+# used to leave units pointing at run-dir files only the new pull-sync copies: a development change's
+# memory-budget-check unit exited 127 on a node and a spoke for 2.5 h ("No such file") until an unrelated
 # commit moved HEAD. Compare-based: /workspace/active-scripts/.accepted.sha records the gate version the run
 # dir holds, and a mismatch reseeds from accepted/ (the same set the boot seed and the HEAD-change reseed copy).
 RUN_DIR="${PULLSYNC_RUN_DIR:-/workspace/active-scripts}"
@@ -1147,7 +1147,7 @@ stage_committed_glue() {
 # is no second reader. canary (or unset) and fleet fall through to the run below
 # unchanged — fleet convergence is task 3.1, not built yet.
 #
-# A hold node keeps what it runs. Measured (CI run 37011691597): a fresh node from a
+# A hold node keeps what it runs. Measured: a fresh node from a
 # published image had its first-boot pull-sync converge it from image code to
 # origin/dev within ~3 min, restarting discovery and goal-host mid-probe, so install
 # acceptance judged "image + current dev" instead of the image it names. On hold
@@ -1187,7 +1187,7 @@ fi
 
 # A cutover mid-flight owns /vessels mutation; never race it.
 #
-# STARVATION BOUND (2026-08-02). The freshness test alone is not enough: the
+# STARVATION BOUND. The freshness test alone is not enough: the
 # marker is REWRITTEN by every new cutover, and an autonomous authoring loop
 # stages cutovers far more often than this timer fires (observed: a new marker
 # every 2-15 min against a 10-min timer). The lock is then permanently "fresh",
@@ -1234,7 +1234,7 @@ fi
 #
 # pull-sync used to reinstall itself (and mirror-to-live) at the END of a tick, after
 # the super-repo pull, so the first tick after a merge ran the OLD script against the
-# NEW super-repo content. Observed 10-02 with 3b7b31b9: the old converge_units (no
+# NEW super-repo content. Observed: the old converge_units (no
 # secret renderer) installed new identity/discovery units whose non-"-"
 # EnvironmentFile=<scoped file> did not exist yet, so any restart of
 # those units would have failed until the next tick. Any new step a commit adds to the
@@ -1342,7 +1342,7 @@ elif [ "${PULLSYNC_REEXECED:-}" = 1 ]; then
   fi
 fi
 
-# TRACKED-RED LIB MISSING: A LOUD NO-OP TICK (qa, 10-02). Placed after SELF-CONVERGE FIRST, the heal path:
+# TRACKED-RED LIB MISSING: A LOUD NO-OP TICK. Placed after SELF-CONVERGE FIRST, the heal path:
 # an ungated tick has just converged $SHARE_DIR/lib from the super-repo (and may have re-exec'd on a newer
 # pull-sync); a gated one has just judged the pulled commit, whose fixture corpus refuses a body that cannot
 # source its lib. If the predicate still loads from neither place, this tick restarts, mirrors, writes and
@@ -1491,8 +1491,8 @@ healthy() { # port -> 0 if 200
 # super-repo refresh. That gate fires only when origin ADVANCES past the last-converged
 # sha, which means a glue capability can never apply to the commit that INTRODUCED it:
 # the old binary writes the marker, then installs the new binary, and by the next tick
-# the marker already says "done" (observed 2026-08-05 — unit convergence landed in
-# 23ee216e and did not run for 23ee216e; DropInPaths still showed the goal-host drain
+# the marker already says "done" (observed — unit convergence landed in
+# a commit and did not run for that commit; DropInPaths still showed the goal-host drain
 # drop-in absent and TimeoutStopUSec still 1min). Running it every tick is cheap and
 # self-limiting: cmp -s makes it a no-op when nothing differs, and it logs only on a
 # real change.
@@ -1578,7 +1578,7 @@ converge_units() {
         # inert for that unit — systemd keeps using the /etc copy and the log
         # line still says "converged". vessel-ctl renders units into /etc, so
         # every dynamically-installed vessel acquires such a shadow and freezes
-        # against every later systemd-level repair. Observed 2026-08-08:
+        # against every later systemd-level repair. Observed:
         # development-vessel kept its old ExecStartPost (and kept serializing
         # the boot) while /usr/lib carried the fixed unit, with 8 units shadowed
         # on one container. Say so rather than reporting a no-op as a success.
@@ -1632,7 +1632,7 @@ converge_units() {
   # converged, logged as "converged", and never ran — and a timer that never runs
   # emits silence, which every consumer reads as health. That is the same
   # built-but-never-connected shape this file already fights for Environment= and
-  # drop-ins. Found 2026-09-09 while adding validator-liveness.timer: it only fired
+  # drop-ins. Found while adding validator-liveness.timer: it only fired
   # because it was enabled BY HAND, and that symlink lives in /etc, so the next
   # image rebuild would have brought the unit back installed-and-disabled.
   #
@@ -1693,8 +1693,8 @@ converge_fleet_defs() {
   # with. A truncating write in secrets.env.sh destroyed FED_SUBSTRATE_ID, so
   # every restart minted a NEW federation identity and orphaned the substrate's
   # hub records — fixed in the repo, and the fix reached no container, so the
-  # identity kept churning across cycles (spoke-6e240fe0 -> 1e18b09e -> cfda39e7
-  # in three restarts, observed 2026-08-08).
+  # identity kept churning across cycles (a new identity on each of three
+  # restarts, observed).
   # Destinations differ: apply-inventory and gen-env are installed as executables
   # in /usr/local/bin (entrypoint invokes them by name); secrets.env.sh is SOURCED
   # from /usr/local/share/substrate. Converging it to the wrong path would leave
@@ -1954,8 +1954,8 @@ revert_target_hashes() {
 # A FEDERATION UNIT RUNS ITS TREE FROM WHERE ITS WorkingDirectory SAYS, and that is usually the IMAGE BAKE
 # (/usr/local/share/substrate/super-repo/...), not this clone. Restarting it after a clone change to
 # scripts/substrate/federation-relay/ then reloads the OLD baked file: the restart reports success while the old
-# code keeps running, and it drops every peer's circuit for nothing. Measured on the hub 2026-10-18T02:39:35Z: a
-# pull-sync restart put the transport back on the 10-13 baked ingress-auth.ts after the change had landed in the
+# code keeps running, and it drops every peer's circuit for nothing. Measured: a
+# pull-sync restart put the transport back on the older baked ingress-auth.ts after the change had landed in the
 # clone. So the transport and relay restart only when they actually run this clone's tree. Otherwise the change is
 # said to be NOT live from the clone, and nothing is bounced here: once the gate accepts it, converge_tier_b installs it
 # into the baked tree and restarts the unit that loads it.
@@ -2254,9 +2254,9 @@ converge_tier_b() {
   rm -rf "$TIERB_WORK/stage" "$w"; return 0
 }
 
-# THE OWED RESTART ENDS LIKE THE SAME-TICK ONE (2026-10-13). A restart deferred for in-flight work and taken on a later
+# THE OWED RESTART ENDS LIKE THE SAME-TICK ONE. A restart deferred for in-flight work and taken on a later
 # tick ("taking OWED restart") used to fall straight into the content short-circuit: no health check and no last-good
-# write. So the pin stopped tracking what runs (measured 2026-10-13: development-vessel's pin stayed on a commit four
+# write. So the pin stopped tracking what runs (measured: development-vessel's pin stayed on a commit four
 # loaded landings old), and an owed restart that came up unhealthy was never seen. This settles it the way the same-tick
 # path does, with one difference that keeps it safe while a pin may already be stale: it reverts to the pin ONLY when
 # the pin was written at or after the start of the process the restart replaced (the pin then names what that process
@@ -2309,7 +2309,7 @@ owed_restart_settle() {
   return 0
 }
 
-# A HEALTHY-RUNNING BASELINE (2026-10-13). The pin also goes stale by every path that loads code without the same-tick
+# A HEALTHY-RUNNING BASELINE. The pin also goes stale by every path that loads code without the same-tick
 # write (the owed path before owed_restart_settle, a hand restart), and self-recovery reverts a down unit to it. So a
 # quiet tick re-pins: when the runtime equals the clone (the caller's branch), the unit has run at least BASELINE_MIN_S
 # (default 300) since it last started, no runtime src/ file is newer than that start (the mirror rewrites every mtime, so
@@ -2347,7 +2347,7 @@ content_hash_nontest() { # vessel-root -> md5 over src/ sql/ scripts/ minus test
 # package.json changes; the clone (/workspace/git/vessels/<v>) — whose node_modules
 # run_suite uses directly and run_suite_at symlinks into its worktree — kept whatever
 # the image or an operator left there. Measured on the hub: goal-host-vessel's clone
-# node_modules dated from 2026-08-10 and lacked @avigopal/ias-executor-ts, so every
+# node_modules dated and lacked @avigopal/ias-executor-ts, so every
 # test importing src/index.ts failed to LOAD (10 unnamed failures carried in the
 # baseline); one more such test made it 11 and the gate refused a correct commit 3x,
 # quiescing goal-host each time, before the starvation break blinded it.
@@ -2360,8 +2360,8 @@ content_hash_nontest() { # vessel-root -> md5 over src/ sql/ scripts/ minus test
 #     holding its package.json "main", default dist/) differs from the install recorded.
 # A file: dependency is a DIRECTORY COPY of another clone, and nothing in the
 # dependant's own manifest changes when that clone moves on or is rebuilt. Measured
-# 2026-10-03 on both nodes: goal-host-vessel's clone held an ias-executor-ts copy from
-# August/September (0.1.1) while the sibling clone was at a 10-02 HEAD, because the
+# on both nodes: goal-host-vessel's clone held an ias-executor-ts copy from
+# August/September (0.1.1) while the sibling clone was at a newer HEAD, because the
 # marker hashed only package.json/bun.lock. goal-host's typecheck in the compose clone
 # was red at baseline, so every lane draft on goal-host failed before its own check ran.
 # So the marker folds in each file: target's identity, and a reinstall first removes the
@@ -2512,7 +2512,7 @@ file_dep_identity() { # target-dir -> "<git HEAD> <digest of the built output di
 # repos/<v>/../../packages; at runtime mirror-to-live (and the image) rewrite it to $RUNTIME_DIR/packages,
 # which the image built. In the clone layout ($CLONE_DIR/<v>) the same relative path names
 # $(dirname $CLONE_DIR)/packages, which nothing provided, so every install was "target missing" and
-# identity-vessel never converged (measured 10-05 on node1: "file: dependency target(s) do not exist:
+# identity-vessel never converged (measured on a node: "file: dependency target(s) do not exist:
 # @avigopal/vessel-discovery-client -> /workspace/git/packages/vessel-discovery-client", every tick).
 # Provide that path as a link to the runtime's packages: the clone then installs and is gated against the
 # exact copy the runtime resolves. A path that already exists (a directory, a file, any link) is never
@@ -2770,8 +2770,8 @@ ensure_clone_nested_deps() { # vessel clone-dir
 # The fan-out (2c) builds a shared package into $RUNTIME_DIR/<pkg>/dist, and the runtime
 # consumers resolve that. The compose clones do not: a dependant clone's file:../<pkg>
 # names the package's GIT CLONE, whose dist is untracked and was built by nobody after
-# the clone was first made. Measured 2026-10-03 on both nodes: ias-executor-ts's clone
-# dist dated 09-30 while its HEAD (and the runtime build, LAST_GOOD == HEAD) was 10-02,
+# the clone was first made. Measured on both nodes: ias-executor-ts's clone
+# dist older than its HEAD (and the runtime build, LAST_GOOD == HEAD),
 # so it lacked newer exports, and every goal-host draft typechecked against it red.
 #
 # So once the fan-out is credited (LAST_GOOD == the clone HEAD — the runtime dist IS this
@@ -2870,7 +2870,7 @@ mirror_quiesce_drain() {
   # QUIESCE_WAIT_S defaulted to 900 and the unit is TimeoutStartSec=900, but systemd starts
   # counting when the unit starts and this wait begins after fetch/skip work has already
   # spent part of the tick. So the 900s wait ALWAYS outlives the budget: measured
-  # 2026-08-16, quiesce opened at 03:30:56 and systemd SIGTERMed the unit at 03:45:49,
+  # quiesce opened at 03:30:56 and systemd SIGTERMed the unit at 03:45:49,
   # `Result=timeout`, before a single iteration of the converge-anyway path could run.
   #
   # The failure is silent and self-perpetuating. The timer simply fires again ten minutes
@@ -2886,7 +2886,7 @@ mirror_quiesce_drain() {
     | grep -o '"in_flight"[[:space:]]*:[[:space:]]*[0-9][0-9]*' | grep -o '[0-9]*$' | head -1)"
   NOW="${NOW:-0}"; case "$NOW" in *[!0-9]*) NOW=0 ;; esac
   log "$1: test gate done; $NOW unit(s) in flight — QUIESCED (admission closed) until the restart; waiting for them to finish rather than restarting into them"
-  # The gate budget defaults to the unit's live TimeoutStartSec (2026-10-11): a fixed 1000 s capped a 1019 s need
+  # The gate budget defaults to the unit's live TimeoutStartSec: a fixed 1000 s capped a 1019 s need
   # even under a longer unit. gate_left still subtracts the margin from the tick's start; an explicit value wins.
   : "${GATE_T0:=$(date +%s)}" ; GATE_BUDGET_SECONDS="${GATE_BUDGET_SECONDS:-${UNIT_TIMEOUT_S:-3600}}"
   _Q_LEFT=$(( ${UNIT_TIMEOUT_S:-3600} - ( $(date +%s) - GATE_T0 ) - ${QUIESCE_MARGIN_S:-120} ))
@@ -2911,7 +2911,7 @@ mirror_quiesce_drain() {
     Q_BOUND=1
   fi
   # ADMISSION STAYS CLOSED UNTIL THE RESTART. The marker used to be removed right after the
-  # drain, which then ran BEFORE the test gate: measured 2026-10-03 on node 1, drained at
+  # drain, which then ran BEFORE the test gate: measured on a node, drained at
   # 19:41:55, a new compose admitted ~19:45:20 while the gate ran, and the restart at
   # 19:47:01 logged "DEFERRING restart — 1 in flight". The drain bought nothing. Now the
   # drain follows the gate and the marker is held through mirror and restart; it is
@@ -3100,7 +3100,7 @@ shared_package_link_audit() {
 # pass_order — the clone dirs in this tick's vessel-pass order: every candidate the previous tick
 # DEFERRED for want of test-gate budget (<v>.testgate-budget-defers) first, so it gates with a fresh
 # budget instead of starving behind the same vessels again; then every other clone, in glob order.
-# THE DEFERRED SET ROTATES (2026-10-06). It used to come out in glob order too, so when EVERY candidate
+# THE DEFERRED SET ROTATES. It used to come out in glob order too, so when EVERY candidate
 # was deferred the same one gated first every tick: measured on the hub, activity-api (alphabetically
 # first) ran its suite first on every tick, its own T2 never fit, and the six candidates behind it
 # deferred on the remainder, 0 convergences in 4 h, a fixed point rather than a rotation. Now the
@@ -3241,7 +3241,7 @@ for d in "${PASS_ORDER[@]}"; do
   # commit and it sails past, straight into the test gate at 3-pre, which runs the
   # CLONE's suite before deciding anything.
   #
-  # Measured 2026-08-08 on this spoke, one tick after the suppression fix landed:
+  # Measured on this spoke, one tick after the suppression fix landed:
   #
   #   11:52:22  activity-api: ... is MASKED — keeping suppression ...
   #   [11 minutes of silence]
@@ -3279,7 +3279,7 @@ for d in "${PASS_ORDER[@]}"; do
   # it equalled the current CLONE_HASH, but the clone can move between the hash and
   # the mirror in the same tick (the mirror copies the newer commit). The marker then
   # named a hash that no longer exists, never matched again, and the restart was
-  # stranded: measured 2026-10-03, development-vessel deferred at 10:52, later ticks
+  # stranded: measured, development-vessel deferred at 10:52, later ticks
   # said nothing, and the unit kept serving 10:26 code under green health. A restart
   # loads whatever is on disk, so any recorded marker is owed. And because a marker
   # can be lost by any other path too, the effect is checked directly: non-test
@@ -3335,7 +3335,7 @@ for d in "${PASS_ORDER[@]}"; do
     # AN OWED RESTART MUST NOT BE STARVED BY A BUSY VESSEL. The age ceiling resets with
     # every new request, so a vessel that is never idle (the compose lane picks again as
     # soon as a draft ends) defers its owed restart on every tick, forever: measured
-    # 2026-10-03, development-vessel held a mirrored fix unloaded from 13:54 on while
+    # development-vessel held a mirrored fix unloaded from 13:54 on while
     # each tick logged "owed restart still deferred". After RESTART_DEFER_MAX deferrals,
     # close admission and drain (the mirror path's quiesce) instead of deferring again.
     # A PROGRESS deferral does not count toward this: the drain's bound would kill the progressing run at
@@ -3398,7 +3398,7 @@ for d in "${PASS_ORDER[@]}"; do
   # hash alone, and that makes its worst case a permanent wedge: restoring a
   # last-good tree produces content BYTE-IDENTICAL to a tree already attempted, so
   # `LAST = CLONE_HASH` matches and the restore is suppressed forever. That is
-  # exactly the recovery path after a corrupt mirror — on 2026-08-02 a drafter
+  # exactly the recovery path after a corrupt mirror — a drafter
   # self-edit wrote an unrendered `{{...}}` placeholder into byte 0 of
   # feature-compose.ts, development-vessel crash-looped, and pull-sync then
   # reported `synced=0 skipped=0 failed=0` on every tick while /vessels stayed
@@ -3419,7 +3419,7 @@ for d in "${PASS_ORDER[@]}"; do
   # full mirror work each time.
   #
   # That is not merely wasteful — it is a DEPLOYMENT DEADLOCK, and it was live.
-  # Measured 2026-08-08 on this spoke: the 09:55:46 run spent its entire budget on
+  # Measured on this spoke: the 09:55:46 run spent its entire budget on
   # activity-api and was SIGKILLed by the unit's own timeout at 10:12:15 ("Failed with
   # result 'timeout'"), and the 10:12:16 run began the same way. goal-host-vessel sat
   # at a commit two pushes stale across four consecutive runs and 20 minutes, and
@@ -3448,7 +3448,7 @@ for d in "${PASS_ORDER[@]}"; do
       log "$v: content already attempted but $SELF_UNIT is not active — overriding re-attempt suppression to restore service"
     fi
   fi
-  # RUNTIME TRUNCATION OVERRIDE (2026-08-02). "unit is active" is a weak proxy for
+  # RUNTIME TRUNCATION OVERRIDE. "unit is active" is a weak proxy for
   # "healthy": bun holds the module it loaded at start, so a vessel keeps serving
   # normally while its own source on disk is destroyed. Observed today —
   # feature-compose.ts went from 190,111 bytes to 38 ("updated content to close
@@ -3465,12 +3465,12 @@ for d in "${PASS_ORDER[@]}"; do
   # as corruption and re-mirror regardless. Measured before landing: across 17
   # vessels at steady state, 16 had ZERO live-vs-clone drift of any kind, so this
   # predicate is quiet by construction.
-  # DRIFT-MISLABEL GATE (2026-08-05). Everything in this block exists only to CLEAR
+  # DRIFT-MISLABEL GATE. Everything in this block exists only to CLEAR
   # SUPPRESS_REATTEMPT, and SUPPRESS_REATTEMPT is read at exactly one place: the
   # `[ "$LAST" = "$CLONE_HASH" ]` short-circuit below. When the clone has ADVANCED
   # (LAST != CLONE_HASH) the normal mirror+restart path already runs, so this block cannot
   # change the outcome — it only logs "RUNTIME SOURCE TRUNCATED" and files a
-  # systematic_failure gap for ordinary deployment lag. Measured 2026-08-05: 18 such lines in
+  # systematic_failure gap for ordinary deployment lag. Measured: 18 such lines in
   # 6h with the hashes CHASING each other (one tick's `clone` hash is the next tick's `live`
   # hash — the signature of a successful mirror followed by a new commit), against ZERO real
   # truncations (the "N vs M bytes" form) in 24h. Those false gaps feed goal generation, so a
@@ -3513,7 +3513,7 @@ EOF
       # Repair runs TOWARD THE CLONE, so it is only a repair while the clone IS
       # origin. Step 1 already lands the clone on origin, so this only restates
       # that invariant at the point of use. It cannot tell an unpushed newer fix
-      # from a stray draft (on 10-02 the clone WAS origin and a hand-deployed
+      # from a stray draft (once, the clone WAS origin and a hand-deployed
       # CSRF fix was overwritten), so the heal proceeds, but the mirror site
       # first copies a live tree pull-sync did not write to the drift
       # quarantine and files a gap naming it — and refuses the overwrite if the
@@ -3553,7 +3553,7 @@ EOF
   # but the authoring RUN executes inside the vessel that HOSTS the resolver —
   # development-vessel serves both feature_compose and patch_with_tools. So a
   # compose targeting activity-api defers converging activity-api while leaving
-  # its own host free to be restarted out from under it. Observed 2026-08-05
+  # its own host free to be restarted out from under it. Observed
   # 06:56:55: development-vessel took SIGTERM mid-compose and killed an in-flight
   # edit ("socket connection was closed unexpectedly" at the caller). The host has
   # NO SIGTERM drain of its own, so the run is simply lost. For that vessel, ANY
@@ -3581,12 +3581,12 @@ EOF
     [ -n "$(find "$mk" -mmin "-$AUTHORING_MARKER_TTL_MIN" 2>/dev/null)" ] || continue
     DEFER_MARKER="$mk"; break
   done
-  # WORK-IN-FLIGHT DEFERRAL (2026-08-05). The marker mechanism above knows two roles: the
+  # WORK-IN-FLIGHT DEFERRAL. The marker mechanism above knows two roles: the
   # vessel being EDITED (its own glob) and the vessel HOSTING THE DRAFTER
   # (AUTHORING_HOST_VESSEL). It is blind to the third: the vessel HOSTING THE DISPATCH.
   # goal-host-vessel executes every walk and is almost never itself an edit target, so no
   # marker ever named it and it was restarted on every convergence regardless of what it was
-  # running. Measured 2026-08-05: 16 restarts in 6h — every one from pull-sync, NRestarts=0 —
+  # running. Measured: 16 restarts in 6h — every one from pull-sync, NRestarts=0 —
   # while GET :8210/health reported in_flight=3 and callers logged "EARLY EDIT-INTENT routing
   # failed (The operation timed out)" and "socket connection was closed unexpectedly".
   # Edit-intent goals are excluded from auto-resume (goal-host index.ts:10315), so each one
@@ -3651,7 +3651,7 @@ EOF
       # itself. The outcome of an in-flight change is the evidence that attributes
       # credit to the decision that produced it; destroy the run and the dispatch
       # ends `interrupted`, no verdict is recorded, and the loop cannot tell a good
-      # change from a bad one. Measured 2026-08-11: three consecutive trials died
+      # change from a bad one. Measured: three consecutive trials died
       # exactly here, and each pushed fix triggered the convergence that killed the
       # next measurement.
       #
@@ -3660,9 +3660,9 @@ EOF
       # on its own — bounded by the longest single compose, not unbounded — and
       # nothing is lost. The vessel already refuses new long-running work while
       # draining; the marker just lets a converger open that early.
-      # THE QUIESCE RUNS AFTER THE TEST GATE, NOT HERE (qa, 2026-10-03). It used to close
+      # THE QUIESCE RUNS AFTER THE TEST GATE, NOT HERE. It used to close
       # admission and drain right here, then hold the marker through the gate (minutes) to
-      # keep the drain's guarantee (ed8ed66a: nothing admitted between the drain and the
+      # keep the drain's guarantee (nothing admitted between the drain and the
       # restart). That kept development-vessel refusing work for the whole gate on every
       # convergence, and closed admission even for a commit the gate then refused. The gate
       # reads only the clone, never the runtime, so it needs no quiesce: this records that one
@@ -3730,14 +3730,14 @@ EOF
   # TEST_TIMEOUT_SECONDS). Exceeding 900s gets the unit SIGTERMed — and the kill
   # would land between this gate and mirror-to-live, i.e. mid-convergence. An
   # unbounded step has already wedged the sibling host loop for 56 minutes once;
-  # bound it. Past the budget the candidate is DEFERRED, never converged ungated (qa,
-  # 2026-10-03): a stalled deploy channel is visible — logged, counted per candidate,
+  # bound it. Past the budget the candidate is DEFERRED, never converged ungated:
+  # a stalled deploy channel is visible — logged, counted per candidate,
   # filed once it starves — while an unmeasured convergence is silent, the gate simply
   # absent precisely when a tick is slow. A deferred candidate gates FIRST on the next
   # tick (pass_order), with that tick's fresh budget. After
   # pull_sync.testgate_budget_defer_max (shaped, default 3) consecutive deferrals of the
   # SAME candidate the starvation is filed, and it is still not converged.
-  # THE BUDGET IS CHECKED BEFORE EVERY RUN, AND IT ENDS BEFORE systemd's KILL (2026-10-06). Measured on the
+  # THE BUDGET IS CHECKED BEFORE EVERY RUN, AND IT ENDS BEFORE systemd's KILL. Measured on the
   # hub: GATE_BUDGET_SECONDS defaulted to 1000 against the unit's TimeoutStartSec of 900, and it was checked
   # ONCE, before a vessel's gate; that gate then started up to five more suite runs (the unresolved-module
   # parent run, the unnamed-rise re-run, the T2 confirmation, the parent/candidate overlay) plus the
@@ -3748,7 +3748,7 @@ EOF
   # a margin (from the tick's start), and each run is started only if its worst case fits; otherwise the
   # candidate is DEFERRED exactly as before (logged, counted, starvation filed at the bound), never
   # converged on a partial measurement. The counter resets only when a gate finishes measuring.
-  # The gate budget defaults to the unit's live TimeoutStartSec (2026-10-11): a fixed 1000 s capped a 1019 s need
+  # The gate budget defaults to the unit's live TimeoutStartSec: a fixed 1000 s capped a 1019 s need
   # even under a longer unit. gate_left still subtracts the margin from the tick's start; an explicit value wins.
   : "${GATE_T0:=$(date +%s)}" ; GATE_BUDGET_SECONDS="${GATE_BUDGET_SECONDS:-${UNIT_TIMEOUT_S:-3600}}"
   BD_FILE="$MARKER_DIR/$v.testgate-budget-defers"
@@ -3759,7 +3759,7 @@ EOF
     _gl_b=$(( ${UNIT_TIMEOUT_S:-3600} - ${GATE_UNIT_MARGIN_S:-${QUIESCE_MARGIN_S:-120}} - (_gl_now - ${PULLSYNC_T0:-$GATE_T0}) ))
     if [ "$_gl_a" -lt "$_gl_b" ]; then echo "$_gl_a"; else echo "$_gl_b"; fi
   }
-  # THE PER-RUN WALL IS DERIVED PER VESSEL (2026-10-11). Every whole-suite run was killed at a fixed 240 s
+  # THE PER-RUN WALL IS DERIVED PER VESSEL. Every whole-suite run was killed at a fixed 240 s
   # (TEST_TIMEOUT_SECONDS default). On the hub (8 cores, load 6-7) development-vessel's suite runs at or past
   # 240 s: T1 went BLIND (RC=124 at 240 s) and the overlay parent was killed at the wall (pass=none), so its
   # candidates were judged on a stale stored baseline and refused for 39 failures that were not theirs. The
@@ -3805,7 +3805,7 @@ EOF
   killed_at_wall() { printf '%s' "$1" | grep -qE '^__PULLSYNC_RC=(124|137) '; }
   SUITE_EFF_WALL_S="${TEST_TIMEOUT_SECONDS:-$SUITE_WALL_S}"; SUITE_WALL_CAP_S="$_sw_cap"; SUITE_WALL_LAST_S="${_sw_last:-null}"
   SUITE_COST_S=$(( SUITE_EFF_WALL_S + ${TEST_KILL_GRACE_SECONDS:-30} ))
-  # WHAT A KNOWN RESULT DEPENDS ON (2026-10-06). A candidate deferred mid-gate has MEASURED how long its
+  # WHAT A KNOWN RESULT DEPENDS ON. A candidate deferred mid-gate has MEASURED how long its
   # gate needs; re-running the same suite on the same inputs only to defer again spends the tick's budget
   # for nothing. The key is everything that result depends on: the HEAD, the outstanding-regression set,
   # the clone's dependency identity (manifest + lock + the last install's marker + every file:
@@ -3854,7 +3854,7 @@ EOF
           summary:("Repair needed: pull-sync deferred " + $v + " at " + $head + " " + $n + " consecutive ticks because the per-tick test-gate budget (" + $b + "s, capped by the unit timeout) was too short for its gate to finish its runs, past pull_sync.testgate_budget_defer_max (" + $max + "). It is NOT converged ungated: a gate that did not measure never promotes. Repair the capability: a faster suite, a larger budget, or a gate sharded across ticks." + (if $cause == "budget" then "" else (" CAUSE OF THESE DEFERRALS: " + $cause + " (host contention, not the budget).") end)),
           classification_metadata:{defer_cause:$cause,vessel:$v,head:$head,consecutive_deferrals:($n | tonumber),bound:($max | tonumber),budget_seconds:($b | tonumber),effective_wall_s:$ew,wall_why:$why}}}}}' 2>/dev/null)"
     fi
-    # PER-VESSEL STARVATION (2026-10-11, law 6). BD_N counts deferrals of ONE candidate, so a stream of pushes
+    # PER-VESSEL STARVATION (law 6). BD_N counts deferrals of ONE candidate, so a stream of pushes
     # resets it: development-vessel deferred for 1.5 h across successive candidates and never tripped the bound,
     # while activity-api (no new pushes) did. So also measure, per VESSEL, the time since its first deferral after
     # its last convergence (the mirror's own pin, last-good): a new last-good restarts the clock, a new candidate
@@ -3915,7 +3915,7 @@ EOF
       | sed 's/[[:space:]]*$//' \
       | sort -u || true
   }
-  # --kill-after IS LOAD-BEARING, not belt-and-braces. Measured 2026-08-17 19:34: a
+  # --kill-after IS LOAD-BEARING, not belt-and-braces. Measured: a
   # convergence tick hung with pull-sync sleeping in pipe_read for 7+ minutes and no output
   # after "Starting". The leaf was `bun test` in /workspace/git/vessels/activity-api,
   # 7 minutes old, with NO `timeout` process left in the chain.
@@ -3932,17 +3932,17 @@ EOF
   # substitution returns. The gate then treats it as an unreadable suite (T_FAIL empty ->
   # TEST GATE BLIND) and converges ungated, which is the designed behaviour for "no
   # instrument" and is now reachable instead of deadlocking before it.
-  # ISOLATED FROM LIVE STATE (2026-09-29). The suite used to inherit this unit's environment,
+  # ISOLATED FROM LIVE STATE. The suite used to inherit this unit's environment,
   # including WORKSPACE_ROOT=/workspace/git/super-repo, the LIVE gap store's root: a /proc
   # watcher caught this function refreshing 16 fixture rows (some-real-gap, class-b-*,
   # heal-probe, flat-*-probe, …) in the live store. It now runs under a scrubbed environment
-  # with a throwaway WORKSPACE_ROOT, like the compose (d8891ed) and post-land (53b4993) runners;
+  # with a throwaway WORKSPACE_ROOT, like the compose and post-land runners;
   # parent and candidate are both measured this way, so the gate still compares like with like.
   # The trailing __PULLSYNC_RC line is diagnostic only (count_pf and fail_names ignore it): a BLIND tick's retained
   # tail was bun's end-of-run failure list cut mid-line at 36 s, far inside the 240 s timeout, so the run was ended
   # by something other than the timeout. Its exit status (124/137 timeout/kill, 1 normal red, other = crash or
   # signal) and wall time are what the next blind tick must show.
-  # OUTPUT GOES TO A FILE, NOT THE PIPE (qa reproduced, 2026-09-30): bun exits before a stdout PIPE drains, so
+  # OUTPUT GOES TO A FILE, NOT THE PIPE bun exits before a stdout PIPE drains, so
   # captured through $( ) ~45% of the output was lost, cut inside the end-of-run failure list before the totals
   # (324,504 of ~594,000 bytes, mid-line). The same run redirected to a file keeps its summary. That race was the
   # ~40% "TEST GATE BLIND" rate: exit 1 (a normal red), not a timeout, kill or crash.
@@ -3955,7 +3955,7 @@ EOF
   # recorded passing days ago reads as a regression belonging to whatever commit is in front of
   # the gate. Measuring the PARENT right now removes that confound: parent and candidate are
   # then compared under one set of conditions, which is what "a test that used to pass and now
-  # fails" actually means. Same correction 17aae9a made for the mitosis cutover gate.
+  # fails" actually means. The mitosis cutover gate makes the same correction.
   #
   # Isolated in a throwaway worktree so the live clone is never checked out from under a
   # converge. node_modules is symlinked because a fresh worktree has none and `bun test`
@@ -3991,14 +3991,14 @@ EOF
   # tests legitimately lowers it. Only count it when failures did not ALSO improve,
   # otherwise a genuine repair that removes dead tests is refused as a regression AND
   # the improvement-ratchet branch below becomes unreachable for that case.
-  # is_reg() (count comparison) REMOVED 2026-08-18 — replaced by the set difference below.
+  # is_reg() (count comparison) REMOVED — replaced by the set difference below.
   # It defined regression as `fail_now > fail_baseline` against a baseline that only ratcheted
   # DOWN, so a suite that grew could never converge again. Left as a comment rather than
   # deleted silently because its absence is the point: no count of failures, however measured,
   # can distinguish "a test broke" from "more tests exist".
   REG=""; REG_F=""; REG_P=""; REG_U=""; REG_NAMED=""; CONF_SET=""; OUT_STILL=""; OVL_KILLED=""; PROT_RED=""
   if [ -z "$BUN_BIN" ]; then
-    # NO INSTRUMENT IS NOT A PASS: HOLD (qa, 2026-10-03). This used to converge ungated. A runner is a
+    # NO INSTRUMENT IS NOT A PASS: HOLD. This used to converge ungated. A runner is a
     # property of the node, not of the vessel, so the gap is one per node; every vessel holds until it
     # is back.
     _nr_node="${GTR_NODE:-$(hostname 2>/dev/null || echo unknown)}"
@@ -4017,7 +4017,7 @@ EOF
     # Re-checked here: ensure_clone_deps (above) can install for minutes.
     if [ "$(gate_left)" -lt "$SUITE_COST_S" ]; then testgate_budget_defer "the suite run" "$SUITE_COST_S"; skipped=$((skipped + 1)); continue; fi
     date +%s > "$MARKER_DIR/$v.testgate-slot" 2>/dev/null || true
-    # CONTENTION SEEN DURING THE RUN (2026-10-19). The admission check reads the host before the run; a co-hosted gate
+    # CONTENTION SEEN DURING THE RUN. The admission check reads the host before the run; a co-hosted gate
     # that starts after it is seen only DURING the run. A sampler reads host_contended every quarter of the suite wall
     # while the suite runs, and once more at its end; the first contended reading is kept (SC_WHY).
     SC_WHY=""; _sc_file="$(mktemp "${TMPDIR:-/tmp}/pullsync-contention-XXXXXX" 2>/dev/null || true)"; _sc_pid=""
@@ -4073,7 +4073,7 @@ EOF
     if [ -n "$GATE_BLIND_WHY" ]; then
       : # blind (above): no verdict, no baseline write
     elif [ -z "$T_FAIL" ] && [ -n "$SC_WHY" ] && killed_at_wall "$T_OUT"; then
-      # A SUITE KILLED AT ITS WALL ON A CONTENDED HOST DID NOT MEASURE THE COMMIT, IT MEASURED THE HOST (2026-10-19, the
+      # A SUITE KILLED AT ITS WALL ON A CONTENDED HOST DID NOT MEASURE THE COMMIT, IT MEASURED THE HOST (the
       # principle of the protected retry): DEFERRED through the counted path, not HELD as blind; the next tick re-runs it.
       log "$v: suite run KILLED at its wall (TEST_TIMEOUT_SECONDS=${TEST_TIMEOUT_SECONDS:-${SUITE_WALL_S:-240}}) while the host was contended ($SC_WHY): not a blind verdict about ${HEAD:0:10}; deferring"
       testgate_budget_defer "the suite run (killed at its wall under contention)" "$SUITE_COST_S" "suite killed at its wall under contention ($SC_WHY)"; skipped=$((skipped + 1)); continue
@@ -4083,7 +4083,7 @@ EOF
       # by hand, in the unit's cgroup, TasksMax and PATH, printed a summary every time, so
       # the generator is tick-dependent and only the tick's own output can name it. Keep
       # the size and tail, and file it so the hold is queryable, not a log line. It used to converge
-      # ungated; it HOLDS now (qa, 2026-10-03: a gate that did not measure never promotes).
+      # ungated; it HOLDS: a gate that did not measure never promotes.
       _blind_tail="$(printf '%s' "$T_OUT" | grep -v '^[[:space:]]*$' | tail -5 | cut -c1-240)"
       log "$v: blind output bytes=${#T_OUT} tail: $(printf '%s' "$_blind_tail" | tr '\n' '|')"
       if command -v jq >/dev/null 2>&1; then
@@ -4102,7 +4102,7 @@ EOF
       # again: the stale absolute count stayed permanently exceeded, and every subsequent
       # commit — correct or not — was refused for the same reason.
       #
-      # Measured 2026-08-18: activity-api was refused three ticks running with
+      # Measured: activity-api was refused three ticks running with
       #   "baseline 177 fail/1136 pass -> 193 fail/1185 pass"
       # Note the PASS count also rose, by 49. The suite had grown by ~65 tests; the baseline
       # had been recorded when 1313 existed and the run had 1378. Comparing those two numbers
@@ -4120,7 +4120,7 @@ EOF
       # comparing across formats — which is the very mistake being fixed.
       B_NAMES_FILE="$TEST_BASELINE_DIR/$v.failnames"
       T_NAMES="$(fail_names "$T_OUT")"
-      # OUTSTANDING REGRESSIONS ARE NEVER ABSORBED INTO THE BASELINE (2026-10-02). The starvation
+      # OUTSTANDING REGRESSIONS ARE NEVER ABSORBED INTO THE BASELINE. The starvation
       # break below used to write the regressed names into failnames, and so did every later
       # baseline refresh — after which the gate could no longer see the regression at all. A
       # regression the break deployed is held in $v.outstanding instead: failnames stays the
@@ -4132,7 +4132,7 @@ EOF
       OUT_FILE="$TEST_BASELINE_DIR/$v.outstanding"
       tg_minus_outstanding() { comm -23 <(printf '%s\n' "$1" | sort -u) <(sort -u "$OUT_FILE" 2>/dev/null) 2>/dev/null | grep . || true; }
       tg_write_failnames() { printf '%s\n' "$(tg_minus_outstanding "$1")" > "$B_NAMES_FILE"; }
-      # OUTSTANDING NAMES AGE (qa, 2026-10-02). Without an age, "baseline + outstanding" is a
+      # OUTSTANDING NAMES AGE. Without an age, "baseline + outstanding" is a
       # permanent shadow baseline. $v.outstanding-since holds "<epoch-first-outstanding>\t<name>";
       # a name outstanding longer than TG_OUTSTANDING_ESCALATE_SECONDS escalates: the gap goes from
       # severity "medium" to "high" (boredom-vessel gapPriorityWeight reads gap.severity, so an aged
@@ -4193,7 +4193,7 @@ EOF
       # Before the baseline is refreshed below: B_NAMES_FILE still holds the PREVIOUS tick's fail set,
       # which is what the generator's two-tick flake filter compares against. Never fatal.
       # Queued, not run: the generator's alone-runs (up to 3 x 165 s) must never sit in front of a deploy in a
-      # 900 s unit (qa). Its inputs are snapshotted here, before the baseline below is refreshed, and it runs at
+      # 900 s unit. Its inputs are snapshotted here, before the baseline below is refreshed, and it runs at
       # the END of the tick, after every vessel has converged, only while the tick budget allows.
       _gq="$(mktemp -d "${TMPDIR:-/tmp}/pullsync-genq-XXXXXX")" && printf '%s' "$T_OUT" > "$_gq/out" && cp "$B_NAMES_FILE" "$_gq/prev" 2>/dev/null \
         && GEN_QUEUE="${GEN_QUEUE}${v}|${_gq}|${HEAD}|${d}"$'\n' || rm -rf "${_gq:-/nonexistent-genq}" 2>/dev/null || true
@@ -4209,7 +4209,7 @@ EOF
       # A FILE THAT STOPS LOADING READS AS AN IMPROVEMENT TO A NAME-SET GATE. bun counts a test
       # file that fails to load as ONE failure with no "(fail)" name, and drops every test in it.
       # So the named set SHRINKS (its failing names vanish), its passing tests vanish, and the
-      # set comparison below converges it. Measured 2026-09-29: the summary count has been
+      # set comparison below converges it. Measured: the summary count has been
       # named + 2 all day on both nodes, i.e. the unnamed count is a stable constant, so a rise
       # in it — confirmed on a second run — is a load regression the name set cannot see.
       # The baseline's third field is its own unnamed count, written with it, so the check never
@@ -4263,23 +4263,23 @@ EOF
         NEW1="$(comm -23 <(printf '%s\n' "$T_NAMES") <(printf '%s\n' "$B_REF") 2>/dev/null || true)"
         NEW2="$(comm -23 <(printf '%s\n' "$T2_NAMES") <(printf '%s\n' "$B_REF") 2>/dev/null || true)"
         CONFIRMED="$(comm -12 <(printf '%s\n' "$NEW1" | sort -u) <(printf '%s\n' "$NEW2" | sort -u) 2>/dev/null | grep -c . || true)"
-        # SUBTRACT TRACKED NAMES BEFORE THE OVERLAY (2026-10-07). The overlay only narrows CONF_SET
+        # SUBTRACT TRACKED NAMES BEFORE THE OVERLAY. The overlay only narrows CONF_SET
         # (an intersection) and the tracked names used to be subtracted after it, so (C ∩ O) − T equals
         # (C − T) ∩ O: doing it first gives the same verdict and runs the two-ref overlay only for
         # names no open gap tracks. Doing it after cost every check-first candidate two extra worst-case
         # runs, which with the two candidate runs already spent exceeds the unit-capped tick budget:
-        # development-vessel 1fac31bc deferred on every tick on node 1 and compose2 (needs 832s/810s, 778s left).
+        # a development-vessel candidate deferred on every tick on a node and a second node (needs 832s/810s, 778s left).
         CONF_SET="$(comm -12 <(printf '%s\n' "$NEW1" | sort -u) <(printf '%s\n' "$NEW2" | sort -u) 2>/dev/null || true)"
-        # A FAILING TEST AN OPEN GAP ALREADY TRACKS IS NOT A REGRESSION (2026-09-30). Check-first landings
-        # (activity-api f636900 added a deliberately red check for an open performance gap) were refused
+        # A FAILING TEST AN OPEN GAP ALREADY TRACKS IS NOT A REGRESSION. Check-first landings
+        # (an activity-api commit added a deliberately red check for an open performance gap) were refused
         # here for 3 cycles, and the regression gap they filed invited a lane to "repair" by weakening the
         # check. Names in an open gap's evidence_resolve.only_tests for this vessel are subtracted.
         TRACKED_ONLY=""
         if [ "${CONFIRMED:-0}" -gt 0 ]; then
-          # THE BATCH, NOT THE TOP COMMIT (2026-10-07). The candidate converges every commit since the last
+          # THE BATCH, NOT THE TOP COMMIT. The candidate converges every commit since the last
           # healthy mirror (last-good), so a check-first commit's check file counts as changed even when a later
-          # commit landed on top before convergence. HEAD^..HEAD alone left development-vessel 1fac31bc's four
-          # tracked reds untracked once cf99e54b (an unrelated test) stacked on it, forcing the overlay that no
+          # commit landed on top before convergence. HEAD^..HEAD alone left a development-vessel candidate's four
+          # tracked reds untracked once an unrelated test commit stacked on it, forcing the overlay that no
           # tick could fit. No pin, or a pin that is not an ancestor of HEAD: the top commit, as before.
           _tf_base="$(cat "$LAST_GOOD_DIR/$v" 2>/dev/null || true)"
           { [ -n "$_tf_base" ] && git -C "$d" merge-base --is-ancestor "$_tf_base" "$HEAD" 2>/dev/null; } || _tf_base="${HEAD}^"
@@ -4295,7 +4295,7 @@ EOF
           fi
           if [ -n "$TRACKED" ]; then
             # Exact leaf match (the line ENDS with " > <name>"), at most ONE line per tracked name: a leaf name
-            # shared by another test file must not hide that file's real regression (qa, 09-30).
+            # shared by another test file must not hide that file's real regression.
             # A FULL-PATH name ("describe > test") is the whole line after the "(fail) "/"✗ " marker, so it
             # can never end with " > <name>"; it matches only as the entire line (still exact, never substring).
             SUBTRACTED="$(gtr_select tracked "$TRACKED" "${CONF_SET:-}")"
@@ -4313,10 +4313,10 @@ EOF
           #
           # Both runs above are at the CANDIDATE, so intersecting them removes per-run flakes but
           # cannot remove the confound between the candidate's conditions and the conditions the
-          # stored baseline was recorded under. Observed 2026-08-28: the baseline file was two
+          # stored baseline was recorded under. Observed: the baseline file was two
           # days old and held 103 names while a fresh run at HEAD produced 97; the single
-          # genuinely-new failure belonged to 14e530e (which enabled the docs-align accuracy
-          # invariant), yet the gate charged it to e785d13 and refused a commit measured, at the
+          # genuinely-new failure belonged to the commit that enabled the docs-align accuracy
+          # invariant, yet the gate charged it to a later commit and refused a commit measured, at the
           # same commit and its parent under identical conditions, to add zero failing tests.
           # A name that already fails at the parent RIGHT NOW is not this commit's regression.
           PARENT_REF="$(git -C "$d" rev-parse --verify --quiet "${HEAD}^" 2>/dev/null || true)"
@@ -4364,7 +4364,7 @@ EOF
           fi
           # UNFREEZE THE BASELINE. The refresh used to live only in the no-newly-failing branch
           # below, so any persistently newly-failing name pinned the stored baseline forever and
-          # every later commit was judged against an ever-staler reference. Observed 2026-08-28:
+          # every later commit was judged against an ever-staler reference. Observed:
           # the file was two days old (103 names vs 97 on a fresh run) because one docs-align
           # accuracy test kept the gate on this path every tick. When the gate has decided to
           # converge, the tree it converged is the new reference — otherwise the same drift is
@@ -4384,8 +4384,8 @@ EOF
       fi
     fi
   fi
-  # AN ENVIRONMENT RED IS A BLIND GATE: HOLD, NEVER COUNT, NEVER BREAK (qa, 2026-10-03). Measured on a
-  # spoke: development-vessel 0d6c70a3 was refused 4x by the load-error gate (unnamed 185 -> 196) while its
+  # AN ENVIRONMENT RED IS A BLIND GATE: HOLD, NEVER COUNT, NEVER BREAK. Measured on a
+  # spoke: a development-vessel candidate was refused 4x by the load-error gate (unnamed 185 -> 196) while its
   # test files could not resolve @avigopal/ias-executor-ts/adapters at the parent AND the candidate, and the
   # 4th refusal took the starvation break and PROMOTED it. When the red is the load-error gate's (no names)
   # and modules are unresolvable on both sides (U_SHARED, the unresolvable-module classifier above), the
@@ -4394,7 +4394,7 @@ EOF
   # non-defect) nor converges. It HOLDS, and files ONE environment gap per (node, vessel) — a stable id,
   # so the store dedupes re-filing — naming the modules, in place of the unresolvable-modules gap.
   # A gate that loaded NO test file on the same shared modules (GATE_BLIND_WHY) is the same environment
-  # fault with nothing measured at all: held identically (qa, 2026-10-03; it used to converge ungated).
+  # fault with nothing measured at all: held identically; it used to converge ungated.
   if { [ -n "$REG" ] && [ -z "$REG_NAMED" ] && [ -n "${U_SHARED:-}" ]; } || [ -n "${GATE_BLIND_WHY:-}" ]; then
     REG="${REG:-$GATE_BLIND_WHY}"
     _env_node="${GTR_NODE:-$(hostname 2>/dev/null || echo unknown)}"
@@ -4406,7 +4406,7 @@ EOF
         classification_metadata:{class:"gate_blind_environment",node:$node,vessel:$v,unresolvable_modules:($mods | split(",")),head:$head,regression:$reg}}}}}' 2>/dev/null)"
     skipped=$((skipped + 1)); continue
   fi
-  # PROTECTED JUDGE TESTS ARE JUDGED ALONE, NOT BY THE DIFF (qa, 2026-10-05). The lane may tighten
+  # PROTECTED JUDGE TESTS ARE JUDGED ALONE, NOT BY THE DIFF. The lane may tighten
   # arming but never loosen it, and that rests on this gate seeing the protected judge tests (the test
   # files autonomyScope.excluded_paths lists under repos/<v>/) go red. Measured 2026-10-05: development-
   # vessel's system-authored-gap-checks.test.ts is ORDER-POLLUTED, red inside one full run and green
@@ -4425,8 +4425,8 @@ EOF
     done
   fi
   PROTECTED_SCOPE_FILE="${PROTECTED_SCOPE_FILE:-${PULLSYNC_SELF_DIR:-.}/autonomy-scope.json}"
-  # PROTECTED RETRY AFTER A TIMEOUT UNDER CONTENTION (user ruling 2026-10-19, option B: "retry once if timeout").
-  # bun's per-test timeout (5 s by default) is a load sensor: on 10-17 and 10-19 one node refused two unrelated candidates
+  # PROTECTED RETRY AFTER A TIMEOUT UNDER CONTENTION: retry once if the test timed out.
+  # bun's per-test timeout (5 s by default) is a load sensor: one node has refused two unrelated candidates
   # on the same protected positive control, red alone ONLY because its case outlived 5 s on a loaded host. A protected
   # run that is red, whose EVERY failure is a bun per-test timeout ("(fail) <name>" followed by "^ this test timed out
   # after <n>ms", no unhandled error, rc 1, the summary's fail count equal to the timeouts), and that ended on a
@@ -4512,9 +4512,9 @@ EOF
   fi
   rm -f "$BD_FILE" "$TG_NEED_FILE" "${PT_FILE:-}" 2>/dev/null || true
   [ -n "${U_GAP_JSON:-}" ] && emit_gap "$U_GAP_JSON"
-  # A NON-MEASUREMENT IS NOT A RED (2026-10-11). When the parent/candidate overlay could not measure because a run
+  # A NON-MEASUREMENT IS NOT A RED. When the parent/candidate overlay could not measure because a run
   # was killed at the per-run wall, the remaining verdict is the stored-baseline one, which on a node behind its
-  # origin charges every failure since its last-good to this candidate (the hub refused bf81499f for 39 such). Hold
+  # origin charges every failure since its last-good to this candidate (the hub once refused a candidate for 39 such). Hold
   # the candidate (fail closed, nothing converges) but do not advance the refusal count toward the bound; the next
   # tick re-measures with the wall derived from this tick's completed runs. A protected-file red still counts.
   if [ -n "$REG" ] && [ -n "${OVL_KILLED:-}" ] && [ -z "${PROT_RED:-}" ]; then
@@ -4552,7 +4552,7 @@ EOF
     RC_FILE="$MARKER_DIR/$v.testgate-refusals"
     RC="$(cat "$RC_FILE" 2>/dev/null || echo 0)"; case "$RC" in ''|*[!0-9]*) RC=0 ;; esac
     RC=$((RC + 1)); echo "$RC" > "$RC_FILE" 2>/dev/null || true
-    # A TEST-ONLY RANGE NEVER TAKES THE STARVATION BREAK (2026-10-02). The break exists because
+    # A TEST-ONLY RANGE NEVER TAKES THE STARVATION BREAK. The break exists because
     # indefinite staleness of RUNTIME code is the worse failure. A range that changes only tests
     # (last-good pin .. HEAD, test_only_range) leaves the unit's code byte-identical, so refusing
     # it costs no staleness at all — and breaking would deploy nothing but the regression's
@@ -4565,7 +4565,7 @@ EOF
       log "$v: TEST REGRESSION at ${HEAD:0:10} ($REG) — REFUSING to converge (refusal $RC; ${TG_PREV_GOOD:0:10}..${HEAD:0:10} is test-only, so no starvation break); runtime keeps running its current code"
       skipped=$((skipped + 1)); continue
     fi
-    # THE BREAK DEFERS; IT NEVER PROMOTES PAST RED (qa, 2026-10-03). It used to converge here once
+    # THE BREAK DEFERS; IT NEVER PROMOTES PAST RED. It used to converge here once
     # RC passed the bound — named regressions held "outstanding", load regressions as a degraded
     # baseline — and on a spoke it deployed a commit the gate had refused four times. Staleness is a
     # cost the gap below makes visible and ranks; a deployed regression is a defect the gate exists to
@@ -4728,12 +4728,12 @@ EOF
       #
       # The swap above is only visible to a consumer whose node_modules copy is a
       # SYMLINK into this dist. That was assumed of every consumer and was true of
-      # exactly one. Measured 2026-08-16, @avigopal/ias-executor-ts:
+      # exactly one. Measured, @avigopal/ias-executor-ts:
       #
       #   development-vessel   realfiles=0    symlinks=164   <- propagated
-      #   ribosome-vessel      realfiles=164  symlinks=0     <- frozen at 08-05
+      #   ribosome-vessel      realfiles=164  symlinks=0     <- frozen
       #   goal-host-vessel / analysis-vessel / llm-resolver-vessel / local-tools-vessel
-      #                        realfiles=164  symlinks=0     <- frozen at 08-05
+      #                        realfiles=164  symlinks=0     <- frozen
       #
       # For the five real-file consumers the swap was a no-op, the bounce restarted
       # them onto identical bytes, and every health check passed — so the run logged
@@ -4843,7 +4843,7 @@ EOF
   # recovered by `Restart=on-failure`, and cannot receive new code. It looks healthiest
   # precisely when it is least recoverable.
   #
-  # Found by hand FOUR times (2026-08-15 x3, 2026-08-17 activity-api, MainPID 1094541,
+  # Found by hand FOUR times (x3, activity-api, MainPID 1094541,
   # masked and up since 06:23). Each instance cost a manual diagnosis because nothing
   # asserted the conjunction — every existing check reads one half or the other.
   # This is the detector those four instances kept not producing.
@@ -4855,7 +4855,7 @@ EOF
   # hand. That is the vacuous-check class this session has hit four times; here the control
   # caught it before the detector shipped rather than after it lied.
   # MASKED + FAILED IS THE SAME PATHOLOGY, and my first version of this check missed it.
-  # Measured 2026-08-17: surrealdb.service was OOM-killed at 14:19:58 with NRestarts=0 and
+  # Measured: surrealdb.service was OOM-killed at 14:19:58 with NRestarts=0 and
   # never came back, because a masked unit cannot be restarted by Restart=on-failure. The
   # local store stayed dead for 5.5 hours; activity-api answered 503 the whole time and its
   # test suite hung forever on connections to it, wedging every convergence tick.
@@ -4928,8 +4928,8 @@ EOF
       # deferral counter never increments again, RESTART_DEFER_MAX is unreachable,
       # and "takes effect on the next tick" never happens.
       #
-      # Measured: goal-host-vessel served code from 2026-08-19 01:54:10 while the
-      # mirrored file on disk was 23 hours newer (2026-08-20 01:13:54), with
+      # Measured: goal-host-vessel served code while the
+      # mirrored file on disk was 23 hours newer, with
       # NRestarts=0, ActiveState=active and /health 200 — every signal green while
       # the fixes it was supposed to load sat unread. The deferral counter was
       # frozen at 1 of 3 and three later ticks said nothing about the vessel.
@@ -5037,8 +5037,8 @@ SUPER_MARKER="$MARKER_DIR/super-repo.sha"
 # pull-sync's own self-update — was skipped and NOTHING was logged. The tick reported
 # "done" and looked healthy.
 #
-# Measured 2026-08-17: the container's super-repo sat at c23558d9 while its own origin/dev
-# read 8501a021, 24 commits behind, across multiple "successful" ticks. The link to the
+# Measured: the container's super-repo sat 24 commits behind its own origin/dev
+# ref, across multiple "successful" ticks. The link to the
 # remote is BURSTY (probed: one >20s connect failure and one 7.3s connect within three
 # attempts, then 10/10 fast), so the fetch fails occasionally — and every occurrence was
 # invisible. The same burstiness silently lost an alpha-credit on the reach path.
@@ -5065,7 +5065,7 @@ if [ "$SUPER_FETCH_OK" = 1 ]; then
         # CAPTURE WHY. "ff-only pull failed — skipping" named a symptom and discarded the
         # only evidence, so every occurrence needed a hand diagnosis to learn the same thing.
         #
-        # Measured 2026-08-17: the clone sat 24 commits behind for hours while every tick
+        # Measured: the clone sat 24 commits behind for hours while every tick
         # reported "done". I first assumed the cause was structural — the incoming range
         # modifies five submodule gitlinks and those paths are permanently dirty here, since
         # pull-sync converges each vessel worktree independently — but running the pull by
@@ -5077,8 +5077,8 @@ if [ "$SUPER_FETCH_OK" = 1 ]; then
         # Which is the point of printing git's own message: I could not tell those two
         # causes apart from the journal, and one of them was wrong.
         # --no-rebase: a clone whose git config says pull.rebase=true turns this into a rebase, and a rebase refuses ANY dirty
-        # tracked file, even one the incoming range never touches. Measured 2026-10-10: the hub's glue layer stopped converging
-        # ("cannot pull with rebase: You have unstaged changes", a runtime lease file) while node1, without that config,
+        # tracked file, even one the incoming range never touches. Measured: the hub's glue layer stopped converging
+        # ("cannot pull with rebase: You have unstaged changes", a runtime lease file) while a node, without that config,
         # pulled past the same kind of file. The flag makes the pull independent of local config.
         _sp_err="$(git -C "$SUPER_DIR" pull --ff-only --no-rebase origin "$BRANCH" 2>&1)"
         if [ $? -eq 0 ]; then
@@ -5110,7 +5110,7 @@ if [ "$SUPER_FETCH_OK" = 1 ]; then
       # ABORTS on the first worktree it cannot check out, so a single vessel
       # carrying uncommitted substrate-authored work stopped the other
       # seventeen from advancing — and the one-line failure said only "may
-      # lag", naming nothing. Observed 2026-08-08: development-vessel held
+      # lag", naming nothing. Observed: development-vessel held
       # modified src/seed/*.ts, and every submodule silently stayed at its old
       # pointer for as long as that work sat there.
       #
@@ -5119,7 +5119,7 @@ if [ "$SUPER_FETCH_OK" = 1 ]; then
       # work that, on the hub, turned out to be a real in-progress activity.
       # Lagging is recoverable; discarding is not.
       #
-      # TRACKED FILES ONLY (--untracked-files=no). Measured 2026-09-07: the
+      # TRACKED FILES ONLY (--untracked-files=no). Measured: the
       # development-vessel worktree carried 2,526 porcelain entries, of which
       # 2,494 were UNTRACKED build artifacts (.js/.d.ts/.map from a compiler
       # run). A submodule checkout does not touch untracked files, so they are
@@ -5158,7 +5158,7 @@ if [ "$SUPER_FETCH_OK" = 1 ]; then
       # them afterwards. So EVERY systemd-level repair — TimeoutStopSec, drains,
       # restart policy, Environment= — silently no-opped until someone rebuilt the
       # image, and nothing reported that it had not taken. A whole repair class
-      # looked landed and was inert (observed 2026-08-05: a goal-host drain drop-in
+      # looked landed and was inert (observed: a goal-host drain drop-in
       # sat in git with DropInPaths showing it absent from the container).
       #
       # Target /usr/lib, NOT /etc, deliberately: /etc outranks every other unit dir,
@@ -5202,7 +5202,7 @@ if [ "$SUPER_FETCH_OK" = 1 ]; then
       # `git log` shows the new commit. Nothing in that set is wrong; none of them
       # observes the running module graph.
       #
-      # Measured 2026-08-19 across three containers: the human surface was serving
+      # Measured across three containers: the human surface was serving
       # code from Aug-11 and Aug-14 against clones pulled minutes earlier. One had
       # been stale for eight days. The discriminator is the unit's start time
       # against the file mtime — not any health signal.
@@ -5305,8 +5305,8 @@ fi
 
 # revive_failed_timers — a timer whose service could not be QUEUED (a Requires= on a masked unit, a unit file
 # that failed to load) enters the failed state and never fires again until reset-failed + start; fixing the
-# cause does not revive it. On 2026-10-06 compose2's rhythm-cadence and gap-store-census timers stayed failed
-# for 11 h after the fix (b9bd860f) promoted, until an operator reset them. Each tick, after the units
+# cause does not revive it. On a second node, two timers stayed failed
+# for 11 h after the fix promoted, until an operator reset them. Each tick, after the units
 # converge: every ENABLED timer in the failed state whose service now loads and whose Requires=/Requisite=
 # are all loadable is reset and started, and logged. One whose cause persists is left failed and logged. A
 # timer revived on 3 consecutive ticks keeps failing, so it is filed as a gap (one per timer) instead of

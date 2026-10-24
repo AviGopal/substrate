@@ -12,8 +12,8 @@ Description=Learning-loop selftest — does the execution→learning chain actua
 # Each was found by an operator following one execution by hand. This is that walk.
 #
 # WHY TIMER-TIER AND NOT THE ROTATION. The design document places probe templates on
-# the autonomous rotation; the 2026-09-09 census found 90 of 102 selection-scheduled
-# validators dormant, every survivor timer-driven. A selftest scheduled by the
+# the autonomous rotation; an inventory found most selection-scheduled
+# validators dormant and every survivor timer-driven. A selftest scheduled by the
 # learning loop it validates is the circularity CLAUDE.md names when it exempts the
 # liveness watchdogs. The RUNNER is bootstrap tier; the PROBES it dispatches still
 # travel the real lanes, which is the point.

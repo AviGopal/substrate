@@ -316,7 +316,7 @@ fi
 # the timer outright ("Refusing to start, unit X.service to trigger not
 # loaded"), so the timer reads as enabled while no schedule exists at all.
 #
-# Observed 2026-08-08 on a UI-only spoke: ENABLED_VESSELS named
+# Observed on a UI-only spoke: ENABLED_VESSELS named
 # substrate-pull-sync.timer and self-recovery.timer but neither .service. Both
 # services were masked, both timers refused to start every boot, and the box
 # could neither converge to origin/dev nor restart its own surface — 13 commits
@@ -407,7 +407,7 @@ for u in $(manageable_units); do
     # build time, so a unit ADDED to units/ afterwards was installed by
     # pull-sync's converge_units and then sat `disabled` forever — it could not
     # run on any existing container without an image rebuild, which is the
-    # opposite of a fleet that updates itself from git. Observed 2026-08-08:
+    # opposite of a fleet that updates itself from git. Observed:
     # development-vessel-seed.service converged, showed `disabled; preset:
     # enabled`, and never ran.
     #
@@ -453,7 +453,7 @@ done
 # for SELECTION (a manifest vessel is installed on demand, never auto-selected),
 # but it silently dropped an explicit DISABLED_VESSELS naming one: the operator
 # said no, resolve_list resolved it (all_units includes manifest), and then no
-# pass acted on it. Measured 2026-09-15: DISABLED_VESSELS=
+# pass acted on it. Measured: DISABLED_VESSELS=
 # federation-transport-vessel.service had no effect — the spoke entrypoint
 # auto-enabled the unit anyway (that auto-enable now honors DISABLED_VESSELS
 # itself; this pass covers the previously-installed-unit case, where the real
@@ -516,7 +516,7 @@ log "done — $disabled_count unit(s) $( [ "$DRY_RUN" = "1" ] && echo 'would be'
 # units run the super-repo's scripts through that variable, and the pattern used to name only
 # /vessels/ and the image paths, so six timer-driven probes shipped with no inventory entry
 # and no warning. Four of them query SurrealDB directly and failed on every compute and spoke
-# node, where there is no local store (measured 2026-10-02 on node 2 and the public spoke).
+# node, where there is no local store (measured on a second node and the public spoke).
 all_inventory_units() { jq -r '.vessels[].unit' "$INV"; jq -r '.vessels[].unit' "$INV" | sed -n 's/\.timer$/.service/p'; }
 unmanaged="$(comm -13 \
   <(all_inventory_units | sort -u) \

@@ -5,8 +5,7 @@
  * per COMMIT across EVERY ref. That number is not landings: --all includes local branches that
  * never reached origin/dev, a gap that took a check commit, a fix and two recommits counts four
  * times, and a check-only commit (the test that should go red, no fix) counts the same as a fix.
- * Measured over origin/dev from 10-10: 27 such commits formed 20 gap families, of which 10 were
- * check-only, and only 4 had a fix whose gap closed landed_verified.
+ * Many such commits are check-only, and few carry a fix whose gap closed landed_verified.
  *
  * The tally here counts ONE landing per GAP FAMILY whose fix commit is on origin/dev AND whose
  * gap's own check closed it (closed_reason landed_verified, the closure evidence the verifier

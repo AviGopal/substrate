@@ -9,7 +9,7 @@
  * backward-chaining model) reads. Without this the edge table is empty (or, after
  * a one-shot backfill, drifts stale as new compositions accrue).
  *
- * INCREMENTAL BY DEFAULT (2026-07-06). The original reconciler re-derived the
+ * INCREMENTAL BY DEFAULT. The original reconciler re-derived the
  * full edge set from ALL traces every run — three keyset passes over the whole
  * trace table (223k+ rows) plus a full pass over execution_trace_content, every
  * 30 minutes. Under load this was the single largest source of SurrealDB
@@ -31,9 +31,9 @@
  *
  * A FULL PASS FIRST CHECKS THE VIEW IS LIVE. The view this reads
  * (v_paradigm_execution_traces) is a materialized view over `execution`, and a
- * materialized view can stop following writes: on 2026-10-06 it held 2 rows, and
- * the weekly full pass read those 2 rows as the whole history, wrote absolute
- * counts from them and advanced last_full_at, all "successfully". Before paging,
+ * materialized view can stop following writes and hold a handful of rows, which a
+ * full pass would read as the whole history, writing absolute counts from them and
+ * advancing last_full_at, all "successfully". Before paging,
  * a full pass now counts the view and `execution` (two plain counts); below
  * LIVE_VIEW_MIN_RATIO it logs, files a gap, writes NOTHING (no edge, no state)
  * and exits non-zero, so the next run tries the full pass again.
@@ -74,7 +74,7 @@ const PASS = process.env.SURREAL_PASS || process.env.SURREALDB_PASSWORD || "";
 const USER = process.env.SURREALDB_USERNAME || "root";
 const auth = "Basic " + Buffer.from(`${USER}:${PASS}`).toString("base64");
 
-// DISCOVERY-ROUTED STORE LOCATION (2026-07-05). This reconciler must run against
+// DISCOVERY-ROUTED STORE LOCATION. This reconciler must run against
 // the substrate whose store the traces actually LAND in — after the SC-P4 hub
 // cutover the local reconciler kept scanning a store the trace stream had left,
 // freezing composition edges (and λ₁) for 3 days while 500+ traces/hr flowed
@@ -173,7 +173,7 @@ export function makeSql(o: {
     // same contention that rate-limits trace-GET). A single rapid-fire pagination run
     // makes hundreds of calls, so one transient empty response would abort the whole
     // reconcile. Retry on parse/transport failure with backoff so the topology actually
-    // gets rebuilt. (2026-06-19) A call that never answers is aborted after timeoutMs and
+    // gets rebuilt. A call that never answers is aborted after timeoutMs and
     // counts as a failed attempt.
     const f = o.fetchImpl ?? fetch;
     let lastErr: unknown;
@@ -533,7 +533,7 @@ export async function reconcile(deps: ReconcileDeps): Promise<{ exitCode: number
   };
 
   // ---- §2b merge) shape-flow edges -------------------------------------------------------
-  // PROVENANCE-BACKED edges (2026-06-27). Shape-flow edges are not wrapper→child dispatch
+  // PROVENANCE-BACKED edges. Shape-flow edges are not wrapper→child dispatch
   // spokes — they are REAL consumption links: (1) = B's input shapes actually intersected
   // A's output shapes across a composition chain; (2) = a consumer task referenced a
   // producer task via {{placeholder}} (consumed_from_task_ids). These are genuine capability
@@ -549,7 +549,7 @@ export async function reconcile(deps: ReconcileDeps): Promise<{ exitCode: number
     // MUST use the same separator as the §2 parent-nesting join and the split below —
     // a separator mismatch here once made every shape-flow key split to [whole, undefined],
     // writing child_activity_id NONE and aborting the entire reconcile on the first genuine
-    // edge. That single-char mismatch is why genuine_edges was frozen for weeks. (2026-06-26)
+    // edge. That single-char mismatch is why genuine_edges was frozen for weeks.
     const key = from + " " + to;
     provenanceEdgeKeys.add(key);
     const e = edges.get(key) ?? { count: 0, success: 0 };
@@ -706,7 +706,7 @@ export async function reconcile(deps: ReconcileDeps): Promise<{ exitCode: number
   // explicit `ORDER BY id` full-sorts the table per page and times out the /sql call.
   // LIMIT/START over an UNORDERED select is worse still: storage-order rows shift as the
   // table grows and deep pagination silently SKIPS rows, disproportionately the most
-  // RECENT — the original source of the ~33% orphan rate. (2026-06-19)
+  // RECENT — the original source of the ~33% orphan rate.
   //
   // INCREMENTAL: index range scan on executed_at (idx_activity_execution_traces_executed_at,
   // verified Iterate Index via EXPLAIN), keyset-advanced on executed_at itself since the
@@ -798,7 +798,7 @@ export async function reconcile(deps: ReconcileDeps): Promise<{ exitCode: number
   // the selection scaffold-exclusion gate can PREFER a durable column over the read-time
   // touchesHub/isSynthetic heuristic. Mirrors activity-api's classifyCompositionEdge
   // (src/routes/activities.ts) and the read-time HUB/SYNTH markers below: hub takes
-  // priority over scaffold; genuine = neither endpoint is a hub or scaffold. (2026-06-26)
+  // priority over scaffold; genuine = neither endpoint is a hub or scaffold.
   const KIND_HUB = ["validator-dispatch", "slot-binding"];
   const KIND_SCAFFOLD = ["compose-", "genuine-edge-probe", "edge-probe", "probe-producer", "probe-consumer", "probe-orchestrator"];
   function classifyEdge(p: string, c: string, provenanceBacked = false): "genuine" | "scaffold" | "hub" {
@@ -807,7 +807,7 @@ export async function reconcile(deps: ReconcileDeps): Promise<{ exitCode: number
     // A provenance-backed consumption edge (real shape-flow or {{placeholder}} reference)
     // is genuine even if an endpoint is a compose-* composite — the composite genuinely
     // consumed/produced the shape. Only the NAME heuristic demoted it to scaffold; the
-    // provenance overrides the name. (2026-06-27)
+    // provenance overrides the name.
     if (provenanceBacked) return "genuine";
     if (KIND_SCAFFOLD.some((s) => (p || "").includes(s) || (c || "").includes(s))) return "scaffold";
     return "genuine";
@@ -843,7 +843,7 @@ export async function reconcile(deps: ReconcileDeps): Promise<{ exitCode: number
     const [p, c] = key.split(" ");
     // Guard + diagnostic: a malformed pair (empty/undefined endpoint) writes a NONE into the
     // SCHEMAFULL child_activity_id/parent_activity_id and aborts the WHOLE reconcile (sql()
-    // rethrows on status!=OK). Skip it and log the raw key bytes so the source can be found. (2026-06-26)
+    // rethrows on status!=OK). Skip it and log the raw key bytes so the source can be found.
     if (!p || !c) { log("skip-malformed-edge keyJSON=" + JSON.stringify(key) + " p=" + JSON.stringify(p) + " c=" + JSON.stringify(c)); continue; }
     const prior = fullMode ? { count: 0, success: 0 } : existingCounts.get(key) ?? { count: 0, success: 0 };
     const e = { count: prior.count + delta.count, success: prior.success + delta.success };
@@ -871,7 +871,7 @@ export async function reconcile(deps: ReconcileDeps): Promise<{ exitCode: number
     } catch (err) {
       // One malformed edge must NEVER abort the whole topology rebuild (sql() rethrows on
       // status!=OK). Log the culprit's raw key + endpoints and continue so the genuine-edge
-      // signal still lands; the bad pair is then root-caused offline. (2026-06-26)
+      // signal still lands; the bad pair is then root-caused offline.
       log("upsert-failed rid=" + rid + " key=" + JSON.stringify(key) + " p=" + JSON.stringify(p) + " c=" + JSON.stringify(c) + " err=" + String(err).slice(0, 200));
     }
   }
@@ -927,7 +927,7 @@ export async function reconcile(deps: ReconcileDeps): Promise<{ exitCode: number
   // this is the HONEST capability-composition signal.
   const SYNTH = ["genuine-edge-probe", "edge-probe", "probe-producer", "probe-consumer", "probe-orchestrator"];
   const isSynthetic = (s: string) => SYNTH.some((k) => (s || "").includes(k));
-  // Topology learns from BOTH failures and successes (operator direction 2026-06-19):
+  // Topology learns from BOTH failures and successes:
   // every edge carries execution_count + success_count, so we distinguish an organic
   // composition that was merely ATTEMPTED from one that actually SUCCEEDED. A failed
   // organic edge is still a real topology link (the substrate TRIED to compose these

@@ -2,7 +2,7 @@
 /**
  * coherence-recover.ts — SELF-RECOVERY from orthogonality erosion (MDP §12.7).
  *
- * WHY (2026-06-20): the coherence metric found the action-space dictionary is bloated with
+ * WHY: the coherence metric found the action-space dictionary is bloated with
  * EXACT-behavioral duplicates (e.g. ~140 detect-unclassified_failure_* variants, cosine 1.0) —
  * the drafter authoring a new cell per instance. Duplicate cells SPLIT credit (fewer samples
  * each → slower convergence) and inflate the action space → orthogonality (the moat) erodes.
@@ -50,10 +50,10 @@ const sig = (a: any): string => {
 const RECOVER_CUT = new Date(Date.now() - 30 * 24 * 3600_000).toISOString();
 const [execs] = await sql(`SELECT activity_id, count() AS n FROM v_paradigm_execution_traces WHERE executed_at >= type::datetime("${RECOVER_CUT}") GROUP BY activity_id;`);
 const execN = new Map<string, number>((execs || []).map((r: any) => [r.activity_id, r.n ?? 0]));
-// KEY FORM (2026-10-07): execN is keyed by the view's bare activity_id ("dup-b"), while each member carries its RECORD
+// KEY FORM: execN is keyed by the view's bare activity_id ("dup-b"), while each member carries its RECORD
 // id ("activity:⟨dup-b⟩", or a backtick form). Looking a member up by its record id missed every time, so every count
-// read 0 and the "canonical" kept was whichever member the query returned first (node 1: 0 counts found where 802
-// exist; 813 live runs since 06-20 demoting 20,871). Look up by the bare id.
+// read 0 and the "canonical" kept was whichever member the query returned first, demoting live runs.
+// Look up by the bare id.
 const keyOf = (id: unknown): string => String(id ?? "").replace(/^activity:/, "").replace(/^[⟨`]/, "").replace(/[⟩`]$/, "");
 const countOf = (a: any): number => execN.get(keyOf(a.id)) ?? 0;
 const families = new Map<string, any[]>();

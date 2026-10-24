@@ -7,7 +7,7 @@
 #
 # The lane may tighten arming but never loosen it, and that rests on the gate seeing the protected
 # judge tests (the test files autonomyScope.excluded_paths lists for the vessel, e.g.
-# development-vessel's system-authored-gap-checks.test.ts) go red. Measured 2026-10-05: that file is
+# development-vessel's system-authored-gap-checks.test.ts) go red. That file can be
 # ORDER-POLLUTED, red inside one full run and green alone, on an unchanged sha. When it is already red
 # in the full run at base, a real loosening shows the SAME failure names at base and tip, so the
 # name-set gate reads "no newly-failing test" and converges: the protection silently fails.

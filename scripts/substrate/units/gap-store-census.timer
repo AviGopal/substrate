@@ -5,8 +5,8 @@ Description=Gap-store census timer
 # Hourly, which is a cost decision rather than a detection-latency one. The count
 # requires pulling every gap row — the cheap store-wide signal in the same
 # response covers only OPEN gaps and is therefore not monotonic, so it cannot
-# support the high-water comparison this check is built on. The 2026-09-09 loss
-# sat undetected for at least eight hours, so an hourly reading closes that
+# support the high-water comparison this check is built on. A store loss can
+# sit undetected for hours, so an hourly reading closes that
 # window by most of an order of magnitude at one large response per hour.
 OnActiveSec=10min
 OnUnitActiveSec=1h

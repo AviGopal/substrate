@@ -1,4 +1,4 @@
-// The 401 branches d08cc51e added to the newly keyed script reads, exercised against a real listener.
+// The 401 branches of the keyed script reads, exercised against a real listener.
 //
 // WHY. Each of those reads now sends the node key; a stale key gets 401. The branches print
 // `credential refused (401) — key stale?` and report what they could not measure as UNKNOWN /

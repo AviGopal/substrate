@@ -2,7 +2,7 @@
 /**
  * coherence-metric.ts — the ORTHOGONALITY health signal (SUBSTRATE_AS_MDP §12.7).
  *
- * WHY (2026-06-20): orthogonality = block-diagonal ⋆/L = the factorized Thompson posterior;
+ * WHY: orthogonality = block-diagonal ⋆/L = the factorized Thompson posterior;
  * it is "the moat" that keeps learning tractable (O(1/ε²) per cell). The named failure mode is
  * "action-space growth tends to RAISE dictionary COHERENCE, eroding the very orthogonality that
  * makes growth efficient." So the honest health metric is NOT global λ₂ (mixing — anti-orthogonal)

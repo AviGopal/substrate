@@ -2,9 +2,9 @@
 # placement-gate-installed-on-existing-clone.test.sh: with the container-wide ledger hooks path (core.hooksPath =
 # scripts/substrate/git-hooks-ledger, whose pre-commit only chains to .git/hooks/pre-commit and returns 0 when that is absent),
 # a super-repo clone that was NOT created this boot must still get setup-git-push's placement-gate wrapper, so a commit adding
-# a top-level path outside ALLOWED_TOPLEVEL_DIRS is refused. Measured 2026-10-10 on node1: the clone predated the
-# "install only into a clone created this boot" rule, .git/hooks/pre-commit never existed, and every system commit skipped
-# the gate (edc68d49 force-added runtime leases/ that way).
+# a top-level path outside ALLOWED_TOPLEVEL_DIRS is refused. A clone that predates the
+# "install only into a clone created this boot" rule has no .git/hooks/pre-commit, and every system commit skips
+# the gate (runtime files were force-added that way).
 #   control:  ledger hooksPath + no .git/hooks/pre-commit => the out-of-place commit LANDS (the hole)
 #   fix:      the installer block from setup-git-push, run with SUPER_CLONED_THIS_BOOT=0 => wrapper written, same commit REFUSED
 #             by the placement check; an existing foreign hook (no marker) is left alone

@@ -148,7 +148,7 @@ jobs:
           # which commit, or that the cause is unpushed work rather than a
           # credential or network fault.
           #
-          # Observed 2026-08-19: repos/identity-vessel pinned to 318a9b22,
+          # Observed: repos/identity-vessel pinned to an older commit,
           # never pushed to its remote. EVERY image build failed here for days
           # while the error said nothing about which repo or why.
           #

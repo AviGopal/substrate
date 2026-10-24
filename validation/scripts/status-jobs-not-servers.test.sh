@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # status-jobs-not-servers.test.sh: substrate-status's `served` level judges the units that SERVE. A timer-triggered
 # Type=oneshot job runs, exits and serves nothing in between, so a failed last run of one must be reported in the
-# evidence but must not fail `served`. Measured 2026-10-13 on a compute node: rhythm-cadence.service (role compute,
+# evidence but must not fail `served`. Observed on a compute node: rhythm-cadence.service (role compute,
 # timer-triggered oneshot) failed one run, and `served` failed for a node whose serving units were all up.
 #   (a) unit_is_job: oneshot + TriggeredBy → job; oneshot without a trigger → not; a simple service → not
 #   (b) MUST-FAIL: eval_served counts a down job like a self-maintenance unit (reported, not failing)

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # status-boot-stall-window.test.sh: substrate-status's `live` level must judge a stuck boot over a short window, not
 # from one instant. Right after a boot, timer-started one-shots run back to back; read once, the gap between two of
-# them ("starting", 1 job queued, 0 running) failed `live` on a fleet that had just reached `seeded` (upgrade
-# acceptance, 2026-10-12). A real stall (no job ever runs) must still fail.
+# them ("starting", 1 job queued, 0 running) failed `live` on a fleet that had just reached `seeded`.
+# A real stall (no job ever runs) must still fail.
 #   (a) MUST-FAIL: queued-but-idle at the first sample, a job running at the next -> not failed (boot note instead)
 #   (b) MUST-FAIL: queued-but-idle, then the boot finishes (running) -> not failed
 #   (c) control: queued-but-idle at every sample -> fails, naming the job counts

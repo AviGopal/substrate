@@ -2,7 +2,7 @@
 /**
  * compose-teacher.ts — SUBSTRATE-NATIVE continuous composition-teaching loop.
  *
- * WHY (2026-06-19, operator direction "the system could do this itself"): the
+ * WHY (operator direction "the system could do this itself"): the
  * substrate's topology is a near-pure star because no real activity composes other
  * real activities — every capability is single-step + lifecycle hooks. Its native
  * greenfield generator (generative-frontier-gap-tick) is DEADLOCKED: it refuses to
@@ -68,7 +68,7 @@ async function log(rec: Record<string, unknown>) {
 const stamp = () => new Date().toISOString();
 
 // 1) Real (non-hub, non-probe, non-proposed) activities with declared shapes.
-//    `tasks` is fetched too so we can detect GOAL-SEEDED head producers (2026-06-26):
+//    `tasks` is fetched too so we can detect GOAL-SEEDED head producers:
 //    a producer whose input is extracted from the goal TEXT (goal_file_extract over
 //    {{goal}}, problem_detection / source_code / code_quality on goal-derived file
 //    paths) emits nothing real when dispatched cold with a goal that names no file —
@@ -78,7 +78,7 @@ const [acts] = await sql(`SELECT id, input_shapes, output_shapes, tasks FROM act
 const real = (acts || []).filter((a: any) => a.id && !isHub(a.id) && !isSynthetic(a.id));
 const actById = new Map<string, any>((real || []).map((a: any) => [a.id, a]));
 
-// GOAL-SEEDED head detection (2026-06-26). A producer is "goal-seeded" if its work
+// GOAL-SEEDED head detection. A producer is "goal-seeded" if its work
 // derives from a file path embedded in the goal text — i.e. it has a goal_file_extract
 // task, or a task that reads file paths / source / quality from {{goal}} or
 // {{impulse:goal_files}}. Cold-dispatched with a path-less goal these ENOENT and emit
@@ -106,7 +106,7 @@ const since = new Date(Date.now() - 24 * 3600_000).toISOString();
 const [succRows] = await sql(`SELECT activity_id, count() AS ok FROM v_paradigm_execution_traces WHERE executed_at >= type::datetime("${since}") AND success = true GROUP BY activity_id;`);
 const succeeds = new Set<string>((succRows || []).filter((r: any) => (r.ok ?? 0) > 0).map((r: any) => r.activity_id));
 
-// 2b) PRODUCER VIABILITY (2026-06-26, hollow-composite root cause). compose-teacher
+// 2b) PRODUCER VIABILITY (hollow-composite root cause). compose-teacher
 //     used to select producer→consumer pairs PURELY by declared-shape compatibility: a
 //     producer that DECLARES output_shape S paired with a consumer that consumes S. But
 //     many producers (e.g. analyze-source-to-concept) need external files supplied
@@ -166,7 +166,7 @@ for (const a of existing || []) {
   const tasks = a.tasks || [];
   // Recognise the genuine activities-as-resolver form (resolver = a template id, i.e.
   // contains "activity:"/"⟨"), the resolver:"compose"+subActivityId form, and the legacy
-  // resolver:"activity"+config.templateId form, so we don't re-author. (2026-06-26)
+  // resolver:"activity"+config.templateId form, so we don't re-author.
   const looksLikeTemplateId = (s: any) => typeof s === "string" && (s.includes("activity:") || s.includes("⟨"));
   const dispatched = tasks
     .filter((t: any) => looksLikeTemplateId(t.resolver) || (t.resolver === "compose" && t.subActivityId) || (t.resolver === "activity" && t.config?.templateId))
@@ -195,12 +195,12 @@ const leafPair = (p: Pair) => !isComposite(p.producer) && !isComposite(p.consume
 // edges), so we PREFER cross-component pairs. A fragmented genuine graph has λ₂=0 ⇒
 // stability_headroom NEGATIVE (sub-critical, SUBSTRATE_AS_DYNAMICS.md §3); BRIDGING two
 // components is the single highest-leverage move to lift λ₂ off zero. Within-component
-// edges only thicken an already-connected blob and don't change connectivity. (2026-06-26)
+// edges only thicken an already-connected blob and don't change connectivity.
 const parent = new Map<string, string>();
 const find = (x: string): string => { let r = x; while (parent.get(r) && parent.get(r) !== r) r = parent.get(r)!; parent.set(x, r); return r; };
 const union = (a: string, b: string) => { parent.set(find(a), find(b)); };
 try {
-  // CRITICAL (2026-06-27): union ONLY over edges tagged edge_kind="genuine" — the SAME
+  // CRITICAL: union ONLY over edges tagged edge_kind="genuine" — the SAME
   // definition spectral-gap.ts uses for its genuine-component count. Previously this
   // unioned over ALL non-hub/non-synthetic edges, which INCLUDED the 333 `scaffold`
   // wrapper-spoke edges (compose-* dispatch parentage). Those scaffold spokes
@@ -222,7 +222,7 @@ try {
 const comp = (id: string): string => (parent.has(id) ? find(id) : `solo:${id}`);
 const bridges = (p: Pair) => comp(p.producer) !== comp(p.consumer); // spans two genuine components (or pulls in an isolated node)
 
-// COLD-RUNNABLE HEAD (2026-06-26, hollow-composite fix). A composite's head producer
+// COLD-RUNNABLE HEAD (hollow-composite fix). A composite's head producer
 // runs at dispatch time with goal = the composite description (no caller-supplied
 // impulses). For the head to emit REAL output its work must NOT depend on external
 // files we don't provide. Two head classes run cold successfully:
@@ -255,7 +255,7 @@ const coldRunnableHead = (p: Pair) => isSelfSourcing(p.producer) || isGoalSeeded
 // empty and the chain going hollow), then leaf endpoints, then strict over relaxed.
 const rank = (p: Pair) =>
   (bridges(p) ? 0 : 8) + (coldRunnableHead(p) ? 0 : 4) + (leafPair(p) ? 0 : 2) + (p.strict ? 0 : 1);
-// VIABILITY FILTER (2026-06-26): restrict candidates to pairs whose PRODUCER demonstrably
+// VIABILITY FILTER: restrict candidates to pairs whose PRODUCER demonstrably
 // produced the bridge shape in a recent successful standalone trace — this is what stops
 // the substrate from authoring composites around producers that ENOENT from a cold start
 // (the hollow-composite root cause). The filter runs BEFORE the bridge/leaf/strict sort,
@@ -292,7 +292,7 @@ if (fresh) {
     input_shapes: [],
     output_shapes: [fresh.shape],
     proposed: false,
-    // GENUINE producer→consumer composite (2026-06-26). Earlier this authored two
+    // GENUINE producer→consumer composite. Earlier this authored two
     // SIBLING `resolver:"activity"` dispatches with NO data-flow link between them — the
     // consumer never referenced the producer, so consumed_from_task_ids stayed empty and
     // childActivityId was not reliably set, meaning composition-edge-reconcile derived only
@@ -313,13 +313,13 @@ if (fresh) {
     // consumer references {{dispatch_producer_<shape>}} so the engine's placeholder scan
     // sets consumedFromTaskIds=["dispatch_producer"] → reconcile §2b Option-B emits the
     // genuine producer→consumer edge. Declared in/out shapes also enable the shape-flow
-    // path. (2026-06-26)
+    // path.
     tasks: [
       { id: "dispatch_producer", description: `Run ${fresh.producer} to produce ${fresh.shape}.`, resolver: fresh.producer, outputShapes: [fresh.shape], config: { reason: "composition step 1: produce " + fresh.shape } },
       { id: "dispatch_consumer", description: `Run ${fresh.consumer} consuming ${fresh.shape} produced upstream.`, resolver: fresh.consumer, inputShapes: [fresh.shape], config: { reason: "composition step 2: consume " + fresh.shape, upstream: `{{dispatch_producer_${fresh.shape}}}` } },
     ],
   };
-  // SEED the dispatched goal (2026-06-26). If the head producer is goal-seeded — it
+  // SEED the dispatched goal. If the head producer is goal-seeded — it
   // pulls a file path out of the goal text — embed a concrete real repo file path so
   // goal_file_extract / problem_detection run on a REAL file and emit real output,
   // which then flows producer→consumer (non-hollow). Self-sourcing heads need no seed.
@@ -356,16 +356,14 @@ let star_ratio: number | null = null, headroom: number | null = null;
 try {
   const sg = (await Bun.file("/workspace/metrics/spectral-gap.jsonl").text()).trim().split("\n").filter(Boolean);
   const last = JSON.parse(sg[sg.length - 1]!);
-  // STALENESS MUST BE AS LOUD AS ABSENCE, and it was not. A missing file lands in the catch
+  // STALENESS MUST BE AS LOUD AS ABSENCE. A missing file lands in the catch
   // below and leaves these null — legibly unavailable. A file whose PRODUCER DIED simply
   // keeps serving its final line, and the reading is indistinguishable from a fresh one.
   //
-  // Measured 2026-09-16: spectral-gap.service had been `failed` since 2026-09-14 on a source
-  // file truncated mid-expression by an automated "vessel code drift detected and committed"
-  // commit (4e4170a8, which deleted 45 lines and added none, removing the JSONL append and
-  // the shape publish outright). The last line of this file was written 2026-09-07. Every
-  // consumer had been reading a NINE-DAY-OLD λ₂ as the current state of the composition
-  // graph, confidently, with nothing anywhere reporting a fault.
+  // A producer can fail outright, for instance on a source file truncated mid-expression by an
+  // automated drift commit that removes the JSONL append and the shape publish. Its file then
+  // keeps serving a days-old λ₂ that every consumer reads as the current state of the
+  // composition graph, with nothing anywhere reporting a fault.
   //
   // One tick is 20 minutes; six hours is eighteen missed writes, which is a dead producer
   // rather than a slow one. Past that, treat the reading as ABSENT — the same state a
@@ -392,12 +390,12 @@ const rec = {
   at: stamp(), action, composite: compositeId,
   execution_id: result?.executionId ?? null, outcome: result?.status ?? null,
   chainable_pairs_available: pairs.length, existing_composites: existingCompositeIds.size,
-  // producer-viability filter visibility (2026-06-26 hollow-composite fix):
+  // producer-viability filter visibility (hollow-composite fix):
   viable_pairs: producible === null ? null : viableCandidates.length,
   producible_pairs: producible === null ? null : producible.size,
   viability_fallback: usedFallback,
   producer_viability: producible === null ? "unavailable" : usedFallback ? "fallback_unfiltered" : "filtered",
-  // cold-runnable / seed visibility (2026-06-26 hollow-composite fix):
+  // cold-runnable / seed visibility (hollow-composite fix):
   head_cold_runnable, head_seeded, seed_file,
   star_ratio, headroom, unlock_at: 0.35,
 };

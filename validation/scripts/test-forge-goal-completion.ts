@@ -6,7 +6,7 @@
  * from validation/scripts/test-22-forge-and-paths.ts which calls
  * VesselForgeHost directly.
  *
- * Spec: openspec/changes/2026-05-18-forge-goal-completion-test/
+ * Spec: the forge-goal-completion test change proposal (kept in history)
  *   - proposal.md
  *   - design.md (assertion tables §c, §d; witness defs §g)
  *   - specs/forge-goal-completion-test/spec.md (R1..R8)
@@ -65,7 +65,7 @@ const DEPTH: 0 | 1 = VARIANT.endsWith("depth-1") ? 1 : 0;
 const MINIBOB_BIN = process.env.MINIBOB_BIN ?? "minibob";
 
 // FORGE_RUNTIME: selects which executor drives the forge. Option C step 1
-// (openspec/changes/2026-04-26-impulse-activity-loop/design.md §Phase 22)
+// (the impulse-activity loop design)
 // pivots from minibob-as-god-object toward ias-executor-ts as the canonical
 // executor. Default is "ias-executor" (direct in-process GoalHost/VesselForgeHost
 // call per task §4.2). Legacy paths remain behind flags for parity comparisons:
@@ -170,7 +170,7 @@ interface DiscoveryProbe {
 }
 
 async function probeDiscovery(shape: string, phase: DiscoveryProbe["phase"]): Promise<DiscoveryProbe> {
-  // 2026-05-20 fix: discovery /resolve with vesselCapability pointer expects
+  // discovery /resolve with vesselCapability pointer expects
   // `pointer.shape: <name>` (inside the pointer object), NOT `shapes: [...]`
   // at the top level. Earlier the shape went outside pointer and discovery
   // ignored it, returning 0 vessels — which masked the fact that the forge
@@ -895,7 +895,7 @@ interface TestReportBody {
 
 async function emitTestReport(body: TestReportBody): Promise<void> {
   // design.md §e: POST to activity-api via test_report_write impulse shape.
-  // The shape is contracted by 2026-05-18-test-audit-loop. Until the write
+  // The shape is contracted by the test-audit loop. Until the write
   // resolver lands, the POST will 404; the report is still printed to stdout
   // for at-a-glance debug and the test exits with the right code.
   try {

@@ -75,7 +75,7 @@ fi
 # app://obsidian.md), NOT in any vault JSON, so we seed a known-good, CRC-valid
 # leveldb that already carries  enable-plugin-substratevault0000 = "true". The
 # blobs below are the exact bytes Obsidian itself wrote after a human trusted the
-# vault once (captured 2026-06-16); replaying them is idempotent and takes effect
+# vault once; replaying them is idempotent and takes effect
 # on the next launch only — we never touch a running Obsidian's open files.
 OBSIDIAN_LS_DIR="/root/.config/obsidian/Local Storage/leveldb"
 TRUST_KEY="enable-plugin-substratevault0000"

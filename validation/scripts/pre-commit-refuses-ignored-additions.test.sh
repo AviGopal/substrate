@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # pre-commit-refuses-ignored-additions.test.sh: the pre-commit block "ignored paths stay untracked" must refuse a staged
-# ADDITION whose path .gitignore ignores (the edc68d49 class: runtime files force-added by an autonomous commit), pass a normal
+# ADDITION whose path .gitignore ignores (the class of runtime files force-added by an autonomous commit), pass a normal
 # addition, and not refuse a MODIFICATION of an already-tracked ignored file. The block is extracted from the real hook
 # (between its own marker and the next section) and run in a scratch repo carrying the real .gitignore, so the hook's other
 # checks (placement, glue tests) do not decide the result. validation/results/*.json is an ignored path inside an allowed dir.

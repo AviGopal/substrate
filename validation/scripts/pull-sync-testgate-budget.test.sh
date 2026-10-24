@@ -4,7 +4,7 @@
 # slice and unit_timeout_s). Runs the script's own code against a temp vessel clone with `bun` stubbed;
 # small timeouts stand in for the real 240 s / 900 s, so the timing cases run in seconds. No network.
 #
-# Measured 2026-10-06 on the hub: GATE_BUDGET_SECONDS defaulted to 1000 against TimeoutStartSec=900 and
+# Observed: GATE_BUDGET_SECONDS defaulted to 1000 against TimeoutStartSec=900 and
 # was checked ONCE, before a vessel's gate; activity-api's gate then started up to five more suite runs,
 # systemd SIGTERMed every tick at 900 s, every vessel after it never converged, and the deferral /
 # starvation path never fired, so the stall was silent.
@@ -18,7 +18,7 @@
 #   (d) MUST-FAIL: N consecutive deferrals of the same candidate file the budget-starved gap (no silent
 #       starvation), including deferrals that happen MID-gate (the counter resets only on a finished gate)
 #   (e) MUST-FAIL: the budget follows the LIVE unit's TimeoutStartSec (systemctl), not a constant: 10min ->
-#       600, 1h 30min -> 5400, an unloaded unit / infinity / garbage -> 3600 (the shipped unit's value; 1800 until 2026-10-13)
+#       600, 1h 30min -> 5400, an unloaded unit / infinity / garbage -> 3600 (the shipped unit's value)
 #   (h) MUST-FAIL: a slow clone-dependency install eats the time left -> deferred before the first run
 #   (j) MUST-FAIL: time left between 1x and 2x a suite run at the parent/candidate overlay -> deferred BEFORE
 #       either overlay run (the overlay is two runs; starting the first would let the second be killed)

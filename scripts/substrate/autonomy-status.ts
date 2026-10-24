@@ -2,7 +2,7 @@
 /**
  * autonomy-status.ts — READ-ONLY one-shot "is the substrate reaching autonomy?" view.
  *
- * REDESIGN PRINCIPLE (2026-07-03): every metric shown here must track a quantity
+ * REDESIGN PRINCIPLE: every metric shown here must track a quantity
  * that is VISIBLE TO THE SYSTEM ITSELF AS A SHAPE — i.e. resolvable through the
  * substrate's own impulse surface (dev-vessel detectors/aggregators, discovery),
  * not an operator-side artifact only the host can see. The view has two tiers:
@@ -17,8 +17,7 @@
  *      shape it derives from; rows with NO shape backing are flagged
  *      "not shape-visible" as closure gaps rather than silently kept.
  *
- * Usefulness annotations come from the measured causal ledger
- * (validation/results/2026-07-03-learning-transfer-causal-ledger.md): SF-coverage
+ * Usefulness annotations come from the measured causal ledger of learning transfer: SF-coverage
  * and genuine-edge density PREDICT per-goal reached-rate; crystallization does
  * not (bookkeeping dial); stalled-credit is a zero-variance tripwire. A dial
  * that predicts nothing is labelled so.
@@ -36,7 +35,7 @@ const STALE_MIN = Number(process.env.STALE_MIN ?? 45); // collector runs every 2
 const DEEP = process.env.AUTONOMY_DEEP === "1";
 
 // ── shape resolution (the system's own view) ────────────────────────────────
-// DISCOVERY-FIRST (2026-07-05): each shape is routed to whichever vessel the
+// DISCOVERY-FIRST: each shape is routed to whichever vessel the
 // discovery registry says PRODUCES it (vesselCapability → resolve_endpoint),
 // instead of assuming development-vessel at a hardcoded port. The static
 // candidates below remain only as the fail-soft fallback when discovery is
@@ -133,8 +132,8 @@ async function fleetStats(): Promise<{ totalVessels?: number; totalShapes?: numb
 // ── collector series (host-cached HISTORY of shape-visible quantities) ──────
 // The AUTHORITATIVE copy is what the collector writes inside the substrate at
 // /workspace/metrics/autonomy-metrics.jsonl (a docker volume). Gather every
-// reachable source and pick the freshest (re-fixed 2026-06-19: reading only the
-// host cache silently froze the view while the collector kept writing).
+// reachable source and pick the freshest (reading only the host cache silently
+// freezes the view while the collector keeps writing).
 const HOST_FALLBACK = `${import.meta.dir}/workspace/metrics/autonomy-metrics.jsonl`;
 const CONTAINER = process.env.SUBSTRATE_CONTAINER ?? "substrate-live";
 const CONTAINER_PATH = "/workspace/metrics/autonomy-metrics.jsonl";
@@ -206,7 +205,7 @@ if (fleet) {
 }
 
 // ── LIFT GATE (windowed over the series; shape: substrate_health_tick) ──────
-// The gate FLAPS tick-to-tick; a single-point headline is a coin flip (2026-06-19).
+// The gate FLAPS tick-to-tick; a single-point headline is a coin flip.
 // The series rows are the collector's ingest of substrateHealthReport emissions,
 // so this is a HISTORY of a shape-visible quantity — resolve substrate_health_tick
 // for the live value (slow; it recomputes the full gate, so not done here).
@@ -225,8 +224,8 @@ if (last) {
   console.log(`  LIFT GATE        ${liftVerdict}${liftWin}   templates ${last.lift?.template_count ?? "?"}   vessels_down ${last.lift?.vessels_down ?? "?"}   [shape: substrate_health_tick]`);
   if (flapping) {
     const fc = last.lift?.flap_context;
-    // Stability gates on TEMPLATE-authoring burst only (2026-06-19); edges are
-    // governed growth, shown separately — matches the authoritative gate (6f1546e).
+    // Stability gates on TEMPLATE-authoring burst only; edges are
+    // governed growth, shown separately — matches the authoritative gate.
     const ctx = fc
       ? `evidence ${fc.above_floor_1h}/${fc.distinct_run_1h} run-activities ≥8 execs (conc ${fc.concentration_ratio}; gate wants ≥0.25) · authoring ${fc.new_templates_1h ?? 0} templates/hr (gate wants ≤10) · +${fc.new_edges_1h ?? 0} edges/hr (healthy growth, not gated)`
       : "(flap_context not yet recorded)";
@@ -379,7 +378,7 @@ if (!last) {
   process.exit(0);
 }
 
-// a probe reading null persistently = dark instrument (single-point nulls FLAP; 2026-06-19)
+// a probe reading null persistently = dark instrument (single-point nulls FLAP)
 const PERSIST = Math.min(3, win.length);
 const recent = win.slice(-PERSIST);
 const persistentlyNull = (path: string) =>
@@ -453,8 +452,8 @@ const tph = last.dec_limiters?.rho_sample_traces_per_hour;
 const edges = last.backward_model?.composition_edges;
 const ksp = kspread(last);
 // Real spectral gap (Fiedler λ₂): prefer the collector-folded snapshot (fresh);
-// fall back to the container's spectral-gap.jsonl, then the host mirror (stale
-// by hours on 2026-06-19 — mis-ranked the scarcest limiter).
+// fall back to the container's spectral-gap.jsonl, then the host mirror (which
+// can be hours stale and mis-rank the scarcest limiter).
 // ⚠ NOT SHAPE-VISIBLE: spectral-gap.jsonl is a host/collector artifact with no
 // resolver shape; the system itself cannot see λ₂. Closure gap — the system-visible
 // alternates are signature_cluster_scan / vector_space_orthogonality_audit.

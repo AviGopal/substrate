@@ -203,8 +203,7 @@ if (dormant.length) {
 // ── Landed-truth freshness: refresh the super-repo mirror before reading ───
 // The super-repo clone is refreshed only at container start (git-push-setup
 // oneshot), so every landed-truth read below goes stale over container uptime
-// — a 3-day-old mirror produced false progress_stall/self_commit_stale gaps on
-// 2026-07-09. This is the one deliberate exception to "strictly read-only":
+// — a days-old mirror produces false progress_stall/self_commit_stale gaps. This is the one deliberate exception to "strictly read-only":
 // a bounded, best-effort ff-only refresh of our OWN mirror so the reads that
 // follow reflect reality. Never merges divergence; failure is non-fatal.
 {
@@ -365,7 +364,7 @@ if (!existsSync(WORKSPACE_ROOT)) {
 // /workspace/trace-spool and replays them every 60s (delete on 2xx, delete on
 // deterministic 4xx, keep on 5xx/transport). A spool file older than a few
 // replay cycles therefore means delivery is PERMANENTLY failing for that trace
-// — the observed instance (2026-07-07): the hub store 500'd duplicate
+// — the observed instance: the hub store 500'd duplicate
 // execution_ids ("already contains" on idx_activity_executions_execution_id),
 // the sink classified 5xx as retryable, and 43 already-delivered traces
 // replayed 4,200+ times/day with no detector aware. Stale spool = either a

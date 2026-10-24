@@ -1,5 +1,5 @@
 /**
- * efficiency-failure-tick (2026-06-28) — the autonomous DETECTION cadence for
+ * efficiency-failure-tick — the autonomous DETECTION cadence for
  * self-management + self-improvement. Runs the two emit-gap detectors on a timer so
  * the substrate CONTINUOUSLY surfaces, without operator prompting:
  *   - its own inefficiencies  (efficiency_scan  -> performance_inefficiency gaps)

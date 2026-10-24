@@ -1,7 +1,7 @@
 /**
  * Rewrite a loopback endpoint into one the CALLER can actually dial.
  *
- * WHY THIS IS SHARED (task #60, 2026-08-10). Every vessel registers its
+ * WHY THIS IS SHARED (task #60). Every vessel registers its
  * IN-CONTAINER address, and `derivePublicEndpoint` in discovery-vessel rewrites
  * the PORT (8xxx → 18xxx, the host mapping convention) while carrying the
  * loopback HOSTNAME through verbatim. That is the origin of registry rows like

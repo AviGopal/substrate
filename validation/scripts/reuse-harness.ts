@@ -188,8 +188,8 @@ interface DiscriminationReport {
   }>;
 }
 
-// Aggregate audit summary for the test-audit loop (OpenSpec
-// 2026-05-18-test-audit-loop Phase G). Populated by the weekly harness post-run
+// Aggregate audit summary for the test-audit loop.
+// Populated by the weekly harness post-run
 // by fetching test_audit_report rows for the trailing window and bucketing them
 // by audit_subtype / caveat / pending-proposal count.
 interface AuditSummary {
@@ -1123,7 +1123,7 @@ function printSummary(
 /**
  * Aggregate test_audit_report rows over a trailing 30-day window and bucket
  * them by status / subtype / caveat. Used by the harness's Phase G audit
- * summary (OpenSpec 2026-05-18-test-audit-loop §G.1.2).
+ * summary (the test-audit loop).
  *
  * Returns undefined when the activity-api refuses the read (e.g. write resolver
  * not yet live on the deploy under test) — callers must tolerate the absence.
@@ -1429,7 +1429,7 @@ async function main() {
     }
   }
 
-  // Aggregate audit-summary (OpenSpec 2026-05-18-test-audit-loop Phase G).
+  // Aggregate audit-summary (the test-audit loop).
   // Best-effort: failure here MUST NOT block the harness from writing the
   // primary recommend/search MRR report.
   let auditSummary: AuditSummary | undefined;
@@ -1486,7 +1486,7 @@ async function main() {
   await writeFile(outputPath, JSON.stringify(report, null, 2), "utf8");
   console.log(`\nReport written to: ${outputPath}\n`);
 
-  // Test-audit loop integration (OpenSpec 2026-05-18-test-audit-loop Phase G.1).
+  // Test-audit loop integration.
   // Register reuse-harness as a test (idempotent) and emit a test_report
   // carrying the MRR + audit-summary as the structural outcome the audit loop
   // consumes. The report id is appended to the on-disk JSON for downstream

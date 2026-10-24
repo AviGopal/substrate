@@ -163,7 +163,7 @@ fi
 echo ""
 echo "RESULT: PASS — no regression."
 
-# ── forge-goal-completion test (2026-05-18-forge-goal-completion-test §T6) ────
+# ── forge-goal-completion test ─────────────────────────────────────────────────
 #
 # Rotates target shape weekly by `week_number % 3`. Logs go to
 # validation/results/{date}-forge-goal.log; the test_report impulse id (if the
@@ -211,7 +211,7 @@ else
   # regression gate.
 fi
 
-# ── Sensitivity-probe sweep (OpenSpec 2026-05-18-test-audit-loop Phase G.2) ────
+# ── Sensitivity-probe sweep (the test-audit loop) ───────────────────────────────
 #
 # For every registered test, dispatch the run-sensitivity-probe meta-activity
 # so the audit loop has fresh sensitivity_evidence rows for its trailing-7-day

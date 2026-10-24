@@ -4,7 +4,7 @@
 #
 # The failure it pins: federation-relay-large-frames.sh starts `timeout 220 bun relay.ts &` and its EXIT trap
 # SIGKILLs the timeout, which does not reach the bun child (GNU timeout also moves its command into a new process
-# group). Measured 2026-10-19 in an image container: one more live bun after every corpus run, and a long
+# group). Observed in an image container: one more live bun after every corpus run, and a long
 # image-coverage-map.check.sh session read false FAILs late in its run.
 #
 #   (a) a fixture that backgrounds a child under `timeout` (a new process group) and returns: after shadow-eval
@@ -20,7 +20,7 @@
 #   (g) reap_session refuses a non-numeric id
 # load (SHADOW_PRESSURE=N runs it, ONLY inside a CPU-capped cgroup; off by default because it spends CPU on purpose):
 #   (h) with 4 busy loops per CPU, N corpus runs give 0 "could not isolate" REFUSE and 0 surviving children.
-#       Measured 2026-10-19: a 2-s isolation POLL refused a fixture and leaked its child in 2 of 20 glue rounds on
+#       Observed: a 2-s isolation POLL refused a fixture and leaked its child in some glue rounds on
 #       a loaded host; the handshake has no timing window to miss.
 #
 # usage: validation/scripts/gate-shadow-eval-reaps-fixture-children.test.sh [shadow-eval.sh] [reference-shadow-eval.sh]
@@ -92,8 +92,8 @@ if [ -n "$REF" ]; then
   reap
 fi
 # (h) burns CPU on purpose, so it refuses to run where that would load a shared host: it needs a cgroup CPU limit
-# (cpu.max other than "max", as in `docker run --cpus N`). Measured 2026-10-19: run uncapped on a shared node host it
-# drove the load average to ~95 and voided every other session's timing reading.
+# (cpu.max other than "max", as in `docker run --cpus N`). Run uncapped on a shared host it
+# drives the load very high and voids every other session's timing reading.
 cap_ok() { local m; m="$(cat /sys/fs/cgroup/cpu.max 2>/dev/null)"; case "$m" in ''|max*) return 1 ;; *) return 0 ;; esac; }
 if [ "${SHADOW_PRESSURE:-0}" -gt 0 ] 2>/dev/null && ! cap_ok; then
   echo "  (h) skipped: SHADOW_PRESSURE needs a CPU-capped cgroup (run it in a container started with --cpus); this one is uncapped"

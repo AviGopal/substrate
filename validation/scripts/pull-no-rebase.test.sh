@@ -2,8 +2,8 @@
 # pull-no-rebase.test.sh: every fast-forward-only `git pull` in scripts/substrate must carry --no-rebase, and the glue layer's
 # super-repo pull must converge a clone whose git config says pull.rebase=true while an UNRELATED tracked file is dirty.
 # Why: with pull.rebase=true, `git pull --ff-only` becomes a rebase, and a rebase refuses any dirty tracked file ("cannot pull
-# with rebase: You have unstaged changes") even when the incoming range never touches it. 2026-10-10 the hub's glue layer
-# stopped converging that way on a runtime lease file, while node1 (no such config) pulled past the same kind of file.
+# with rebase: You have unstaged changes") even when the incoming range never touches it. A glue layer
+# stops converging that way on a runtime lease file, while a node with no such config pulls past the same kind of file.
 #   static:     no `pull … --ff-only` without --no-rebase in scripts/substrate/*.sh
 #   control:    on the fixture, the pull WITHOUT --no-rebase fails (the fixture reproduces the hazard)
 #   behaviour:  the real super-repo pull line from substrate-pull-sync.sh, run on the fixture, fast-forwards and keeps the

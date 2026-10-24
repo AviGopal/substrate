@@ -3,9 +3,9 @@ Description=Gap-store census — flags the gap store collapsing against its own 
 # Records how many gaps the substrateGap resolver serves and reports a drop below
 # half the highest count seen in the preceding 14 days. Closed gaps keep their
 # rows, so this series is monotonic apart from deliberate pruning and a large drop
-# is not attrition. Precedent: 2026-09-09, 4,113 gaps at 14:35 and 44 at 22:59
-# across a vessel restart, unreported; recovery depended on orphaned atomic-write
-# temps that happened to still be parseable.
+# is not attrition: a store can drop from thousands of gaps to a few dozen
+# across a vessel restart, unreported, and recovery then depends on orphaned atomic-write
+# temps that happen to still be parseable.
 #
 # It asks the resolver rather than reading gaps.json: WORKSPACE_ROOT differs
 # between this script's environment and the vessel process's, and several stale

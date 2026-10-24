@@ -46,7 +46,7 @@ WorkingDirectory=/vessels/development-vessel
 # timeout from stopping the vessel: the reads then refuse (fail closed).
 ExecStartPre=-/usr/bin/timeout -k 5 30 /root/.bun/bin/bun /scripts/bootstrap-seeder.ts --pool-policy
 ExecStart=/root/.bun/bin/bun /vessels/development-vessel/src/index.ts
-# Template seeding used to run here as ExecStartPost. It now lives in
+# Template seeding lives in
 # development-vessel-seed.service.
 #
 # The reason is not that seeding was wrong, but that systemd holds a Type=simple
@@ -55,13 +55,13 @@ ExecStart=/root/.bun/bin/bun /vessels/development-vessel/src/index.ts
 # unit ordered into it sat in `start waiting` behind this one. The old comment
 # here said a long start-post "does not block serving", which was true of this
 # vessel's own socket and false of the rest of the fleet. Measured on a restart
-# 2026-08-08: stateful-ui-vessel, boredom-vessel.timer, substrate-pull-sync.timer,
+# stateful-ui-vessel, boredom-vessel.timer, substrate-pull-sync.timer,
 # self-recovery.timer and substrate-ready were all queued behind it.
 #
-# 2026-06-18 (kept for the record): the default 90s start timeout used to kill
+# The default 90s start timeout kills
 # the whole cgroup when that seed overran it, which also SIGTERM'd in-flight
 # patch_with_tools attempts mid-edit. With the seed gone the start phase is just
-# the server coming up, so the generous budget below is no longer load-bearing —
+# the server coming up, so the generous budget below is not load-bearing —
 # it is left in place because lowering it buys nothing and risks re-opening that.
 TimeoutStartSec=600
 Restart=on-failure

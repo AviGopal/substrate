@@ -1,5 +1,5 @@
-// fed-ingress-auth-enforce.test.ts — THE REAL TRANSPORT SERVER WITH INBOUND AUTHENTICATION IN ENFORCE MODE (operator
-// exception, user ruling 2026-10-12). Companion to fed-ingress-auth.test.ts (the pure logic) and fed-ingress-log.test.ts
+// fed-ingress-auth-enforce.test.ts — THE REAL TRANSPORT SERVER WITH INBOUND AUTHENTICATION IN ENFORCE MODE (an operator
+// exception). Companion to fed-ingress-auth.test.ts (the pure logic) and fed-ingress-log.test.ts
 // (mode off: today's behaviour, unchanged).
 //
 // WHAT IS JUDGED. This tree's federation-transport-server.ts + ingress-auth.ts + repos/libp2p-federation-transport run as a

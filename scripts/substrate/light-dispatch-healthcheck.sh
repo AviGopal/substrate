@@ -5,7 +5,7 @@
 # (crash / clean exit / OOM). It cannot catch a process that is still alive and
 # holding port 8280 but no longer answering — a wedged event loop, a stuck
 # in-flight dispatch, a deadlock. That failure mode silently livelocks the whole
-# boredom shape-pool (every shape dispatches through :8280); observed 2026-06-13.
+# boredom shape-pool (every shape dispatches through :8280); observed.
 #
 # This probe runs on a timer. It curls /health with a hard timeout: a hung
 # process accepts the TCP connect but never responds, so --max-time is what

@@ -2,14 +2,13 @@
  * validator-liveness-tick.ts — a detector for the SILENT-VALIDATOR class.
  *
  * A validator that stops running emits silence, and silence is indistinguishable
- * from health. Measured 2026-09-09: of 102 validator-shaped activities that had
- * executed since 08-25, only 12 ran in the last 24h — 90 were dormant, at ages of
- * 7 to 16 days. The dormant set was precisely the wiring-validation layer
- * (advertised-shape-coverage 15d, orphaned-capability 16d, detector-coverage 9d,
- * coverage_tick 12d, substrate_health_tick 12d). Nothing reported it.
+ * from health. Most validator-shaped activities can go dormant for days at once,
+ * and the dormant set is precisely the wiring-validation layer (advertised-shape
+ * coverage, orphaned capabilities, detector coverage, coverage and health ticks).
+ * Nothing reports it.
  *
  * WHY THIS RUNS FROM SYSTEMD AND NOT FROM THE POOL. Every survivor of that census
- * was systemd-timed or a very-high-frequency tick; every dormant one was a
+ * was systemd-timed or a very-high-frequency tick; the dormant ones are
  * `satisfier:*` or `learned-composition-*`, i.e. Thompson-selected. Cadence
  * currently rides on selection, and selection has no obligation to keep a
  * validator alive — including `rhythm_conductor_tick` itself, which is registered

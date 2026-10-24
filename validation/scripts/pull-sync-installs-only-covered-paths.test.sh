@@ -17,7 +17,7 @@
 #   (i) each install site named below carries a cov_allows guard
 #   (j) mirror-to-live's vessel convergence call sites do not consult the map (vessel code keeps converging)
 #   (k) the tick's done line reports coverage_skipped and coverage_map
-# the dated exemption (user ruling via qa 2026-10-19: the units' exemption lapses at its own date, not at deploy):
+# the dated exemption (the units' exemption lapses at its own date, not at deploy):
 #   (l) a parse-level unit listed in converges_today_exempt with a FUTURE expires converges as today, and the map
 #       load names the exemption as in force
 #   (m) the same unit with a PAST expires is left as baked (must-fail for an exemption that never lapses)

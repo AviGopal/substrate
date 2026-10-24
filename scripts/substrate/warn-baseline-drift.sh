@@ -13,7 +13,7 @@
 #
 # That guard is CORRECT and must not be weakened: rolling back to a hand-synced
 # live tree would silently discard whatever the operator had just deployed.
-# Measured 2026-08-09: three consecutive self-development runs were blocked by a
+# Measured: three consecutive self-development runs were blocked by a
 # baseline this Makefile had poisoned minutes earlier, and the cause was
 # invisible from the deploy side — the sync printed success either way.
 #

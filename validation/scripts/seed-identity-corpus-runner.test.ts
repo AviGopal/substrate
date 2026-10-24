@@ -1,7 +1,7 @@
 // seed-identity-corpus-runner.test.ts: on a genuine first boot seed-identity mints goal-host's corpus runner as a SEPARATE
 // principal with ONLY verdict-corpus:write, writes it to its scoped files (secrets-manifest: goal-host-vessel) and the
 // persisted store, never to the shared /etc/substrate/env; goal-host's main key never carries the corpus scope, because
-// the walk's egress sends that key (key option (d), 2026-10-12). Its tools-exec scope: seed-identity-tools-exec.test.ts.
+// the walk's egress sends that key. Its tools-exec scope: seed-identity-tools-exec.test.ts.
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";

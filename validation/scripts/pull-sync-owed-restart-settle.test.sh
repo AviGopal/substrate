@@ -4,8 +4,8 @@
 #
 # The failure it pins: a restart deferred for in-flight work and taken on a later tick ("taking OWED restart") fell
 # straight into the content short-circuit, so it neither health-checked the restarted unit nor wrote
-# /workspace/.last-good/<v>. Measured 2026-10-13: development-vessel's pin stayed on a commit four loaded landings old,
-# on both nodes. Every pin reader (the same-tick revert, self-recovery's revert) would then roll back all of them at once.
+# /workspace/.last-good/<v>. Observed: development-vessel's pin stayed several loaded landings behind
+# on every node. Every pin reader (the same-tick revert, self-recovery's revert) would then roll back all of them at once.
 #
 # owed_restart_settle (taken from the script itself; systemctl, /health, the mirror, the revert hash and the gap
 # writer stubbed and recorded):

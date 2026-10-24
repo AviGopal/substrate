@@ -4,7 +4,7 @@
 # required EnvironmentFile is absent. Gap: pull-sync-converges-new-units-before-the-new-
 # script-renders-the-files-they-require.
 #
-# Replays 10-02 / 3b7b31b9: the INSTALLED pull-sync is an OLD one (the script under
+# Replays a self-update: the INSTALLED pull-sync is an OLD one (the script under
 # test with its secret renderer cut out); the super-repo's origin is one commit ahead
 # with the NEW pull-sync (the script under test), a render-secret-scope.sh that writes
 # env.d/new.env, and units/new.service, which loads that file without '-'. Runs the
@@ -37,7 +37,7 @@ show() { sed 's/^/    /' "$T/out.txt" | tail -25; }
 sed -e "s#/usr/local/share/substrate#$T/share#g" -e "s#/usr/local/bin#$T/bin#g" \
     -e "s#/usr/lib/systemd/system#$T/unit#g" -e "s#/etc/substrate#$T/etc#g" \
     -e "s#/workspace#$T/ws#g" "$SCRIPT" > "$T/new.sh"
-# OLD = the same, without the secret renderer (what the node ran before 3b7b31b9)
+# OLD = the same, without the secret renderer (what a node ran before the renderer existed)
 sed -e 's#^  _cu_rss="\$_cu_root/scripts/substrate/render-secret-scope.sh"$#  _cu_rss=/nonexistent/render-secret-scope.sh#' "$T/new.sh" > "$T/old.sh"
 cmp -s "$T/new.sh" "$T/old.sh" && { echo "FAIL - could not derive the OLD script (renderer line not found)"; exit 1; }
 

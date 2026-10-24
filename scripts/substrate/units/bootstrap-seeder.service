@@ -5,7 +5,7 @@ Description=bootstrap-seeder (seed shared activity templates)
 # Run after activity-api is up so POST /v2/activities/templates is available
 After=identity-seeder.service activity-api.service
 # identity-seeder first: seeding with the pre-mint bootstrap key writes org-less
-# rows that fail schema validation (observed 2026-07-02 first-boot test).
+# rows that fail schema validation.
 Wants=activity-api.service
 
 # Smoke test (task 3.3):
@@ -24,7 +24,7 @@ Wants=activity-api.service
 # Restart=on-failure + RestartSec=20 + StartLimitBurst=10 below, a seeder that
 # keeps failing held the boot for up to ten minutes — and on a federated spoke
 # it fails readily, because it seeds 18 templates over the network to the HUB's
-# activity-api and those calls time out. Measured 2026-08-08 on a spoke restart:
+# activity-api and those calls time out. On a spoke restart
 # `systemctl list-jobs` showed multi-user.target, stateful-ui-vessel,
 # boredom-vessel.timer, substrate-pull-sync.timer, self-recovery.timer and
 # substrate-ready all in `start waiting` behind this one unit, with
@@ -33,7 +33,7 @@ Wants=activity-api.service
 # NOTHING orders after this unit — no After=, Requires= or Wants= anywhere in
 # units/ names it — so the target was waiting for it and getting no ordering
 # guarantee in return. Type=simple marks it started as soon as it forks; the
-# seeding still runs, still retries on failure, and no longer decides how long
+# seeding still runs, still retries on failure, and does not decide how long
 # the substrate takes to finish booting.
 #
 # The retry policy below is deliberately kept: it is what makes the seeder
@@ -44,7 +44,7 @@ WorkingDirectory=/vessels/ias-executor-ts
 ExecStart=/root/.bun/bin/bun /scripts/bootstrap-seeder.ts
 # Self-heal the boot race: the target vessel answers /health before its DB
 # connection is warm, so a too-early seed run fails. on-failure + generous
-# burst lets the oneshot converge without operator help (2026-07-02).
+# burst lets the oneshot converge without operator help.
 Restart=on-failure
 RestartSec=20
 StandardOutput=journal

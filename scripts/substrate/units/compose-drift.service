@@ -16,7 +16,7 @@ Description=Compose-drift detector — flags the composer degrading its own anch
 # A detector for the authoring lane cannot be authored and scheduled by the
 # authoring lane. Per CLAUDE.md, a check cannot be scheduled by the mechanism it
 # exists to recover — this is that stated bootstrap-tier exception, and the
-# precedent is f0cfb91: a one-line inverted boolean that degraded the composer
+# precedent is a one-line inverted boolean that degraded the composer
 # threefold for two days while passing every gate on the way in.
 After=activity-api.service surrealdb.service development-vessel.service
 

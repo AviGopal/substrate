@@ -55,7 +55,7 @@ set +a
 # refuses to boot when it finds an EXISTING DATASTORE and no persisted
 # API_KEY_SECRET — correctly, since the datastore's keys were signed with a
 # secret it can no longer produce. So the container came up fine for as long as
-# it kept running and could NOT BE RESTARTED. Observed 2026-08-08 on a spoke
+# it kept running and could NOT BE RESTARTED. Observed on a spoke
 # that had been healthy for hours: `docker start` -> "refusing to boot
 # insecure", exit 1. A substrate without a local datastore never trips the check
 # and stays unaffected, which is why this hid.

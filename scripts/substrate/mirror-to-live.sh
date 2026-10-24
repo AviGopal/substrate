@@ -12,7 +12,7 @@
 # drift between callers. Copies src/ plus the root build files; deliberately
 # NOT node_modules (bun install owns that) and NOT .git.
 #
-# cp INTO an existing dir nests (src/src — the docker-cp gotcha, 2026-07-01):
+# cp INTO an existing dir nests (src/src — the docker-cp gotcha):
 # always rm the target first, then cp the tree.
 set -uo pipefail
 
@@ -52,7 +52,7 @@ target_sha() { if [ -n "$REF_SHA" ]; then git -C "$SRC" rev-parse HEAD 2>/dev/nu
 # push leg raced, the wrong branch checked out) mirrors the wrong code and the
 # deploy still exits 0 saying "mirrored". Every caller then believes it shipped
 # what it asked for. That is task #51, and it is the same shape as the six sync
-# targets that copied one file while printing success (50f10bb9).
+# targets that copied one file while printing success.
 #
 # Pass the SHA you MEANT to deploy — as $3 or MIRROR_EXPECT_SHA — and a mismatch
 # fails loudly BEFORE the live tree is touched. Omitted, behaviour is exactly as
@@ -80,7 +80,7 @@ fi
 
 # The cutover push leg leaves the clone's working tree with unstaged deletions
 # (src/ gone) after committing only its staged files; mirroring that state
-# severs the live runtime's source (observed obsidian-vessel, 2026-07-13).
+# severs the live runtime's source (observed obsidian-vessel).
 # These clones exist solely to push committed state — restore to HEAD first so
 # the mirror always reflects the commit, never push-leg working-tree damage.
 # NOTE: `checkout -f -- .` restores from the INDEX, which the cutover push leg leaves
@@ -107,7 +107,7 @@ fi
 # flat under /vessels, so rewrite to absolute paths — the same rewrite the
 # Dockerfile does at build time. Without it, bun install over the image's
 # physical copy produced a circular package.json symlink and the vessel
-# crash-looped on "Cannot find module" (analysis-vessel, 2026-07-02).
+# crash-looped on "Cannot find module" (analysis-vessel).
 # Change detection compares the REWRITTEN form so an unchanged dep set never
 # triggers a reinstall.
 NEWPKG=""

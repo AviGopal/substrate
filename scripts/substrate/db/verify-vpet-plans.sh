@@ -3,7 +3,7 @@
 # ---------------------------------------------------------------------------
 # Resource-SAFE verification for the v_paradigm_execution_traces (vpet) hot
 # path. Runs ONLY metadata + EXPLAIN (query-plan, non-executing) + scalar
-# count() probes — it NEVER materialises view rows, so it is safe to run even
+# count probes — it NEVER materialises view rows, so it is safe to run even
 # under memory pressure. Do NOT add a bare SELECT to this script.
 #
 # What it answers (the three open questions the audit could not close live):

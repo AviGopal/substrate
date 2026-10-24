@@ -1,4 +1,4 @@
-// INBOUND AUTHENTICATION FOR THE OVERLAY (operator exception, user ruling 2026-10-12: inbound authentication only).
+// INBOUND AUTHENTICATION FOR THE OVERLAY (operator exception: inbound authentication only).
 //
 // The libp2p ingress used to authorize nothing: it resolved every request with this transport's own key, so anyone who
 // could dial got whatever the transport could reach (peer ids are sha256 of a guessable vesselId; Noise gives

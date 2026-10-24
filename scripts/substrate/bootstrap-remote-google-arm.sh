@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# bootstrap-remote-google-arm.sh — temporary conduit that makes the syzygy hub's
+# bootstrap-remote-google-arm.sh — temporary conduit that makes the hub's
 # live llm-resolver-google arm consumable by THIS machine's substrate, so
 # code-change goals can land while every local LLM provider key is credit-dead.
 #

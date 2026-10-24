@@ -558,7 +558,10 @@
             "repos/goal-host-vessel/src/inbound-auth.ts",
             "repos/development-vessel/src/lib/gap-store-merge.ts",
             "repos/development-vessel/src/lib/call-credential.ts",
-            "repos/development-vessel/src/lib/gap-forward-queue.ts"
+            "repos/development-vessel/src/lib/gap-forward-queue.ts",
+            "repos/development-vessel/src/resolvers/vessel-mitosis-cutover.ts",
+            "repos/development-vessel/src/resolvers/test-suite.ts",
+            "repos/development-vessel/src/test-child-env.ts"
           ],
           "require_falsifier_classes": [
             "class2"
@@ -850,7 +853,10 @@
             "repos/goal-host-vessel/src/inbound-auth.ts",
             "repos/development-vessel/src/lib/gap-store-merge.ts",
             "repos/development-vessel/src/lib/call-credential.ts",
-            "repos/development-vessel/src/lib/gap-forward-queue.ts"
+            "repos/development-vessel/src/lib/gap-forward-queue.ts",
+            "repos/development-vessel/src/resolvers/vessel-mitosis-cutover.ts",
+            "repos/development-vessel/src/resolvers/test-suite.ts",
+            "repos/development-vessel/src/test-child-env.ts"
           ],
           "require_falsifier_classes": [
             "class2"

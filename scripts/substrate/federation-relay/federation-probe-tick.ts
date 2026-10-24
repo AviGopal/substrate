@@ -912,7 +912,7 @@ async function negativeControls(
     //
     // Reporting the second as `partial` claims we looked and came up short, when in
     // fact there was nothing to look at — the same conflation `unstamped` vs `none`
-    // exists to prevent in the falsifier census.
+    // exists to prevent in the falsifier inventory.
     nc.NC4 = flags.length === 0 ? 'skipped_no_connection'
       : sawRelayed && sawDirect ? 'fired'
       : !sawRelayed && !relayedTargetsExist ? 'not_applicable_no_relayed_peer'

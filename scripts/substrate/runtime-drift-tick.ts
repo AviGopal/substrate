@@ -14,11 +14,10 @@
  * compose)"), which is safe only if some other holder will revert it. When the other
  * holder has already exited, nobody does, and the un-reverted edit persists.
  *
- * WHY THIS IS A WATCHDOG AND NOT AN ACTIVITY. Observed twice on 2026-09-13: the live copy
- * of `development-vessel/src/resolvers/gap-to-feature.ts` was left syntactically invalid
- * (a duplicated `const`, then an inline-duplicated array literal) while the COMMIT was
- * clean. The unit stayed `active` and `/health` returned ok because the module was already
- * loaded — the damage only detonates on the next restart, taking the gap->spec pipeline
+ * WHY THIS IS A WATCHDOG AND NOT AN ACTIVITY. A live copy such as
+ * `development-vessel/src/resolvers/gap-to-feature.ts` can be left syntactically invalid
+ * while the COMMIT is clean. The unit stays `active` and `/health` returns ok because the
+ * module is already loaded — the damage only detonates on the next restart, taking the gap->spec pipeline
  * with it. A check that must survive a broken `gap-to-feature` cannot be scheduled by the
  * mechanism it exists to recover, which is the liveness-watchdog exemption in CLAUDE.md's
  * script-retention rule. It is the same reason the other two ticks are exempt.
@@ -27,11 +26,10 @@
  * repair below. Silent and trace-free when nothing has drifted.
  *
  * REPAIR IS NOT THIS TICK'S JOB — IT IS pull-sync's, AND pull-sync ALREADY DOES IT.
- * `substrate-pull-sync.sh:1198` calls `mirror-to-live "$v" "$CLONE_DIR"` on its own
- * 10-minute timer, and patch-with-tools.ts:618 states the ownership outright: "Repair
- * stays owned by pull-sync / mirror-to-live." Measured 2026-09-13: pull-sync restored a
- * deliberately drifted metric-collector-vessel file at 23:53:31 with no help from this
- * tick, whose own journal shows no repair. So RUNTIME_DRIFT_REPAIR defaults to OFF: a
+ * `substrate-pull-sync.sh` calls `mirror-to-live "$v" "$CLONE_DIR"` on its own
+ * 10-minute timer, and patch-with-tools.ts states the ownership outright: "Repair
+ * stays owned by pull-sync / mirror-to-live." pull-sync restores a deliberately drifted
+ * file with no help from this tick. So RUNTIME_DRIFT_REPAIR defaults to OFF: a
  * second writer converging the same trees on the same cadence is a race, not a safety net,
  * and the one thing the class was NOT missing is a repairer.
  *
@@ -70,9 +68,9 @@ const CLONE_ROOT = process.env.RUNTIME_DRIFT_CLONE_ROOT ?? "/workspace/git/vesse
 // Not every vessel is a submodule with a clone under CLONE_ROOT. An IN-TREE vessel lives
 // at <super-repo>/repos/<name> and has no CLONE_ROOT entry at all, so a definition of
 // "authoritative source" that names only CLONE_ROOT leaves it coverable by nobody. That is
-// not hypothetical: measured 2026-09-16, relevance-sink-vessel sat with a runtime file that
-// did not parse while a correct, committed copy of it was present at repos/<name>/src the
-// entire time, and this tick could only narrate its own blindness once every three minutes.
+// not hypothetical: an in-tree vessel can sit with a runtime file that does not parse while a
+// correct, committed copy of it is present at repos/<name>/src, and this tick could only
+// narrate its own blindness every few minutes.
 // This constant exists so the gap below can NAME the candidate authority it found. Repair
 // still belongs to pull-sync / mirror-to-live (see the header); this tick reports.
 const SUPER_REPO_ROOT = process.env.RUNTIME_DRIFT_SUPER_REPO_ROOT ?? "/workspace/git/super-repo";

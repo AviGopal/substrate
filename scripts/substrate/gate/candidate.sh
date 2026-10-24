@@ -12,7 +12,7 @@
 # Verdicts (stdout, one per line; `GAP <impulse-json>` lines are filed by the caller):
 #   none        the candidate touches no gate path (or IS the accepted sha)
 #   widening    it edits/removes an accepted fixture, or drops a gate_paths/fixture_paths
-#               entry (H2, the 6ac1aa6 class). Not promotable on parity; P has no criterion
+#               entry (H2). Not promotable on parity; P has no criterion
 #               yet, so a widening is never promoted here. Gap category authority_widening.
 #   refused     shadow evaluation failed, or the candidate cannot be judged (accepted sha has
 #               no git identity, or the candidate does not descend from it). Gap.

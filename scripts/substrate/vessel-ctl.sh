@@ -3,7 +3,7 @@
 #
 # ONE method for attaching/detaching a vessel, driven by the declarative
 # vessels.manifest.json (volume copy at /workspace/substrate/fleet/ preferred).
-# SELF-CONTAINED (2026-07-02): runs natively IN-CONTAINER (where it ships at
+# SELF-CONTAINED: runs natively IN-CONTAINER (where it ships at
 # /usr/local/bin/vessel-ctl) or from a host (docker exec hop via --container).
 # Vessel source comes from the IN-CONTAINER git clones
 # (/workspace/git/vessels/<name>, cloned on demand) — never a host checkout,
@@ -82,7 +82,7 @@ unit_of() { case "$1" in *.service|*.timer|*.socket) printf '%s' "$1";; *) print
 # stopped one — so a stopped target selected the docker-exec path, every csh()
 # failed, manifest_json() emitted nothing, and the caller was told
 # `vessel '<name>' not in manifest`. That names the wrong cause entirely: the
-# manifest is fine and the container is down. Observed 2026-08-19 against a
+# manifest is fine and the container is down. Observed against a
 # container another session had stopped seconds earlier; the misdiagnosis cost a
 # whole run. Ask whether it is RUNNING, which is the thing docker exec needs.
 if command -v docker >/dev/null 2>&1 \
@@ -98,7 +98,7 @@ fi
 csh() { if [ "$IN_CONTAINER" = 1 ]; then bash -c "$1"; else docker exec "$CONTAINER" bash -c "$1"; fi; }
 
 # PROBE WINDOWS ARE MAINTENANCE HOLDS. A held-out probe run on a node is measured against an undisturbed
-# node, so no unit restarts or stops there while a probeWindow record is open (qa's rule, 2026-10-03,
+# node, so no unit restarts or stops there while a probeWindow record is open (
 # gap probe-windows-are-announced-by-message-so-a-restart-can-land-inside-one). Same rules as pull-sync's
 # side of the hold:
 #   - probeWindow: shaped poolImpulse, body {node, from, until, tag, reason}, read at use time from this
@@ -196,7 +196,7 @@ RUNTIME_DIR=/vessels
 # Desired dynamic membership, volume-backed. The rendered unit lives in
 # /etc/systemd/system — container filesystem, NOT a volume — so a recreate
 # keeps the manifest and the source but silently drops every installed unit
-# (measured by the 2026-09-21 lifecycle audit: "manifest and source persist,
+# (measured by the lifecycle audit: "manifest and source persist,
 # but generated service unit disappears"). install/uninstall maintain this
 # record; entrypoint.sh re-installs its members on every boot.
 INSTALLED_JSON=/workspace/substrate/fleet/installed.json
@@ -280,7 +280,7 @@ case "$ACTION" in
       # working vendor unit in /usr/lib with one whose WorkingDirectory does not
       # exist, so the next restart dies with status=200/CHDIR — an install that
       # returned ok:true broke a vessel that was serving before it ran (measured
-      # by the 2026-09-21 lifecycle audit: install "success", then 200/CHDIR).
+      # by the lifecycle audit: install "success", then 200/CHDIR).
       echo "{\"ok\":false,\"action\":\"install\",\"vessel\":\"$VESSEL\",\"container\":\"$CONTAINER\",\"error\":\"WORKDIR ABSENT ($wd) — refusing to install a unit that cannot chdir; if a baked vendor unit exists it keeps serving. Create the workdir (clone the super-repo) or point the manifest workdir at a baked path.\"}"
       exit 1
     elif ! csh "[ -f '$wd/package.json' ]"; then

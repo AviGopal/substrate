@@ -12,7 +12,7 @@
  * Appends one line per tick to /workspace/metrics/self-development-trend.jsonl.
  * Read it (tail / jq) any time — across sessions — to see whether the running
  * loop genuinely improves. Low/flat early is EXPECTED (the composer's S1→S2
- * frontier); the question is the slope over time. (2026-06-28)
+ * frontier); the question is the slope over time.
  *
  * Self-activating from the run-dir; env-gated SELF_DEV_TREND (default 1).
  */

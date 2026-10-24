@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# J9 (= J4, the 847025e2 replay, end to end): after bootstrap, a lane-pushed
+# J9 (= J4, the no-self-exec replay, end to end): after bootstrap, a lane-pushed
 # substrate-pull-sync.sh is NOT executed. The node runs gate-runner -> the ACCEPTED pull-sync
 # (the real script, fixed paths moved into a temp tree; systemctl/curl stubbed). origin gains
 # a pull-sync that drops a marker in BIN_DIR when run. The tick fetches and fast-forwards the

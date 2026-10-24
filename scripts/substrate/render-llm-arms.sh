@@ -3,7 +3,7 @@
 # list (scripts/substrate/llm-arms.json, or the LLM_ARMS env override), instead
 # of hand-authored per-provider .service files.
 #
-# Operator ask #7 (ratified 2026-07-19): "one provider per unit, but nothing
+# Operator ask #7: "one provider per unit, but nothing
 # hardcoded — in the hub setup we should be able to configure that multiple
 # start, and adding new vessels should be simple regardless of where they are so
 # long as they are in the same discovery."

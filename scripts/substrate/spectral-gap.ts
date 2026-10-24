@@ -3,7 +3,7 @@
  * spectral-gap.ts — compute the REAL spectral gap of the activity composition graph,
  * not the edge-count proxy.
  *
- * WHY (2026-06-19): the DEC convergence rate is R ~ λ₁·ρ_sample·κ⁻¹, where λ₁ is the
+ * WHY: the DEC convergence rate is R ~ λ₁·ρ_sample·κ⁻¹, where λ₁ is the
  * spectral gap (credit-mixing speed) of the composition graph. autonomy-metrics tracked
  * λ₁ as raw edge COUNT (28) — which hides topology degeneracy. The live graph is a STAR:
  * one hub (validator-dispatch) at degree ~27, 26 leaves at degree 1. Edge-count says
@@ -27,7 +27,7 @@
 // (SURREAL_PASS="..."). systemd's EnvironmentFile strips the quotes, but a raw file
 // read does not — a bare `(\S+)` capture grabs the literal quotes and the password
 // fails to verify (401, non-JSON body → .json() throws, blinding this metric). Strip
-// surrounding quotes so the direct-SQL instrumentation survives the convention. (2026-06-26)
+// surrounding quotes so the direct-SQL instrumentation survives the convention.
 const PASS = (await Bun.file("/etc/substrate/env").text()).match(/SURREAL_PASS="?([^"\s]+)"?/)?.[1] ?? "";
 const q = async (sql: string): Promise<any[]> =>
   (await (await fetch("http://127.0.0.1:8000/sql", {
@@ -42,7 +42,7 @@ const rows = (await q("SELECT parent_activity_id, child_activity_id, execution_c
 // (SUBSTRATE_AS_DYNAMICS.md §3). λ₁ above is the credit-MIXING rate; ρ_grow is the rate
 // at which fresh UNINFORMED Beta(1,1) cells are minted. When growth outruns mixing the
 // trajectory falls off the slow manifold into livelock. We only ever measured the LHS,
-// so the inequality could be observed but never gated. This computes the RHS. (2026-06-26)
+// so the inequality could be observed but never gated. This computes the RHS.
 //
 // SOURCE: variant_performance_metrics — the canonical per-variant Thompson Beta-cell
 // store. Every newly-minted activity creates a vpm cell, initially at the uninformed
@@ -99,7 +99,7 @@ const rhoGrow =
 //     work. The full-graph headroom is therefore PERVERSE (more composition → lower
 //     headroom) and hides real progress. Kept for continuity/observability.
 //   - GENUINE: hooks EXCLUDED — the actual capability→capability topology. This is the
-//     HONEST connectivity signal (the governor / headroom should key on THIS). (2026-06-19)
+//     HONEST connectivity signal (the governor / headroom should key on THIS).
 const HOOKS = ["validator-dispatch", "slot-binding"];
 const touchesHook = (s: string) => HOOKS.some((h) => (s || "").includes(h));
 
@@ -108,7 +108,7 @@ const touchesHook = (s: string) => HOOKS.some((h) => (s || "").includes(h));
 // is in the GENUINE capability subgraph iff it is tagged genuine; iff it is tagged
 // hub/scaffold it is excluded. ONLY legacy/untagged rows (edge_kind/genuine NONE)
 // fall back to the touchesHook node-name heuristic — keeping this backward-compatible
-// while the topology re-tags on the next reconcile/write. (2026-06-26)
+// while the topology re-tags on the next reconcile/write.
 const isGenuineEdge = (r: any): boolean => {
   if (r && typeof r.genuine === "boolean") return r.genuine;
   if (r && typeof r.edge_kind === "string" && r.edge_kind.length > 0) return r.edge_kind === "genuine";
@@ -140,7 +140,7 @@ function analyze(rowsIn: any[]) {
   for (const c of comp) compSizes[c] = (compSizes[c] ?? 0) + 1;
   const largest = Math.max(0, ...Object.values(compSizes));
   // Fiedler λ₂ of the normalized Laplacian via deflated power iteration on M=cI-L.
-  // GIANT-COMPONENT FIX (2026-07-02): λ₂ of a disconnected graph is 0 by definition,
+  // GIANT-COMPONENT FIX: λ₂ of a disconnected graph is 0 by definition,
   // so a single 2-node islet (observed: a repaired-of-repaired artifact pair) zeroed
   // the governor's headroom while 99.5% of the mass was one well-connected component.
   // Compute λ₂ on the GIANT component — the honest mixing rate of where the credit
@@ -184,7 +184,7 @@ function analyze(rowsIn: any[]) {
   const lambda2 = fiedler(gc);
   const maxDeg = Math.max(0, ...A.map((row) => row.filter((w) => w > 0).length));
   const starRatio = n > 1 ? maxDeg / (n - 1) : 0;
-  // MULTI-SCALE / SMALL-WORLD metrics (2026-06-19): "credit traversal on DIFFERENT
+  // MULTI-SCALE / SMALL-WORLD metrics: "credit traversal on DIFFERENT
   // HORIZONS" = high LOCAL clustering (short-horizon, within-domain credit) + short
   // GLOBAL paths (long-horizon, cross-domain). A naturally-modular capability graph is
   // best measured as a SMALL-WORLD (connected + clustered + bridged), NOT by a single
@@ -235,7 +235,7 @@ const genuine = analyze(rows.filter((r: any) => isGenuineEdge(r)));
 // The master inequality keys on the credit-MIXING rate λ₁. Use the GENUINE (hook-excluded)
 // λ₂ as λ₁ — it is the honest capability-graph mixing signal (full-graph λ₂ is inflated by
 // the lifecycle hub). stability_headroom = λ₁ - ρ_grow; the inequality λ₁ ≳ ρ_grow HOLDS
-// when headroom ≥ 0 (mixing keeps pace with minting). ratio > 1 ⇒ holds. (2026-06-26)
+// when headroom ≥ 0 (mixing keeps pace with minting). ratio > 1 ⇒ holds.
 const lambda1 = genuine.fiedler_lambda2;
 const stabilityHeadroom = rhoGrow === null ? null : Math.round((lambda1 - rhoGrow) * 1e6) / 1e6;
 const stabilityRatio = rhoGrow === null || rhoGrow === 0 ? null : Math.round((lambda1 / rhoGrow) * 1e4) / 1e4;
@@ -247,7 +247,7 @@ const stabilityRatio = rhoGrow === null || rhoGrow === 0 ? null : Math.round((la
 // pin λ₁=0 even though the WORKING capability graph is one connected component. This
 // measures the connectivity of the system that is actually operating, reported
 // ALONGSIDE all-time genuine (never replacing it) so the graveyard stays visible.
-// live_lambda1 is the honest credit-mixing rate of the working substrate. (2026-06-27)
+// live_lambda1 is the honest credit-mixing rate of the working substrate.
 const LIVE_WINDOW_HOURS = 24;
 const normId = (s: string) => (s || "").replace(/^activity:/, "").replace(/[⟨⟩`]/g, "").trim();
 let liveSet: Set<string> | null = null;
@@ -273,7 +273,7 @@ const out = {
   // LIVE genuine subgraph (both endpoints succeeded in the last 24h) — connectivity of
   // the WORKING system, excluding graveyard fragments. live_genuine.components==1 with
   // live_lambda1>0 ⇒ the operating capability graph mixes credit even while all-time
-  // genuine λ₁=0 from dead fragments. null ⇒ live query unreachable. (2026-06-27)
+  // genuine λ₁=0 from dead fragments. null ⇒ live query unreachable.
   live_genuine: liveGenuine,
   live_lambda1: liveLambda1,
   // ρ_grow — RHS of the master inequality (SUBSTRATE_AS_DYNAMICS.md §3). See block above for

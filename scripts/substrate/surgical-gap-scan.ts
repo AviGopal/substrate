@@ -20,7 +20,7 @@
  *   `const NAME = "http://…"` named default and NOT behind a `?? ` env fallback —
  *   i.e. genuinely inline, genuinely surgical.
  *
- * SCOPE (broadened 2026-06-29): the scan covers EVERY vessel under <repos>/<v>/src
+ * SCOPE: the scan covers EVERY vessel under <repos>/<v>/src
  * (auto-discovered), not a fixed 3-vessel list. The fetch-anchoring + idiomatic
  * exclusions (named-default const, `?? ` fallback) are what keep this high-precision
  * fleet-wide — a bare "any localhost literal" scan was measured noisy (121 survivors,

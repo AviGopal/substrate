@@ -63,7 +63,7 @@ fi
 # node_modules next to a lockfile. Restarting re-runs ExecStart, never the
 # install, so the vessel then crash-loops on a missing module for as long as the
 # container lives while `systemctl is-active` reports `activating`, never
-# `failed`. Measured on substrate-ui-local 2026-08-19: NRestarts=1681 across five
+# `failed`. Measured: NRestarts=1681 across five
 # days, `Cannot find module '@avigopal/libp2p-federation-transport'`, registry
 # short by a vessel, and no check anywhere reporting a fault.
 #

@@ -1,6 +1,6 @@
 [Unit]
 Description=DB-contention monitor — fire db_contention_observer (reads /metrics/db, emits substrateGap on contention)
-# Closes the DB-contention blind spot from the 2026-06-20 SurrealDB write-storm.
+# Closes the DB-contention blind spot that a SurrealDB write-storm exposed.
 # Read-only monitor; safe to run continuously (part of observability, not the
 # autonomous self-development loop).
 After=activity-api.service development-vessel.service

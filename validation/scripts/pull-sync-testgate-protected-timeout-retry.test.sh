@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # pull-sync's protected-alone gate retries a protected judge test ONCE when its red is only bun per-test timeouts on a
 # contended host, and only on a quiet host (scripts/substrate/substrate-pull-sync.sh, PROTECTED RETRY AFTER A TIMEOUT
-# UNDER CONTENTION; user ruling 2026-10-19, option B). A sibling of pull-sync-testgate-protected-alone.test.sh: the
+# UNDER CONTENTION). A sibling of pull-sync-testgate-protected-alone.test.sh: the
 # same extraction of the gate slice, its own stubs (that fixture is not edited). `bun test <file>` answers run N of a
 # file from $T/stub/alone-<file>.<N>; host_contended answers "uncontended" until a protected-alone run has started in the
 # tick (every earlier reading, the suite's admission, its mid-run sampler and end check, and the protected admission,

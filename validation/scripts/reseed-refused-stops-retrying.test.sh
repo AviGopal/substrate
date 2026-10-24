@@ -2,7 +2,7 @@
 # reseed-refused-stops-retrying.test.sh: when identity-vessel refuses the seed request itself (signup 400, e.g.
 # WEAK_PASSWORD), seed-identity exits 3 and reseed-restart must stop at once and say so. It used to retry ten times,
 # each logged as "identity-vessel DB likely still warming", and restart identity-vessel halfway through; a human reading
-# that journal was sent after the wrong cause (measured 2026-10-12, podman install acceptance).
+# that journal was sent after the wrong cause.
 #   (a) MUST-FAIL: a seeder that exits 3 is run exactly once, and the loop says REFUSED
 #   (b) control: a seeder that exits 1 is still retried (transient), and says "still warming"
 #   (c) seed-identity maps a signup 400 to exit 3 and leaves other failures to the retryable throw

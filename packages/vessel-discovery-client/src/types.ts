@@ -118,7 +118,7 @@ export interface DiscoveryConfig {
  *
  * The four `resolve_*` fields mirror the contract on `VesselCapability`
  * — what a vessel advertises at registration flows through to what
- * discovery returns in resolve queries. Added 2026-04-24.
+ * discovery returns in resolve queries.
  *
  * `auth_token_source` and `auth_delegation_mode` extend that contract
  * with a fifth + sixth field that declare *whose* credential to attach,
@@ -160,7 +160,7 @@ export interface VesselRegistration {
   resolve_timeout_ms?: number
 
   /** Which credential kind the caller should attach. Default when absent:
-   *  `"caller_identity"` (preserves pre-2026-04-23 behavior). */
+   *  `"caller_identity"`. */
   auth_token_source?: AuthTokenSource
 
   /** How the caller obtains the user-bound token to send. Default when
@@ -219,7 +219,7 @@ export type ResolveAuthScheme = "none" | "ApiKey" | "Bearer"
  * format the Authorization header; this says *whose* token to format.
  *
  * Default when absent: `"caller_identity"` — the caller attaches its own
- * service identity, preserving pre-2026-04-23 behavior.
+ * service identity.
  *
  *   "caller_identity"  caller's own service token (e.g. METABOB_API_KEY)
  *   "user_identity"    a user JWT the caller is acting on behalf of;
@@ -263,7 +263,7 @@ export const DEFAULT_AUTH_DELEGATION_MODE: AuthDelegationMode = "forward"
  * Vessel capability information.
  *
  * The four `resolve_*` fields are the vessel's self-describing resolve
- * contract, added 2026-04-24 so clients can call any vessel generically
+ * contract, so clients can call any vessel generically
  * without per-vessel hardcoded routing. Vessels advertise these at
  * registration; discovery returns them here; clients honor them. All
  * are optional for backward compatibility — clients should apply the

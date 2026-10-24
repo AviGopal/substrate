@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # gate-soak-ticks-row.test.sh: the gate's soak length is a shaped row that can only RAISE the accepted floor, and no
 # row value can skip or delay a refusal (scripts/substrate/gate/candidate.sh, SOAK LENGTH; pull-sync gate_candidate).
-# User ruling 2026-10-20 (via qa): soak_ticks becomes a shaped row, starting at 1.
+# soak_ticks is a shaped row, starting at 1.
 #
 # On the gate-test harness (gt_live: the REAL pull-sync, gate-runner, candidate.sh and shadow-eval), with the row
 # served through pull-sync's own tuning_param read (a curl stub answers /v2/tuning-params/gate.soak_ticks):

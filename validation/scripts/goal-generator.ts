@@ -11,7 +11,7 @@
  *     [--depth-mix 0.5,0.3,0.2] \
  *     [--scenario-mix 0.6,0.2,0.2] \
  *     [--adversarial-fraction 0.1] \
- *     [--output validation/generated/12345-2026-05-19.json]
+ *     [--output validation/generated/<seed>-<date>.json]
  *     [--held-out]  # G1.4: weekly held-out suite (seed=YYYY_WW_held_out_v1, count=8)
  *
  * --held-out mode (G1.4.1):

@@ -87,7 +87,7 @@ function persistAdminKey(key: string): void {
 // whose org already exists takes the 409 branch and never reaches that code, so
 // every fleet seeded before the admin-key step shipped carries an EMPTY
 // SUBSTRATE_ADMIN_KEY. Once /v1/jwt/generate began gating the requested role by
-// caller entitlement (SEC-5, a9db360), that emptiness became a hard lockout:
+// caller entitlement, that emptiness is a hard lockout:
 // `substrate-key issue|list|revoke` all fail with "requires admin entitlement",
 // and the only credential that could mint a replacement is the missing one.
 //
@@ -139,13 +139,13 @@ async function waitForIdentity(maxMs = 30_000): Promise<void> {
   throw new Error(`identity-vessel not ready after ${maxMs}ms`);
 }
 
-// goal-host's corpus runner: a SEPARATE principal (2026-10-12, user ruling via qa, key option (d) as refined). Its
+// goal-host's corpus runner: a SEPARATE principal. Its
 // only scope is verdict-corpus:write, the one credential the verdict-corpus writer accepts. goal-host's main key is
 // GOAL_HOST_KEY_SCOPES below: the walk's egress sends that key, so it must never carry the corpus scope.
 export const CORPUS_RUNNER_KEY_NAME = "goal-host-corpus-runner";
 export const CORPUS_RUNNER_KEY_SCOPES: string[] = ["verdict-corpus:write"];
 // goal-host's MAIN key: explicit, and it must NEVER carry verdict-corpus:write or admin (the walk's egress sends it).
-// tools-exec (2026-10-20, user ruling): the daemon admits its state-changing tool shapes (shell, fs_write, fs_edit,
+// tools-exec: the daemon admits its state-changing tool shapes (shell, fs_write, fs_edit,
 // git_commit, code_*) only from node-self, admin or tools-exec, and the walk is the ReAct floor that calls them. No
 // other key gets it: the fleet key is the node's own key, which node-self already admits at the daemon.
 export const GOAL_HOST_KEY_SCOPES: string[] = ["read", "write", "tools-exec"];
@@ -327,10 +327,9 @@ async function keyAuthenticates(key: string): Promise<boolean> {
     // says this function exists to prevent: it "asked the authority", got told
     // no, and reported yes.
     //
-    // Measured 2026-08-20 on a recreated substrate-live: the fleet key was
-    // rejected by BOTH identity endpoints, yet the seeder logged "existing key
-    // authenticates — nothing to re-issue" on every run while bootstrap-seeder
-    // failed 18/18 templates with 401 and never recovered. The re-issue branch
+    // On a recreated container the fleet key can be rejected by BOTH identity
+    // endpoints while the seeder logs "existing key authenticates — nothing to
+    // re-issue" on every run and bootstrap-seeder fails every template with 401. The re-issue branch
     // below was correct and simply unreachable.
     //
     // Read the field that carries the verdict; fail closed on any shape we do
@@ -394,7 +393,7 @@ async function main() {
 
   // A 409 MEANS THE ORG SURVIVED, NOT THAT THE KEYS DID — and this used to `return`.
   //
-  // Measured 2026-08-18. `make recreate` keeps the named volumes, so identity's org row
+  // `make recreate` keeps the named volumes, so identity's org row
   // persists and signup answers 409 on every boot after the first. The old code returned
   // there, having issued NO key. Whatever value gen-env had just written into
   // /etc/substrate/env was therefore never minted through identity, and every vessel came up
@@ -460,7 +459,7 @@ async function main() {
     const body = await signupRes.text();
     // A 400 is identity refusing the request itself (e.g. WEAK_PASSWORD: the seed credential fails the password
     // policy), so re-sending the same value can never succeed. Exit 3 tells reseed-restart to stop retrying and say
-    // so, instead of ten "DB likely still warming" retries (measured 2026-10-12). 5xx stays retryable.
+    // so, instead of ten "DB likely still warming" retries. 5xx stays retryable.
     if (signupRes.status === 400) {
       console.error(`[seed-identity] signup REFUSED (400, not transient): ${body}`);
       process.exit(3);
@@ -501,15 +500,14 @@ async function main() {
   console.log(describeIssuedKey("substrate-admin", adminKey));
   console.log("[seed-identity] set SUBSTRATE_ADMIN_KEY in its scoped files (secrets-manifest.json) and .substrate-secrets");
 
-  // Issue dedicated per-vessel keys (per D4 — per-vessel trace attribution) and
+  // Issue dedicated per-vessel keys (per-vessel trace attribution) and
   // WRITE them. These stanzas previously only console.log'd an instruction to
   // "set X in /etc/substrate/env" that nothing executed — while gen-env.sh had
   // already frozen each per-vessel var as a copy of the PRE-seed bootstrap
   // METABOB_API_KEY. Each vessel prefers its per-vessel var over METABOB_API_KEY,
   // so on a fresh boot the stale bootstrap copy SHADOWED the newly minted key
   // forever: goal-host's discovery registration and activity-api recommend calls
-  // 401'd on every cold boot and no goal could run (measured:
-  // validation/reports/coldboot-proof-2026-09-19, F2 FAIL). Warm volumes never
+  // 401'd on every cold boot and no goal could run. Warm volumes never
   // showed it because the key never changes there. upsertEnvVar is the same
   // helper the admin key above already uses.
   const localToolsKey = await issueKey(token, user_id, org_id, "local-tools-vessel");

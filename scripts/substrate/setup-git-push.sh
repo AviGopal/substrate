@@ -76,7 +76,7 @@ else
   echo "[setup-git-push] WARN attempt-ledger hooks missing at $LEDGER_HOOKS — commits will not be spooled"
 fi
 
-# PAT validation (2026-06-19). The in-container push is an HTTPS PAT path. When
+# PAT validation. The in-container push is an HTTPS PAT path. When
 # the PAT is invalid/missing, EVERY `git push` fails with "Invalid username or
 # token. Password authentication is not supported." — and the cutover would spew
 # that auth error on every self-alteration and report a misleading
@@ -92,7 +92,7 @@ fi
 # $SUBSTRATE_GIT_PAT from the git process env at push time (the dev-vessel unit
 # has it via its EnvironmentFile), so the token is never written into any config.
 #
-# PAT validation is ADVISORY, not gating (2026-06-19). The fine-grained PAT in
+# PAT validation is ADVISORY, not gating. The fine-grained PAT in
 # use authenticates git ops most of the time but exhibits INTERMITTENT
 # "Invalid username or token" failures (GitHub fine-grained-PAT flakiness /
 # rate-limiting). A hard startup probe that DISABLED the helper on a single
@@ -104,7 +104,7 @@ fi
 PAT_PROBE_REPO="${SUBSTRATE_PAT_PROBE_REPO:-development-vessel}"
 REPO_OWNER="${SUBSTRATE_REPO_OWNER:-AviGopal}"   # fork override: set SUBSTRATE_REPO_OWNER to your GitHub org/user
 if [ -n "$SUBSTRATE_GIT_PAT" ]; then
-  # Self-sufficient helper (2026-07-12): source /etc/substrate/env at use time so
+  # Self-sufficient helper: source /etc/substrate/env at use time so
   # git authenticates from ANY process context (plain shells, tick units without
   # the full EnvironmentFile), not only units that inherit SUBSTRATE_GIT_PAT.
   # Falls back to the process env when the file is absent. The token is still
@@ -289,9 +289,9 @@ if [ -d "$SUPER_REPO_DIR/.git" ]; then
   _ph_ours=0
   [ -f "$_ph" ] && grep -q "$PLACEMENT_HOOK_MARKER" "$_ph" 2>/dev/null && _ph_ours=1
   # INSTALLED WHEN ABSENT, ON EVERY BOOT. This used to install only into a clone created this boot ("an existing volume
-  # keeps its commit behaviour"). Measured 2026-10-10: node1's clone predates that rule, so .git/hooks/pre-commit never
+  # keeps its commit behaviour"). Measured: a node's clone predates that rule, so .git/hooks/pre-commit never
   # existed, the ledger's pre-commit chained to nothing and returned 0, and every system commit skipped the placement gate,
-  # the leak scan and the ignored-path check (edc68d49 force-added runtime leases/ that way). A clone without a hook gets
+  # the leak scan and the ignored-path check (an autonomous commit force-added runtime leases/ that way). A clone without a hook gets
   # the wrapper; a repo with its OWN hook (no marker) is still left alone.
   if [ "$_ph_ours" = 1 ] || [ ! -e "$_ph" ]; then
     mkdir -p "$SUPER_REPO_DIR/.git/hooks"

@@ -46,7 +46,7 @@ for artifact in main.js manifest.json; do
   # "are the same file", and under `set -e` that aborted the script HERE, before the
   # reload below. Net effect: the bundle was rebuilt and the plugin was never told,
   # so Obsidian kept serving the previously-loaded bundle until it was restarted by
-  # hand. Measured 2026-08-07: Obsidian had been up 4h with a bundle built 4h after
+  # hand. Measured: Obsidian had been up 4h with a bundle built 4h after
   # it started. Skip the copy when source and destination are the same file; a real
   # (non-symlinked) install still copies exactly as before.
   if [[ "$REPO_DIR/$artifact" -ef "$PLUGIN_DIR/$artifact" ]]; then

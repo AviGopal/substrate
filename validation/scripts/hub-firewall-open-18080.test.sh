@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # hub-firewall-open-18080.test.sh: ALLOW_18080_SRC=any opens activity-api (18080) and its TLS twin (9443) to every source,
-# per the user ruling of 2026-10-13 (the hub is not walled; protection lives in auth). Every other published port keeps
+# (the hub is not walled; protection lives in auth). Every other published port keeps
 # its default-deny. A source list and the empty list behave exactly as before.
 # The rule body runs under env -i with iptables/ip6tables/logger/systemctl/ip/ss shimmed (argv recorded; no kernel).
 #   (a) MUST-FAIL: `any` puts 18080 in the open list and admits 9443 from every source

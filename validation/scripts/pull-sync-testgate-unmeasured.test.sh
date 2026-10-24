@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# A GATE THAT DID NOT MEASURE NEVER PROMOTES (qa ruling). pull-sync's test gate
+# A GATE THAT DID NOT MEASURE NEVER PROMOTES. pull-sync's test gate
 # (scripts/substrate/substrate-pull-sync.sh, the "3-pre. TEST GATE" slice) had three paths that
 # converged a vessel with no measurement at all. Each must now hold or defer, and be filed:
 #
@@ -16,7 +16,7 @@
 #   (e) structural: the vessel loop iterates pass_order's order
 #   (f) NO COUNTABLE RESULT (the suite ran but printed no pass/fail totals) is the same "did not
 #       measure": HOLD, gap pull-sync-testgate-blind-<v> with the output tail, baseline untouched
-#       (not in the ruling's list of three; the ruling's principle covers it)
+#       (the same principle covers it)
 #
 # usage: validation/scripts/pull-sync-testgate-unmeasured.test.sh [path/to/substrate-pull-sync.sh]
 # Needs bash, git, jq, awk, sed.

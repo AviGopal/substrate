@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 /**
  * watchdog-tick.ts — degraded-mode watchdog for a demoted timer unit.
- * (openspec 2026-07-09-restore-contiguous-shape-flow, design §4)
+ * (design: restore contiguous shape flow)
  *
  * The event-driven drain (GapDrainObserver on development-vessel) is the PRIMARY
  * selection pathway; this tick only restarts flow when the event path has
@@ -137,12 +137,10 @@ async function main(): Promise<void> {
   } else {
     // RETRY ACROSS A VESSEL RESTART. A single attempt loses the whole tick when the
     // target restarts mid-request, and the next tick is STALL_MIN (20+) minutes away.
-    // Measured 2026-09-05: development-vessel restarted 7 times in 3 hours (mitosis
-    // cutover churn) and this restart fetch failed 6 times in the same window, every
-    // one with "The socket connection was closed unexpectedly" — the same error an
-    // operator resolve hit twice while a cutover was in flight. The composable-gap
-    // flow sat stalled up to 450 minutes with 314 open intents behind it, while the
-    // unit exited Result=success because the payload-level ok:false is invisible to
+    // During mitosis cutover churn, development-vessel restarts repeatedly and this
+    // fetch fails with "The socket connection was closed unexpectedly". The
+    // composable-gap flow then stalls for hours with open intents behind it, while the
+    // unit exits Result=success because the payload-level ok:false is invisible to
     // systemd. A restart takes seconds; the cycle it costs takes twenty minutes.
     const ATTEMPTS = 3;
     for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {

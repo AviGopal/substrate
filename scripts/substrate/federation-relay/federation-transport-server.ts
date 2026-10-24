@@ -43,7 +43,7 @@ const API_KEY = process.env.METABOB_API_KEY || ''
 // substrate deployment (hub==local, or an unfederated node) is byte-for-byte unchanged.
 const HUB_API_KEY = process.env.HUB_API_KEY || API_KEY
 
-// ── INBOUND AUTHENTICATION (operator exception, user ruling 2026-10-12; logic in ./ingress-auth.ts) ─────────────
+// ── INBOUND AUTHENTICATION (operator exception; logic in ./ingress-auth.ts) ─────────────
 // The MODE is a shaped per-node policy record, fedIngressAuthPolicy {mode: off|log|enforce, same_authority_peers,
 // same_authority_substrates, cache}, read from the local development-vessel pool at use time (30 s cache), never an env
 // var (law 1). Absent or unreadable = `off` until this node has once read `enforce`; after that = `enforce` (a ratchet
@@ -122,11 +122,11 @@ async function fetchAnchor(url: string): Promise<string> {
     if (ma) console.log(`[fed-transport] relay from ${url}/bootstrap: ${ma}`)
     return ma
   } catch (e) {
-    // An unreachable pointer is a HINT that missed, not an error condition. Observed
-    // 2026-09-12: a stale droplet IP pinned in a host workspace file (HTTP 000) timed out
-    // here, and the exit below then deleted this substrate's entire libp2p presence — 13
-    // of 13 registry rows with libp2p_multiaddr:null, a unit parked in `activating`
-    // forever (Restart=always ⇒ never `failed`, so nothing reported it). An address
+    // An unreachable pointer is a HINT that missed, not an error condition. A stale
+    // address pinned in a host workspace file times out here, and an exit would delete
+    // this substrate's entire libp2p presence — every registry row with
+    // libp2p_multiaddr:null, a unit parked in `activating` forever (Restart=always ⇒
+    // never `failed`, so nothing reports it). An address
     // someone typed once must never be able to kill the node (law 11).
     console.error(`[fed-transport] bootstrap fetch failed (${url}): ${(e as Error).message}`)
     return ''
@@ -181,11 +181,11 @@ async function resolveAnchor(): Promise<string> {
 }
 if (!RELAY) RELAY = await resolveAnchor()
 
-// A RELAY-LESS TRANSPORT IS A HEALTHY TRANSPORT (operator-ratified 2026-07-19:
+// A RELAY-LESS TRANSPORT IS A HEALTHY TRANSPORT (operator-ratified:
 // "the relay won't always be available due to networking conditions, so internally a
 // direct connection should be equivalent to a punchthrough").
 //
-// This used to be `process.exit(1)`, and that single line made the overlay bootstrap
+// A `process.exit(1)` here would make the overlay bootstrap
 // CIRCULAR: discovery derives relay_multiaddrs from registered circuits, circuits exist
 // only once a transport reserves, and the transport refused to start without an anchor —
 // so a standalone substrate (the default inventory) could never originate an overlay, and
@@ -381,9 +381,9 @@ async function proxyToLocalOwner(pointer: any): Promise<any> {
   const wanted = String(pointer?._fedTargetVessel ?? '').split('@')[0]
   // A target qualified with ANOTHER substrate (`<vessel>@<substrate>`) is never served from
   // here: matching only its bare name let a peer answer with its OWN copy of the vessel, so
-  // a read addressed to a departed spoke came back with a different spoke's file (measured
-  // 2026-10-02: the addressed spoke stopped, the egress fallback asked the next live circuit,
-  // and that spoke served its local fileContent). Forward to the owner's registered row when
+  // a read addressed to a departed spoke would come back with a different spoke's file (the
+  // egress fallback asks the next live circuit, and that spoke serves its local fileContent).
+  // Forward to the owner's registered row when
   // there is one; otherwise refuse, which the egress loop reads as "not a hit" and moves on.
   const fedTarget = String(pointer?._fedTargetVessel ?? '')
   const fedOwner = fedTarget.includes('@') ? fedTarget.slice(fedTarget.lastIndexOf('@') + 1) : ''
@@ -415,8 +415,7 @@ async function proxyToLocalOwner(pointer: any): Promise<any> {
   )
   // Honor the producer's self-declared distribution rule on the cross-substrate
   // path too, not only discovery's own /resolve pick: discovery echoes
-  // distribution_policy in capability rows since the policy data-path landed
-  // (discovery-vessel 6ab2e24). A unique_authoritative / stateful_data_owner_pin
+  // distribution_policy in capability rows. A unique_authoritative / stateful_data_owner_pin
   // producer wins over interchangeable replicas; absent/stateless keeps the prior
   // first-reachable behavior. (Capability rows do not echo `metadata`, so the
   // first-class field is the only signal here — which is exactly why it exists.)
@@ -491,8 +490,8 @@ async function proxyToVessel(pointer: any, t: string, owner: any): Promise<any> 
     // single form kept them incompatible — goal-host got type:undefined from
     // {impulse: pointer}.
     body: JSON.stringify({ ...fwd, impulse: { ...fwd, pointer: fwd } }),
-    // 20_000 here silently killed the ReAct floor. `llm_completion` has NO local
-    // producer — it resolves only to llm-resolver-opus@syzygy-hub — so EVERY agentic
+    // A 20_000 cap here silently kills the ReAct floor. `llm_completion` may have NO local
+    // producer — it can resolve only to an llm resolver on the hub — so EVERY agentic
     // tool loop crosses this proxy. A 5-tool universal-executor dispatch measures well
     // past 20s (reproduced: HTTP 500 "ingress proxy failed: The operation timed out."
     // at 20.45s, while the same call with one tool returns in 4.9s). goal-host caps a
@@ -765,7 +764,7 @@ async function resolveOverLibp2p(target: string, pointer: any): Promise<any> {
 // substrate's entire hub mirror disappears while local `register -> 201` keeps
 // logging success (observed on the spoke: reservations=1, circuit empty, all
 // @substrate rows gone from the hub). Same defect class as the obsidian
-// sidecar's stale capture (fixed in 480ac50).
+// sidecar's stale capture.
 const currentCircuit = () => vl.advertiseMultiaddrs().find((m) => m.includes('p2p-circuit')) ?? ''
 // Ratified decision "direct ≡ punchthrough": a direct connection is equivalent to a
 // relay punchthrough, so registration rows must announce the node's DIRECT listen
@@ -950,16 +949,14 @@ Bun.serve({
           // no shape/body/value. A peer that OWNS the named vessel but cannot serve answers
           // with a fully-formed envelope whose failure sits one level DOWN:
           //
-          //   {content:{shape:'llm_completion',produced_by:'…@spoke-739b76f1',
+          //   {content:{shape:'llm_completion',produced_by:'…@<spoke>',
           //             body:{resolved:false,error:'no llm arm is currently servable …'}}}
           //
-          // content.error is undefined there, so isHollowErr was false, the loop took the
-          // FAILURE as its hit and stopped — never trying the remaining circuits. Measured
-          // 2026-08-18: a substrate on neither this host nor the hub had joined through the
-          // public relay advertising llm arms it could not serve. Every llm_completion in the
-          // fleet settled on it, the ReAct floor logged 'dispatch FAILED http=500' on all 8
-          // iterations, and ordinary human goals failed while three WORKING arms sat on the
-          // hub's circuit, later in the very list this loop was walking.
+          // content.error is undefined there, so a check on it alone would take the FAILURE as
+          // its hit and stop, never trying the remaining circuits. A substrate that joins
+          // through the public relay advertising llm arms it cannot serve would then capture
+          // every llm_completion in the fleet, failing ordinary goals while working arms sit
+          // later in the very list this loop walks.
           //
           // Keeping the cross-substrate spill intact is the point ("any funded arm in the
           // network suffices"); a spill that settles on an arm which just said it cannot serve
@@ -980,9 +977,9 @@ Bun.serve({
           // vessels on the hub as `<vessel>@<substrate>` with protocol 'libp2p' and its
           // circuit multiaddr, but the hub's connection table holds only the relay until
           // something dials the spoke, so the live-circuit walk below finds nothing and a
-          // ?vessel=-only call to a joined spoke failed with "could not reach … over any
-          // live circuit" (measured 2026-09-30, one-command spoke join: the same resolve
-          // with that registered multiaddr as ?target= was answered by the spoke).
+          // ?vessel=-only call to a joined spoke fails with "could not reach … over any
+          // live circuit", while the same resolve with that registered multiaddr as
+          // ?target= is answered by the spoke.
           const wantedShape = String((pointer as any)?.type ?? '')
           if (wantedShape) {
             const rows = await localDiscoveryResolve({ type: 'vesselCapability', shape: wantedShape }, true).catch(() => [] as any[])
@@ -1156,7 +1153,7 @@ if (SELF_MIRROR) console.log(`[fed-transport] hub mirror disabled: HUB_DISCOVERY
 // appending unconditionally minted doubled hub rows like …@min-proof@min-proof.
 const HUB_VESSEL_ID = VESSEL_ID.endsWith(`@${SUBSTRATE_ID}`) ? VESSEL_ID : `${VESSEL_ID}@${SUBSTRATE_ID}`
 
-// The mirror is PER-VESSEL (2026-07-11): each plain-HTTP local vessel gets its own
+// The mirror is PER-VESSEL: each plain-HTTP local vessel gets its own
 // `<vesselId>@<substrate>` row in the hub namespace, carrying that vessel's shapes and
 // THIS transport's circuit multiaddr as the reachability contract. This is what makes
 // every vessel in the fleet individually addressable and health-scoreable from any
@@ -1409,7 +1406,7 @@ process.on('SIGINT', () => { void withdrawAndExit('SIGINT') })
 await register()
 await registerAtHub()
 setInterval(register, 120_000) // refresh discovery TTL
-// The inbound-auth census denominator: refusals only mean something per hour the circuit was UP (the reservation lapses
+// The inbound-auth denominator: refusals only mean something per hour the circuit was UP (the reservation lapses
 // for long stretches; a NO_RESERVATION failure never reaches any ingress and is logged on the egress side instead).
 setInterval(() => { void ingressMode().then((m) => console.log(`[fed-ingress-auth] window circuit_up=${currentCircuit() ? 'y' : 'n'} mode=${m}`)).catch(() => {}) }, 300_000)
 setInterval(registerAtHub, 120_000)

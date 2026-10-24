@@ -4,7 +4,7 @@ After=activity-api.service discovery-vessel.service
 Wants=activity-api.service
 # Watchdog: never permanently give up. The whole boredom shape-pool dispatches
 # through this vessel on :8280; a silent death here livelocks the entire
-# autonomous self-dev loop (observed 2026-06-13). StartLimitIntervalSec=0
+# autonomous self-dev loop. StartLimitIntervalSec=0
 # disables the default 5-starts/10s rate limit so systemd keeps retrying
 # indefinitely instead of parking the unit in failed/dead.
 StartLimitIntervalSec=0

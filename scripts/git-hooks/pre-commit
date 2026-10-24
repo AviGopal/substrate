@@ -302,7 +302,7 @@ fi
 #
 # NOT COVERED (named, not papered over): PassEnvironment=, `ExecStart=/usr/bin/env X=…`, a value set
 # inside a script the unit runs, backslash-continued lines, and drop-ins written into /etc at runtime
-# by hand or by a script (validation/reports/env-ratchet-2026-10-11/ inventories those).
+# by hand or by a script.
 # BYPASSED COMMITS (--no-verify, or a clone with no hook installed) are caught by the committed-tree
 # check validation/scripts/env-ratchet-committed-tree.test.sh — but only where the glue corpus runs
 # (this hook, the acceptance run). pull-sync never runs it, so it does NOT block a bypassed commit
@@ -429,7 +429,7 @@ er_main || exit 1
 # .gitignore names runtime state (leases/, pool/, gaps/, state/, the host-sync stream, ...). `git add -f` and
 # `git add -A` over a force-listed path still commit it, and once tracked, every node rewrites the file in its
 # clone: the clone carries a permanent modification, and a later commit touching it stalls that node's glue
-# pull. edc68d49 (an autonomous "drift sync", 2026-09-26) force-added leases/*.json this way. Refuse any staged
+# pull. An autonomous "drift sync" commit force-added leases/*.json this way. Refuse any staged
 # ADDITION whose path .gitignore ignores. Modifying an already-tracked file is not refused here; untracking
 # those is a separate, reviewed commit.
 mapfile -t ADDED_IGNORED < <(git diff --cached --name-only --diff-filter=AR -z | xargs -0 -r git check-ignore --no-index -- 2>/dev/null || true)
@@ -544,7 +544,7 @@ fi
 # a commit that changes ui/src without its dist ships source the deployment
 # will never render, and fails SILENTLY: the vessel boots, /health is green,
 # and a person sees yesterday's page. That exact state ran on two deployments
-# for a full day (2026-08-08).
+# for a full day.
 #
 # Deliberately narrow: it only asks whether dist was rebuilt alongside src, not
 # whether the bundle is byte-correct. Where it runs is split by workspace volume,
@@ -691,8 +691,8 @@ fi
 # WHEN: a staged path under scripts/substrate/, validation/scripts/, the seeder, the
 # vendored packages, this hook, or its env-ratchet lists. Set GLUE_TESTS_FAST=1 to run the declared --fast subset
 # instead (it drops pull-sync-hold-channel, ~21s of the run).
-# HOW LONG (measured 2026-10-03, the whole hook, wall clock, in a disposable container from the
-# image node 1 runs, 16 CPUs and no CPU limit, as on the live node, with the live node busy
+# HOW LONG (measured, the whole hook, wall clock, in a disposable container from the
+# image a node runs, 16 CPUs and no CPU limit, as on the live node, with the live node busy
 # alongside): 78s, 111s and 88s over three runs (glue tests 29 files); the base before the
 # tracked-red work took 62-80s (23 files). The in-container commit path this must fit
 # (vessel-mitosis-cutover's runGit commit) passes no timeout to git; the bound around it is the

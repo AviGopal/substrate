@@ -5,7 +5,7 @@ After=surrealdb.service valkey.service identity-vessel.service discovery-vessel.
 # /health, and registers with discovery regardless of SurrealDB/valkey state,
 # converging per-request. A hard Requires= would propagate SurrealDB's documented
 # OOM/self-restart loop into an activity-api restart cascade — the coupling this
-# severs. After= (added surrealdb/valkey, previously missing) keeps boot ordering.
+# severs. After= on surrealdb and valkey keeps boot ordering.
 Wants=surrealdb.service valkey.service
 
 [Service]

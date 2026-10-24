@@ -28,39 +28,10 @@ const RESOLVE = DEV.replace(/\/$/, "") + "/v2/impulses/resolve";
 // pointers (every *_write shape) against identity-vessel, so a write without it is answered 401.
 const KEY = process.env.METABOB_API_KEY ?? "";
 
-/**
- * HISTORY (superseded 2026-10-06, see AFFORDABILITY IS THE CONDUCTOR'S TO MEASURE below).
- * THE AFFORDABILITY GATE WAS MEASURING THE WRONG THING, AND IT HAD CLOSED PERMANENTLY.
- *
- * `bucketLoadFromProc` in the conductor buckets the RAW 1-minute load average:
- * `<1 -> 0, <3 -> 1, <8 -> 2, else 3`. Those thresholds are absolute — they do not know
- * how many cores the host has. Affordability is `budget <= 1 - bucketLoad/3`, so at
- * bucket 3 the ceiling is exactly 0 and NO family with a positive budget can ever be
- * selected. The whole cadence layer stops.
- *
- * Measured on this host: 16 cores, load 9.61 — about 60% utilised, entirely healthy — and
- * `rhythm_conductor_tick` returned `bucket_load: 3, enqueued: []`. The federation
- * verification family fired ONCE in 33 hours, and every other family showed the same
- * starvation. A load of 8 is "maximum congestion" on a 16-core box, which is half its
- * capacity.
- *
- * So the sensor WAS normalised here, in the bootstrap-tier caller, and passed through the
- * `bucket_load` pointer field the conductor already accepts for exactly this purpose.
- * THE GUARD IS NOT REMOVED — a genuinely saturated host still buckets to 3 and still
- * prices families out. What changes is that "saturated" now means per-core saturation
- * rather than a constant that happens to be true of a 4-core VM and permanently true of
- * a workstation. Same thresholds, divided by cores.
- *
- * This is the same shape as two other defects found in this subsystem: a guard that never
- * opens is not conservative, it is inert; and a discriminator that measures the wrong
- * quantity is worse than a missing one, because it reports confidently.
- */
-// AFFORDABILITY IS THE CONDUCTOR'S TO MEASURE (2026-10-06). This script used to compute the per-core
-// load-average bucket above and PIN it as bucket_load. A load average does not measure contention on a
-// workstation: node1 read load 23-25 on 16 cores (bucket 2) and enqueued nothing for ~8 h while PSI said
-// the host was idle. rhythm_conductor_tick (development-vessel 5691816e) now buckets on PSI cpu/io "some
-// avg60" against a shaped threshold and falls back to per-core load only when PSI is unreadable; this
-// script no longer pins a bucket, and journals what the conductor measured.
+// AFFORDABILITY IS THE CONDUCTOR'S TO MEASURE. A load average does not measure contention on a
+// workstation: a high load can coexist with an idle host by PSI. rhythm_conductor_tick (development-vessel)
+// buckets on PSI cpu/io "some avg60" against a shaped threshold and falls back to per-core load only when
+// PSI is unreadable; this script pins no bucket, and journals what the conductor measured.
 
 
 /**

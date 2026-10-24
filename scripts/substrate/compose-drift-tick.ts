@@ -2,12 +2,10 @@
  * compose-drift-tick.ts — a detector for the COMPOSER-DEGRADES-ITSELF class.
  *
  * The substrate modifies the component that performs all modification, and
- * nothing executes the result. Measured 2026-09-09: `feature-compose.ts` took 41
- * autonomous commits across 09-06/07, and its anchor-failure rate went 3.3% (on
- * 09-04, a zero-commit day that serves as the natural control) to 34.4% on 09-08.
- * One confirmed cause was `f0cfb91`, a ONE-LINE inverted boolean that disabled
- * the blind-edit anchor repair for two days and passed typecheck, the semantic
- * gate and mitosis cutover on the way in. `bac7d00` repaired it.
+ * nothing executes the result. A burst of autonomous commits to `feature-compose.ts`
+ * can raise its anchor-failure rate many times over against a zero-commit day as
+ * the natural control. A one-line inverted boolean that disables the blind-edit
+ * anchor repair passes typecheck, the semantic gate and mitosis cutover on the way in.
  *
  * NOTHING REPORTED ANY OF THAT. The compose pipeline logs its own blind spot on
  * every run against an untested file: "every gate below this point READS the
@@ -36,9 +34,9 @@
  * THE INSTRUMENT IS NAMED, BECAUSE THE OBVIOUS VARIANT DISAGREES. The population
  * is `feature_compose` executions; the numerator is `apply_failed AND
  * ops_applied == 0` — a HARD anchor failure where nothing was applied. Dropping
- * the `ops_applied` clause reports 43.3% for 09-08 where this instrument reports
- * 34.4%: two defensible metrics, very different numbers. Six operator metrics
- * for this same question were discarded for measuring the wrong population, so
+ * the `ops_applied` clause reports a markedly higher rate than this instrument:
+ * two defensible metrics, very different numbers. Operator metrics for this same
+ * question that measure the wrong population are discarded, so
  * the predicate is stated in the gap it emits and must stay stated.
  *
  * DAY-SCALE WINDOWS ONLY. A 2-hour slice of this series read 24.6% while the
@@ -113,11 +111,9 @@ function median(xs: number[]): number {
  * DELIBERATELY NOT A POOLED TWO-PROPORTION TEST. Pooling the baseline's raw
  * counts folds any previously-degraded day into the reference, so the detector
  * normalises to its own bad history and goes blind exactly after an episode —
- * the failure mode it exists to catch. Measured while writing this file: against
- * pooled counts (contaminated by 09-08 at 34.4%) 09-09 scored z=1.84 and would
- * have been waved through; against the robust median baseline it scores far
- * higher, which matches the operator finding that the composer never returned to
- * its early-September level after bac7d00 repaired the acute regression.
+ * the failure mode it exists to catch. Against pooled counts contaminated by a
+ * degraded day, the next degraded day scores below threshold and is waved
+ * through; against the robust median baseline it scores far higher.
  *
  * p0 is the MEDIAN of the composer's own complete days, so a single catastrophic
  * day cannot raise the bar it will later be judged against.

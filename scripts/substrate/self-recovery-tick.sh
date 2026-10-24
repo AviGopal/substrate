@@ -17,7 +17,7 @@
 # reverted to the last-good GIT source (never a host checkout — the substrate
 # does not rely on a host workspace). Read-only otherwise; never throws.
 #
-# DUAL CONTEXT (fix 2026-07-01): this script may run FROM the host (docker CLI
+# DUAL CONTEXT: this script may run FROM the host (docker CLI
 # available) OR INSIDE the container (deployed as a systemd unit — NO docker CLI).
 # The body previously used `docker exec "$CONTAINER"` unconditionally, so when it
 # ran in-container EVERY docker call failed silently: healthy() always returned
@@ -39,7 +39,7 @@ DB_PROBE_GAP="${DB_PROBE_GAP:-3}"           # seconds between the two consecutiv
 # eventually succeeds. 2s is far above a healthy single-row fetch (milliseconds) and far below
 # the 30s latencies observed while the store was pinned, so it separates the two cleanly.
 DB_PROBE_SLOW_S="${DB_PROBE_SLOW_S:-2}"
-# Sustained-wedge escalation (2026-07-31 outage): the DB-pressure guard below
+# Sustained-wedge escalation (outage): the DB-pressure guard below
 # correctly BACKS OFF restarting vessels when SurrealDB is the bottleneck — but
 # nothing restarted SurrealDB itself, so a wedge persisted for hours. Root: the
 # unit's MemoryHigh=22G throttle/reclaim zone makes surreal unresponsive
@@ -83,13 +83,13 @@ csh()  { if [ "$IN_CONTAINER" = 1 ]; then sh -c "$1"; else docker exec "$CONTAIN
 # srv_auth reaches the inner curl on stdin instead of being spliced into the command string.
 cshi() { if [ "$IN_CONTAINER" = 1 ]; then sh -c "$1"; else docker exec -i "$CONTAINER" sh -c "$1"; fi; }
 csys() { if [ "$IN_CONTAINER" = 1 ]; then systemctl "$@"; else docker exec "$CONTAINER" systemctl "$@"; fi; }
-# Role-awareness (2026-07-30): a unit is intentionally-disabled for the active
+# Role-awareness: a unit is intentionally-disabled for the active
 # ENABLED_ROLES iff apply-inventory.sh masked it — an /etc-level symlink
 # /etc/systemd/system/<unit> -> /dev/null (apply-inventory.sh). Read that same
 # mask (the ground truth boot just wrote) in the container's context; more robust
 # than re-deriving ENABLED_ROLES here.
 masked() { [ "$(csh "readlink /etc/systemd/system/$1 2>/dev/null" 2>/dev/null)" = "/dev/null" ]; }
-# Never installed (2026-08-08): a MANIFEST vessel's real unit is written to
+# Never installed: a MANIFEST vessel's real unit is written to
 # /etc/systemd/system by `vessel-ctl install`, after readiness. Before that runs
 # the only unit by that name is the one baked into the image, whose
 # WorkingDirectory (/vessels/<v>) does not exist for a manifest vessel — it is
@@ -111,16 +111,16 @@ manifest_vessel() {
          break
        done" 2>/dev/null | grep -q yes
 }
-# ...unless the image can already run it (2026-10-16). The guard's real condition is "the baked unit cannot run". Since
-# 9c39f411 (09-17) the image bakes human-surface-vessel's source and enables its unit at build, so on a node with no /etc
+# ...unless the image can already run it. The guard's real condition is "the baked unit cannot run". Since
+# a later change, the image bakes human-surface-vessel's source and enables its unit at build, so on a node with no /etc
 # render this test (an /etc file only) skipped a RUNNING vessel every tick: never health-checked, never recovered (the
 # human surface, on two of three nodes). A manifest vessel is not installed only when nothing can run it: no rendered
 # unit, AND the baked unit is not enabled or cannot start. metric-collector-vessel (source baked, unit not enabled)
-# still waits for vessel-ctl install; a baked unit with no source (the 08-07 case) still waits.
-# "Cannot start" is the unit's OWN WorkingDirectory missing: that is the chdir the 08-07 unit looped on, and it is what
+# still waits for vessel-ctl install; a baked unit with no source (an earlier case) still waits.
+# "Cannot start" is the unit's OWN WorkingDirectory missing: that is the chdir an earlier unit looped on, and it is what
 # systemd renders from the manifest's workdir. Keying the source by /vessels/<unit> instead missed every vessel whose
 # source is elsewhere: federation-transport-vessel (and federation-relay) run from the super-repo's federation-relay
-# dir, so the transport was skipped as NOT INSTALLED while enabled and running, on two nodes (2026-10-16).
+# dir, so the transport was skipped as NOT INSTALLED while enabled and running, on two nodes.
 # An empty WorkingDirectory falls back to /vessels/<unit>, the $RUNTIME default.
 not_installed() {
   csh "[ -f /etc/systemd/system/$1.service ]" 2>/dev/null && return 1
@@ -130,7 +130,7 @@ not_installed() {
   csh "[ -d '$wd' ]" 2>/dev/null && return 1
   return 0
 }
-# Still inside its own start phase (2026-08-03): a unit running ExecStartPre/
+# Still inside its own start phase: a unit running ExecStartPre/
 # ExecStartPost — DB migrations, template seeding — is not yet serving /health,
 # so probing it reads as death. Restarting then aborts the start work and the
 # next tick finds it starting again: observed on the hub as activity-api
@@ -142,7 +142,7 @@ not_installed() {
 # that dies instantly spends its life alternating between `activating`
 # (SubState=auto-restart) and a sub-second run, so this guard — written for a
 # genuinely slow start — was excusing the one failure mode nothing else catches.
-# It is never `failed`, so no check above it fires either. Measured 2026-08-19:
+# It is never `failed`, so no check above it fires either. Measured:
 # federation-transport-vessel at NRestarts=1681 over five days on one container
 # and 61 within minutes on a fresh one, skipped by this function every tick.
 #
@@ -158,7 +158,7 @@ starting() {
 # (/workspace/git/vessels/<name>): the last-good pin recorded by pull-sync/
 # cutover at /workspace/.last-good/<name> when present, else the clone's
 # current dev HEAD. Git is the revert source — never a host checkout (the
-# substrate must not rely on a host workspace, 2026-07-02). Exit 1 = no clone.
+# substrate must not rely on a host workspace). Exit 1 = no clone.
 crevert() {
   local name="$1"
   csh "CLONE=/workspace/git/vessels/$name; [ -d \"\$CLONE/.git\" ] || exit 1; \
@@ -317,7 +317,7 @@ diagnose() {
   printf '%s\n---\nlive source parses: %s\nrevert source: %s\n' "$jrnl" "$parses" "$clone_state"
 }
 
-# Shared-DB pressure guard (2026-07-23 resource-cascade gap). Root: the fleet's
+# Shared-DB pressure guard (resource-cascade gap). Root: the fleet's
 # DB-backed vessels share ONE SurrealDB. When it saturates/throttles, activity-
 # api's /health (a SurrealDB round-trip) times out -> 503 -> this tick restarts
 # it -> init crash-loops on 'SurrealDB not ready, retrying N/40' against the
@@ -339,7 +339,7 @@ diagnose() {
 # fast as an idle one, so the probe could only ever detect a DEAD database, never a
 # congested one — while congestion is the entire condition this guard exists to catch.
 #
-# The failure that exposed it, measured on the hub 2026-08-08: the `execution` table
+# The failure that exposed it, measured: the `execution` table
 # had grown to 18GB, activity-api's /health (which does real reads) timed out, and
 # this probe returned 200 in milliseconds. Self-recovery therefore concluded "DB is
 # fine, the vessel is broken" and restarted activity-api — 16 times in 6 hours. Each
@@ -374,7 +374,7 @@ printf 'user = root:%s\\n' \"\$P\" | curl -s -K - -o /dev/null -w '%{http_code} 
     # A STATUS CODE WITHOUT A TIME CANNOT SEE SATURATION. The probe collected
     # http_code and discarded time_total, so a 200 that took 4.9s read identically to
     # one that took 5ms -> "DB alive, NOT the bottleneck" -> restart proceeds. That is
-    # the exact defect activity-api's own /health carried until 16edacd: a boolean
+    # the exact defect activity-api's own /health carried before it was fixed: a boolean
     # sitting next to a number it ignored. It was here too, in the watchdog ABOVE it.
     #
     # And the query cannot carry the signal on its own. The comment above says this one

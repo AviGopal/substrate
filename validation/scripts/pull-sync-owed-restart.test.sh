@@ -39,9 +39,9 @@
 # The vessel is modelled, not canned: in_flight is a counter, `sleep` drains it by one,
 # and a request that tries to start during the gate is admitted only while the
 # quiesce marker is absent (development-vessel's quiesced() check).
-# Measured 2026-10-03 (node 1): drained 19:41:55, the marker was removed at once, the
-# gate ran to 19:47:00, a compose was admitted ~19:45:20, and the restart logged
-# "DEFERRING restart — 1 in flight" at 19:47:01: the drain bought nothing.
+# Observed: the marker was removed as soon as the drain finished, a compose was
+# admitted while the gate was still running, and the restart then logged
+# "DEFERRING restart — 1 in flight": the drain bought nothing.
 #   (l) 1 in flight, a request arrives during the gate and another during the mirror ->
 #       the marker is ABSENT while the gate runs (the gate request is admitted), and HELD
 #       from the drain's first wait through the mirror to the restart; the drain follows

@@ -19,7 +19,7 @@
 #                     (substrate-ready.service): the ready-gated timers are
 #                     After=substrate-ready, so counting them creates a
 #                     circular wait that burns the full poll timeout at every
-#                     boot (observed 2026-07-02 recreate)
+#                     boot (observed recreate)
 #
 # Readiness rules per enabled inventory unit:
 #   health_port present        -> curl 127.0.0.1:<port><health_path|/health> == 200
@@ -151,7 +151,7 @@ fi
 # masks on this fleet are the product of a deliberate selection — not leftover
 # state on a default standalone. Without this, the masked-core-on-standalone
 # rule below declared every custom ENABLED_VESSELS standalone NOT-ready for
-# deliberately-excluded units (measured 2026-09-15 on a minimal control fleet:
+# deliberately-excluded units (measured on a minimal control fleet:
 # 3 phantom "down" units on a healthy deployment), and a gate that fails on
 # healthy fleets gets ignored. The default full standalone — the topology the
 # rule was built for, where NO selection env exists — keeps its protection.
@@ -275,7 +275,7 @@ pass() { # -> sets RESULTS (unit|status lines), FAILING count, MASKED count
     [ "$SERVICES_ONLY" = 1 ] && [ "${unit%.timer}" != "$unit" ] && continue
     # --quick gates on core units PLUS any unit with a health_port. Core-only
     # left the container HEALTHCHECK structurally blind to every non-core
-    # vessel: measured 2026-09-15, a fleet whose only functional vessel
+    # vessel: measured, a fleet whose only functional vessel
     # (relevance-sink, non-core, port 8255) could not serve a single write
     # stayed docker-`healthy` because --quick never looked at it. A ported
     # unit that is masked or not enabled classifies masked/skipped in one

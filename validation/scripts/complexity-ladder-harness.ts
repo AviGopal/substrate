@@ -49,7 +49,7 @@ const DEV_VESSEL = process.env.DEV_VESSEL_ENDPOINT ?? "http://localhost:18090";
 const DISCOVERY = process.env.DISCOVERY_ENDPOINT ?? "http://localhost:18100";
 // THE TRACE STORE IS NOT NECESSARILY LOCAL.
 //
-// This substrate is a SPOKE (`spoke-cfda39e7`), and `roles.spoke` in
+// A substrate can be a SPOKE, and `roles.spoke` in
 // vessels.inventory.json does not include the `api` role — `activity-api` is
 // MASKED here by design and the trace store lives on the hub. Defaulting to
 // localhost:18080 makes every goal-path read come back empty, which reads
@@ -529,7 +529,7 @@ async function main() {
   // rungs demanding distinct work MUST record distinct signatures. When two do
   // not, the walk did the same thing for both, whatever their reach says.
   //
-  // Measured 2026-08-12: rungs 1 and 3 both recorded 4502429f46
+  // Observed: rungs 1 and 3 both recorded the same path signature
   // ([satisfier:shellResult]) — a one-transformation and a three-transformation
   // goal, indistinguishable in durable state. That is the result this section
   // was added to make impossible to overlook.

@@ -1,9 +1,7 @@
 [Unit]
 Description=Memory-budget check — does the fleet's declared memory budget fit this machine, and can a capped unit recover?
-# WHY THIS UNIT EXISTS AT ALL (2026-08-17). The script was written, negative-controlled and
-# committed — and nothing ran it. A repo-wide grep for its name returned two hits, both
-# comments. An adversarial audit found the same true of validation/scripts/
-# argument-chain-check.test.ts. Two careful instruments, zero call sites.
+# WHY THIS UNIT EXISTS AT ALL. A detector that nothing schedules is never observed failing,
+# so it can never be trusted when it passes. This unit is the call site the script needs.
 #
 # That is the failing half of detector work here: construction is not the bottleneck,
 # PLACEMENT is. A detector with no scheduler is indistinguishable from one that was never

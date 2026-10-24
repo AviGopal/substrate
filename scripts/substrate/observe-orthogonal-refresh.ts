@@ -3,20 +3,20 @@
  * observe-orthogonal-refresh.ts — run observe-orthogonal-patterns on a cadence so
  * fresh orthogonal-decisions flow to enact-orthogonal-decisions.
  *
- * WHY (2026-06-19): observe-orthogonal-patterns is the cross-template synthesis loop
+ * WHY: observe-orthogonal-patterns is the cross-template synthesis loop
  * (resolver/failure pattern reports → LLM → MODIFY / CREATE_DETECTOR / CREATE_CONSUMER
  * decisions). enact-orthogonal-decisions (in the boredom rotation) reads the latest
  * decisions from /workspace/observations/orthogonal-latest.json and acts on them —
  * authoring CONSUMERS for orphan output shapes, which is what deepens the composition
  * topology beyond depth-2. But observe itself is NOT in the boredom rotation, so its
- * observations went STALE on 2026-06-02 and the loop dried up. This timer (mirroring
+ * observations go STALE and the loop dries up. This timer (mirroring
  * funnel-drain / composition-edge-reconcile) guarantees observe runs on cadence and
  * repoints `orthogonal-latest.json` at the fresh decisions.
  *
  * Dispatch path: the dev-vessel cli `run-activity` (fetches the re-seeded template
  * from activity-api and runs the cli sequential executor, whose bare-{{taskId}}
- * variable binding is the one proven to surface the aggregator data to the LLM —
- * see finding-2026-06-19-compose-var-binding-fixed). The LLM wraps its JSON in
+ * variable binding is the one proven to surface the aggregator data to the LLM).
+ * The LLM wraps its JSON in
  * ```json fences; we strip them and rewrite the file as clean JSON so enact's
  * json_path_extract reads a valid array. Only repoints `latest` when the run yields
  * a NON-EMPTY decision array — a degraded/empty run never clobbers good observations.

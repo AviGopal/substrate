@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # secret-scope-corpus-runner.test.sh: goal-host's corpus-runner key (GOAL_HOST_CORPUS_RUNNER_API_KEY, scope verdict-corpus:write
 # only) is a SCOPED secret. A grading credential in the shared /etc/substrate/env would sit in every unit's process env,
-# local-tools' walk-driven shell included, reopening the forgery path the runner split closes (key option (d), 2026-10-12).
+# local-tools' walk-driven shell included, reopening the forgery path the runner split closes.
 #   (a) secrets-manifest.json scopes it to goal-host-vessel (consumer) and identity-seeder (writer) only; no script consumer
 #   (b) MUST-FAIL: render-secret-scope (values mode) writes it into private/env.d/goal-host-vessel.env and identity-seeder.env
 #       and into NO other rendered file (no other unit's env.d, not admin.env)

@@ -2,15 +2,14 @@
 /**
  * typecheck-scenario-gen.ts — concrete-scenario SUPPLY for the self-alteration funnel.
  *
- * WHY (2026-06-17): the funnel (drafter → apply → patch_with_tools → cutover →
+ * WHY: the funnel (drafter → apply → patch_with_tools → cutover →
  * push) is proven to autonomously resolve CONCRETE blockers and land them on
- * GitHub (substrate-live commit 28df8d0 fixed a real tsc error). But the
+ * GitHub (it has fixed a real tsc error). But the
  * substrate had NO detector that turns its own concrete defects into patchable
  * scenario files — its materialized scenarios were exhausted/abstract meta-gaps
  * that patch_with_tools can't verify. This generator closes that gap for the
  * highest-value concrete-defect class: TypeScript compile errors. They are
- * localized, single-file, and patch_with_tools-verifiable (the 28df8d0 fix was
- * exactly one). For each `tsc --noEmit` error in a vessel with a writable clone,
+ * localized, single-file, and patch_with_tools-verifiable. For each `tsc --noEmit` error in a vessel with a writable clone,
  * it emits a concrete scenario file + an open gap row (high harm so
  * pick_priority_scenario ranks it ABOVE the abstract meta-gaps). The existing
  * funnel then drafts → patches → cuts over → pushes — sustained autonomous

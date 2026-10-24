@@ -20,7 +20,7 @@ resp="$(curl -s --max-time 4 -X POST "$EP/v2/impulses/resolve" \
 [ -z "$resp" ] && exit 0
 echo "$resp" | jq -e '.success and ((.body.notes | length) > 0)' >/dev/null 2>&1 || exit 0
 # Conventions are fetched by TYPE, not by recency. The default listing is the newest 500 by
-# updated_at; measured 2026-09-22 a flood of expectation-battery residue pushed every feedback
+# updated_at; measured a flood of expectation-battery residue pushed every feedback
 # note out of that window and this hook reported 0 conventions while 91 existed. A filtered
 # read cannot be displaced by unrelated writes.
 fbresp="$(curl -s --max-time 4 -X POST "$EP/v2/impulses/resolve" \

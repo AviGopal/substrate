@@ -5,7 +5,7 @@
 # Why a directory: InaccessiblePaths= binds what a path named when the unit started.
 # render-secret-scope.sh replaces the files by rename, so a mask on a FILE covered a
 # dead inode after the first render and every root vessel could read the live admin
-# key (measured 10-02, inode inside == outside). A directory overmount survives any
+# key (the inode inside equals the one outside). A directory overmount survives any
 # rename inside it, provided the directory itself is never replaced.
 #
 #   (a) no unit, script, Dockerfile line or executable doc names the flat layout

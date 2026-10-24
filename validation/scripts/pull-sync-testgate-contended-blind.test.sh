@@ -6,7 +6,7 @@
 # pull-sync-testgate-contention.test.sh: the same extraction and the real host_contended against a pressure fixture
 # file; its own bun stub, whose whole-suite run can make the host hot mid-run and outlive the wall. No network.
 #
-# Measured 2026-10-19 09:55Z on one node: "suite run KILLED at TEST_TIMEOUT_SECONDS=413 … TEST GATE BLIND … HOLDING",
+# Observed on one node: "suite run KILLED at TEST_TIMEOUT_SECONDS=413 … TEST GATE BLIND … HOLDING",
 # while another co-hosted node's gate ran concurrently.
 #
 #   (a) MUST-FAIL: the host is contended only MID-RUN and the suite is killed at its wall -> DEFERRED (counted), not BLIND

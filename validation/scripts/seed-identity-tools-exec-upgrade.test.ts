@@ -2,7 +2,7 @@
 // once, by key_id, through identity's apiKey_write impulse; the fleet key never gains it.
 //
 // A node seeded before GOAL_HOST_KEY_SCOPES carried tools-exec keeps a [read, write] goal-host key, and the daemon's
-// tool gate refuses the walk's tool hops from it (user ruling 2026-10-20, "Identity scope grant"). The fresh-mint
+// tool gate refuses the walk's tool hops from it. The fresh-mint
 // side is seed-identity-tools-exec.test.ts; this is the upgrade. Same harness: a RUN of the real script against a
 // fake identity (IDENTITY_VESSEL_URL) that keeps key rows by value, answers /v1/keys/validate from them, and applies
 // apiKey_write impulses on /v1/auth/resolve, recording every one. The warm path is signup 409 (no live env here, so

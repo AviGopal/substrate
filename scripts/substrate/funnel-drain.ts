@@ -4,7 +4,7 @@
  * `apply_proposal_as_patch` on the development-vessel resolver, decoupled from
  * the boredom selector.
  *
- * WHY (2026-06-17): apply-proposal-as-patch is the funnel's entry point
+ * WHY: apply-proposal-as-patch is the funnel's entry point
  * (proposal → staged mitosis → self-propelled cutover → push). It lives in the
  * boredom pool but ranks ~69th by value_per_sec, so the selector almost never
  * picks it — a self-reinforcing starvation (never picked → never productive →

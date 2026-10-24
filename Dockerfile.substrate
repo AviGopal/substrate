@@ -52,7 +52,7 @@ ENV PATH=/root/.bun/bin:$PATH
 # image). The compose verify gate runs each vessel's `typecheck` script in a
 # TRANSIENT checkout with no node_modules, so a repo-local typescript can never
 # serve it — a vessel without this was structurally un-editable through the
-# learning loop (every draft rolled back with exit 127, measured 2026-09-15).
+# learning loop (every draft rolled back with exit 127, measured).
 RUN bun install -g typescript && ln -sf /usr/local/bin/bun /usr/local/bin/node
 
 # --- SurrealDB ---
@@ -201,7 +201,7 @@ COPY repos/metric-collector-vessel/tsconfig.json ./metric-collector-vessel/
 
 # relevance-sink-vessel (impulse-relevance penalty writes, decoupled from the
 # activity-api trace store — port 8255). Self-contained single file, no runtime
-# deps, so no `bun install`. Added 2026-06-21 but was never baked into the image,
+# deps, so no `bun install`. Added but was never baked into the image,
 # so every container recreate lost it and the unit crash-looped on a missing
 # /vessels/relevance-sink-vessel/src/index.ts (penalty-write decoupling inert).
 COPY repos/relevance-sink-vessel/package.json ./relevance-sink-vessel/
@@ -228,7 +228,7 @@ COPY scripts/substrate/render-secret-scope.sh /usr/local/bin/render-secret-scope
 COPY scripts/substrate/secret-mask-probe.sh /usr/local/bin/secret-mask-probe
 COPY scripts/substrate/setup-git-push.sh /usr/local/bin/setup-git-push
 COPY scripts/substrate/git-hooks-ledger/ /usr/local/share/substrate/git-hooks-ledger/
-# Self-bootstrap + self-diagnosis (2026-07-02): readiness gate, doctor, and the
+# Self-bootstrap + self-diagnosis: readiness gate, doctor, and the
 # identity-seeder wrapper. These make `docker run` the COMPLETE launch contract —
 # no host-side make seed-live / "wait ~15s" / configure step is load-bearing.
 COPY scripts/substrate/substrate-ready.sh /usr/local/bin/substrate-ready
@@ -255,7 +255,7 @@ COPY scripts/substrate/reseed-restart.sh /usr/local/bin/reseed-restart
 # copy of that instruction was unrunnable — authored at the host layer, consumed
 # at the container layer, which is the same mistake this file keeps paying for.
 COPY scripts/substrate/substrate-config.sh /usr/local/bin/substrate-config
-# In-container source-of-truth channel (2026-07-02): the substrate pulls its own
+# In-container source-of-truth channel: the substrate pulls its own
 # updates from origin/dev via the /workspace/git clones and mirrors them into
 # the live /vessels runtime — git remotes are the ONLY code channel; no host
 # docker-cp / bind-mount path is load-bearing.
@@ -268,7 +268,7 @@ COPY scripts/substrate/lib/ /usr/local/share/substrate/lib/
 # The pinned judge's core (bootstrap tier): substrate-pull-sync.service runs it; it executes
 # only the accepted gate staged under /workspace/.gate (scripts/substrate/gate/).
 COPY scripts/substrate/gate/gate-runner.sh /usr/local/libexec/substrate/gate-runner
-# Fleet-membership tooling ships IN the image (2026-07-02): install/uninstall/
+# Fleet-membership tooling ships IN the image: install/uninstall/
 # sync a dynamic vessel from the in-container git clones — runnable natively
 # in-container (and dispatchable via local-tools' shell resolver), no host
 # checkout involved. self-recovery-tick is image-baked for the same reason.
@@ -342,7 +342,7 @@ COPY repos/human-surface-vessel/ui/dist /vessels/human-surface-vessel/ui/dist
 RUN cd /vessels/human-surface-vessel && bun install || true
 # bun links a file: dep as a symlink STUB (three symlinks, no src), so the baked
 # relay dir could never resolve @avigopal/libp2p-federation-transport at runtime —
-# the exact crash the 2026-09-16 falsifier recorded. The install below therefore
+# the exact crash the falsifier recorded. The install below therefore
 # MATERIALISES the real package over the stub, making the image copy self-contained.
 RUN cd /usr/local/share/substrate/super-repo/scripts/substrate/federation-relay && \
     sed -i 's|"@avigopal/libp2p-federation-transport": "[^"]*"|"@avigopal/libp2p-federation-transport": "file:/vessels/libp2p-federation-transport"|' package.json && \

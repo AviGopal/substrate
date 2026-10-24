@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * operator-goal-generator.ts — the CONVERGENT ENABLER (2026-06-27).
+ * operator-goal-generator.ts — the CONVERGENT ENABLER.
  *
  * WHY. The substrate now HAS the learning machinery: successor-features ψ (state-
  * conditioned Thompson), traced multi-step deliberation, the post-execution reach-gate

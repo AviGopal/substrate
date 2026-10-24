@@ -1,13 +1,11 @@
 /**
  * gap-store-census-tick.ts — a detector for the SILENT-STORE-COLLAPSE class.
  *
- * Measured 2026-09-09: the gap store served 4,113 gaps at 14:35 and 44 at 22:59,
- * across a development-vessel restart. Nothing reported it. It was recovered only
- * because an operator happened to look, and because ~50 orphaned atomic-write
- * temps (~300MB, themselves a disk leak) still held parseable snapshots. Law 7
- * measures progress as the gap triple — close rate, latency, durability — and for
- * several hours that triple was being computed over a store that had silently
- * lost 97% of its rows.
+ * A gap store can lose almost all of its rows across a development-vessel restart
+ * with nothing reporting it, recoverable only if an operator happens to look and
+ * orphaned atomic-write temps still hold parseable snapshots. Law 7 measures
+ * progress as the gap triple — close rate, latency, durability — and that triple
+ * would be computed over a store that silently lost most of its rows.
  *
  * WHY A COUNT AND NOT A WRITE GUARD. The write path is already correct atomic
  * practice: a per-writer unique tmp, an in-process read-modify-write lock, then
@@ -28,18 +26,18 @@
  *
  * THE BASELINE IS A HIGH-WATER MARK, NOT AN AVERAGE. Closing a gap does not
  * remove its row — closed gaps persist with status "closed" — so this series
- * should be monotonic apart from deliberate pruning. Any prior census is
+ * should be monotonic apart from deliberate pruning. Any prior count is
  * therefore positive evidence that the store DID hold that many, and a drop below
  * it is not variance. Averaging would let a collapse lower the very bar it is
  * later judged against, the same contamination compose-drift-tick avoids by using
  * a median rather than pooled counts.
  *
  * META-GUARD (a detector must be proven to COMPLETE, not merely to exist): with
- * no usable census history it says so and abstains rather than reporting health,
+ * no usable count history it says so and abstains rather than reporting health,
  * and it records every reading so the first real collapse has something to be
  * measured against.
  *
- * Strictly read-only except its own census file and substrateGap emission.
+ * Strictly read-only except its own count file and substrateGap emission.
  */
 
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
@@ -49,7 +47,7 @@ const DEV = process.env.DEV_VESSEL_ENDPOINT || process.env.DEVELOPMENT_VESSEL_UR
 // The service key the unit's EnvironmentFile carries; development-vessel authenticates write-type
 // pointers (every *_write shape) against identity-vessel, so a write without it is answered 401.
 const KEY = process.env.METABOB_API_KEY ?? "";
-/** The census lives outside the gap store: a store that loses itself must not
+/** The count history lives outside the gap store: a store that loses itself must not
  *  also lose the record proving it did. */
 const CENSUS_PATH =
   process.env.GAP_CENSUS_PATH || join(process.env.SUBSTRATE_STATE_DIR || "/workspace/substrate/state", "gap-store-census.jsonl");
@@ -71,7 +69,7 @@ async function gapCount(): Promise<number | null> {
       // cannot be used as a count. The rows themselves must be counted.
       //
       // AND NOT falsifier_coverage EITHER, though it is tempting: it IS computed
-      // store-wide (identical at limit 1 and limit 100000, verified 2026-09-10),
+      // store-wide (identical at limit 1 and limit 100000),
       // which would make this check nearly free. But it covers only the OPEN
       // population, and closing a gap moves it out of that population — so the
       // series would not be monotonic, and an ordinary closing sweep would read

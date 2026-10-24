@@ -309,8 +309,8 @@ run
 [ -z "$(git -C "$d" status --porcelain -- bun.lock package.json)" ] && ok "(g) tracked bun.lock restored after install" || bad "(g) clone left dirty: $(git -C "$d" status --porcelain)"
 
 # ── (j) a file: dependency's target moved: reinstall although the manifest did not ─
-# Measured 2026-10-03: goal-host's clone held a directory copy of ias-executor-ts from
-# August while the sibling clone had moved on, because the marker hashed only the
+# Observed: goal-host's clone held an old directory copy of ias-executor-ts
+# while the sibling clone had moved on, because the marker hashed only the
 # dependant's own package.json/bun.lock.
 DEP="$CLONE_DIR/ias-executor-ts"
 mk_dep() { # build a sibling clone with a committed src and an untracked dist

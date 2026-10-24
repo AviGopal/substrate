@@ -97,7 +97,7 @@ jobs:
             # CREDENTIAL failure for what was a URL-resolution bug — sending
             # anyone who read it to check PAT grants that were never the cause.
             #
-            # Measured 2026-08-19: 0 of 18 resolved on every scheduled run,
+            # Measured: 0 of 18 resolved on every scheduled run,
             # while `git ls-remote https://github.com/AviGopal/concept-db.git`
             # answered instantly and unauthenticated.
             case "$url" in
@@ -150,7 +150,7 @@ jobs:
           # has: it is the only thing that moves submodule gitlinks, so when it
           # no-ops the hub's submodule-deployed vessels freeze at whatever commit
           # they were on — and the 6-hourly schedule keeps reporting success.
-          # Observed 2026-08-08: every submodule skipped on "could not resolve
+          # Observed: every submodule skipped on "could not resolve
           # dev" for the PAT, the job went green, and the repo's history contains
           # ZERO pointer-bump commits. development-vessel — which runs from the
           # super-repo tree, not the image copy — had been frozen behind it.

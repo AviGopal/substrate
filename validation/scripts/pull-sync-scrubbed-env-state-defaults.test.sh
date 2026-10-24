@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # pull-sync-scrubbed-env-state-defaults.test.sh: scrubbed_env (scripts/substrate/substrate-pull-sync.sh) must point EVERY
 # state default the code under test names (`process.env.X ?? "/workspace/..."`) under its throwaway root, derived from the
-# tree at call time, and must FLAG any live state file that moves during a scrubbed run. Found 2026-10-17: suites had
-# credited the live close-oracle calibration and gap-class posteriors for weeks (fixture classes at alpha 1000+), because
-# env -i dropped each X and the test process wrote the compiled-in /workspace default.
+# tree at call time, and must FLAG any live state file that moves during a scrubbed run. Without it, suites
+# credit the live close-oracle calibration and gap-class posteriors (fixture classes at very high alpha), because
+# env -i drops each X and the test process writes the compiled-in /workspace default.
 #
 #   pull-sync-scrubbed-env-state-defaults.test.sh [path/to/substrate-pull-sync.sh]
 #

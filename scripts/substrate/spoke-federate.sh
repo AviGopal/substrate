@@ -97,7 +97,7 @@ cexec 'systemctl restart federation-transport-vessel.service' || true
 
 # A transport that answers /health with 200/ok can still have ZERO relay
 # reservations and an empty circuit multiaddr — that state has no remote
-# visibility at all, and treating it as joined is how the 2026-09-21 lifecycle
+# visibility at all, and treating it as joined is how the lifecycle
 # audit got a "healthy" spoke nothing could reach. Joined means a live relay
 # reservation, so gate on transport.activeReservations, not on the socket
 # answering.

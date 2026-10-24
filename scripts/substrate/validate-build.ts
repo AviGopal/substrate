@@ -189,9 +189,8 @@ for (const [vessel, { frozen, seds }] of containerized) {
 //
 // This is the same trap as the untracked-lockfile check above, one level up: a
 // dirty dev tree masks what a clean checkout would produce. It is not theoretical
-// — on 2026-08-09 the recorded pointers were 30 commits behind six vessels whose
-// work was pushed, so `clone --recursive && make up` built a substrate missing the
-// mitosis test-delta fix and the pathless-goal resolution, with no signal anywhere.
+// — recorded pointers can lag vessels whose work is pushed, so `clone --recursive
+// && make up` builds a substrate missing landed fixes, with no signal anywhere.
 //
 // Drift is legitimate mid-change (you commit the vessel before bumping the
 // pointer), so these WARN by default and only fail under --strict-repro, which

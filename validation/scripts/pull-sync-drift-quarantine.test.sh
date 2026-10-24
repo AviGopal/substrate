@@ -2,7 +2,7 @@
 # A pull-sync overwrite of live content pull-sync did not write is RECOVERABLE
 # and LOUD (scripts/substrate/substrate-pull-sync.sh, drift_quarantine).
 #
-# Replays 2026-10-02 10:07Z: the clone == origin/dev holds OLD code, the live
+# Replays the case where the clone == origin/dev holds OLD code, the live
 # runtime holds a NEWER hand-deployed fix that was never pushed, and the drift
 # heal restores the runtime from the clone. Runs the script's own drift block
 # (SUPPRESS_REATTEMPT=1 .. the re-attempt short-circuit) followed by its mirror

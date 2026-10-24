@@ -203,7 +203,7 @@ http_code() { curl -s -o /dev/null -w '%{http_code}' --max-time "${2:-5}" "$1" 2
 unit_prop() { systemctl show "$1" -p "$2" --value 2>/dev/null || true; }
 unit_active() { [ "$(systemctl is-active "$1" 2>/dev/null || true)" = "active" ]; }
 # A JOB, not a server: a Type=oneshot service started by a timer runs, exits and serves nothing in between, so a
-# failed last run says nothing about whether the node serves. Measured 2026-10-13 on a compute node: rhythm-cadence.service
+# failed last run says nothing about whether the node serves. Measured on a compute node: rhythm-cadence.service
 # (role compute, timer-triggered oneshot) failed one run and failed `served` for a node whose serving units were all up.
 unit_is_job() {
   [ "$(systemctl show -p Type --value "$1" 2>/dev/null)" = oneshot ] && [ -n "$(systemctl show -p TriggeredBy --value "$1" 2>/dev/null)" ]
@@ -314,7 +314,7 @@ probe_goal() {
     # A pull-sync run restarts every vessel whose code it moves, discovery among them, and
     # the known-answer goal reads discovery. A dispatch made while it runs can land in a
     # restart and miss, which this level would report as the substrate being unusable.
-    # Measured on a fresh install (CI run 37011691597): the first boot pull-sync restarted
+    # Measured on a fresh install: the first boot pull-sync restarted
     # discovery at 13:19:18 and goal-host at 13:19:28; a dispatch between them found no
     # content and spent the probe's budget. So no dispatch is made while one runs: the
     # level stays unknown and says why, and --wait asks again once the run has finished.
@@ -463,7 +463,7 @@ eval_live() {
       # ONE SAMPLE CANNOT TELL A STALL FROM THE GAP BETWEEN TWO JOBS. Right after a boot,
       # timer-started one-shots run back to back, and for an instant one is queued while none
       # runs. Read once, that instant failed `live` on a fleet that had just reached `seeded`
-      # (upgrade acceptance, 2026-10-12: "systemd is still starting (1 job(s) queued, 0
+      # (upgrade acceptance: "systemd is still starting (1 job(s) queued, 0
       # running)"). A stall is a state that persists, so it is judged over a short window:
       # it fails only if no job runs and the boot is still unfinished at every sample.
       if [ "$sys_state" = starting ] && [ "${jobs_r:-0}" -eq 0 ]; then
@@ -784,7 +784,7 @@ evaluate() {
     elif [ -n "$gate" ]; then VAL[$l]="unknown"; EVID[$l]="not evaluated: $gate"
     else
       V=unknown; E=""
-      # `usable` dispatches a real goal and can take minutes. Measured 2026-10-13: 197 s on a spoke with nothing
+      # `usable` dispatches a real goal and can take minutes. Measured: 197 s on a spoke with nothing
       # printed until the end, which reads as a hang to whoever runs the README's verdict command. Say so first, on
       # stderr (stdout and --json stay unchanged). Not gated on a TTY: `docker exec` without -t has none.
       [ "$l" = usable ] && echo "[status] checking usable: a real completion and a known-answer goal; this can take a few minutes" >&2

@@ -1,7 +1,7 @@
 // seed-identity-tools-exec.test.ts: goal-host's per-vessel key is minted with tools-exec, and no other key is.
 //
 // The daemon admits its state-changing tool shapes (shell, fs_write, fs_edit, git_commit, code_*) only from node-self,
-// admin or tools-exec (user ruling, 2026-10-20). The walk is the ReAct floor that calls them with goal-host's key, so
+// admin or tools-exec. The walk is the ReAct floor that calls them with goal-host's key, so
 // that key carries tools-exec; it still never carries admin. The fleet key is the node's own key (node-self at the
 // daemon), so it does not; neither does any other per-vessel key, the admin key or the corpus runner's.
 //

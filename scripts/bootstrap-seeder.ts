@@ -13,8 +13,6 @@
  *
  * Exits 0 on success, non-zero on fatal error.
  *
- * Spec: openspec/changes/2026-05-23-substrate-explicit-vessels tasks.md §Phase 3
- *
  * `--pool-policy [--scope-file=<path>]` (development-vessel.service ExecStartPre):
  * seed the first autonomyScope and spendEnvelope records into a FRESH pool, from
  * the committed scripts/substrate/autonomy-scope.json, before the vessel serves.

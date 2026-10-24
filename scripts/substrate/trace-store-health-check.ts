@@ -6,7 +6,7 @@
  * reads activity-api's GET /metrics/db traceStore block (O(1) counters, never a
  * COUNT over activity_execution_traces) and emits a `substrateGap` (category
  * trace_store_reconciliation) when row_count exceeds the configured cap.
- * Part of openspec change 2026-07-08-substrate-self-managed-db-reconciliation.
+ * Part of the self-managed database reconciliation.
  *
  * Read-only + best-effort: logs a one-line verdict, never throws. Wired as the
  * trace-store-health-check.service oneshot on a timer.

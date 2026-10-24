@@ -27,7 +27,7 @@ DISCOVERY="${DISCOVERY_ENDPOINT:-http://127.0.0.1:8100}"
 # scheduling layer knows the surface is absent and the timer plane, which carries the actual
 # work, never asks.
 #
-# The cost of not asking, measured: a dispatch every thirty minutes since 2026-09-14, each
+# The cost of not asking, measured: a dispatch every thirty minutes, each
 # one reaching the goal gate, being judged hollow for an unreachable surface, and taking a
 # full penalty against the activity. The activity is fine. The vault is not connected. A
 # hundred-odd observations were recorded as evidence about an arm when they were evidence

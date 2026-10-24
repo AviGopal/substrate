@@ -2,9 +2,9 @@
 # fleet-excludes-unsafe-vessels.test.sh: a vessel with an open critical security defect is not installable.
 #
 # conversation-vessel runs a caller's params.command with `sh -c`, reachable through POST /resolve/tool
-# with no authentication (gap conversation-vessel-runs-an-unauthenticated-callers-command-with-sh-c):
-# unauthenticated remote code execution as root in the container. On 2026-10-03 no node ran it, and the
-# tooling could not install it: vessel-ctl install refuses a name with no manifest entry, and
+# with no authentication:
+# unauthenticated remote code execution as root in the container. No node runs it, and the
+# tooling cannot install it: vessel-ctl install refuses a name with no manifest entry, and
 # apply-inventory selects only inventory entries. This test keeps it that way. It fails if the vessel
 # reappears in the fleet definition (inventory, manifest) or as a unit file, which is the only way a node
 # would ever start it. Remove the name below only when that gap closes with a verified fix.

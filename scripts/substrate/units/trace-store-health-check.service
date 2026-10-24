@@ -1,6 +1,6 @@
 [Unit]
 Description=Trace-store size monitor — fire trace_store_health_observer (reads /metrics/db traceStore counters, emits substrateGap on cap overage)
-# Part of 2026-07-08-substrate-self-managed-db-reconciliation: the detect leg of
+# Part of the self-managed database reconciliation: the detect leg of
 # the autonomous reconcile cadence (observe -> gap -> gap-compose dispatch ->
 # lease-gated db_admin reconcile_trace_store -> release).
 After=activity-api.service development-vessel.service

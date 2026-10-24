@@ -5,8 +5,7 @@
  * Fires the `db_contention_observer` resolver on development-vessel, which reads
  * activity-api's GET /metrics/db and emits a `substrateGap` (category
  * db_contention) when query latency / in-flight depth / error-rate exceed
- * thresholds. Closes the blind spot from the 2026-06-20 SurrealDB write-storm
- * that nothing self-detected.
+ * thresholds, so a SurrealDB write-storm is self-detected.
  *
  * Read-only + best-effort: logs a one-line verdict, never throws. Wired as the
  * db-contention-check.service oneshot on a timer.

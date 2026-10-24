@@ -8,7 +8,7 @@
  * reliably correct. Nothing guards the EVIDENCE step, and law 1 makes every
  * field addressable and therefore rewritable, with no ownership discipline.
  *
- * Measured instances of the class (2026-09-03), all silent in production:
+ * Measured instances of the class, all silent in production:
  *   - variant_performance_metrics.updated_at is decay's elapsed clock
  *     (posterior-update.ts decayedThompsonCounts) AND is refreshed by counter
  *     upserts and by chain-credit's ancestor write. Decay was under-applied

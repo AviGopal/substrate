@@ -42,7 +42,7 @@ fi
 # EACH FIXTURE RUNS IN ITS OWN SESSION, and whatever it leaves behind is killed when it returns. A fixture that
 # backgrounds a child (the relay fixture runs `timeout 220 bun relay.ts &`, and SIGKILL of timeout never reaches its
 # child; GNU timeout also moves the child into a new process group) otherwise leaks it into every later corpus run.
-# Measured 2026-10-19 in an accepted-image container: one more live bun after each run, 10 after 10, and a long
+# Measured in an accepted-image container: one more live bun after each run, 10 after 10, and a long
 # image-coverage-map.check.sh session then read false FAILs late.
 # The session id is the leader's pid, taken from $! by THIS root process. setsid run in the background is not a
 # group leader, so it calls setsid() and execs without forking: sid = $!. Nothing the fixture can write is read

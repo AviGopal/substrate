@@ -2,7 +2,7 @@
 # J8: the fixture corpus belongs to the ACCEPTED version (H2). The classifier
 # (scripts/substrate/gate/candidate.sh, run from accepted/) judges each gate candidate:
 #   must fail   a candidate EDITING an accepted fixture -> verdict widening, an
-#               authority_widening gap, NO promote.request (the 6ac1aa6 class)
+#               authority_widening gap, NO promote.request (the fixture-edit class)
 #   must fail   a candidate REMOVING one, or dropping a gate_paths / fixture_paths glob from
 #               gate-policy.json -> widening likewise
 #   must fail   a candidate whose body does not parse -> shadow refused, gate_candidate_refused

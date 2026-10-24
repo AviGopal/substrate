@@ -5,7 +5,7 @@
 # "3-pre. TEST GATE" slice). Several temp vessel clones go through the script's own pass order and
 # gate slice tick after tick, with `bun` stubbed per vessel; small timeouts stand in for the real ones.
 #
-# Measured 2026-10-06 on the hub: 23 finished ticks, 0 convergences in 4 h. The same 7 candidates were
+# Observed: many finished ticks with no convergence. The same candidates were
 # TEST GATE DEFERRED every tick: the deferred set came out of pass_order in glob order, so activity-api
 # (alphabetically first) ran its suite first every tick, never fit its own T2, and left the others too
 # little time. A fixed point, not a rotation.

@@ -318,7 +318,7 @@ if [ -n "${target:-}" ] && [ -n "${hub_key:-}" ]; then
     # The same compose the page's blocks ran under: on the Podman leg that is podman-compose
     # itself. `podman compose` picks a provider, and on a runner that also has Docker it
     # chose the docker-compose plugin, which found no Podman socket, so the stop never
-    # happened (CI run 37046962127, podman leg).
+    # happened (podman leg).
     fleet_compose() { if [ "$ENGINE" = podman ]; then "$pc" "$@"; else eng compose "$@"; fi; }
     ( cd "${spoke_dir:-/nonexistent}" && fleet_compose stop ) >"$RESULT_DIR/diag/spoke-stop.txt" 2>&1
     spoke_id="$first_id"; target="$first_target"

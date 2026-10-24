@@ -2,17 +2,15 @@
  * rhythm-seed-tick.ts — insert the time-shaped rhythms and family goals missing by id; never overwrite.
  *
  * WHY THIS EXISTS. Law 5 puts cadence in the pool as time-shaped rhythm impulses that
- * rhythm_conductor_tick reads, scores by due-ness and enqueues. On 2026-09-07 thirteen
- * rhythms were seeded BY HAND and verified end to end. No script was retained, so when
- * a power outage recreated the pool on 2026-09-09 the registry came back EMPTY and
- * nothing noticed: a conductor with no rhythms is silent, and silence reads as health.
+ * rhythm_conductor_tick reads, scores by due-ness and enqueues. Rhythms seeded by hand,
+ * with no script retained, leave the registry EMPTY when an outage recreates the pool,
+ * and nothing notices: a conductor with no rhythms is silent, and silence reads as health.
  * Meanwhile validator-liveness files a recurring validator-cadence-severed gap that
  * nothing can service while the conductor has nothing to make due.
  *
  * THIS IS RESTORATION, NOT NEW POLICY — EXCEPT WHERE AN ENTRY IS EXPLICITLY FLAGGED
  * "NEW POLICY" IN A COMMENT ON THE ENTRY ITSELF. Every unflagged body below is recovered
- * VERBATIM from the pre-outage pool snapshot (/workspace/pool/standing.json,
- * 2026-09-07T04:33Z) — the same families, budgets, credit and staleness that were already
+ * VERBATIM from a pre-outage pool snapshot (/workspace/pool/standing.json) — the same families, budgets, credit and staleness that were already
  * approved and running. No budget was invented in the restored set. In this scheduler
  * budget is COST (due = credit_mean * staleness / budget; affordable iff
  * budget <= 1 - load/3), so a fabricated budget would silently re-prioritise the whole
@@ -23,9 +21,8 @@
  * and writes nothing if any rhythm already exists, so it is safe on every tick and cannot
  * fight a live conductor or double-seed.
  *
- * IT JOURNALS WHAT IT SEEDED, deliberately: the 09-07 seeding left no record, which is
- * why the loss was unrecoverable rather than merely inconvenient. The next recovery can
- * diff against this log.
+ * IT JOURNALS WHAT IT SEEDED, deliberately: a seeding that leaves no record makes a loss
+ * unrecoverable rather than merely inconvenient. The next recovery can diff against this log.
  *
  * NOTE ON COVERAGE, stated rather than discovered later: the conductor maps family -> goal
  * from its bootstrap FAMILY_GOALS const, extended at runtime by rhythmFamilyGoal impulses.
@@ -199,8 +196,7 @@ const SEED = {
       }
     },
     // ───────────────────────────────────────────────────────────────────────────────
-    // NEW POLICY, NOT RESTORATION. This family did not exist before the outage and is
-    // NOT in the 2026-09-07 snapshot. Every number below was AUTHORED (2026-09-12), not
+    // NEW POLICY, NOT RESTORATION. This family is NOT in the pre-outage snapshot. Every number below was AUTHORED, not
     // recovered — the file's restoration claim above does not cover it, which is why it
     // carries this flag.
     //
@@ -239,7 +235,7 @@ const SEED = {
         "description": "Dial the federation overlay from an ephemeral nonce-identity libp2p peer and grade join/find/route/leave/payload invariants against the live roster. Cheapest budget in the registry on purpose: verification must stay affordable during churn, because churn is when federation breaks."
       }
     },
-    // NEW POLICY (2026-10-05, bootstrap item 2: system-authored gap checks). Paces
+    // NEW POLICY (bootstrap item 2: system-authored gap checks). Paces
     // development-vessel's gap_check_supply_tick, which dispatches ONE "write a failing test
     // that reproduces <symptom>" edit goal per needs_localization gap (bounded, with backoff),
     // so the lane authors its own checks instead of the operator writing them.
@@ -262,8 +258,8 @@ const SEED = {
         "description": "Turn gaps that have no check into armed gaps: one edit goal per needs_localization gap to write a failing test; armed only when it is red at HEAD for the right reason."
       }
     },
-    // NEW POLICY (2026-10-05, bootstrap item 3: scope earn-in). Paces development-vessel's
-    // scope_earn_in_tick, which applies the adopted criterion (WIRING.md, 10-03: every regression on an
+    // NEW POLICY (bootstrap item 3: scope earn-in). Paces development-vessel's
+    // scope_earn_in_tick, which applies the adopted criterion (every regression on an
     // excluded file maps to an armed must-fail, and a mutation of the guarded lines reddens it) and only
     // PROPOSES; the accepted applier re-runs the evidence itself before any scope change. budget 0.20:
     // it runs checks and mutations, no compose, so cheaper than gap-check-supply. 1/1 uninformed prior.
@@ -283,7 +279,7 @@ const SEED = {
         "description": "Propose scope changes per excluded file by the adopted earn-in criterion; never self-applied."
       }
     },
-    // NEW POLICY (2026-10-15): reach on arbitrary multi-step goals, measured by the system's own rhythm instead of an
+    // NEW POLICY: reach on arbitrary multi-step goals, measured by the system's own rhythm instead of an
     // operator dispatching hand-picked probe rounds. The family's credit, settled on `reached` by the conductor's own
     // outcome pass, IS the reach record: no new store.
     //
@@ -329,7 +325,7 @@ const SEED = {
         "goal": "run validation-goal-synth then validation-dispatch-tick then validation-grade-tick for the least-recently-validated promoted template"
       }
     },
-    // NEW POLICY, NOT RESTORATION (2026-09-12) — see the rhythm entry above. This
+    // NEW POLICY, NOT RESTORATION — see the rhythm entry above. This
     // mapping is LOAD-BEARING: federation-verification has no entry in the conductor's
     // bootstrap FAMILY_GOALS const, and the conductor merges pool goals OVER that const,
     // so without this row the family scores due every tick and is then skipped
@@ -342,7 +338,7 @@ const SEED = {
         "goal": "Resolve the federation_verification_report shape and report the federation overlay's current state: its coverage fraction, its blocking reason, which invariants are failing, and whether the report is fresh. The shape is served by the federation transport vessel and returns the most recent report measured by an independent ephemeral libp2p peer, starting a new sweep when the last one is stale."
       }
     },
-    // NEW POLICY (2026-10-15): the reach-probe members (see the rhythm entry). One member per goal, so siblings dedup
+    // NEW POLICY: the reach-probe members (see the rhythm entry). One member per goal, so siblings dedup
     // independently; each runs observe-only.
     {
       "id": "rhythm-family-goal-reach-probe-top-failures",
