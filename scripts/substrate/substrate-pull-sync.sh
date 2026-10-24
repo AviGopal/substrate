@@ -3232,7 +3232,7 @@ for d in "${PASS_ORDER[@]}"; do
   # skew (last successful fan-out HEAD != current HEAD) and force a re-fan-out,
   # suppressed to once per HEAD via $v.fanout-fail so a persistently-unhealthy
   # consumer cannot cause a rebuild/revert loop (a new src change clears it).
-  DIST_RETRY=""
+  DIST_RETRY=""; TG_GATE_ONLY=""
   SELF_UNIT="$(vessel_unit "$v")"
   # A MASKED VESSEL MUST NOT BE CONVERGED AT ALL — NOT EVEN TESTED.
   #
@@ -3377,7 +3377,18 @@ for d in "${PASS_ORDER[@]}"; do
     fi
   fi
   if [ "$CLONE_HASH" = "$RUNTIME_HASH" ]; then
-    if [ -z "$DIST_RETRY" ]; then
+    # A RUNTIME THAT MATCHES THE CLONE IS NOT A GATED ONE. A cutover writes the runtime and commits into the
+    # clone itself, so the next tick found runtime == clone and skipped the gate: the ungated sha ran, and a
+    # quiet tick later it was pinned last-good. Whether HEAD was gated is its own record ($v.gated-sha, written
+    # when the gate passes; an absent record reads the last-good pin, so an upgraded node at its pin is not
+    # re-gated). A HEAD that differs from it goes through the gate now: GATE-ONLY, nothing is mirrored or
+    # restarted, and a pass records it (the next tick then takes this short-circuit and pins it).
+    TG_GATED="$(cat "$MARKER_DIR/$v.gated-sha" 2>/dev/null || cat "${LAST_GOOD_DIR:-/nonexistent}/$v" 2>/dev/null || true)"
+    if [ -z "$DIST_RETRY" ] && [ -n "$TG_GATED" ] && [ "$TG_GATED" != "$HEAD" ]; then
+      TG_GATE_ONLY=1
+      log "$v: UNGATED RUNTIME — the runtime already runs the clone's tree at ${HEAD:0:10}, but the last gated sha is ${TG_GATED:0:10}; gating ${HEAD:0:10} now (gate only: nothing to mirror or restart)"
+    fi
+    if [ -z "$DIST_RETRY" ] && [ -z "${TG_GATE_ONLY:-}" ]; then
       [ "$LAST" = "$CLONE_HASH" ] || echo "$CLONE_HASH" > "$MARKER"
       [ "$(cat "$MARKER_DIR/$v.runtime-sha" 2>/dev/null)" = "$CLONE_HASH" ] || echo "$CLONE_HASH" > "$MARKER_DIR/$v.runtime-sha" 2>/dev/null || true
       # Say so when the clone moved but nothing mirrored changed: this branch used to
@@ -3391,7 +3402,7 @@ for d in "${PASS_ORDER[@]}"; do
       pin_running_baseline "$v" "$(vessel_unit "$v")" "$(health_port "$v")" "$HEAD"
       continue
     fi
-    log "$v: src converged but dist stale (last-good != ${HEAD:0:10}) — re-running fan-out"
+    [ -n "${TG_GATE_ONLY:-}" ] || log "$v: src converged but dist stale (last-good != ${HEAD:0:10}) — re-running fan-out"
   fi
   # Re-attempt suppression: this exact content was already attempted (unhealthy ->
   # reverted), so don't mirror/revert loop. BUT the suppression is keyed on content
@@ -3538,7 +3549,7 @@ EOF
       emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"runtime-source-truncated-$v\",\"category\":\"systematic_failure\",\"source\":\"substrate_detected\",\"summary\":\"pull-sync found live source under $RUNTIME_DIR/$v collapsed to a fraction of its git content ($TRUNCATED) while the unit was still active. A write tool truncated running vessel source; the vessel kept serving from its in-memory module, so nothing else noticed. Re-mirrored from the clone. Ops are applied against RUNTIME_ROOT (live source) rather than a scratch copy — that is the class to close.\",\"status\":\"open\"}}}}"
     fi
   fi
-  if [ -z "$DIST_RETRY" ] && [ -n "$SUPPRESS_REATTEMPT" ] && [ "$LAST" = "$CLONE_HASH" ]; then continue; fi
+  if [ -z "$DIST_RETRY" ] && [ -z "${TG_GATE_ONLY:-}" ] && [ -n "$SUPPRESS_REATTEMPT" ] && [ "$LAST" = "$CLONE_HASH" ]; then continue; fi
 
   # 2b. Drain-awareness: never converge a vessel whose working plane shows a
   # LIVE authoring run — a marker that is fresh (< TTL) with its recorded pid
@@ -4338,7 +4349,7 @@ EOF
           # "0 attributable" against A's 214, converged). The candidate converges the whole batch since
           # last-good, so last-good is what it is judged against. No pin, or a pin that is not an
           # ancestor of HEAD: the top commit's parent, as before (the batch rule above uses the same fallback).
-          PARENT_REF="$(cat "$LAST_GOOD_DIR/$v" 2>/dev/null || true)"
+          PARENT_REF="$(cat "${LAST_GOOD_DIR:-/nonexistent}/$v" 2>/dev/null || true)"
           { [ -n "$PARENT_REF" ] && [ "$PARENT_REF" != "$HEAD" ] && git -C "$d" merge-base --is-ancestor "$PARENT_REF" "$HEAD" 2>/dev/null; } \
             || PARENT_REF="$(git -C "$d" rev-parse --verify --quiet "${HEAD}^" 2>/dev/null || true)"
           if [ -n "$PARENT_REF" ]; then
@@ -4618,6 +4629,14 @@ EOF
         summary:("pull-sync test gate: " + $v + " gated within the per-tick budget again at " + $head + " after budget starvation."),
         classification_metadata:{vessel:$v,head:$head,evidence:"gate finished and passed within the budget"}}}}}' 2>/dev/null)"
     rm -f "$MARKER_DIR/$v.testgate-starved" 2>/dev/null || true
+  fi
+  # The gate passed at HEAD: the record a matching runtime is later checked against (UNGATED RUNTIME).
+  echo "$HEAD" > "$MARKER_DIR/$v.gated-sha" 2>/dev/null || true
+  if [ -n "${TG_GATE_ONLY:-}" ]; then
+    # Admission was never closed (that happens only in the drain below), so a pending drain is simply dropped.
+    Q_PENDING_PORT=""
+    log "$v: gate passed at ${HEAD:0:10}, whose tree the runtime already runs — recorded as gated; nothing to mirror"
+    continue
   fi
   # The owed quiesce (Q_PENDING_PORT, set before the gate): only now that the gate has passed.
   if [ -n "${Q_PENDING_PORT:-}" ]; then mirror_quiesce_drain "$v" "$Q_PENDING_PORT"; fi
