@@ -2323,6 +2323,48 @@ owed_restart_settle() {
   return 0
 }
 
+# THE RUNTIME HAS STAYED BEHIND ITS CLONE TOO LONG. Every hold cause (a gate that defers, goes blind, is killed at its
+# wall, refuses, or a drain or an owed restart that never ends) leaves the runtime on old code, and each has its own
+# bounded alarm, but none of them sees the sum: one node kept development-vessel's runtime on old code for 3+ days while
+# a fix waited, every tick logging only its own reason. So the effect itself is measured, per vessel: since when the
+# runtime's content has differed from the clone's ($v.runtime-behind-since "<t0> <runtime hash>"). The clock restarts
+# only when the RUNTIME changes (a new push to the clone is the same stall, not a new one). Past
+# pull_sync.runtime_behind_clone_alarm_seconds (shaped, default 21600) it files one upserted row per vessel,
+# pull-sync-runtime-behind-clone-<v>, naming both hashes, the age, the gate's last verdict ($v.last-gate-verdict) and
+# its wall's why; a runtime that matches the clone again ends the clock and closes the row.
+# runtime_behind_alarm <vessel> <clone content hash> <runtime content hash> <clone HEAD>
+runtime_behind_alarm() {
+  local _rb_v="$1" _rb_ch="$2" _rb_rh="$3" _rb_head="$4" _rb_f="$MARKER_DIR/$1.runtime-behind-since" _rb_t0="" _rb_rt="" _rb_al="" _rb_max _rb_age _rb_verdict _rb_why
+  { read -r _rb_t0 _rb_rt _rb_al < "$_rb_f"; } 2>/dev/null || true
+  case "$_rb_t0" in ''|*[!0-9]*) _rb_t0="" ;; esac
+  if [ "$_rb_ch" = "$_rb_rh" ]; then
+    [ -f "$_rb_f" ] || return 0
+    rm -f "$_rb_f" 2>/dev/null || true
+    if [ "$_rb_al" = alarmed ]; then
+      log "$_rb_v: the runtime matches the clone again at ${_rb_head:0:10} — closing pull-sync-runtime-behind-clone-$_rb_v"
+      emit_gap "$(jq -n -c --arg v "$_rb_v" --arg head "${_rb_head:0:10}" \
+        '{impulse:{pointer:{type:"substrateGap_write",gap:{id:("pull-sync-runtime-behind-clone-" + $v),category:"systematic_failure",source:"substrate_detected",status:"closed",closed_reason:"runtime_converged",
+          summary:("pull-sync: " + $v + "'"'"'s runtime matches its clone again at " + $head + "."),classification_metadata:{vessel:$v,head:$head,evidence:"runtime content hash equals the clone content hash"}}}}}' 2>/dev/null)"
+    fi
+    return 0
+  fi
+  if [ -z "$_rb_t0" ] || [ "$_rb_rt" != "$_rb_rh" ]; then
+    _rb_t0=$(date +%s); _rb_al=""; echo "$_rb_t0 $_rb_rh" > "$_rb_f" 2>/dev/null || true
+  fi
+  tuning_param pull_sync.runtime_behind_clone_alarm_seconds 21600; _rb_max="${TP_VALUE:-21600}"
+  case "$_rb_max" in ''|*[!0-9]*) _rb_max=21600 ;; esac
+  _rb_age=$(( $(date +%s) - _rb_t0 ))
+  [ "$_rb_age" -ge "$_rb_max" ] || return 0
+  _rb_verdict="$(cat "$MARKER_DIR/$_rb_v.last-gate-verdict" 2>/dev/null || true)"
+  _rb_why="$(jq -r '.why // empty' "$MARKER_DIR/$_rb_v.suite-wall" 2>/dev/null || true)"
+  log "$_rb_v: !!! RUNTIME BEHIND CLONE for ${_rb_age}s (bound ${_rb_max}s): runtime ${_rb_rh:0:10}, clone ${_rb_ch:0:10} at ${_rb_head:0:10}; last gate verdict: ${_rb_verdict:-none recorded} — filing pull-sync-runtime-behind-clone-$_rb_v"
+  emit_gap "$(jq -n -c --arg v "$_rb_v" --arg rt "${_rb_rh:0:10}" --arg ch "${_rb_ch:0:10}" --arg head "${_rb_head:0:10}" --argjson age "$_rb_age" --argjson max "$_rb_max" --arg verdict "$_rb_verdict" --arg why "$_rb_why" \
+    '{impulse:{pointer:{type:"substrateGap_write",gap:{id:("pull-sync-runtime-behind-clone-" + $v),category:"systematic_failure",source:"substrate_detected",status:"open",severity:"high",
+      summary:("Repair needed: " + $v + "'"'"'s runtime (content " + $rt + ") has stayed behind its clone (content " + $ch + ", HEAD " + $head + ") for " + ($age|tostring) + "s, past pull_sync.runtime_behind_clone_alarm_seconds (" + ($max|tostring) + "). Whatever holds it, the runtime still runs old code. Last gate verdict: " + (if $verdict == "" then "none recorded" else $verdict end) + "."),
+      classification_metadata:{vessel:$v,runtime_hash:$rt,clone_hash:$ch,head:$head,behind_seconds:$age,bound_seconds:$max,last_gate_verdict:$verdict,wall_why:$why,edit_site:"scripts/substrate/substrate-pull-sync.sh"}}}}}' 2>/dev/null)"
+  [ "$_rb_al" = alarmed ] || echo "$_rb_t0 $_rb_rh alarmed" > "$_rb_f" 2>/dev/null || true
+}
+
 # A HEALTHY-RUNNING BASELINE. The pin also goes stale by every path that loads code without the same-tick
 # write (the owed path before owed_restart_settle, a hand restart), and self-recovery reverts a down unit to it. So a
 # quiet tick re-pins: when the runtime equals the clone (the caller's branch), the unit has run at least BASELINE_MIN_S
@@ -3277,6 +3319,7 @@ for d in "${PASS_ORDER[@]}"; do
     release_carried_hold "$v" "$SELF_UNIT is MASKED, so nothing will restart it"
     skipped=$((skipped+1)); continue
   fi
+  runtime_behind_alarm "$v" "$CLONE_HASH" "$RUNTIME_HASH" "$HEAD"   # before every hold below, so each one is covered
   if { [ -z "$SELF_UNIT" ] || [ "${SELF_UNIT%.service}" = "$SELF_UNIT" ]; } \
      && [ -d "$RUNTIME_DIR/$v/dist" ] \
      && grep -q '"build"[[:space:]]*:' "$RUNTIME_DIR/$v/package.json" 2>/dev/null \
@@ -3872,6 +3915,8 @@ EOF
   TG_NEED_FILE="$MARKER_DIR/$v.testgate-need"; TG_REMEASURE=""
   GV_T0=$(date +%s)
   PROT_COST_S=$(( ${PROTECTED_TEST_TIMEOUT_SECONDS:-120} + ${TEST_KILL_GRACE_SECONDS:-30} ))
+  # tg_verdict <verdict>: the gate's last verdict for $v ($v.last-gate-verdict), read by runtime_behind_alarm.
+  tg_verdict() { echo "$(date -u +%FT%TZ) ${HEAD:0:10} $1" > "$MARKER_DIR/$v.last-gate-verdict" 2>/dev/null || true; }
   testgate_budget_defer() { # <the run that would start> <its worst case, s> [<cause, when not the budget: host contention>]
     local BD_HEAD="" BD_N=0 BD_MAX _gl
     _gl="$(gate_left)"
@@ -3889,6 +3934,7 @@ EOF
     # A forced re-measure (TG_REMEASURE, below) replaces the old need: that old need was the reason it ran.
     [ -z "${TG_REMEASURE:-}" ] && [ "$_tn_okey" = "$_tn_key" ] && [ "$_tn_oneed" -gt "$_tn_need" ] && _tn_need="$_tn_oneed"
     echo "$_tn_key $_tn_need ${TG_SKIPS:-0}" > "$TG_NEED_FILE" 2>/dev/null || true
+    tg_verdict "deferred: $1 (${3:-budget})"
     if [ -n "${3:-}" ]; then log "$v: TEST GATE DEFERRED — $1 not started: $3 (deferral $BD_N at ${HEAD:0:10}); the candidate holds, never converges ungated"; else log "$v: TEST GATE DEFERRED — $1 needs up to ${2}s but ${_gl}s remain (gate budget ${GATE_BUDGET_SECONDS}s, capped by the unit's TimeoutStartSec ${UNIT_TIMEOUT_S:-3600}s less ${GATE_UNIT_MARGIN_S:-${QUIESCE_MARGIN_S:-120}}s from the tick's start); NOT converging ${HEAD:0:10} this tick (consecutive budget deferral $BD_N of this candidate, bound $BD_MAX); it gates FIRST next tick with a fresh budget"; fi
     if [ "$BD_N" -ge "$BD_MAX" ]; then
       log "$v: !!! TEST GATE BUDGET-STARVED — filing pull-sync-testgate-budget-starved-$v ($BD_N consecutive deferrals at ${HEAD:0:10}, bound $BD_MAX)"
@@ -4062,7 +4108,7 @@ EOF
       '{impulse:{pointer:{type:"substrateGap_write",gap:{id:("pull-sync-testgate-no-runner-" + $nid),category:"systematic_failure",source:"substrate_detected",status:"open",severity:"high",
         summary:("Repair needed: pull-sync on node " + $node + " has no test runner (bun is missing from BUN_BIN and PATH), so no vessel test gate can run and every vessel is HELD, not converged (" + $v + " at " + $head + " among them). Repair the capability by putting bun on PATH in the convergence environment."),
         classification_metadata:{node:$node,vessel:$v,head:$head}}}}}' 2>/dev/null)"
-    skipped=$((skipped + 1)); continue
+    tg_verdict "blind: no test runner"; skipped=$((skipped + 1)); continue
   else
     # START BY RHYTHM, NOT IN PHASE (see testgate_start_jitter): once per tick, before the first suite run, then the
     # host and the budget are re-checked before it starts.
@@ -4148,7 +4194,7 @@ EOF
             summary:("Repair needed: pull-sync HELD " + $v + " at " + $head + " (not converged) because its test suite produced no countable pass/fail summary (" + $bytes + " bytes of output). The run ended without bun printing its totals, so no test was consulted, and a gate that did not measure never promotes. Output tail: " + $tail),
             classification_metadata:{blind_output_bytes:($bytes|tonumber),blind_output_tail:$tail,head:$head}}}}}')"
       fi
-      skipped=$((skipped + 1)); continue
+      tg_verdict "blind: no countable result"; skipped=$((skipped + 1)); continue
     else
       # ── SET-BASED GATE ────────────────────────────────────────────────────────────────
       # A COUNT CANNOT EXPRESS "REGRESSION", AND THE COUNT VERSION WEDGED CONVERGENCE.
@@ -4347,7 +4393,7 @@ EOF
             # untracked regression through. Hold: neither, until the store answers. (A gap about the
             # stale key would be written with the same key and refused too: this line is the report.)
             log "$v: credential refused (401) — key stale? the gap store refused the node key, so whether the ${CONFIRMED} newly-failing test(s) at ${HEAD:0:10} are tracked by open gaps is UNKNOWN (environment fault, not a regression) — HOLDING $v this tick: no refusal counted, no regression gap, runtime keeps its current code"
-            skipped=$((skipped + 1)); continue
+            tg_verdict "unknown: the gap store refused the credential"; skipped=$((skipped + 1)); continue
           fi
           if [ -n "$TRACKED" ]; then
             # Exact leaf match (the line ENDS with " > <name>"), at most ONE line per tracked name: a leaf name
@@ -4474,7 +4520,7 @@ EOF
       '{impulse:{pointer:{type:"substrateGap_write",gap:{id:("pull-sync-testgate-environment-" + $nid + "-" + $v),category:"systematic_failure",source:"substrate_detected",status:"open",severity:"high",
         summary:("Repair needed: pull-sync test gate for " + $v + " on node " + $node + " is BLIND — environment: test files cannot resolve " + $mods + " at the parent and at the candidate " + $head + " (" + $reg + "). The clone environment, not the commit, fails to load them, so " + $v + " is HELD (not converged, not refused) until they resolve. Usually the clone node_modules copy of a file: dependency has no built output (its sibling clone dist is untracked and was never built or synced)."),
         classification_metadata:{class:"gate_blind_environment",node:$node,vessel:$v,unresolvable_modules:($mods | split(",")),head:$head,regression:$reg}}}}}' 2>/dev/null)"
-    skipped=$((skipped + 1)); continue
+    tg_verdict "blind: environment"; skipped=$((skipped + 1)); continue
   fi
   # PROTECTED JUDGE TESTS ARE JUDGED ALONE, NOT BY THE DIFF. The lane may tighten
   # arming but never loosen it, and that rests on this gate seeing the protected judge tests (the test
@@ -4603,7 +4649,7 @@ EOF
           summary:("Repair needed: pull-sync cannot measure " + $v + " at " + $head + ": for " + ($n|tostring) + " consecutive ticks its suite runs were killed at the per-run wall (" + ($ew|tostring) + "s; cap " + ($cap|tostring) + "s = a quarter of the unit budget less the kill grace; killed: " + $killed + "), so the candidate is held without a verdict. The unit budget must grow or the suite must shrink."),
           classification_metadata:{vessel:$v,head:$head,effective_wall_s:$ew,cap_s:$cap,last_completed_wall_s:$last,consecutive_holds:$n,wall_why:$why,edit_site:"scripts/substrate/substrate-pull-sync.sh"}}}}}' 2>/dev/null)"
     fi
-    skipped=$((skipped + 1)); continue
+    tg_verdict "held: overlay killed at the wall"; skipped=$((skipped + 1)); continue
   fi
   # Reaching here, this gate MEASURED (a counted refusal or a pass): the no-count hold streak ends, and an open
   # unmeasurable gap closes.
@@ -4652,7 +4698,7 @@ EOF
     if [ -n "$TG_TESTONLY" ]; then
       emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-test-regression-$v\",\"category\":\"systematic_failure\",\"source\":\"substrate_detected\",\"summary\":\"pull-sync test gate: $v at ${HEAD:0:10} regressed its own suite ($REG), confirmed on a second run. The range ${TG_PREV_GOOD:0:10}..${HEAD:0:10} changes only tests, so it is refused until repaired (refusal $RC); the starvation break never applies to a test-only range, which changes no runtime code.\",\"status\":\"open\",\"classification_metadata\":{\"vessel\":\"$v\",\"effective_wall_s\":${SUITE_EFF_WALL_S:-240},\"wall_why\":\"${SUITE_WALL_WHY:-}\"}}}}}"
       log "$v: TEST REGRESSION at ${HEAD:0:10} ($REG) — REFUSING to converge (refusal $RC; ${TG_PREV_GOOD:0:10}..${HEAD:0:10} is test-only, so no starvation break); runtime keeps running its current code"
-      skipped=$((skipped + 1)); continue
+      tg_verdict "refused: $REG"; skipped=$((skipped + 1)); continue
     fi
     # THE BREAK DEFERS; IT NEVER PROMOTES PAST RED. It used to converge here once
     # RC passed the bound — named regressions held "outstanding", load regressions as a degraded
@@ -4663,15 +4709,16 @@ EOF
     if [ "$RC" -le "${TEST_GATE_MAX_REFUSALS:-3}" ]; then
       emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-test-regression-$v\",\"category\":\"systematic_failure\",\"source\":\"substrate_detected\",\"summary\":\"pull-sync test gate: $v at ${HEAD:0:10} regressed its own suite ($REG), confirmed on a second run. Refusal $RC of ${TEST_GATE_MAX_REFUSALS:-3}; the runtime stays on the code it is already running until this is repaired.\",\"status\":\"open\",\"classification_metadata\":{\"vessel\":\"$v\",\"effective_wall_s\":${SUITE_EFF_WALL_S:-240},\"wall_why\":\"${SUITE_WALL_WHY:-}\"}}}}}"
       log "$v: TEST REGRESSION at ${HEAD:0:10} ($REG) — REFUSING to converge ($RC/${TEST_GATE_MAX_REFUSALS:-3}); runtime keeps running its current code"
-      skipped=$((skipped + 1)); continue
+      tg_verdict "refused: $REG"; skipped=$((skipped + 1)); continue
     fi
     emit_gap "$(jq -n -c --arg v "$v" --arg head "${HEAD:0:10}" --arg reg "$REG" --arg rc "$RC" --arg max "${TEST_GATE_MAX_REFUSALS:-3}" --argjson ew "${SUITE_EFF_WALL_S:-240}" --arg why "${SUITE_WALL_WHY:-}" \
       '{impulse:{pointer:{type:"substrateGap_write",gap:{id:("pull-sync-test-regression-" + $v),category:"systematic_failure",source:"substrate_detected",status:"open",severity:"high",
         summary:("Repair needed (ESCALATED): pull-sync test gate has refused " + $v + " " + $rc + " consecutive runs, past the bound of " + $max + ", at " + $head + " (" + $reg + "). The starvation break defers convergence; it never promotes past red, so the runtime stays on its current code until the regression is repaired."),
         classification_metadata:{vessel:$v,head:$head,refusals:($rc | tonumber),refusal_bound:($max | tonumber),escalated:true,regression:$reg,effective_wall_s:$ew,wall_why:$why}}}}}' 2>/dev/null)"
     log "$v: TEST REGRESSION at ${HEAD:0:10} ($REG) — REFUSING to converge (refusal $RC, past the bound ${TEST_GATE_MAX_REFUSALS:-3}: gap ESCALATED; the starvation break defers, it never promotes past red); runtime keeps running its current code"
-    skipped=$((skipped + 1)); continue
+    tg_verdict "refused past the bound: $REG"; skipped=$((skipped + 1)); continue
   fi
+  tg_verdict "passed"
   rm -f "$MARKER_DIR/$v.testgate-refusals" 2>/dev/null || true
   # A STARVED CANDIDATE THAT GATED CLOSES ITS GAP: the gate finished and passed at this HEAD.
   if [ -s "$MARKER_DIR/$v.testgate-starved" ]; then
