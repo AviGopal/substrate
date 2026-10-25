@@ -52,6 +52,7 @@ unit_timeout_s() {
 }
 : "${UNIT_TIMEOUT_S:=$(unit_timeout_s)}"
 GEN_QUEUE=""
+SLOW_QUEUE=""
 # PINNED JUDGE (scripts/substrate/gate/). gate-runner (substrate-pull-sync.service's ExecStart)
 # runs THIS file from /workspace/.gate/accepted/ — a `git archive` of the accepted sha — and
 # sets PULLSYNC_ACCEPTED_DIR to that copy. In that mode (the "gated" mode):
@@ -260,6 +261,8 @@ dev_resolve() {
 # tick (log line + DEFERRAL_LOG record `tuning_param_fallback`), so "the shaped value is not being
 # read" is observable instead of indistinguishable from "the shaped value equals the default".
 # Not a subshell: TP_VALUE and the once-per-tick set survive the call.
+# `tuning_param <name> <default> string` reads a STRING row (migration 203 widened the value to float | string)
+# instead: the value is the row's string, and only an absent or empty one falls back.
 TP_FALLBACK_SEEN=" "
 tuning_param() {
   local _tp_out _tp_code _tp_body _tp_why=""
@@ -271,20 +274,28 @@ tuning_param() {
   [ "$_tp_out" = "$_tp_code" ] && _tp_body=""
   case "$_tp_code" in
     2[0-9][0-9])
-      TP_VALUE="$(printf '%s' "$_tp_body" | sed -n 's/.*"value"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\)\(\.[0-9]*\)\{0,1\}[[:space:]]*[,}].*/\1/p' | head -1)"
+      if [ "${3:-}" = string ]; then
+        TP_VALUE="$(printf '%s' "$_tp_body" | sed -n 's/.*"value"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)"
+      else
+        TP_VALUE="$(printf '%s' "$_tp_body" | sed -n 's/.*"value"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\)\(\.[0-9]*\)\{0,1\}[[:space:]]*[,}].*/\1/p' | head -1)"
+      fi
       if [ -z "$TP_VALUE" ]; then
-        if printf '%s' "$_tp_body" | grep -q '"value"[[:space:]]*:[[:space:]]*null'; then _tp_why=null; else _tp_why=non_numeric; fi
+        if printf '%s' "$_tp_body" | grep -q '"value"[[:space:]]*:[[:space:]]*null'; then _tp_why=null; elif [ "${3:-}" = string ]; then _tp_why=non_string; else _tp_why=non_numeric; fi
       fi ;;
     ''|000|*[!0-9]*) _tp_why=unreachable ;;
     *) _tp_why="http_$_tp_code" ;;
   esac
-  case "$TP_VALUE" in ''|*[!0-9]*) TP_VALUE="$2"; _tp_why="${_tp_why:-non_numeric}" ;; esac
+  if [ "${3:-}" = string ]; then
+    [ -n "$TP_VALUE" ] || { TP_VALUE="$2"; _tp_why="${_tp_why:-non_string}"; }
+  else
+    case "$TP_VALUE" in ''|*[!0-9]*) TP_VALUE="$2"; _tp_why="${_tp_why:-non_numeric}" ;; esac
+  fi
   TP_WHY="$_tp_why" # why the default was used ("" = the row was read), for a caller that must tell "no row" from "unreadable"
   if [ -n "$_tp_why" ] && [ "${TP_FALLBACK_SEEN#* $1 }" = "$TP_FALLBACK_SEEN" ]; then
     TP_FALLBACK_SEEN="$TP_FALLBACK_SEEN$1 "
     log "tuning_param_fallback name=$1 reason=$_tp_why default=$2"
     printf '{"at":"%s","actor":"pull-sync","action":"tuning_param_fallback","name":"%s","reason":"%s","default":%s}\n' \
-      "$(date -Iseconds)" "$1" "$_tp_why" "$2" >> "$DEFERRAL_LOG" 2>/dev/null || true
+      "$(date -Iseconds)" "$1" "$_tp_why" "$(if [ "${3:-}" = string ]; then printf '"%s"' "$2"; else printf '%s' "$2"; fi)" >> "$DEFERRAL_LOG" 2>/dev/null || true
   fi
 }
 
@@ -342,6 +353,120 @@ testgate_start_jitter() {
   log "${1:-?}: suite start jitter ${_tj}s (drawn from 0..${_tj_max}s, pull_sync.testgate_start_jitter_s; once this tick) so co-hosted gates do not start in phase"
   [ "$_tj" -gt 0 ] && sleep "$_tj"
   return 0
+}
+# THE SLOW LANE. A vessel's whole suite can outgrow its gate: activity-api's ran ~860 s against the 840 s per-run cap, and
+# the gate needs T1, T2 and a two-run overlay inside one tick, so it was structurally deadlocked. ~690 s of it was three
+# classes of files: trace-retention *.scale files, *.real* files that each boot a database, and one bounded-list file. Those
+# files are declared SLOW per vessel; every gate run (T1, the unnamed-rise re-run, T2, the parent/candidate overlay)
+# measures only the FAST set, so the gate's verdicts, its baseline and its derived wall come from the fast suite alone.
+# After the candidate CONVERGES the slow files run ONCE, at the end of the tick and only if the tick's budget allows
+# (slow_lane_run); a regression there (failing names new against the slow baseline) files a gap. It never blocks,
+# refuses or reverts a convergence.
+# Shaped: ONE tuning row, pull_sync.slow_test_globs = "<vessel>=<glob>,<glob>;<vessel>=...", read with tuning_param's
+# string mode; globs are relative to the vessel root and match as case patterns (* crosses /). No row = the default
+# below. A vessel it does not name has no slow list and gates exactly as before (plain `bun test`, no file list).
+# Top-level, and called from the gate only when defined, like host_contended.
+PULLSYNC_SLOW_TEST_GLOBS_DEFAULT='activity-api=*.real*.test.ts,*.scale.test.ts,test/trace-list-bounded-newest-first.test.ts'
+slow_test_globs() { # vessel -> SLOW_GLOBS (comma-separated globs, empty when the vessel has none)
+  local _sg_all="$PULLSYNC_SLOW_TEST_GLOBS_DEFAULT" _sg_e _sg_list
+  SLOW_GLOBS=""
+  if declare -F tuning_param >/dev/null 2>&1; then tuning_param pull_sync.slow_test_globs "$PULLSYNC_SLOW_TEST_GLOBS_DEFAULT" string; _sg_all="$TP_VALUE"; fi
+  IFS=';' read -ra _sg_list <<< "$_sg_all"
+  for _sg_e in "${_sg_list[@]}"; do
+    _sg_e="${_sg_e#"${_sg_e%%[![:space:]]*}"}"
+    case "$_sg_e" in "$1="*) SLOW_GLOBS="${_sg_e#*=}" ;; esac
+  done
+}
+# slow_split <run dir> <fast|slow>: the test files bun would discover there (its own patterns; node_modules and dot
+# directories pruned), as ./relative paths, split by SLOW_GLOBS. `fast` prints NOTHING unless the split is real (at least
+# one slow AND one fast file), and nothing means: run plain `bun test`, the whole suite, exactly as before.
+slow_split() {
+  [ -n "${SLOW_GLOBS:-}" ] || return 0
+  local _ss_f _ss_g _ss_rel _ss_hit _ss_fast="" _ss_slow="" _ss_globs
+  IFS=',' read -ra _ss_globs <<< "$SLOW_GLOBS"
+  while IFS= read -r _ss_f; do
+    [ -n "$_ss_f" ] || continue
+    _ss_rel="${_ss_f#./}"; _ss_hit=""
+    for _ss_g in "${_ss_globs[@]}"; do
+      [ -n "$_ss_g" ] || continue
+      # shellcheck disable=SC2254
+      case "$_ss_rel" in $_ss_g) _ss_hit=1; break ;; esac
+    done
+    if [ -n "$_ss_hit" ]; then _ss_slow="$_ss_slow$_ss_f"$'\n'; else _ss_fast="$_ss_fast$_ss_f"$'\n'; fi
+  done < <(cd "$1" 2>/dev/null && find . \( -name node_modules -o -name '.?*' \) -prune -o -type f -print 2>/dev/null \
+             | grep -E '[._](test|spec)\.[cm]?[jt]sx?$' | LC_ALL=C sort)
+  [ -n "$_ss_slow" ] || return 0
+  case "$2" in
+    slow) printf '%s' "$_ss_slow" ;;
+    *) printf '%s' "$_ss_fast" ;;
+  esac
+}
+# slow_lane_run <vessel> <head> <clone dir> <slow globs>: the slow files of a candidate that passed its fast gate, run
+# ONCE after it converged (queued at the gate's pass, drained at the end of the tick). Not converged, a moved clone, no
+# budget or a run that measured nothing: logged, and nothing is written. A regression files
+# pull-sync-slow-lane-regression-<vessel> naming the candidate, the files and the tests, and is re-filed while they fail;
+# it closes when the slow lane runs clean. The slow baseline ($v.slow-failnames) NEVER absorbs a new failing name (the
+# outstanding-set lesson): a name leaves it when it passes, and its first observation is recorded without a verdict.
+# Never touches the gate's baseline, outstanding set, refusals or last-good.
+slow_lane_run() {
+  local _sl_v="$1" _sl_head="$2" _sl_d="$3" SLOW_GLOBS="$4" _sl_left _sl_wall _sl_grace _sl_out _sl_rc _sl_t0 _sl_root _sl_nf
+  local _sl_pairs _sl_names _sl_base _sl_new _sl_files _sl_bf="$TEST_BASELINE_DIR/$1.slow-failnames" _sl_mark="$MARKER_DIR/$1.slow-lane-regression"
+  local -a _sl_list=()
+  [ "$(cat "$LAST_GOOD_DIR/$_sl_v" 2>/dev/null)" = "$_sl_head" ] || { log "$_sl_v: slow lane not run: ${_sl_head:0:10} passed its gate but did not converge this tick"; return 0; }
+  [ "$(git -C "$_sl_d" rev-parse HEAD 2>/dev/null)" = "$_sl_head" ] || { log "$_sl_v: slow lane not run: the clone is no longer at ${_sl_head:0:10}"; return 0; }
+  mapfile -t _sl_list < <(slow_split "$_sl_d" slow)
+  [ "${#_sl_list[@]}" -gt 0 ] || return 0
+  _sl_grace="${TEST_KILL_GRACE_SECONDS:-30}"
+  # The gate's per-run cap (a quarter of the unit budget less the grace, floored): the slow lane is one run, never longer.
+  _sl_wall=$(( ( ${UNIT_TIMEOUT_S:-3600} - ${GATE_UNIT_MARGIN_S:-${QUIESCE_MARGIN_S:-120}} ) / 4 - _sl_grace ))
+  [ "$_sl_wall" -lt "${SUITE_WALL_FLOOR_S:-240}" ] && _sl_wall="${SUITE_WALL_FLOOR_S:-240}"
+  _sl_left=$(( ${UNIT_TIMEOUT_S:-3600} - ( $(date +%s) - ${PULLSYNC_T0:-$(date +%s)} ) - ${GATE_UNIT_MARGIN_S:-${QUIESCE_MARGIN_S:-120}} ))
+  if [ "$_sl_left" -lt $(( _sl_wall + _sl_grace )) ]; then
+    log "$_sl_v: slow lane not run for ${_sl_head:0:10}: its ${#_sl_list[@]} slow file(s) need up to $(( _sl_wall + _sl_grace ))s and ${_sl_left}s of the tick remain; the next converged candidate runs them (convergence is unaffected)"
+    return 0
+  fi
+  _sl_out="$( (cd "$_sl_d" && _sl_root="$(mktemp -d "${TMPDIR:-/tmp}/pullsync-root-XXXXXX")" && _sl_o="$(mktemp "${TMPDIR:-/tmp}/pullsync-out-XXXXXX")" && _sl_t0=$(date +%s) && scrubbed_env "$_sl_root" timeout --kill-after="$_sl_grace" "$_sl_wall" "$BUN_BIN" test "${_sl_list[@]}" > "$_sl_o" 2>&1; echo "__PULLSYNC_RC=$? wall=$(( $(date +%s) - _sl_t0 ))s" >> "$_sl_o"; cat "$_sl_o"; rm -rf "$_sl_root" "$_sl_o" 2>/dev/null) || true )"
+  _sl_rc="$(printf '%s' "$_sl_out" | sed -n 's/^__PULLSYNC_RC=\([0-9]*\) .*/\1/p' | tail -1)"
+  _sl_nf="$(printf '%s' "$_sl_out" | grep -oE '^ *[0-9]+ fail' | grep -oE '[0-9]+' | tail -1 || true)"
+  if [ -z "$_sl_nf" ] || [ "$_sl_rc" = 124 ] || [ "$_sl_rc" = 137 ]; then
+    log "$_sl_v: !!! slow lane at ${_sl_head:0:10} measured nothing (rc ${_sl_rc:-?}, wall ${_sl_wall}s): not a result; no baseline written, no verdict (convergence is unaffected)"
+    return 0
+  fi
+  # "<file>\t<failing test>" per failure: bun prints each file's path ("path:") before its results; a re-listing after the
+  # totals ("N tests failed:") is attributed to no file.
+  _sl_pairs="$(printf '%s\n' "$_sl_out" | sed 's/\x1b\[[0-9;]*m//g' | awk '
+    /tests? failed:$/ { f = ""; next }
+    /^[^ (].*[._](test|spec)\.[cm]?[jt]sx?:$/ { f = substr($0, 1, length($0) - 1); next }
+    /^\(fail\)|^✗/ { n = $0; sub(/ \[[0-9.]*m*s\]$/, "", n); sub(/[[:space:]]*$/, "", n); print f "\t" n }')"
+  _sl_names="$(printf '%s\n' "$_sl_pairs" | cut -f2 | grep . | LC_ALL=C sort -u || true)"
+  if [ ! -f "$_sl_bf" ]; then
+    printf '%s\n' "$_sl_names" | grep . > "$_sl_bf"
+    log "$_sl_v: slow lane baseline recorded at ${_sl_head:0:10}: ${#_sl_list[@]} slow file(s), $_sl_nf failing (no verdict on first observation)"
+    return 0
+  fi
+  _sl_base="$(LC_ALL=C sort -u "$_sl_bf" 2>/dev/null | grep . || true)"
+  _sl_new="$(LC_ALL=C comm -23 <(printf '%s\n' "$_sl_names" | grep .) <(printf '%s\n' "$_sl_base" | grep .) 2>/dev/null || true)"
+  # A name that passes leaves the baseline; a new failing name never enters it.
+  LC_ALL=C comm -12 <(printf '%s\n' "$_sl_names" | grep .) <(printf '%s\n' "$_sl_base" | grep .) > "$_sl_bf" 2>/dev/null || true
+  if [ -n "$_sl_new" ]; then
+    _sl_files="$(printf '%s\n' "$_sl_pairs" | awk -F'\t' 'NR == FNR { if ($0 != "") N[$0] = 1; next } ($2 in N) && $1 != "" { print $1 }' <(printf '%s\n' "$_sl_new") - | LC_ALL=C sort -u)"
+    [ -n "$_sl_files" ] || _sl_files="$(printf '%s\n' "${_sl_list[@]#./}")"
+    log "$_sl_v: !!! slow lane REGRESSION at ${_sl_head:0:10} — $(printf '%s' "$_sl_new" | grep -c .) newly failing test(s) in $(printf '%s' "$_sl_files" | tr '\n' ' ' | sed 's/ $//'): $(printf '%s' "$_sl_new" | tr '\n' ';' | cut -c1-400) (filed; convergence is unaffected)"
+    : > "$_sl_mark" 2>/dev/null || true
+    emit_gap "$(jq -n -c --arg v "$_sl_v" --arg head "$_sl_head" --arg names "$_sl_new" --arg files "$_sl_files" --arg globs "$SLOW_GLOBS" \
+      '($names | split("\n") | map(select(length > 0))) as $n | ($files | split("\n") | map(select(length > 0))) as $f | {impulse:{pointer:{type:"substrateGap_write",gap:{id:("pull-sync-slow-lane-regression-" + $v),category:"systematic_failure",source:"substrate_detected",status:"open",severity:"medium",
+        summary:("Repair needed: " + $v + " at " + $head[0:10] + " converged past its fast test gate, and its slow lane (the files the gate excludes, pull_sync.slow_test_globs) then failed " + ($n | length | tostring) + " test(s) that were not failing before, in " + ($f | join(", ")) + ": " + ($n | join("; ")) + ". The slow lane never blocks or reverts a convergence, so this gap is the only signal; it closes when the slow lane runs clean."),
+        classification_metadata:{vessel:$v,candidate_sha:$head,files:$f,failing_tests:$n,slow_test_globs:$globs}}}}}' 2>/dev/null)"
+  else
+    log "$_sl_v: slow lane at ${_sl_head:0:10}: ${#_sl_list[@]} slow file(s), $_sl_nf failing, none new against the slow baseline"
+    if [ -e "$_sl_mark" ]; then
+      emit_gap "$(jq -n -c --arg v "$_sl_v" --arg head "$_sl_head" \
+        '{impulse:{pointer:{type:"substrateGap_write",gap:{id:("pull-sync-slow-lane-regression-" + $v),category:"systematic_failure",source:"substrate_detected",status:"closed",closed_reason:"slow_lane_clean",
+          summary:("pull-sync slow lane: " + $v + " at " + $head[0:10] + " has no failing test that was not failing before."),
+          classification_metadata:{vessel:$v,candidate_sha:$head}}}}}' 2>/dev/null)"
+      rm -f "$_sl_mark" 2>/dev/null || true
+    fi
+  fi
 }
 # Failing-test names that are red ON PURPOSE in this commit: an OPEN gap's class2 check (evidence_resolve
 # test_suite for vessel $1) whose test_file is among the files the commit changed ($2, newline-separated).
@@ -3891,6 +4016,13 @@ EOF
   killed_at_wall() { printf '%s' "$1" | grep -qE '^__PULLSYNC_RC=(124|137) '; }
   SUITE_EFF_WALL_S="${TEST_TIMEOUT_SECONDS:-$SUITE_WALL_S}"; SUITE_WALL_CAP_S="$_sw_cap"; SUITE_WALL_LAST_S="${_sw_last:-null}"
   SUITE_COST_S=$(( SUITE_EFF_WALL_S + ${TEST_KILL_GRACE_SECONDS:-30} ))
+  # THE SLOW LANE (see slow_lane_run): the gate's runs measure only the fast files of a vessel that declares slow ones.
+  SLOW_GLOBS=""; declare -F slow_test_globs >/dev/null 2>&1 && slow_test_globs "$v"
+  if [ -n "$SLOW_GLOBS" ]; then
+    _sl_nslow="$(slow_split "$d" slow | grep -c . || true)"; _sl_nfast="$(slow_split "$d" fast | grep -c . || true)"
+    if [ "${_sl_nfast:-0}" -gt 0 ]; then log "$v: slow lane: the gate runs ${_sl_nfast} fast test file(s); ${_sl_nslow} slow file(s) ($SLOW_GLOBS) run once after convergence"
+    else log "$v: slow lane: nothing to split (${_sl_nslow:-0} slow, ${_sl_nfast:-0} fast file(s) for $SLOW_GLOBS); the gate runs the whole suite"; fi
+  fi
   # WHAT A KNOWN RESULT DEPENDS ON. A candidate deferred mid-gate has MEASURED how long its
   # gate needs; re-running the same suite on the same inputs only to defer again spends the tick's budget
   # for nothing. The key is everything that result depends on: the HEAD, the outstanding-regression set,
@@ -3910,6 +4042,7 @@ EOF
         [ -n "$_tk_n" ] && echo "filedep $_tk_n $( [ -d "$_tk_t" ] && file_dep_identity "$_tk_t" || echo missing)"
       done <<< "$_tk_fd"
       echo "env $("$BUN_BIN" --version 2>/dev/null || echo none) ${TEST_TIMEOUT_SECONDS:-${SUITE_WALL_S:-240}} ${TEST_KILL_GRACE_SECONDS:-30} ${PROTECTED_TEST_TIMEOUT_SECONDS:-120}"
+      [ -z "${SLOW_GLOBS:-}" ] || echo "slow $SLOW_GLOBS"
     } | md5sum | cut -d' ' -f1
   }
   TG_NEED_FILE="$MARKER_DIR/$v.testgate-need"; TG_REMEASURE=""
@@ -4047,7 +4180,8 @@ EOF
   # captured through $( ) ~45% of the output was lost, cut inside the end-of-run failure list before the totals
   # (324,504 of ~594,000 bytes, mid-line). The same run redirected to a file keeps its summary. That race was the
   # ~40% "TEST GATE BLIND" rate: exit 1 (a normal red), not a timeout, kill or crash.
-  run_suite() { (cd "$d" && _rs_root="$(mktemp -d "${TMPDIR:-/tmp}/pullsync-root-XXXXXX")" && _rs_out="$(mktemp "${TMPDIR:-/tmp}/pullsync-out-XXXXXX")" && _rs_t0=$(date +%s) && scrubbed_env "$_rs_root" timeout --kill-after="${TEST_KILL_GRACE_SECONDS:-30}" "${TEST_TIMEOUT_SECONDS:-${SUITE_WALL_S:-240}}" "$BUN_BIN" test > "$_rs_out" 2>&1; _rs_rc=$?; cat "$_rs_out"; echo "__PULLSYNC_RC=$_rs_rc wall=$(( $(date +%s) - _rs_t0 ))s"; case "$_rs_rc" in 124|137) log "$v: !!! suite run KILLED at TEST_TIMEOUT_SECONDS=${TEST_TIMEOUT_SECONDS:-${SUITE_WALL_S:-240}} (wall $(( $(date +%s) - _rs_t0 ))s, rc $_rs_rc): not a result" >&2 ;; esac; rm -rf "$_rs_root" "$_rs_out" 2>/dev/null) || true; }
+  # A vessel with a slow list runs its FAST files by name (slow_split); with none, or nothing to split, plain `bun test`.
+  run_suite() { (cd "$d" && _rs_fast=() && { ! declare -F slow_split >/dev/null 2>&1 || mapfile -t _rs_fast < <(slow_split . fast); } && _rs_root="$(mktemp -d "${TMPDIR:-/tmp}/pullsync-root-XXXXXX")" && _rs_out="$(mktemp "${TMPDIR:-/tmp}/pullsync-out-XXXXXX")" && _rs_t0=$(date +%s) && scrubbed_env "$_rs_root" timeout --kill-after="${TEST_KILL_GRACE_SECONDS:-30}" "${TEST_TIMEOUT_SECONDS:-${SUITE_WALL_S:-240}}" "$BUN_BIN" test ${_rs_fast[@]+"${_rs_fast[@]}"} > "$_rs_out" 2>&1; _rs_rc=$?; cat "$_rs_out"; echo "__PULLSYNC_RC=$_rs_rc wall=$(( $(date +%s) - _rs_t0 ))s"; case "$_rs_rc" in 124|137) log "$v: !!! suite run KILLED at TEST_TIMEOUT_SECONDS=${TEST_TIMEOUT_SECONDS:-${SUITE_WALL_S:-240}} (wall $(( $(date +%s) - _rs_t0 ))s, rc $_rs_rc): not a result" >&2 ;; esac; rm -rf "$_rs_root" "$_rs_out" 2>/dev/null) || true; }
   # Run the suite at an arbitrary ref, NOW, under this tick's conditions.
   #
   # The stored baseline is a snapshot taken at some earlier tick; test outcomes here depend on
@@ -4083,7 +4217,8 @@ EOF
       [ -d "$d/$_rsa_n/node_modules" ] && [ -d "$_rsa_wt/$_rsa_n" ] && [ ! -e "$_rsa_wt/$_rsa_n/node_modules" ] \
         && ln -s "$d/$_rsa_n/node_modules" "$_rsa_wt/$_rsa_n/node_modules" 2>/dev/null || true
     done
-    _rsa_out="$( (cd "$_rsa_wt" && _rs_root="$(mktemp -d "${TMPDIR:-/tmp}/pullsync-root-XXXXXX")" && _rs_out="$(mktemp "${TMPDIR:-/tmp}/pullsync-out-XXXXXX")" && _rs_t0=$(date +%s) && scrubbed_env "$_rs_root" timeout --kill-after="${TEST_KILL_GRACE_SECONDS:-30}" "${TEST_TIMEOUT_SECONDS:-${SUITE_WALL_S:-240}}" "$BUN_BIN" test > "$_rs_out" 2>&1; _rs_rc=$?; cat "$_rs_out"; echo "__PULLSYNC_RC=$_rs_rc wall=$(( $(date +%s) - _rs_t0 ))s"; case "$_rs_rc" in 124|137) log "$v: !!! suite run at ${_rsa_ref:0:10} KILLED at TEST_TIMEOUT_SECONDS=${TEST_TIMEOUT_SECONDS:-${SUITE_WALL_S:-240}} (wall $(( $(date +%s) - _rs_t0 ))s, rc $_rs_rc): not a result" >&2 ;; esac; rm -rf "$_rs_root" "$_rs_out" 2>/dev/null) || true )"
+    # The same fast set as run_suite, enumerated in the worktree (each ref's own files).
+    _rsa_out="$( (cd "$_rsa_wt" && _rs_fast=() && { ! declare -F slow_split >/dev/null 2>&1 || mapfile -t _rs_fast < <(slow_split . fast); } && _rs_root="$(mktemp -d "${TMPDIR:-/tmp}/pullsync-root-XXXXXX")" && _rs_out="$(mktemp "${TMPDIR:-/tmp}/pullsync-out-XXXXXX")" && _rs_t0=$(date +%s) && scrubbed_env "$_rs_root" timeout --kill-after="${TEST_KILL_GRACE_SECONDS:-30}" "${TEST_TIMEOUT_SECONDS:-${SUITE_WALL_S:-240}}" "$BUN_BIN" test ${_rs_fast[@]+"${_rs_fast[@]}"} > "$_rs_out" 2>&1; _rs_rc=$?; cat "$_rs_out"; echo "__PULLSYNC_RC=$_rs_rc wall=$(( $(date +%s) - _rs_t0 ))s"; case "$_rs_rc" in 124|137) log "$v: !!! suite run at ${_rsa_ref:0:10} KILLED at TEST_TIMEOUT_SECONDS=${TEST_TIMEOUT_SECONDS:-${SUITE_WALL_S:-240}} (wall $(( $(date +%s) - _rs_t0 ))s, rc $_rs_rc): not a result" >&2 ;; esac; rm -rf "$_rs_root" "$_rs_out" 2>/dev/null) || true )"
     git -C "$d" worktree remove --force "$_rsa_wt" >/dev/null 2>&1 || rm -rf "$_rsa_wt" 2>/dev/null || true
     git -C "$d" worktree prune >/dev/null 2>&1 || true
     printf '%s' "$_rsa_out"
@@ -4719,6 +4854,8 @@ EOF
     tg_verdict "refused past the bound: $REG"; skipped=$((skipped + 1)); continue
   fi
   tg_verdict "passed"
+  # Queued for the slow lane (slow_lane_run), drained at the end of the tick only if $v converged to HEAD.
+  [ -z "${SLOW_GLOBS:-}" ] || SLOW_QUEUE="${SLOW_QUEUE:-}${v}|${HEAD}|${d}|${SLOW_GLOBS}"$'\n'
   rm -f "$MARKER_DIR/$v.testgate-refusals" 2>/dev/null || true
   # A STARVED CANDIDATE THAT GATED CLOSES ITS GAP: the gate finished and passed at this HEAD.
   if [ -s "$MARKER_DIR/$v.testgate-starved" ]; then
@@ -5539,6 +5676,12 @@ while IFS='|' read -r gv gq gh gd; do
   FAILTEST_GEN_DEADLINE=$(( $(date +%s) + gleft )) gen_failing_test_gaps "$gv" "$(cat "$gq/out" 2>/dev/null)" "$gq/prev" "$gh" "$gd" || true
   rm -rf "$gq"
 done <<< "$GEN_QUEUE"
+
+# THE SLOW LANE, after the generator: each converged candidate's slow files once, budget permitting (see slow_lane_run).
+while IFS='|' read -r sl_v sl_h sl_d sl_g; do
+  [ -n "$sl_v" ] || continue
+  slow_lane_run "$sl_v" "$sl_h" "$sl_d" "$sl_g" || true
+done <<< "${SLOW_QUEUE:-}"
 
 log "done — synced=$synced skipped=$skipped deferred=$deferred failed=$failed coverage_skipped=$COV_SKIPPED coverage_map=$COV_STATE link_audit=ok:$LA_OK/relinked:$LA_RELINKED/deferred:$LA_DEFERRED/refused:$LA_REFUSED/absent:$LA_ABSENT tier_b=$TIERB_STATE"
 
