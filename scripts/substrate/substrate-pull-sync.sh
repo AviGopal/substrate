@@ -3794,15 +3794,26 @@ EOF
   # yet it is the cap. It is logged with its inputs on every gate run, recorded in $v.suite-wall (JSON), and
   # carried in the classification_metadata (effective_wall_s, wall_why) of the starvation, regression and
   # unmeasurable gaps this gate files, which is where the system's gap reader sees it. An explicit TEST_TIMEOUT_SECONDS still wins (tests; an operator pin).
+  # A KILL AT THE DERIVED WALL GROWS THE NEXT WALL. Only completed runs were recorded, so a suite that outgrew 1.5 x its last
+  # completed run was killed at the wall on every tick, nothing completed, and the wall never grew: the gate locked itself
+  # (one node held development-vessel at a 345 s wall for days). An UNCONTENDED kill at the derived wall is recorded as
+  # last_killed_wall_s, and the next wall is the larger of last-completed x 1.5 and last-killed x 1.5, capped. A completed
+  # run clears it. A kill on a contended host measured the host, not the suite: it defers (below) and grows nothing.
   SUITE_WALL_FILE="$MARKER_DIR/$v.suite-wall"
   _sw_cap=$(( ( ${UNIT_TIMEOUT_S:-3600} - ${GATE_UNIT_MARGIN_S:-${QUIESCE_MARGIN_S:-120}} ) / 4 - ${TEST_KILL_GRACE_SECONDS:-30} ))
   _sw_floor="${SUITE_WALL_FLOOR_S:-240}"   # the floor (240 s, the old fixed wall); a variable only so tests can scale it
   [ "$_sw_cap" -lt "$_sw_floor" ] && _sw_cap="$_sw_floor"
   _sw_last="$(jq -r '.last_completed_wall_s // empty' "$SUITE_WALL_FILE" 2>/dev/null || true)"
   case "$_sw_last" in ''|*[!0-9]*) _sw_last="" ;; esac
+  _sw_kill="$(jq -r '.last_killed_wall_s // empty' "$SUITE_WALL_FILE" 2>/dev/null || true)"
+  case "$_sw_kill" in ''|*[!0-9]*) _sw_kill="" ;; esac
   if [ -n "$_sw_last" ]; then
     SUITE_WALL_S=$(( (_sw_last * 3 + 1) / 2 )); [ "$SUITE_WALL_S" -lt "$_sw_floor" ] && SUITE_WALL_S="$_sw_floor"; [ "$SUITE_WALL_S" -gt "$_sw_cap" ] && SUITE_WALL_S="$_sw_cap"
     SUITE_WALL_WHY="last completed full run ${_sw_last}s x1.5, floor ${_sw_floor}s, cap ${_sw_cap}s"
+    if [ -n "$_sw_kill" ] && [ $(( (_sw_kill * 3 + 1) / 2 )) -gt "$SUITE_WALL_S" ]; then
+      SUITE_WALL_S=$(( (_sw_kill * 3 + 1) / 2 )); [ "$SUITE_WALL_S" -gt "$_sw_cap" ] && SUITE_WALL_S="$_sw_cap"
+      SUITE_WALL_WHY="GROWN: the last run was killed at its ${_sw_kill}s wall, x1.5 (cap ${_sw_cap}s), over the last completed full run ${_sw_last}s x1.5, floor ${_sw_floor}s"
+    fi
   else
     SUITE_WALL_S="$_sw_cap"; SUITE_WALL_WHY="no completed full run measured yet: the cap ${_sw_cap}s (a quarter of the unit budget less the kill grace)"
   fi
@@ -3812,8 +3823,8 @@ EOF
     log "$v: per-run wall ${SUITE_WALL_S}s ($SUITE_WALL_WHY)"
   fi
   jq -n -c --argjson w "${TEST_TIMEOUT_SECONDS:-$SUITE_WALL_S}" --argjson d "$SUITE_WALL_S" --argjson c "$_sw_cap" --arg why "$SUITE_WALL_WHY" \
-    --argjson last "${_sw_last:-null}" --arg at "$(date -u +%FT%TZ)" \
-    '{effective_wall_s:$w, derived_wall_s:$d, cap_s:$c, last_completed_wall_s:$last, why:$why, at:$at}' > "$SUITE_WALL_FILE.tmp" 2>/dev/null \
+    --argjson last "${_sw_last:-null}" --argjson killed "${_sw_kill:-null}" --arg at "$(date -u +%FT%TZ)" \
+    '{effective_wall_s:$w, derived_wall_s:$d, cap_s:$c, last_completed_wall_s:$last, why:$why, at:$at} + (if $killed == null then {} else {last_killed_wall_s:$killed} end)' > "$SUITE_WALL_FILE.tmp" 2>/dev/null \
     && mv -f "$SUITE_WALL_FILE.tmp" "$SUITE_WALL_FILE" 2>/dev/null || true
   # record_suite_wall <run output>: a COMPLETED full run (not killed at the wall, and it printed a pass count)
   # becomes the vessel's measurement for the next gate.
@@ -3823,7 +3834,14 @@ EOF
     _rw_w="$(printf '%s' "$1" | sed -n 's/^__PULLSYNC_RC=\([0-9]*\) wall=\([0-9]*\)s$/\2/p' | tail -1)"
     case "$_rw_rc" in 124|137|'') return 0 ;; esac
     [ -n "$_rw_w" ] && [ -n "$(count_pf "$1" pass)" ] || return 0
-    jq -c --argjson w "$_rw_w" '.last_completed_wall_s = $w | .measured_at = (now | todate)' "$SUITE_WALL_FILE" > "$SUITE_WALL_FILE.tmp" 2>/dev/null \
+    jq -c --argjson w "$_rw_w" '.last_completed_wall_s = $w | .measured_at = (now | todate) | del(.last_killed_wall_s)' "$SUITE_WALL_FILE" > "$SUITE_WALL_FILE.tmp" 2>/dev/null \
+      && mv -f "$SUITE_WALL_FILE.tmp" "$SUITE_WALL_FILE" 2>/dev/null || true
+  }
+  # record_suite_kill: an UNCONTENDED run was killed at the DERIVED wall; the next gate grows from it (above). A pinned
+  # TEST_TIMEOUT_SECONDS says nothing about the derived wall, so it records nothing.
+  record_suite_kill() {
+    [ -z "${TEST_TIMEOUT_SECONDS:-}" ] || return 0
+    jq -c --argjson k "$SUITE_WALL_S" '.last_killed_wall_s = $k | .killed_at = (now | todate)' "$SUITE_WALL_FILE" > "$SUITE_WALL_FILE.tmp" 2>/dev/null \
       && mv -f "$SUITE_WALL_FILE.tmp" "$SUITE_WALL_FILE" 2>/dev/null || true
   }
   # killed_at_wall <run output>: the run was killed by the per-run wall (timeout 124, or 137 after the grace).
@@ -4115,6 +4133,7 @@ EOF
       log "$v: suite run KILLED at its wall (TEST_TIMEOUT_SECONDS=${TEST_TIMEOUT_SECONDS:-${SUITE_WALL_S:-240}}) while the host was contended ($SC_WHY): not a blind verdict about ${HEAD:0:10}; deferring"
       testgate_budget_defer "the suite run (killed at its wall under contention)" "$SUITE_COST_S" "suite killed at its wall under contention ($SC_WHY)"; skipped=$((skipped + 1)); continue
     elif [ -z "$T_FAIL" ]; then
+      killed_at_wall "$T_OUT" && record_suite_kill
       log "$v: !!! TEST GATE BLIND — suite produced no countable result ($(killed_at_wall "$T_OUT" && echo "killed_at_wall: TEST_TIMEOUT_SECONDS=${TEST_TIMEOUT_SECONDS:-${SUITE_WALL_S:-240}}" || echo "errored or absent")); HOLDING $v (a gate that did not measure never promotes; runtime keeps its current code)"
       # A blind verdict that discards its output cannot be diagnosed: the same command run
       # by hand, in the unit's cgroup, TasksMax and PATH, printed a summary every time, so
