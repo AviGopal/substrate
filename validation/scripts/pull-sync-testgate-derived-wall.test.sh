@@ -49,7 +49,7 @@ cat > "$T/bin/bun" <<BUN
 cat "$T/stub/full"; exit 1
 BUN
 chmod +x "$T/bin/bun"; BUN_BIN="$T/bin/bun"
-GTR_NODE=node1; CLONE_DIR="$T/clones"; MARKER_DIR="$T/marker"; TEST_BASELINE_DIR="$T/baseline"; LAST_GOOD_DIR="$T/lastgood"; TMPDIR="$T/tmp"
+GTR_NODE=node-a; CLONE_DIR="$T/clones"; MARKER_DIR="$T/marker"; TEST_BASELINE_DIR="$T/baseline"; LAST_GOOD_DIR="$T/lastgood"; TMPDIR="$T/tmp"
 TEST_GATE_MAX_REFUSALS=3; PROTECTED_SCOPE_FILE="$T/scope.json"; echo '{"autonomyScope":{"excluded_paths":["repos/development-vessel/test/none.test.ts"]}}' > "$PROTECTED_SCOPE_FILE"
 OLD='(fail) old > one'; NEWF='(fail) new > regressed'
 g() { git -C "$d" -c user.name=t -c user.email=t@t "$@" >/dev/null 2>&1; }

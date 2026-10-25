@@ -77,7 +77,7 @@ chmod +x "$T/bin/bun"
 BUN_BIN="$T/bin/bun"
 
 VESSEL=development-vessel
-GTR_NODE=node1
+GTR_NODE=node-a
 CLONE_DIR="$T/clones"; MARKER_DIR="$T/marker"; TEST_BASELINE_DIR="$T/baseline"; LAST_GOOD_DIR="$T/lastgood"; TMPDIR="$T/tmp"
 TEST_GATE_MAX_REFUSALS=3
 PROTECTED_SCOPE_FILE="$T/autonomy-scope.json"
