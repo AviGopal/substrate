@@ -354,6 +354,30 @@ testgate_start_jitter() {
   [ "$_tj" -gt 0 ] && sleep "$_tj"
   return 0
 }
+# THE PER-RUN CAP (testgate_run_cap -> RUN_CAP_S): the longest any one gate run (T1, the unnamed-rise re-run, T2, either
+# overlay run, the slow lane) may take before it is killed at its wall. It was a QUARTER of the tick budget less the kill
+# grace, so four worst-case runs fit one tick: (3600 - 120) / 4 - 30 = 840 s. development-vessel's suite outgrew that under
+# load: killed at 840 s, the kill spent the tick, and the two-run overlay (~1536-1740 s measured) never followed it, so the
+# vessel stayed budget-starved. The cap is now pull_sync.testgate_run_cap_seconds (shaped, numeric, default 1200), and the
+# invariant it keeps is the one that deadlocks when broken: the TWO-RUN OVERLAY fits one tick at the cap.
+#   tick budget   B = TimeoutStartSec - margin = 3600 - 120 = 3480 s
+#   overlay       2 x (1200 + 30 grace)        = 2460 s <= 3480, leaving 1020 s for T1 at its measured (fast-set) wall
+#   hard ceiling  B / 2 - grace                = 1710 s; a row above it is clamped, so no row can make the overlay unfittable
+# Four worst-case runs (4920 s) no longer fit one tick, and need not: gate_left is checked before EVERY run, so a run whose
+# worst case does not fit what is left defers the candidate (it gates first next tick) instead of being killed mid-run.
+# The caller floors it (SUITE_WALL_FLOOR_S). Top-level, and called only when defined (like host_contended): a caller
+# without it keeps the quarter-budget cap.
+testgate_run_cap() {
+  local _rc_b _rc_g _rc_max
+  _rc_b=$(( ${UNIT_TIMEOUT_S:-3600} - ${GATE_UNIT_MARGIN_S:-${QUIESCE_MARGIN_S:-120}} ))
+  _rc_g="${TEST_KILL_GRACE_SECONDS:-30}"
+  _rc_max=$(( _rc_b / 2 - _rc_g ))
+  RUN_CAP_S=1200
+  if declare -F tuning_param >/dev/null 2>&1; then tuning_param pull_sync.testgate_run_cap_seconds 1200; RUN_CAP_S="$TP_VALUE"; fi
+  case "$RUN_CAP_S" in ''|*[!0-9]*) RUN_CAP_S=1200 ;; esac
+  [ "$RUN_CAP_S" -gt "$_rc_max" ] && RUN_CAP_S="$_rc_max"
+  return 0
+}
 # THE SLOW LANE. A vessel's whole suite can outgrow its gate: activity-api's ran ~860 s against the 840 s per-run cap, and
 # the gate needs T1, T2 and a two-run overlay inside one tick, so it was structurally deadlocked. ~690 s of it was three
 # classes of files: trace-retention *.scale files, *.real* files that each boot a database, and one bounded-list file. Those
@@ -419,8 +443,9 @@ slow_lane_run() {
   mapfile -t _sl_list < <(slow_split "$_sl_d" slow)
   [ "${#_sl_list[@]}" -gt 0 ] || return 0
   _sl_grace="${TEST_KILL_GRACE_SECONDS:-30}"
-  # The gate's per-run cap (a quarter of the unit budget less the grace, floored): the slow lane is one run, never longer.
-  _sl_wall=$(( ( ${UNIT_TIMEOUT_S:-3600} - ${GATE_UNIT_MARGIN_S:-${QUIESCE_MARGIN_S:-120}} ) / 4 - _sl_grace ))
+  # The gate's per-run cap (testgate_run_cap, floored): the slow lane is one run, never longer.
+  if declare -F testgate_run_cap >/dev/null 2>&1; then testgate_run_cap; _sl_wall="$RUN_CAP_S"
+  else _sl_wall=$(( ( ${UNIT_TIMEOUT_S:-3600} - ${GATE_UNIT_MARGIN_S:-${QUIESCE_MARGIN_S:-120}} ) / 4 - _sl_grace )); fi
   [ "$_sl_wall" -lt "${SUITE_WALL_FLOOR_S:-240}" ] && _sl_wall="${SUITE_WALL_FLOOR_S:-240}"
   _sl_left=$(( ${UNIT_TIMEOUT_S:-3600} - ( $(date +%s) - ${PULLSYNC_T0:-$(date +%s)} ) - ${GATE_UNIT_MARGIN_S:-${QUIESCE_MARGIN_S:-120}} ))
   if [ "$_sl_left" -lt $(( _sl_wall + _sl_grace )) ]; then
@@ -3290,16 +3315,26 @@ shared_package_link_audit() {
 # deferred set is ordered by <v>.testgate-slot, the epoch at which each candidate last STARTED a
 # suite run (never = 0, first): whoever spent the budget last goes last, so every deferred
 # candidate reaches the first slot within as many ticks as there are deferred candidates.
+# A BUDGET-STARVED VESSEL GATES FIRST. The rotation alone let a starved vessel wait its turn behind every other
+# deferred candidate, each of which spent the tick before it: development-vessel was budget-starved on both nodes
+# for over a day. A vessel carrying <v>.testgate-starved (written when its starvation gap is filed, per candidate
+# or per vessel; removed when its gate finishes and passes) now leads the first set, ahead of the deferred
+# candidates that are not starved; starved vessels rotate among themselves by the same slot. With no starved
+# marker the order is exactly the rotation above. A starved vessel whose last gate finished (so its deferral
+# count was cleared) still leads: it is starved until a gate passes.
 pass_order() {
-  local _po_d _po_s
+  local _po_d _po_s _po_v _po_st
   for _po_d in "$CLONE_DIR"/*/; do
-    [ -s "$MARKER_DIR/$(basename "$_po_d").testgate-budget-defers" ] || continue
-    _po_s="$(cat "$MARKER_DIR/$(basename "$_po_d").testgate-slot" 2>/dev/null || echo 0)"
+    _po_v="$(basename "$_po_d")"; _po_st=1
+    [ -s "$MARKER_DIR/$_po_v.testgate-starved" ] && _po_st=0
+    [ "$_po_st" = 0 ] || [ -s "$MARKER_DIR/$_po_v.testgate-budget-defers" ] || continue
+    _po_s="$(cat "$MARKER_DIR/$_po_v.testgate-slot" 2>/dev/null || echo 0)"
     case "$_po_s" in ''|*[!0-9]*) _po_s=0 ;; esac
-    printf '%s\t%s\n' "$_po_s" "$_po_d"
-  done | sort -s -n -k1,1 | cut -f2-
+    printf '%s\t%s\t%s\n' "$_po_st" "$_po_s" "$_po_d"
+  done | sort -s -n -k1,1 -k2,2 | cut -f3-
   for _po_d in "$CLONE_DIR"/*/; do
-    [ -s "$MARKER_DIR/$(basename "$_po_d").testgate-budget-defers" ] || printf '%s\n' "$_po_d"
+    _po_v="$(basename "$_po_d")"
+    [ -s "$MARKER_DIR/$_po_v.testgate-budget-defers" ] || [ -s "$MARKER_DIR/$_po_v.testgate-starved" ] || printf '%s\n' "$_po_d"
   done
   return 0
 }
@@ -3958,10 +3993,10 @@ EOF
   # (TEST_TIMEOUT_SECONDS default). On the hub (8 cores, load 6-7) development-vessel's suite runs at or past
   # 240 s: T1 went BLIND (RC=124 at 240 s) and the overlay parent was killed at the wall (pass=none), so its
   # candidates were judged on a stale stored baseline and refused for 39 failures that were not theirs. The
-  # wall is now the vessel's last COMPLETED full-run wall x 1.5, floored at 240 s and capped at a QUARTER of the unit
-  # budget less the kill grace: T1, the T2 confirmation and the two-run overlay are four runs that must fit ONE tick,
-  # because a deferred gate starts over next tick (at half, the overlay could never follow T1); with no measurement
-  # yet it is the cap. It is logged with its inputs on every gate run, recorded in $v.suite-wall (JSON), and
+  # wall is now the vessel's last COMPLETED full-run wall x 1.5, floored at 240 s and capped at the per-run cap
+  # (testgate_run_cap: 1200 s, clamped to half the tick budget less the kill grace, so the two-run overlay always fits
+  # one tick, because a deferred gate starts over next tick; it was a quarter, four worst-case runs, until
+  # development-vessel's suite outgrew 840 s); with no measurement yet it is the cap. It is logged with its inputs on every gate run, recorded in $v.suite-wall (JSON), and
   # carried in the classification_metadata (effective_wall_s, wall_why) of the starvation, regression and
   # unmeasurable gaps this gate files, which is where the system's gap reader sees it. An explicit TEST_TIMEOUT_SECONDS still wins (tests; an operator pin).
   # A KILL AT THE DERIVED WALL GROWS THE NEXT WALL. Only completed runs were recorded, so a suite that outgrew 1.5 x its last
@@ -3970,7 +4005,9 @@ EOF
   # last_killed_wall_s, and the next wall is the larger of last-completed x 1.5 and last-killed x 1.5, capped. A completed
   # run clears it. A kill on a contended host measured the host, not the suite: it defers (below) and grows nothing.
   SUITE_WALL_FILE="$MARKER_DIR/$v.suite-wall"
-  _sw_cap=$(( ( ${UNIT_TIMEOUT_S:-3600} - ${GATE_UNIT_MARGIN_S:-${QUIESCE_MARGIN_S:-120}} ) / 4 - ${TEST_KILL_GRACE_SECONDS:-30} ))
+  # The cap is testgate_run_cap (THE PER-RUN CAP, above: 1200 s, clamped so the two-run overlay fits the tick).
+  if declare -F testgate_run_cap >/dev/null 2>&1; then testgate_run_cap; _sw_cap="$RUN_CAP_S"
+  else _sw_cap=$(( ( ${UNIT_TIMEOUT_S:-3600} - ${GATE_UNIT_MARGIN_S:-${QUIESCE_MARGIN_S:-120}} ) / 4 - ${TEST_KILL_GRACE_SECONDS:-30} )); fi
   _sw_floor="${SUITE_WALL_FLOOR_S:-240}"   # the floor (240 s, the old fixed wall); a variable only so tests can scale it
   [ "$_sw_cap" -lt "$_sw_floor" ] && _sw_cap="$_sw_floor"
   _sw_last="$(jq -r '.last_completed_wall_s // empty' "$SUITE_WALL_FILE" 2>/dev/null || true)"
@@ -3985,7 +4022,7 @@ EOF
       SUITE_WALL_WHY="GROWN: the last run was killed at its ${_sw_kill}s wall, x1.5 (cap ${_sw_cap}s), over the last completed full run ${_sw_last}s x1.5, floor ${_sw_floor}s"
     fi
   else
-    SUITE_WALL_S="$_sw_cap"; SUITE_WALL_WHY="no completed full run measured yet: the cap ${_sw_cap}s (a quarter of the unit budget less the kill grace)"
+    SUITE_WALL_S="$_sw_cap"; SUITE_WALL_WHY="no completed full run measured yet: the cap ${_sw_cap}s (the per-run cap, testgate_run_cap)"
   fi
   if [ -n "${TEST_TIMEOUT_SECONDS:-}" ]; then
     log "$v: per-run wall ${TEST_TIMEOUT_SECONDS}s (TEST_TIMEOUT_SECONDS set; the derived wall would be ${SUITE_WALL_S}s: $SUITE_WALL_WHY)"
@@ -4094,6 +4131,8 @@ EOF
     _sv_el=$(( $(date +%s) - _sv_t0 ))
     if [ "$BD_N" -lt "$BD_MAX" ] && [ "$_sv_el" -ge "$_sv_after" ]; then
       log "$v: !!! TEST GATE BUDGET-STARVED (per vessel) — filing pull-sync-testgate-budget-starved-$v (deferred for ${_sv_el}s since its last convergence ${_sv_cur:0:10}, across candidates; bound ${_sv_after}s)"
+      # The same marker as the per-candidate bound: pass_order gates a starved vessel first, and a passing gate closes the gap.
+      echo "$HEAD $BD_N" > "$MARKER_DIR/$v.testgate-starved" 2>/dev/null || true
       emit_gap "$(jq -n -c --arg v "$v" --arg head "${HEAD:0:10}" --arg el "$_sv_el" --arg after "$_sv_after" --arg lg "${_sv_cur:0:10}" --arg b "$GATE_BUDGET_SECONDS" --argjson ew "${SUITE_EFF_WALL_S:-240}" --arg why "${SUITE_WALL_WHY:-}" \
         '{impulse:{pointer:{type:"substrateGap_write",gap:{id:("pull-sync-testgate-budget-starved-" + $v),category:"systematic_failure",source:"substrate_detected",status:"open",severity:"high",
           summary:("Repair needed: pull-sync has deferred " + $v + " for " + $el + "s since its last convergence (" + $lg + "), across successive candidates (now " + $head + "), because the per-tick test-gate budget (" + $b + "s, capped by the unit timeout) is too short for its gate; past pull_sync.testgate_starve_after_seconds (" + $after + "). It is NOT converged ungated. Repair the capability: a faster suite, a larger budget, or a gate sharded across ticks."),
@@ -4783,7 +4822,7 @@ EOF
       log "$v: !!! UNMEASURABLE — ${_um_n} consecutive ticks held ${HEAD:0:10} without a measurement (runs killed at the ${SUITE_EFF_WALL_S}s wall, cap ${SUITE_WALL_CAP_S}s) — filing pull-sync-testgate-unmeasurable-$v"
       emit_gap "$(jq -n -c --arg v "$v" --arg head "${HEAD:0:10}" --argjson ew "${SUITE_EFF_WALL_S:-240}" --argjson cap "${SUITE_WALL_CAP_S:-240}" --argjson last "${SUITE_WALL_LAST_S:-null}" --argjson n "$_um_n" --arg why "${SUITE_WALL_WHY:-}" --arg killed "$OVL_KILLED" \
         '{impulse:{pointer:{type:"substrateGap_write",gap:{id:("pull-sync-testgate-unmeasurable-" + $v),category:"systematic_failure",source:"substrate_detected",status:"open",severity:"high",
-          summary:("Repair needed: pull-sync cannot measure " + $v + " at " + $head + ": for " + ($n|tostring) + " consecutive ticks its suite runs were killed at the per-run wall (" + ($ew|tostring) + "s; cap " + ($cap|tostring) + "s = a quarter of the unit budget less the kill grace; killed: " + $killed + "), so the candidate is held without a verdict. The unit budget must grow or the suite must shrink."),
+          summary:("Repair needed: pull-sync cannot measure " + $v + " at " + $head + ": for " + ($n|tostring) + " consecutive ticks its suite runs were killed at the per-run wall (" + ($ew|tostring) + "s; cap " + ($cap|tostring) + "s, the per-run cap; killed: " + $killed + "), so the candidate is held without a verdict. The unit budget must grow or the suite must shrink."),
           classification_metadata:{vessel:$v,head:$head,effective_wall_s:$ew,cap_s:$cap,last_completed_wall_s:$last,consecutive_holds:$n,wall_why:$why,edit_site:"scripts/substrate/substrate-pull-sync.sh"}}}}}' 2>/dev/null)"
     fi
     tg_verdict "held: overlay killed at the wall"; skipped=$((skipped + 1)); continue
