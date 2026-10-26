@@ -189,6 +189,10 @@ asking pays, whom to ask, or how to word it.
   and a view), and `solicitationResponse_write` (the answer returned). No new shape for a
   run's view is needed: a shape is a routing key, and a scope is a field.
 - **The surfaces are its resolvers**, chosen by a learned posterior, not the first one listed.
+  A shape declared as needing a person has only these as producers: each surface and vault
+  advertises it, and a step that is not a human resolver cannot satisfy it. Without that, a
+  satisfier or a learned composition can fill a person's input from a search and be credited
+  for it, and asking never wins selection against the stand-in.
 - **The question is composed, not templated:** the subject's evidence is bound from the pool
   (approaches tried, the reach reason, the target decision), and a model writes the question
   over that metadata. The result is validated against the closed primitives.

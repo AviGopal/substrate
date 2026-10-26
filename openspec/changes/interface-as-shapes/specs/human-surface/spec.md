@@ -172,9 +172,19 @@ produced under the same shape SHALL be drawn with its producer, never hidden. It
 labelled as produced without a person only from a registry declaration of which shapes need a
 person, never from a name.
 
+A shape declared as needing a person SHALL be served only by human resolvers: the surface, and
+any other surface or vault that delivers a question to a person and returns the answer. Each
+SHALL advertise itself as a producer of that shape, so a walk that needs it finds the person
+among its producers and chooses to ask. A producer that is not a human resolver SHALL NOT
+satisfy a shape declared as needing a person. A walk that has no human resolver for it asks
+through the asking activity, or records that no person could be asked; it does not bind a
+stand-in under that shape.
+
 **Check:** a grade the learning corpus refuses is still kept on the run and drawn beside the
 judge's verdict. No label is written with a fixed confidence. A person-shaped output a satisfier produced draws with its producer and no
-person mark. An output from the step a person's answer drove is marked as theirs.
+person mark. An output from the step a person's answer drove is marked as theirs. Discovery
+for a shape declared as needing a person returns only human resolvers, and a composed activity
+whose step produces that shape without calling one is refused at bind.
 
 ## Requirement: teaching is a reading of the box, with a named reader
 
