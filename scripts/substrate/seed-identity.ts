@@ -149,6 +149,11 @@ export const CORPUS_RUNNER_KEY_SCOPES: string[] = ["verdict-corpus:write"];
 // git_commit, code_*) only from node-self, admin or tools-exec, and the walk is the ReAct floor that calls them. No
 // other key gets it: the fleet key is the node's own key, which node-self already admits at the daemon.
 export const GOAL_HOST_KEY_SCOPES: string[] = ["read", "write", "tools-exec"];
+// The fleet key (substrate-default): the node's own key, loaded by every unit from the shared env. db:admin and
+// templates:admin are activity-api's handler gates on its db_admin / fts-rebuild and template retire/promote routes,
+// whose callers send this key; the admin scope itself is never on it.
+export const FLEET_KEY_ADMIN_SCOPES: string[] = ["db:admin", "templates:admin"];
+export const FLEET_KEY_SCOPES: string[] = ["read", "write", ...FLEET_KEY_ADMIN_SCOPES];
 
 // ensureCorpusRunnerKey: provision the runner's key on EVERY boot of a node whose identity this seeder serves (spokes
 // skip identity-seeder entirely: ExecCondition), not only on a genuine first boot, so a long-lived substrate gets it
@@ -213,7 +218,7 @@ export const TOOLS_EXEC_SCOPE = "tools-exec";
 export const GRANT_REFUSALS: Record<string, string> = {
   NOT_FOUND: "identity has no api_key row for that key_id",
   FORBIDDEN: "the admin key may not grant it (not admin, or the key is in another org)",
-  SCOPE_NOT_GRANTABLE: "identity's allowlist does not admit tools-exec",
+  SCOPE_NOT_GRANTABLE: "identity's allowlist does not admit that scope",
   PERSIST_FAILED: "identity could not write the api_key row",
 };
 export async function ensureGoalHostToolsExec(fleetKey: string): Promise<void> {
@@ -250,6 +255,52 @@ export async function ensureGoalHostToolsExec(fleetKey: string): Promise<void> {
     console.warn(`[seed-identity] goal-host tools-exec: refused for key_id=${gh.key_id}: ${r.status} ${code}, ${why} (retried next boot)`);
   } catch (e) {
     console.warn(`[seed-identity] goal-host tools-exec error: ${(e as Error).message}`);
+  }
+}
+
+// ensureFleetKeyAdminScopes: the per-boot upgrade for a node seeded before FLEET_KEY_SCOPES carried db:admin and
+// templates:admin. There the fleet key keeps [read, write], and activity-api's handler gates refuse its legitimate
+// callers. A SEPARATE step from ensureGoalHostToolsExec on purpose: that step's invariant is that the fleet key is
+// never a grant target (node-self already admits it at the daemon), and it stays that way. This one targets ONLY the
+// fleet key, by key_id, and adds ONLY the scopes it is missing:
+//   - the fleet key carries both already: nothing to do (so a second boot makes no call);
+//   - otherwise: ONE apiKey_write impulse on identity's resolve door, as the admin key, adding the missing scopes.
+//     Same key, same secret: no rotation, so no consumer restarts and no file changes.
+// Fails OPEN like its siblings. An identity whose allowlist predates these scopes answers SCOPE_NOT_GRANTABLE, and one
+// that predates apiKey_write answers 400 RESOLVE_FAILED: each is one logged skip, retried next boot, so this seeder may
+// land ahead of identity. Exported so a check can drive it alone: it reads and writes no file, only identity.
+export async function ensureFleetKeyAdminScopes(fleetKey: string): Promise<void> {
+  const tag = "[seed-identity] fleet key admin scopes:";
+  try {
+    const fleet = await val(fleetKey);
+    if (fleet.valid !== true || !fleet.key_id) { console.warn(`${tag} skipped, the fleet key does not authenticate with a key_id`); return; }
+    const held: string[] = Array.isArray(fleet.scopes) ? fleet.scopes : [];
+    const missing = FLEET_KEY_ADMIN_SCOPES.filter((s) => !held.includes(s));
+    if (missing.length === 0) { console.log(`${tag} key_id=${fleet.key_id} already carries ${FLEET_KEY_ADMIN_SCOPES.join(", ")}`); return; }
+    const admin = (process.env.SUBSTRATE_ADMIN_KEY ?? "").trim();
+    if (!admin) { console.warn(`${tag} skipped for key_id=${fleet.key_id}, SUBSTRATE_ADMIN_KEY empty this boot (retried next boot)`); return; }
+    const r = await fetch(`${IDENTITY_URL}/v1/auth/resolve`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `ApiKey ${admin}` },
+      body: JSON.stringify({ impulse: { pointer: { type: "apiKey_write", key_id: fleet.key_id, add_scopes: missing } } }),
+      signal: AbortSignal.timeout(15_000),
+    });
+    const j = (await r.json().catch(() => null)) as any;
+    if (r.ok && j?.success === true) {
+      console.log(j?.data?.changed === false
+        ? `${tag} key_id=${fleet.key_id} already carries them (identity changed nothing)`
+        : `${tag} granted ${missing.join(", ")} to key_id=${fleet.key_id} (same key, no rotation)`);
+      return;
+    }
+    const code = String(j?.error?.code ?? "?");
+    if (r.status === 400 && code === "RESOLVE_FAILED") {
+      console.warn(`${tag} skipped for key_id=${fleet.key_id}, identity does not serve apiKey_write yet (${r.status} ${code}; retried next boot)`);
+      return;
+    }
+    const why = GRANT_REFUSALS[code] ?? "unrecognised answer";
+    console.warn(`${tag} refused for key_id=${fleet.key_id}: ${r.status} ${code}, ${why} (retried next boot)`);
+  } catch (e) {
+    console.warn(`${tag} error: ${(e as Error).message}`);
   }
 }
 
@@ -430,6 +481,7 @@ async function main() {
       await ensureAdminKey(existing);
       await ensureCorpusRunnerKey(existing);
       await ensureGoalHostToolsExec(existing);
+      await ensureFleetKeyAdminScopes(existing);
       return;
     }
     console.log(
@@ -446,12 +498,13 @@ async function main() {
       throw new Error(`login failed ${loginRes.status}: ${await loginRes.text()} — org exists but the seed credential no longer opens it; the keyspace needs manual recovery`);
     }
     const { token, user_id, org_id } = await loginRes.json() as { token: string; user_id: string; org_id: string };
-    const reissued = await issueKey(token, user_id, org_id, "substrate-default");
+    const reissued = await issueKey(token, user_id, org_id, "substrate-default", FLEET_KEY_SCOPES);
     writeFleetKey(reissued.key);
     console.log(`${describeIssuedKey("substrate-default", reissued)} — re-issued and wrote it to env + secrets; key consumers must restart`);
     await ensureAdminKey(reissued.key);
     await ensureCorpusRunnerKey(reissued.key);
     await ensureGoalHostToolsExec(reissued.key);
+    await ensureFleetKeyAdminScopes(reissued.key);
     return;
   }
 
@@ -476,7 +529,7 @@ async function main() {
   console.log(`[seed-identity] org created: ${org_id}, user: ${user_id}`);
 
   // Issue the shared substrate default key
-  const issuedDefault = await issueKey(token, user_id, org_id, "substrate-default");
+  const issuedDefault = await issueKey(token, user_id, org_id, "substrate-default", FLEET_KEY_SCOPES);
   const defaultKey = issuedDefault.key;
   console.log(describeIssuedKey("substrate-default", issuedDefault));
 

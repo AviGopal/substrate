@@ -86,14 +86,14 @@ describe("goal-host's key carries tools-exec", () => {
     }
     const others = [...byName.keys()].filter((k) => k !== "goal-host-vessel");
     for (const k of others) expect(byName.get(k)).not.toContain("tools-exec");
-    expect(byName.get("substrate-default")).toEqual(["read", "write"]);
+    expect(byName.get("substrate-default")).toEqual(["read", "write", "db:admin", "templates:admin"]);
   });
 
   test("CONTROL: the warm-boot fleet re-issue does not carry tools-exec", async () => {
     if (live.length > 0) throw new Error(`refusing to run the seeder here: ${live.join(", ")} exist`);
     const { byName, exit } = await issuedScopes(409);
     expect(exit).toBe(0);
-    expect(byName.get("substrate-default")).toEqual(["read", "write"]);
+    expect(byName.get("substrate-default")).toEqual(["read", "write", "db:admin", "templates:admin"]);
     for (const s of byName.values()) expect(s).not.toContain("tools-exec");
   });
 });
