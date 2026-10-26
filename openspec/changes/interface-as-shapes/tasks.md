@@ -165,7 +165,7 @@ Paths are in `repos/human-surface-vessel/`.
     (`src/routes/proxy.ts`).
 
 ## Phase 13 — what the surface draws, kept and honest
-47. Each form decision is kept durably, and the census counts across restarts
+47. Each form decision is kept durably, and the counts of form decisions survive restarts
     (`src/store.ts`). Verified by `human_surface:ui_view` counting forms drawn before a restart.
 48. The policy's layout variant is read by the page, or removed from the policy
     (`ui/src/Surface.tsx`). Verified by an audit finding no policy field the surface ignores.
