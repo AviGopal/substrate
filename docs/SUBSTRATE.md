@@ -30,10 +30,7 @@ The substrate has generalized from "one local container" to **one image that run
 > entrypoint's arm pass is what leaves them unenabled. The role selection governs
 > what starts **at boot**; it is not a barrier against a manual start.
 - `full` = every role, `desktop` included — the intended shape of a local
-  substrate, and a hand-maintained enumeration. Because it currently enumerates
-  all twelve roles, `ENABLED_ROLES=full` masks nothing, which makes it
-  behaviourally equivalent to leaving the selection env unset. That equivalence
-  is a property of today's list, not a guarantee: `full` masks anything absent
+  substrate, and a hand-maintained enumeration. `full` masks anything absent
   from it, so a role added to the inventory and not added here would be masked
   by `full` and left running by unset. Verify rather than assume:
   ```bash
@@ -878,20 +875,6 @@ activityRegistryChange → learned-topology-snapshot → reachable-unlearned-rep
                        → draft-gap-closing-activity → new template in registry
 ```
 
-**Substrate-authored development (S2).** Once the lift criteria (coverage progress + substrate health + operator hand-over) are met and the operator authorises the transition, the substrate authors its own activities via the `draft-gap-closing-activity` goal and the `propose-spec` / `verify-merge-candidate` pipeline.
-
-**S2 → S3 is the active direction.** S3 (distributed-stable, adversarial-resistant, operator non-load-bearing) is tracked in the post-lift agenda and S3 readiness criteria (measured by active push-away: substrate refusing operator interventions with cited evidence, not by passive intervention-absence). S3 has no operational gate in this document — it is emergent and operator-measured under sustained adversarial exposure.
-
-**Measuring S2→S3 readiness.** S2→S3 readiness is observable through two shape families owned by development-vessel:
-
-- `operatorIntervention` — emitted when the substrate detects operator action against substrate state. Carries `classification` (`intervention | maintenance | redundant`), `target`, `rationale`, and supporting evidence. The operator can emit these explicitly; development-vessel also detects them by watching commits, lifecycle overrides, and direct file mutations.
-- `interventionRefused` — emitted by substrate gates (promote-guard, template-sanitizer, etc.) when they reject an operator action with cited rationale and supporting evidence.
-- `interventionRateReport` — periodic aggregation of intervention and refusal rates. A trend toward zero under adversarial exposure is the S2→S3 signal.
-
-The substrate cannot self-declare S3. Only the operator can observe sustained push-away and make that judgment. These shapes give the operator the data to do so.
-
-**Lift-criterion hardening — external anchors and stall detection.** Two risks threaten the lift criterion's load-bearing character. First, **measurement gaming**: a substrate that optimises whatever the criterion measures can satisfy `coverage_progress` with trivial goals and satisfy `confidence_passing` by repetition. The structural defense is external anchors the substrate cannot author or modify — a held-out evaluation set (`heldOutEvalReport`), CI agreement between the substrate harness and an independent runner (`ciAgreementReport`), and adversarial probes introduced by the operator that the substrate must handle without degrading. Second, **stall undetectability**: the topology-discovery chain produces flat signals both when the substrate has genuinely converged AND when a chain link has silently failed. The defense is a `chainStallReport` shape that fires when the chain produces zero progress signals for more than a configurable window without any external explanation (for example, no new shapes were registered, no new traces appeared). Stall is distinguishable from convergence only when the substrate can explain the absence of progress.
-
 ## Event bus
 
 All lifecycle events — task binding, execution completion, gap classification, LLM dispatch — flow on the activity-api WebSocket broadcaster (`ws://localhost:18080/ws`) in addition to any in-process eventSink. Discovery-vessel emits four additional event types on the same bus: `vessel.registered`, `vessel.heartbeat`, `vessel.deregistered`, and `vessel.expired`. Any vessel subscribing to the bus receives all of these without any per-emitter configuration.
@@ -904,25 +887,11 @@ Vessels that accumulate idiom-purity gaps are candidates for substrate-driven se
 
 A vessel carries a purity gap when it serves legacy REST endpoints that predate the resolver contract, or ships built-in tools (bash/read/write/edit/git) that bypass discovery instead of routing through discovery-resolved ones. Self-replacement for such a vessel is substrate-driven and not operator-led — the operator's role is adversarial testing of the replacement, not authoring it. Which vessels carry gaps is a live fact: query the purity audit rather than trusting a list here.
 
-## Closure properties
-
-Lift requires not just what the substrate does autonomously, but what it does NOT depend on. Seven external stateful dependencies are the formal closure gaps — services and state structurally outside the substrate that load-bear on lift properties until each is replaced:
-
-1. **Operator memory** (`~/.claude/.../memory/`) — cross-session recall that the substrate has no equivalent surface for. Replacement: `memoryNote` shapes owned by development-vessel, mirrored to the cache via `memory-sync-tick`.
-2. **Slash-command skills** (`/openspec-propose`, `/review`, `/deploy`, etc.) — stateful workflows bound to the Claude Code harness. Replacement: substrate-resident activity equivalents (`propose-spec`, `verify-merge-candidate`, `apply-spec`).
-3. **Subagent dispatch** (Plan, Explore, general-purpose) — research and multi-step work via operator-side invocation. Replacement: substrate activity dispatch with goal decomposition resolvers.
-4. **GitHub Actions CI** — merge gates and canary deploy triggers in GitHub infrastructure. Replacement: substrate harness as the merge-authority gate; substrate-resident CI criterion (`ciAgreementReport`).
-5. **Operator shell access** (`kubectl`, `helmfile`, `docker exec`) — operational commands outside the substrate's activity system. Replacement: substrate-dispatched restart and restore activities (`restart-vessel`, `restore-data`).
-6. **Operator spec-authoring** — new specs originate with the operator. Replacement: substrate-authored proposals via `propose-spec` / `verify-merge-candidate` pipeline with operator as reviewer.
-7. **Operator git access** — commits, PRs, and merges require operator git credentials. Replacement: substrate-resident git authorship, PR opening, and merging gated by the CI-closure verdict.
-
-Closure is measured by a substrate-resident closure-audit script that tests each `(property, external_tool)` pair against substrate-only resolvers and returns a verdict. Three consecutive nightly green closure-audit runs are a hard lift gate.
-
 ## Forge vessel (parallel variant exploration)
 
 The substrate forge vessel enables parallel variant exploration at the substrate level. Instead of evaluating candidate changes serially — author → deploy → measure → decide — the forge spawns N ephemeral substrate clones, each pursuing a different candidate change, observes N outcomes in parallel, and promotes the winner via Thompson. Variant exploration moves from O(N × deploy_time) to O(1 × deploy_time + N × measurement_time).
 
-Combined with the substrate's existing Thompson-managed candidate selection, this turns post-lift development into autonomous A/B testing at the substrate level. A fork is not a privileged substrate twin — it is a substrate-resident vessel set whose discovery advertisements are scoped to a fork namespace. Fork outcomes feed the main substrate's posteriors; the fork is archived afterward.
+Combined with the substrate's existing Thompson-managed candidate selection, this turns development into autonomous A/B testing at the substrate level. A fork is not a privileged substrate twin — it is a substrate-resident vessel set whose discovery advertisements are scoped to a fork namespace. Fork outcomes feed the main substrate's posteriors; the fork is archived afterward.
 
 ## Substrate self-deployment
 

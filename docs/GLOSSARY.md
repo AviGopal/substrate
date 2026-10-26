@@ -127,7 +127,6 @@ The words used for how the running system behaves and is operated.
 | **profile** | which vessels a container runs, named by the data it holds: `standalone`, `hub`, `hub-minimal`, `spoke`, `surface`, `compute` | [README § Installation](../README.md#installation) |
 | **hub / spoke** | a hub holds a network's learning state and the compute next to it; a spoke runs its own vessels and resolves the hub's shapes through discovery | federation: [`FEDERATION.md`](FEDERATION.md) |
 | **cockpit** | the agent-facing tool surface (the metabob MCP server) through which agents dispatch goals and read verdicts | `CLAUDE.md` |
-| **S1 → S2 → S3** | the operator trajectory: operator-authored development, then substrate-authored development under supervision, then a system that resists harmful intervention with cited evidence | `CLAUDE.md` § The operator role |
 
 ## 7. Use these terms
 
