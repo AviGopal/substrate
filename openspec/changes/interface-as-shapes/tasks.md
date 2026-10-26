@@ -179,11 +179,13 @@ Paths are in `repos/human-surface-vessel/`.
     artifact is evidence under it (`ui/src/components/RunView.tsx`).
 52. The system's health by kind of work: reach, trend, cost, what it is stuck on
     (`ui/src/components/RunsList.tsx`).
-53. Person-only shapes: the surface advertises itself (`DISCOVERY_SHAPES`, `src/config.ts`) as a
-    producer of each shape declared as needing a person; discovery for such a shape returns only
-    human resolvers; a step that is not a human resolver is refused at bind for it. Verified by
-    discover-by-shapes returning the surface for that shape and no composed stand-in, and by a
-    walk that needs it asking.
+53. Person-only shapes. The surface serves `human_input` already (`DISCOVERY_SHAPES` in
+    `src/config.ts`; the `human_input` case in `src/routes/impulses.ts`). What remains is in the
+    walk: a producer that is not a human resolver is left out of discovery for a shape declared
+    as needing a person, and refused at bind and at the judge; and asking is reachable from step
+    selection, not only from recovery, so a step that needs a person's input finds the human
+    resolvers among its producers. Verified by discovery for that shape listing only human
+    resolvers, by no composed stand-in binding it, and by a walk whose step needs it asking.
 
 ## Pre-registered validation
 - Task 12: the encoded default produces the same output as today's renderer on every existing

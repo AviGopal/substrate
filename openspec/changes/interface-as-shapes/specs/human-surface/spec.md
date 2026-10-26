@@ -176,8 +176,10 @@ A shape declared as needing a person SHALL be served only by human resolvers: th
 any other surface or vault that delivers a question to a person and returns the answer. Each
 SHALL advertise itself as a producer of that shape, so a walk that needs it finds the person
 among its producers and chooses to ask. A producer that is not a human resolver SHALL NOT
-satisfy a shape declared as needing a person. A walk that has no human resolver for it asks
-through the asking activity, or records that no person could be asked; it does not bind a
+satisfy a shape declared as needing a person, at bind or at the judge. Step selection SHALL
+find the human resolvers for such a shape as it finds any producer, so asking is chosen where a
+step needs a person, not only when recovery runs out. A walk that has no human resolver for it
+asks through the asking activity, or records that no person could be asked; it does not bind a
 stand-in under that shape.
 
 **Check:** a grade the learning corpus refuses is still kept on the run and drawn beside the
