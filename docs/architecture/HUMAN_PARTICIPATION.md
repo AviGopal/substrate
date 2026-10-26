@@ -47,7 +47,7 @@ a private answer store, or claim that the requesting activity resumed. A contrib
 is public feedback to the system; author identity beyond the existing surface context
 is not established by these records.
 
-`Panel.body` is unknown JSON content. An optional `asks` list remains a presentation
+A new panel or question needs a non-empty title, body or `asks`; one with none is refused, and the surface's own view reports how many it has refused. `Panel.body` is unknown JSON content. An optional `asks` list remains a presentation
 hint, not a complete vocabulary of contributions. Text and JSON are the current input
 forms; arbitrary binary content can be referenced but is not uploaded or resolved by
 this implementation. Original content is available alongside its interpreted rendering.

@@ -755,8 +755,9 @@ Two sides honour it:
   the lease before each trace-store read and skips the cycle while one is held.
   The check **fails open** — an unreadable or malformed lease file proceeds as
   if no lease existed, so a corrupt lease can never wedge self-measurement.
-- **The writer is gated.** activity-api's `db_admin` operation
-  `reconcile_trace_store` validates a caller-supplied `lease_token` against the
+- **The writer is gated.** activity-api's `db_admin` operations, like its full-text
+  index rebuild, need an API key holding the `db:admin` scope (template retire and
+  promote need `templates:admin`). `reconcile_trace_store` also validates a caller-supplied `lease_token` against the
   same file and **fails closed** without a valid unexpired lease.
 
 **The reconcile is a copy-forward table swap**, which is why its rails matter.

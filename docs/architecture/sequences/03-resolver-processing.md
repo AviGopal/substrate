@@ -22,7 +22,8 @@ The unifying idea is that all four are the same contract. A resolver is `{ id, t
 4. **Grounded floor loop** — `runGroundedToolLoop` in goal-host-vessel: at most 4 iterations, 8 calls per iteration, wall-clock deadline, deduplicated calls, and a strict separation of *grounding* (reads) from *side effects* (writes).
 5. **Nested dispatch** — `compose` and `compose_parallel` task resolvers, plus the `activity` resolver, run a child template on the same runtime with `parentExecutionId` and an extended `compositionChain`.
 6. **Composition provenance** — `consumedFromTaskIds` and `childActivityId` are what let producer→consumer activity edges be derived from placeholder references.
-7. **Ribosome** — a reached execution triggers the `ribosome-extract` activity, whose tasks assess quality, synthesise a template, validate it, and attempt the write.
+7. **Write admission** — a goal that is not admitted as a change writes only within its own product (its target and terminal shapes); change shapes need admission, either through the edit-intent route or a caller declaring a change shape. A template is judged by what its run would write: every task's shapes, and for a resolve request, the impulse its body names. A request whose body does not name its impulse plainly is refused. The check runs when a template is picked and again at each task, and a refusal holds for the rest of the dispatch.
+8. **Ribosome** — a reached execution triggers the `ribosome-extract` activity, whose tasks assess quality, synthesise a template, validate it, and attempt the write.
 
 ## Main Sequence Diagram: Complete Resolver Flow
 
