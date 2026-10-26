@@ -366,7 +366,9 @@ testgate_start_jitter() {
 # string mode; globs are relative to the vessel root and match as case patterns (* crosses /). No row = the default
 # below. A vessel it does not name has no slow list and gates exactly as before (plain `bun test`, no file list).
 # Top-level, and called from the gate only when defined, like host_contended.
-PULLSYNC_SLOW_TEST_GLOBS_DEFAULT='activity-api=*.real*.test.ts,*.scale.test.ts,test/trace-list-bounded-newest-first.test.ts'
+# development-vessel's one-process suite ran ~575-751 s unloaded and was killed at the per-run cap under load, so its
+# overlay never fit a tick; its slow list is the ten files that dominate that wall, named as exact paths.
+PULLSYNC_SLOW_TEST_GLOBS_DEFAULT='activity-api=*.real*.test.ts,*.scale.test.ts,test/trace-list-bounded-newest-first.test.ts;development-vessel=test/lib/self-call-auth-sweep.test.ts,test/resolvers/feature-compose-semantic-gate-unconditional.test.ts,test/drafter-split/f8-time-bound.test.ts,test/drafter/v1-prompts.test.ts,test/drafter-split/f6-behaviour-preservation.test.ts,test/drafter-split/verdict-diff.golden.test.ts,test/drafter-split/f1-adversarial-module.test.ts,test/resolvers/gap-check-supply-site-mutation.test.ts,test/drafter-split/f10-variant-allowlist.test.ts,test/resolvers/gap-check-supply-region-pair-5e69d7a0.test.ts'
 slow_test_globs() { # vessel -> SLOW_GLOBS (comma-separated globs, empty when the vessel has none)
   local _sg_all="$PULLSYNC_SLOW_TEST_GLOBS_DEFAULT" _sg_e _sg_list
   SLOW_GLOBS=""
