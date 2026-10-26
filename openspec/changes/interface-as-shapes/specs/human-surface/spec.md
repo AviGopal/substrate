@@ -220,8 +220,8 @@ system's own measure of whether it is closing what it detects. An attempt with n
 record SHALL be shown as one, not hidden. A step the system does not record in a readable form
 (a deploy, a configuration change, today) SHALL NOT be drawn, and SHALL NOT be inferred.
 
-Until the system's attempts carry the run they started, its own runs SHALL be grouped by what
-they report, never by their wording: by the template the system routed each to. Each group
+When an attempt does not carry the run it started, the surface SHALL group the system's own
+runs by what they report, never by their wording: by the template the system routed each to. Each group
 shows that template's rate ("2 of 44 reached"), so the reach of one kind of work is visible at
 a glance, and a change of outcome across different asks is never drawn as one ask learning.
 
@@ -351,8 +351,8 @@ example. The same words sent again at once count as a likely misreading. Ignorin
 confirmation counts nothing. The person's next move grades the reading: carrying on credits
 it, undo or a correction debits it.
 
-Until reader activities exist, the surface reads only the exact phrases and prefixes, and
-sends everything else to the system as text with its context.
+When no reader activity serves a message, the surface reads only the exact phrases and
+prefixes, and sends everything else to the system as text with its context.
 
 **Check:** the same words on two screens are read differently, each reading echoed by its
 stakes. A high-stakes reading takes effect only on yes. An undo after a reading is recorded

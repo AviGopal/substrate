@@ -142,7 +142,7 @@ stakes, not by refusing to read:
 | High | a verdict, a lesson, a commitment, a stop, a pin for every output of a shape | confirmed first ("Wrong answer? yes / no") | only on yes |
 | Unsure | readers disagree, or none is confident | a choice of the top two or three readings | the choice made |
 
-Cases the readings must handle, as the mock draws them:
+Cases the readings must handle:
 
 | Where | Typed | Reading | Echo |
 |---|---|---|---|
