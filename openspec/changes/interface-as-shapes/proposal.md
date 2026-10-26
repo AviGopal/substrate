@@ -1,8 +1,9 @@
 # The interface is shapes: every behaviour of the surface is changeable through interaction
 
-**Vessel:** human-surface-vessel (interpreter, primitives, write checks), with named
-dependencies on goal-host-vessel (dispatch, walk state, utterance routing) and
-development-vessel (validators, gap store).
+**Vessel:** human-surface-vessel (interpreter, primitives, write checks, the person's record,
+sign-in), with named dependencies on goal-host-vessel (dispatch, walk state, utterance routing,
+asking a person), development-vessel (validators, gap store, the readers of answers) and
+identity-vessel (people's accounts and delegated tokens).
 
 **Consolidates and extends** the earlier changes, kept in history:
 `do-anything-surface`,
@@ -37,6 +38,22 @@ governs every other activity.
 - **Input is several separate controls, and most of them reach nothing.** Grading is refused
   for want of a human-scoped credential, corrections and follow-ups have no reader, and the
   system's questions mostly arrive as empty panels.
+- **A person's history lives in a store that forgets it.** The person's list is drawn from
+  what goal-host still holds, which is a bounded window of recent runs. When it drops a run, or
+  a read fails, the person's ask vanishes from their list or stays "running" for ever, and they
+  ask again.
+- **The system asks people from code, and most answers go nowhere.** Several steps write
+  questions directly. None of them is selected, traced as a step or graded. Most of the
+  readers of those answers are unscheduled or absent. Asks outlive the gap they were about.
+  An answer to an earlier revision is hidden when the asker rewrites the question. A hold
+  that waits on a person's verification has no exit.
+- **A message is read by a closed list.** A misreading is invisible to learning, and a
+  message that is only a reading's prefix is sent as a goal.
+- **Every output is a preview.** A page is drawn from its first 2,000 characters, and a long
+  answer cannot be read here at all.
+- **The interface is arranged around the machinery, not the person.** Shape names, producers,
+  ids and counts sit at the same weight as the answer. A raw artifact is presented as the
+  answer. One layout serves different jobs.
 
 ## What changes
 
@@ -65,6 +82,23 @@ governs every other activity.
    system's health and capability.
 10. **A time-displaced ask is a thread with a future:** a commitment the system's own rhythm
     machinery honours, shown as "next due", judged at commitment and fulfilment.
+11. **A person's asks and their outcomes are the surface's own record**, kept durably, so
+    their threads outlive whatever goal-host still holds.
+12. **A message is read by reader activities**, chosen by their record in context. The stakes of
+    a reading decide its echo: applied with undo, confirmed first, or offered as a choice.
+13. **Asking a person is an activity the system selects, and the surface is one of its
+    resolvers.** Every ask names its subject, carries the evidence to answer it, has a reader
+    and a time, and leaves when its subject closes.
+14. **Verification is a choice among validators**, a person being one. An answer given without
+    a person's credential only steers reversible actions.
+15. **A person signs in, so a verdict they give is theirs.** The credential stays on the server,
+    and a delegated token is minted per write.
+16. **A signed-in person can read any output whole.** Everyone else sees the preview, marked as
+    cut.
+17. **An activity may draw into its own run's region**, and nowhere else. Progress is the
+    surface's own drawing of the walk.
+18. **The landing serves the person's jobs:** what needs them, their threads, the system's
+    health, and teaching.
 
 ## The ruling this reopens
 
@@ -89,3 +123,12 @@ then the closed list stays in code, and nothing in this change claims otherwise.
 The gap triple applied to the interface: interface gaps closed, the latency from detection to
 close, and whether they stay closed. Also, the share of interface changes asked for in text
 that took effect, and how long each took. Not by the number of views, variants or primitives.
+
+Whether the interface serves people is measured per job, from records the surface already keeps:
+- the time to an answer the person accepts;
+- how often they ask again;
+- how often they override the default form;
+- complaints by kind;
+- how often a person's verdict disagrees with the judge's;
+- how soon stuck work is noticed;
+- the share of asks answered, and the share of answers a reader acted on.

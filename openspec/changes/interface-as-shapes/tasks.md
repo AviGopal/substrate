@@ -102,6 +102,84 @@ function. Display-only steps are batched; server steps deploy alone.
 25. Box readings in a commitment's context: stop, a new rhythm, a new due time.
 26. "Judged against another ask" on a run, from the recall it records.
 
+## Phase 9 — the person's record
+Paths are in `repos/human-surface-vessel/`.
+
+27. Each run's outcome (status, reach, execution) is kept beside its ask in the durable record
+    when first read finished (`src/own-dispatches.ts`). Verified by a restart: the outcome reads
+    back with goal-host unreachable.
+28. The person's list holds every ask in the record. A run goal-host answers "not found" for is
+    drawn with its kept outcome, or as "record gone", never as running
+    (`src/routes/proxy.ts`). Verified with goal-host answering "not found" for every run.
+29. A thread's mark counts every run of the thread in the record, an uncaptured outcome
+    included as such (`ui/src/lib/threads.ts`). Verified by a thread of four asks, two with
+    outcomes, drawing four marks.
+30. A message that is only a reading's prefix is not sent (`ui/src/lib/box.ts`). Verified by
+    "hard to understand:" alone starting no run and reaching no reader.
+
+## Phase 10 — sign-in, and outputs whole
+31. A person signs in. The session stays on the server, and a delegated token for the
+    writer's node and the label shape is minted per verdict (`src/person-session.ts`).
+    Verified by a stored human label naming the person, with the token's audience naming the
+    writer's node.
+32. The session cookie is secure over TLS; a forwarded protocol is believed only from the
+    local proxy; sign-in and sign-out are accepted only from the surface's own page
+    (`src/person-session.ts`). Verified by a cross-origin sign-in being refused before the
+    identity service is called.
+33. A signed-in person reads an output whole by run and output id; everyone else gets the
+    preview (`src/routes/proxy.ts`). Verified by the read being refused without a session, and
+    served with one.
+34. A cut page is drawn whole for a signed-in person, and any other cut output offers to show
+    all (`ui/src/components/Rendered.tsx`). Verified by the cut mark leaving when the whole
+    arrives.
+35. The grade form retires once a person can obtain an account and sign in
+    (`ui/src/components/GradeGesture.tsx`). Verified by a verdict typed in the box while
+    signed in being stored as the person's.
+36. Page-frame ids are bound to the signed-in session (`src/page-frame.ts`). Verified by one
+    person's frame not loading under another session.
+37. Sign-in is offered where the writer is reached over the relay, once an end-to-end run
+    through the relay has passed (`src/person-session.ts`).
+
+## Phase 11 — asks and answers (surface side)
+38. The waiting list leads with asks a person can act on; folded kinds follow
+    (`src/routes/impulses.ts`). Verified by the first rows all being asks.
+39. A gap ask carries its gap's status, read off the request path, and an ask about a closed
+    gap is folded and not counted as waiting (`src/routes/proxy.ts`). Verified with a stub gap
+    store marking one gap closed.
+40. No answer form claims a reader the surface cannot confirm
+    (`ui/src/components/ResponseForms.tsx`).
+41. An answer to an earlier revision of an ask is still shown and counted as answered
+    (`src/store.ts`). Verified by rewriting an answered ask.
+42. A verification ask draws the change, the condition, and before-and-after when its asker
+    sends them (`ui/src/components/QuestionView.tsx`).
+43. The echo of an answer given without a person's credential names only what it can do
+    (`ui/src/components/TopBar.tsx`).
+
+## Phase 12 — reading a message (as the message impulse and readers become available)
+44. A message other than an exact phrase goes to the system as one impulse with its text,
+    context, recent moves and provenance (`ui/src/components/TopBar.tsx`).
+45. The echo follows the reading's stakes: undo for low and medium, confirmation for high, a
+    choice when unsure (`ui/src/components/TopBar.tsx`). Verified by a high-stakes reading
+    taking effect only on yes.
+46. Undo and corrections are recorded against the reader that proposed the reading
+    (`src/routes/proxy.ts`).
+
+## Phase 13 — what the surface draws, kept and honest
+47. Each form decision is kept durably, and the census counts across restarts
+    (`src/store.ts`). Verified by `human_surface:ui_view` counting forms drawn before a restart.
+48. The policy's layout variant is read by the page, or removed from the policy
+    (`ui/src/Surface.tsx`). Verified by an audit finding no policy field the surface ignores.
+49. System runs are grouped by the template they report, with that template's rate
+    (`ui/src/components/RunsList.tsx`).
+
+## Phase 14 — the person's jobs
+50. Landing leads with what needs the person, then what changed in their threads, then one
+    line of the system's health (`ui/src/Surface.tsx`).
+51. A thread presents an answer to the person's words with one line on why to trust it; a raw
+    artifact is evidence under it (`ui/src/components/RunView.tsx`).
+52. The system's health by kind of work: reach, trend, cost, what it is stuck on
+    (`ui/src/components/RunsList.tsx`).
+
 ## Pre-registered validation
 - Task 12: the encoded default produces the same output as today's renderer on every existing
   render test.
@@ -112,5 +190,14 @@ function. Display-only steps are batched; server steps deploy alone.
 - Task 22: a gap the system closes appears as a thread whose steps name the commit and the
   gate's verdict, and a person's verdict on it is kept as an observation.
 - Task 24: a time-displaced ask shows "next due", and the run it fires lands in its thread.
+- Task 28: after a restart, with goal-host holding none of a person's earlier runs, their list
+  shows every ask with its kept outcome or "record gone", and none as running.
+- Task 31: a person signs in on a node that serves the verdict writer, gives one verdict, and
+  the stored label is a human verdict naming them, with the token's audience naming that node.
+- Task 39: no ask about a closed gap is counted as waiting.
+- Task 45: across a week of use, undo after a reading is recorded against the reader that
+  proposed it.
 - Throughout: interface gaps, and teaching, are measured by the gap triple; interface changes
-  asked for in text are measured by the share that took effect and the time each took.
+  asked for in text are measured by the share that took effect and the time each took. How
+  well the interface serves people is measured per job, by the proposal's measures, before a
+  layout change and after it.

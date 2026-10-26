@@ -117,7 +117,157 @@ is offered only once its reader exists. The proof that it
 took is the thread's next outcome: teaching is measured like a gap, by whether it took, how
 long it took, and whether it stayed.
 
-## 6. Dependencies outside the surface
+## 6. Reading a message
+
+A message is not matched against the surface's words. It travels as one impulse:
+
+```
+message {
+  text:      what was typed
+  onScreen:  the context the box showed when it was sent (a thread, a run, a question, an output)
+  recent:    the person's last moves
+  from:      the box, signed in or unverified
+}
+```
+
+Reader activities each propose a reading with a confidence. A deterministic reader that knows
+"not now" and a model that reads "nah, not right now" are variants of one reading, chosen by
+their record in that context (law 2). The chips stay as the dependable path. Risk is handled by
+stakes, not by refusing to read:
+
+| Stakes | What the reading would do | The echo | Counts when |
+|---|---|---|---|
+| Low | a view, an interface complaint, an item supplied to a run | applied at once, "undo" | the person carries on |
+| Medium | an answer, a decline, a follow-up, a new ask, a steer | applied, "undo" stays a while | the person carries on past the next move |
+| High | a verdict, a lesson, a commitment, a stop, a pin for every output of a shape | confirmed first ("Wrong answer? yes / no") | only on yes |
+| Unsure | readers disagree, or none is confident | a choice of the top two or three readings | the choice made |
+
+Cases the readings must handle, as the mock draws them:
+
+| Where | Typed | Reading | Echo |
+|---|---|---|---|
+| waiting on you | "Seattle" | answer | Answer · undo |
+| waiting on you | "nah, figure it out yourself" | decline | Declined · undo |
+| waiting on you | a 200-line log | answer as content | Answer · undo |
+| waiting on you | "wrong: the question makes no sense" | a complaint about the question | Interface issue · the question still waits |
+| an outcome | "can you make that a list" | view: rows | Display: list · undo |
+| an outcome | "ugh" | unsure: verdict or complaint | Wrong answer · Hard to read · Neither |
+| an outcome | "this is wrong, Barcelona isn't in Italy" | verdict, not reached, with its reason | Wrong answer? yes / no |
+| an outcome | "and Madrid?" | follow-up linked to the run | Follow-up · undo |
+| an outcome | "wrong answer, and show it as a table" | two parts | Wrong answer? yes / no · Display: table · undo |
+| not reached | "try again but actually read the search result" | steer | Steer · retrying · undo |
+| an outcome or later | "next time, GitHub means the website" | lesson | Remember for next time? yes / no |
+| no context | "every couple of hours, check the trace store" | commitment | Every ~2 h, starting now? yes / just once |
+| running | "stop" | stop | Stop this run? yes / no |
+| no context | "Render apnews.com as a webpage." | a new ask | New ask |
+| a question that closed while typing | "Seattle" | unsure | Its question closed · ask again · new ask |
+| anywhere | "hard to understand:" and nothing more | nothing to read | (not sent) |
+
+Next-move grading: carrying on credits the reader; undo or a correction debits it and keeps a
+labelled miss; yes or no on a confirmation grades it; a choice credits the proposer and debits
+the others. This is also how each person's verdicts earn their reliability.
+
+## 7. Asking a person
+
+**The mechanism this replaces.** One step asks, as a code path in goal-host's recovery:
+1. Recovery runs out of approaches.
+2. It takes the first vessel discovery lists for `human_input`.
+3. It builds the question from a fixed template: the goal and the approaches tried.
+4. It waits on an in-memory record, polling, which a restart loses.
+5. On an answer, it reruns the last approach once, with the answer in a variable.
+
+Other steps write questions to the surface directly, in development-vessel's gap judge and
+lanes. None of them is selected, traced as a step or graded. So the system cannot learn when
+asking pays, whom to ask, or how to word it.
+
+**The target is a mix:**
+- **Asking is an activity**, selected where producers are chosen, recovery included. Its
+  answer enters the pool and is bound like any upstream output. It is graded on answered,
+  declined, insufficient or timed out, and on whether the work it fed then reached.
+- **It is composed from producers that exist:** `human_input` (asking a surface or a vault),
+  `uiQuestion_write` and `uiPanel_write` (the surface's cards, given the run they belong to
+  and a view), and `solicitationResponse_write` (the answer returned). No new shape for a
+  run's view is needed: a shape is a routing key, and a scope is a field.
+- **The surfaces are its resolvers**, chosen by a learned posterior, not the first one listed.
+- **The question is composed, not templated:** the subject's evidence is bound from the pool
+  (approaches tried, the reach reason, the target decision), and a model writes the question
+  over that metadata. The result is validated against the closed primitives.
+- **Waiting survives a restart:** the pending ask is a stored impulse, and the run is resumed
+  when its answer arrives, rather than held in a poll.
+- **Progress is the surface's own drawing** of the walk state, not a watcher activity or step
+  events: routine telemetry does not belong in the trace store.
+
+**External prior art,** to verify before citing in normative text:
+- LangGraph's interrupt-and-resume, and Temporal's durable signals: pausing a run and
+  surviving a restart.
+- MCP elicitation's accept, decline and cancel: the outcome set.
+- A2UI: the closed component catalog.
+
+None of these selects or grades the asker. Learning when and whom to ask is this system's part.
+
+## 8. Verification
+
+A landed change that no check can measure is held, and a person is asked "did the change
+actually fix it?". As built, the cycle has no exit: the hold has no date, the answer has no
+reader, and the gap is asked about again.
+
+**The design:**
+- **Verifying is choosing a validator** by earned reliability: the detector's own
+  re-measurement, a check that runs, a person, a model's judgement. Each is graded later by
+  whether the change held: reopened, reverted, recurred.
+- **The ask carries** the landed change, the condition it was meant to fix, and what was
+  measured before and after.
+- **Each answer has a reader:**
+  - "fixed" requests a re-measurement or a check;
+  - "not fixed" releases the hold and reopens the gap;
+  - "drop" ends it, and only on a person's credential.
+- **A hold has a review date.** At it, the gap becomes a goal to write the missing check (law
+  6: wrongness is a goal seed). It never expires unnoticed.
+- **An answer without a person's credential is an observation.** It may steer what can be
+  undone. It may not close, credit or label.
+
+## 9. The person's record, and signing in
+
+The surface keeps, beside each ask it sends, the outcome it reads for that run: status, reach
+and execution. Its list, its threads and their marks are drawn from that record. goal-host's
+window of runs is bounded, and a person's history is not something it should be asked to keep
+(law 11: the vessel that asked keeps what it asked).
+
+**Signing in follows the identity service's contract:**
+1. **The sign-in** sends the credential once.
+2. **The session** stays in the surface server. The browser holds an opaque id in a cookie
+   scripts cannot read and other sites cannot send.
+3. **The delegated token.** For each verdict, the surface reads the verdict writer's registry
+   row. It mints a token for that row's node and the label shape, with its own key as the
+   actor and the person's session as the caller, and writes with it. The writer stamps the
+   label as a person's human verdict only when the token names its own node.
+
+Sessions are short and cannot be refreshed, so a person signs in again when needed. A verdict
+given while signed out is kept, and is recorded as theirs after they sign in.
+
+**Two dependencies outside the surface:**
+- **Accounts.** A person must be able to obtain an account in the substrate's organisation.
+  Signing up into a new organisation puts their verdicts where nothing reads them.
+- **The relay path.** Where the writer is reached over the relay, the delegated token must
+  name the writer's node, and the path is offered only once an end-to-end run through the
+  relay has passed.
+
+## 10. What the layout answers to
+
+These are the principles a layout is judged by, before any taste:
+- **The reader and the job first.** A view is built per job, not one view for the data model.
+- **Progressive disclosure**, inside rows as well as sections: the answer, then why it is
+  trusted, then evidence, then process.
+- **The reader's vocabulary.** Mechanism names appear on request, never as headlines.
+- **Signal over ink.** Every chip, id and dot has to earn its place on the default view.
+- **Grouping and consistency.** Related things look related; repeated rows are one object.
+- **Status without explanation.** This is in tension with discoverability: commands typed into
+  one box cannot be seen. Chips and the echo carry discoverability, and the documents carry
+  mechanism.
+- **Measured, not judged.** Appeal is read from what people do, per job (the proposal's
+  measures), before a layout is changed. A layout change is an experiment.
+
+## 11. Dependencies outside the surface
 
 | Need | Owner |
 |---|---|
@@ -139,6 +289,14 @@ long it took, and whether it stayed.
 | Shapes that declare what they take, so inference can choose the shape that answers (a run's record for a question about a run; a commitment for a time-displaced ask) | discovery / goal-host |
 | Commitments a person owns: a rhythm or dated item carrying who asked and which thread; admission of "schedule this" as a change; a dated variant the conductor fires on time; an overdue detector; a notification to the person | development-vessel / goal-host |
 | What a run was given from other goals' recall, recorded on the run | goal-host |
+| Asking a person as a selectable activity, its answer bound in the pool, its waiting stored and resumed | goal-host / coordinator |
+| One asking activity in place of the steps that write questions directly | development-vessel, goal-host |
+| A reader for every kind of answer the surface collects, scheduled and reporting what it did | development-vessel |
+| Asks withdrawn when their subject closes; answers kept across an ask's rewrites | development-vessel |
+| Verification holds with a review date, and validator choice by earned reliability | development-vessel |
+| A person's account in the substrate's organisation | identity |
+| One output of a run readable whole by its id | goal-host |
+| A message impulse and reader activities | goal-host / coordinator |
 
 The surface work in `tasks.md` does not wait on these. Each surface step is useful alone, and
 each dependent step is offered only when something reads it.

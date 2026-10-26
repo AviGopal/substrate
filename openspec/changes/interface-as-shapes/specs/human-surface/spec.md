@@ -10,10 +10,14 @@ time. Only the frame (the fixed regions and the input), the interpreter and the 
 code. Once views are shapes, the frame SHALL itself be described by a default `uiView`, so its
 arrangement is changeable even though its machinery is not.
 
+A field a presentation shape declares SHALL be read by the surface. A field nothing reads (a
+layout variant the bundle ignores while it draws a fixed one) misstates what the system
+controls, and SHALL be either read or removed.
+
 **Check:** a change to any of these shapes, written while the surface is running, is visible
 on the next read without a rebuild or restart. An audit lists every presentation constant
 still compiled into the bundle and finds each is part of the frame, the interpreter or a
-primitive.
+primitive. An audit of the policy's fields finds none that the surface does not read.
 
 ## Requirement: a closed set of primitives
 
@@ -94,8 +98,17 @@ Every interaction meets the current state of the whole system. Continuity with a
 earlier exchange (a thread, a run, a question) is explicit and visible, as the box's context
 and a link carried with what is sent; it is never inferred from wording.
 
+A message that carries only the start of a reading (a complaint's prefix with nothing after
+it, a chip's words left unfinished) SHALL NOT be sent. It stays in the box until it says
+something.
+
+The one exception to one input is credentials. A person signs in through two fields of their
+own (an identifier and a password), because a password typed into the box would be echoed
+and read as a message. Signing in sends nothing to the system but the credential's check.
+
 **Check:** the same words typed in two contexts are read differently, and each reading is
-shown before or as it takes effect. No control other than the box sends anything.
+shown before or as it takes effect. No control other than the box and the sign-in fields sends
+anything. A complaint prefix sent alone reaches no reader and starts no run.
 
 ## Requirement: one path per kind of interaction
 
@@ -207,8 +220,14 @@ system's own measure of whether it is closing what it detects. An attempt with n
 record SHALL be shown as one, not hidden. A step the system does not record in a readable form
 (a deploy, a configuration change, today) SHALL NOT be drawn, and SHALL NOT be inferred.
 
+Until the system's attempts carry the run they started, its own runs SHALL be grouped by what
+they report, never by their wording: by the template the system routed each to. Each group
+shows that template's rate ("2 of 44 reached"), so the reach of one kind of work is visible at
+a glance, and a change of outcome across different asks is never drawn as one ask learning.
+
 **Check:** a commit the system lands appears as a thread step naming the gap it addressed and
-the gate's verdict. A policy change appears with its author. A deploy appears with the units
+the gate's verdict. System runs routed to one template draw as one line with that template's
+rate. A policy change appears with its author. A deploy appears with the units
 it restarted. A run that belongs to a gap's attempt appears inside that gap's thread and in no
 other thread.
 
@@ -285,7 +304,176 @@ no verified or learned marker is drawn as unknown.
 
 The surface SHALL serve, as `human_surface:ui_view`, which view, variant, forms and policy
 revision it drew for each region, so that the system can read its own interface and
-validators can check it.
+validators can check it. What it drew SHALL be kept durably, the way people's form choices
+and exposures are kept, so that a restart does not turn the record into "not observed". A
+count read from a declared constant is not a record of what was drawn.
 
 **Check:** after a variant takes effect, `human_surface:ui_view` names that variant for the
-region it drew.
+region it drew. After a restart, the forms drawn before it are still counted.
+
+## Requirement: a person's asks and their outcomes are the surface's own record
+
+Every ask sent from the surface SHALL be kept by the surface, durably, with the outcome of its
+run (finished or not, reached or not, its execution) once it is read. A person's list and
+threads SHALL be drawn from that record, not from what goal-host still holds: goal-host keeps a
+bounded window of runs, and a person's history must outlive it.
+
+A run whose state can no longer be read SHALL be drawn with its kept outcome, or as "record
+gone" when none was kept. It SHALL never be drawn as running, or stalled, because a read
+failed or the run aged out. A thread's mark SHALL count every run of the thread in the record,
+with an outcome never captured shown as such, never as unjudged.
+
+**Check:** after a restart, and after goal-host no longer holds them, a person's earlier asks
+are still listed, each with the outcome kept for it. A run goal-host answers "not found" for
+is drawn as kept or as "record gone", never as running. A thread asked four times shows four
+runs.
+
+## Requirement: a message is read by readers, and the stakes decide the echo
+
+A message SHALL travel to the system as one impulse carrying its text, what was on screen when
+it was sent, the person's recent moves, and its provenance (signed in, or unverified). Readers
+SHALL be activities that each propose a reading with a confidence. The exact-phrase reader is
+one of them, the fastest and always right when it matches. The reading chosen SHALL be chosen
+by each reader's record in that context.
+
+The echo follows the stakes of the reading:
+- low (a view, an interface complaint, an item supplied to a run): applied at once, with undo;
+- medium (an answer, a decline, a follow-up, a new ask, a steer): applied, with undo for a while;
+- high (a verdict, a lesson, a commitment, a stop, a pin for every output of a shape):
+  confirmed first, in a few words;
+- unsure (readers disagree, or none is confident): a choice of the top two or three readings,
+  never "what did you mean?".
+
+An exact phrase or a chip is an explicit choice and is not confirmed again. A message is read
+against what was on screen when it was sent. A message may have parts, each read and echoed.
+"No, I meant …" right after a reading corrects it, and the correction is kept as a labelled
+example. The same words sent again at once count as a likely misreading. Ignoring a
+confirmation counts nothing. The person's next move grades the reading: carrying on credits
+it, undo or a correction debits it.
+
+Until reader activities exist, the surface reads only the exact phrases and prefixes, and
+sends everything else to the system as text with its context.
+
+**Check:** the same words on two screens are read differently, each reading echoed by its
+stakes. A high-stakes reading takes effect only on yes. An undo after a reading is recorded
+against the reader that proposed it.
+
+## Requirement: an ask the surface shows has a subject, evidence and a reader
+
+Asking a person SHALL be an activity the system selects, like any other producer, and the
+surface SHALL be one of its resolvers: an ask is not a code path inside another step. Every
+ask the surface shows SHALL:
+- name its subject (the run or gap it is about) and carry the evidence needed to answer it,
+  composed from the subject's own records, never a fixed template;
+- name the reader that will act on the answer, and be offered only when that reader runs;
+- carry a time by which it is answered or withdrawn;
+- leave the person's waiting list when its subject closes, and be withdrawn by its asker then.
+
+An answer SHALL be kept with the revision it answered and SHALL stay visible and counted when
+the asker rewrites the ask. The surface SHALL show what an answer did once its reader reports,
+and SHALL NOT claim a reader runs when it cannot confirm one.
+
+The waiting list SHALL lead with asks a person can act on. Asks that no reader takes, notices
+and malformed asks follow them, folded, and do not count as waiting. A person's attention is
+the scarce input: the system SHOULD ask only when a person is the most reliable validator it
+has for the subject.
+
+**Check:** no ask with no confirmed reader is offered as waiting. An ask whose gap has closed
+is not counted as waiting. An answer to an earlier revision is still shown as answered. The
+first rows of the waiting list are asks a person can act on.
+
+## Requirement: verification asks are validator choices, and an unverified answer only steers
+
+When a landed change cannot be measured, the system SHALL choose how to verify it from the
+validators it has, ordered by their earned reliability: the detector's own re-measurement, a
+check that runs, a person, a model's judgement. A person is one validator among these. Every
+validator, a person included, SHALL be graded later by whether the change held.
+
+A verification ask SHALL carry what a person needs to verify: the landed change, the condition
+it was meant to fix, and what was measured before and after. Its answer SHALL have a reader that
+closes, reopens or requests a check. A hold waiting on verification SHALL carry a review date,
+and SHALL NOT expire unnoticed: at its date it becomes a goal to write the missing check.
+
+An answer given without a person's credential is an observation. It MAY steer reversible
+actions (reopen, retry, raise priority, request a check). It SHALL NOT close a gap, credit a
+posterior or enter the verdict corpus as a person's verdict. The echo SHALL show only what
+the answer can do ("Not fixed: reopened"), never more.
+
+**Check:** a verification ask shows the change and the condition. An answer to it reaches a
+reader. An unsigned "fixed" requests a check and does not close the gap. A hold past its date
+appears as a goal, not as an expired gap.
+
+## Requirement: a person signs in, so a verdict they give is theirs
+
+A person SHALL be able to sign in on the surface. The credential SHALL go to the identity
+service once and SHALL NOT be kept. The session it returns SHALL stay on the surface server.
+The browser holds only an opaque id, in a cookie that scripts cannot read and that other sites
+cannot send; the cookie is marked secure when the surface is reached over TLS. A forwarded
+protocol header is believed only from the local proxy. Signing in and out SHALL be accepted
+only from the surface's own page.
+
+A verdict given while signed in SHALL be written as that person's, under a delegated token
+minted for the one node whose writer checks it and for the one shape it writes, right before
+the write. The node SHALL be read from the registry row of the producer the write goes to, so
+the token's audience and the write's target cannot differ. A verdict given while signed out
+SHALL be kept on the run as before, and SHALL be recorded as the person's when they sign in.
+
+Sign-in SHALL be offered where this node serves the verdict writer itself. Where the writer is
+reached over the relay, the same path SHALL be offered only once an end-to-end run through the
+relay has passed. A person SHALL be able to obtain an account in the substrate's organisation:
+signing in to a separate organisation would record verdicts where nothing learns from them.
+
+**Check:** a signed-in verdict is stored as a human verdict naming the person, with the
+token's audience naming the writer's node. No credential appears in any response or record of
+the surface. A sign-in posted from another origin, or with none, is refused before the
+identity service is called.
+
+## Requirement: a signed-in person can read an output whole
+
+The surface SHALL let a signed-in person read any output of a run whole, up to the cap its
+producer sets, by the run and the output's own id. Because the surface reads under its own
+key, this read SHALL be served only to a request carrying a valid person session, and SHALL
+NOT be open to every visitor. The preview stays readable to everyone.
+
+For a signed-in person, a page they asked to see SHALL be drawn whole, and any other cut output
+SHALL offer to show all of it. What arrives replaces the preview; the cut mark remains only
+if the whole is itself capped. Where the whole cannot be read, the preview stays, marked as
+cut.
+
+**Check:** without a session, the whole read is refused and the preview draws with its cut
+mark. With a session, a cut page draws whole and its cut mark is gone. An expired session is
+refused.
+
+## Requirement: an activity draws into its own run's region, and only there
+
+During a run, an activity MAY show something to a person, or ask them something, through the
+surface's question and panel shapes, carrying the run it belongs to and a view composed from
+the closed primitives. No separate run-scoped view shape is added. The surface SHALL accept it
+only after reading that the run exists and is running, and SHALL drop it when the run ends. It
+SHALL draw it labelled with the activity that produced it.
+
+It SHALL NOT hide or restyle the run's outcome, verdict, cut marks or provenance. It SHALL
+NOT write the global presentation policy, and SHALL NOT pass markup through the page frame.
+The run's progress is not such a view: it is the surface's own drawing of the walk's state,
+under the presentation policy, with no activity producing it.
+
+**Check:** a view for a finished or unknown run is refused. A view that would replace the
+outcome region is refused. A run's view disappears when the run ends.
+
+## Requirement: the landing serves the person's jobs
+
+The surface SHALL serve four jobs, each with its own view:
+- getting something done, which is the person's threads;
+- being needed, which is the few asks waiting on this person;
+- watching the system, which is its health by kind of work (reach, trend, cost, what it is
+  stuck on) and its gaps as threads;
+- teaching it, which is lessons and their effect.
+
+Landing SHALL show first what needs the person (usually none to three), then what changed in
+their threads, then one line of the system's health. A result SHALL be presented as an answer
+to the person's words, with one line on why to trust it; a raw artifact is evidence, never the
+answer.
+
+**Check:** with no asks waiting, landing shows the person's threads first. A thread whose
+answer is a raw artifact is drawn with the artifact as evidence under an answer, or marked as
+having none.
