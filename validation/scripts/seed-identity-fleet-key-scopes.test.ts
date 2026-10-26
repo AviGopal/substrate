@@ -104,12 +104,15 @@ afterAll(() => {
 });
 
 async function run(admin = ADMIN_KEY): Promise<string> {
+  return runWith(FLEET_KEY, admin);
+}
+async function runWith(fleetKey: string, admin = ADMIN_KEY): Promise<string> {
   process.env.SUBSTRATE_ADMIN_KEY = admin;
   const lines: string[] = [];
   const [log, warn] = [console.log, console.warn];
   console.log = (...a: unknown[]) => { lines.push(a.join(" ")); };
   console.warn = (...a: unknown[]) => { lines.push(a.join(" ")); };
-  try { await mod.ensureFleetKeyAdminScopes(FLEET_KEY); } finally { console.log = log; console.warn = warn; }
+  try { await mod.ensureFleetKeyAdminScopes(fleetKey); } finally { console.log = log; console.warn = warn; }
   return lines.join("\n");
 }
 
@@ -161,6 +164,35 @@ describe("the fleet key carries db:admin and templates:admin", () => {
     const out = await run("");
     expect(current.grants).toHaveLength(0);
     expect(out).toContain("SUBSTRATE_ADMIN_KEY empty this boot");
+  });
+
+  // A rotation gives the fleet key a new NAME (substrate-default-r2, -r3, ...) and, when it is a re-mint, a new value
+  // and key_id with the default [read, write]. The step never uses the name: it is handed the value the fleet is
+  // carrying (main() passes currentFleetKey(), the rendered env's METABOB_API_KEY) and grants by the key_id identity
+  // answers for THAT value. A re-mint under the new name is driven here, twice; a rename in place keeps the value and key_id, so it is the
+  // already-covered unrotated case.
+  test("MUST-FAIL: after a rotation to substrate-default-r2, and again to -r3, the CURRENT fleet key gains both scopes", async () => {
+    current = fake(["read", "write"]);
+    const oldRow = current.keys.get(FLEET_KEY)!;
+    await run();
+    expect(oldRow.scopes).toEqual(["read", "write", "db:admin", "templates:admin"]);
+
+    // Rotation 1 (re-mint): a NEW key named substrate-default-r2, [read, write]; the env now carries its value.
+    const r2 = `mb-fleetfixture-r2-${"2".repeat(32)}`;
+    current.keys.set(r2, { key_id: "kid-fleet-r2", scopes: ["read", "write"] });
+    await runWith(r2);
+    expect(current.keys.get(r2)).toEqual({ key_id: "kid-fleet-r2", scopes: ["read", "write", "db:admin", "templates:admin"] });
+    const g2 = JSON.parse(current.grants.at(-1)!.body).impulse.pointer;
+    expect(g2).toEqual({ type: "apiKey_write", key_id: "kid-fleet-r2", add_scopes: ["db:admin", "templates:admin"] });
+    expect(JSON.stringify(g2)).not.toContain("substrate-default");
+
+    // Rotation 2 (re-mint again): substrate-default-r3.
+    const r3 = `mb-fleetfixture-r3-${"3".repeat(32)}`;
+    current.keys.set(r3, { key_id: "kid-fleet-r3", scopes: ["read", "write"] });
+    await runWith(r3);
+    expect(current.keys.get(r3)!.scopes).toEqual(["read", "write", "db:admin", "templates:admin"]);
+    expect(JSON.parse(current.grants.at(-1)!.body).impulse.pointer.key_id).toBe("kid-fleet-r3");
+    expect(current.grants).toHaveLength(3);
   });
 
   test("no key value reaches the log", async () => {
