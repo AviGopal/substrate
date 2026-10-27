@@ -327,6 +327,34 @@ host_contended() {
   HC_WHY="host contended: cpu pressure some avg10=${_hc_a10}% avg60=${_hc_a60}% >= ${_hc_pct}% (pull_sync.testgate_psi_defer_pct)"
   return 0
 }
+# A CONTENDED READING IS SAMPLED UNTIL IT SETTLES, NOT DEFERRED ON ONE INSTANT. Measured: periodic store bursts
+# (~8-9 cores every ~65 s) put avg10 over the threshold whatever the gate does, so a start admitted on one reading
+# was a coin flip. Called only after host_contended said contended, at a START (a suite run, a protected run): re-reads
+# host_contended every 5 s until it says uncontended, up to the shaped tuning row pull_sync.testgate_psi_settle_s
+# (default 75 s, one burst period plus margin; 0 = no wait), capped so the run it admits still fits the gate budget
+# (gate_left less <cost>, when gate_left is defined). Returns 0 when the host is STILL contended at the bound (HC_WHY
+# then names the wait, so the deferral says it waited), 1 when it settled (logged with samples and seconds). Waited
+# seconds are the sum of the sleeps issued, so a harness's sleep stub drives it. Top-level and called from the gate only
+# when defined, like host_contended: a harness that sources the gate slice without it defers on the first reading.
+host_contention_settle() { # <label> <cost of the run it admits, s>
+  local _hs_why="$HC_WHY" _hs_max _hs_waited=0 _hs_n=0 _hs_step _hs_left
+  tuning_param pull_sync.testgate_psi_settle_s 75; _hs_max="${TP_VALUE:-0}"
+  case "$_hs_max" in ''|*[!0-9]*) _hs_max=0 ;; esac
+  if declare -F gate_left >/dev/null 2>&1; then
+    _hs_left=$(( $(gate_left) - ${2:-0} )); [ "$_hs_left" -lt "$_hs_max" ] && _hs_max="$_hs_left"
+  fi
+  [ "$_hs_max" -gt 0 ] || return 0
+  while [ "$_hs_waited" -lt "$_hs_max" ]; do
+    _hs_step=5; [ $(( _hs_max - _hs_waited )) -lt "$_hs_step" ] && _hs_step=$(( _hs_max - _hs_waited ))
+    sleep "$_hs_step"; _hs_waited=$(( _hs_waited + _hs_step )); _hs_n=$(( _hs_n + 1 ))
+    if ! host_contended; then
+      log "${1:-?}: host contention settled after ${_hs_waited}s (${_hs_n} samples, bound ${_hs_max}s, pull_sync.testgate_psi_settle_s; first reading: ${_hs_why#host contended: }; now $(grep '^some' "${PSI_CPU_FILE:-/proc/pressure/cpu}" 2>/dev/null | head -1)): starting"
+      return 1
+    fi
+  done
+  HC_WHY="$HC_WHY; still contended after a ${_hs_waited}s settle wait (${_hs_n} samples, bound ${_hs_max}s, pull_sync.testgate_psi_settle_s)"
+  return 0
+}
 # START BY RHYTHM, NOT IN PHASE. Co-hosted nodes' gates are woken by one push and started their suites
 # together, so each ran on a host the others loaded: one node's development-vessel suite was KILLED at its wall (TEST GATE
 # BLIND, HELD) while another node's gate ran beside it. No lock can serialize them (no shared mount, see HOST CONTENTION
@@ -4139,7 +4167,7 @@ EOF
           classification_metadata:{vessel:$v,head:$head,starved_seconds:($el | tonumber),bound_seconds:($after | tonumber),last_converged:$lg,budget_seconds:($b | tonumber),keyed:"vessel",effective_wall_s:$ew,wall_why:$why}}}}}' 2>/dev/null)"
     fi
   }
-  if declare -F host_contended >/dev/null 2>&1 && host_contended; then testgate_budget_defer "the suite run" "$SUITE_COST_S" "$HC_WHY"; skipped=$((skipped + 1)); continue; fi
+  if declare -F host_contended >/dev/null 2>&1 && host_contended && { ! declare -F host_contention_settle >/dev/null 2>&1 || host_contention_settle "$v: the suite run" "$SUITE_COST_S"; }; then testgate_budget_defer "the suite run" "$SUITE_COST_S" "$HC_WHY"; skipped=$((skipped + 1)); continue; fi
   if [ "$(gate_left)" -lt "$SUITE_COST_S" ]; then testgate_budget_defer "the suite run" "$SUITE_COST_S"; skipped=$((skipped + 1)); continue; fi
   TG_KEY="$(testgate_key)"; TG_SKIPS=0
   if [ -s "$TG_NEED_FILE" ]; then
@@ -4289,7 +4317,7 @@ EOF
     # START BY RHYTHM, NOT IN PHASE (see testgate_start_jitter): once per tick, before the first suite run, then the
     # host and the budget are re-checked before it starts.
     if declare -F testgate_start_jitter >/dev/null 2>&1 && testgate_start_jitter "$v"; then
-      if declare -F host_contended >/dev/null 2>&1 && host_contended; then testgate_budget_defer "the suite run" "$SUITE_COST_S" "$HC_WHY"; skipped=$((skipped + 1)); continue; fi
+      if declare -F host_contended >/dev/null 2>&1 && host_contended && { ! declare -F host_contention_settle >/dev/null 2>&1 || host_contention_settle "$v: the suite run" "$SUITE_COST_S"; }; then testgate_budget_defer "the suite run" "$SUITE_COST_S" "$HC_WHY"; skipped=$((skipped + 1)); continue; fi
     fi
     # Re-checked here: ensure_clone_deps (above) can install for minutes.
     if [ "$(gate_left)" -lt "$SUITE_COST_S" ]; then testgate_budget_defer "the suite run" "$SUITE_COST_S"; skipped=$((skipped + 1)); continue; fi
@@ -4758,7 +4786,7 @@ EOF
       # RED BEATS DEFER: a protected file already red alone is a refusal now, never re-reported as "budget".
       if [ "$(gate_left)" -lt "$PROT_COST_S" ]; then [ -z "$PROT_RED" ] && PROT_DEFER="$_pf"; break; fi
       # Nor on a contended host: a protected test's own per-test timeouts are what contention breaks (see host_contended).
-      if declare -F host_contended >/dev/null 2>&1 && host_contended; then [ -z "$PROT_RED" ] && { PROT_DEFER="$_pf"; PROT_DEFER_WHY="$HC_WHY"; }; break; fi
+      if declare -F host_contended >/dev/null 2>&1 && host_contended && { ! declare -F host_contention_settle >/dev/null 2>&1 || host_contention_settle "$v: protected run of $_pf" "$PROT_COST_S"; }; then [ -z "$PROT_RED" ] && { PROT_DEFER="$_pf"; PROT_DEFER_WHY="$HC_WHY"; }; break; fi
       prot_alone_run "$_pf"
       # This run is the retry owed by an earlier tick (see PROTECTED RETRY AFTER A TIMEOUT UNDER CONTENTION): it counts.
       _pt_owed=0; grep -qxF "$HEAD $_pf" "$PT_FILE" 2>/dev/null && _pt_owed=1
@@ -4775,7 +4803,7 @@ EOF
           printf '{"at":"%s","actor":"pull-sync","action":"protected_retry_after_timeout_under_contention","vessel":"%s","head":"%s","file":"%s","why":"%s"}\n' \
             "$(date -Iseconds)" "$v" "$HEAD" "$_pf" "$(printf '%s' "$_pt_why" | tr -d '"\\')" >> "$DEFERRAL_LOG" 2>/dev/null || true
           echo "$HEAD $_pf" >> "$PT_FILE" 2>/dev/null || true
-          if declare -F host_contended >/dev/null 2>&1 && host_contended; then
+          if declare -F host_contended >/dev/null 2>&1 && host_contended && { ! declare -F host_contention_settle >/dev/null 2>&1 || host_contention_settle "$v: protected retry of $_pf" "$PROT_COST_S"; }; then
             # Never retried hot: the candidate is DEFERRED through the counted path, and the next tick's run of this
             # file (admitted only on an uncontended host) is the retry.
             PROT_DEFER="$_pf"; PROT_DEFER_WHY="protected retry after timeout under contention owed for $_pf, and the host is still contended ($HC_WHY)"; break
