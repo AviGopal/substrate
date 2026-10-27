@@ -2965,7 +2965,7 @@
         "auto-describe-served-writes.sh"
       ],
       "evidence": {
-        "accepted": "23a15af3a974d2d285de5a64b22855256452582d",
+        "accepted": "e35b8815b6fb748524a3d244c88b86e6ffa8e9bf",
         "mutation": "insert `exit 99` after line 1",
         "mutated_blob": "b6dc532e600c56c1bc81e1e2f80049d5bec2268f"
       }
