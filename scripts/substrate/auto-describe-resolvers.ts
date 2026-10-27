@@ -21,10 +21,23 @@
  *    Evidence is gathered read-only from the trace store: the shape id itself,
  *    a sample of recent impulse pointers of that shape, and the names/descriptions
  *    of activities that DECLARE the shape as an output_shape.
- *  - It SKIPS write/destructive/lifecycle/internal shapes (only describes
- *    DATA/REPORT/QUERY resolvers — the ones operator goals compose).
- *  - Bounded: at most MAX_PER_TICK shapes per fire, round-robin over the backlog
- *    via a persisted cursor, so it works through the gap over time without flooding.
+ *  - It SKIPS lifecycle/internal tick machinery. Served STORE WRITES (`*_write`,
+ *    `*_delete`, `*_update`, `*_deprecate`, `*Write`) are described FIRST, and
+ *    without the LLM: a write's description is DERIVED from what discovery itself
+ *    advertises (the shape's object and effect, read from its id; the vessel that
+ *    serves it; and that vessel's own described readers of the same object). A
+ *    write with no description can never be a recalled target, so a goal that asks
+ *    to CHANGE something a surface keeps was read as a report (writes used to be
+ *    skipped here outright, so the tick logged "no undescribed data shapes" while
+ *    every advertised write stayed undescribed). Derived text is the same on every
+ *    run, so a re-description after a restart re-indexes nothing.
+ *  - Bounded: at most MAX_PER_TICK LLM-described shapes per fire, round-robin over
+ *    the backlog via a persisted cursor, so it works through the gap without flooding.
+ *  - Only a shape a LIVE VESSEL serves (discovery's vesselCapability names one) is
+ *    described; walk-minted composites (composedDeliverable_*) never are.
+ *  - PROVENANCE: every learned description it posts names this tick and its run
+ *    (source "auto-describe-resolvers@<run start ISO>"), which discovery keeps on the
+ *    learned entry; the tick's log line carries the same run id.
  *  - NON-FATAL throughout: any LLM / discovery / DB failure → log + skip, never throw.
  *
  * Env-gated: AUTO_DESCRIBE_RESOLVERS=1 to run (anything else = no-op exit).
@@ -48,20 +61,71 @@ const sqlAuth = "Basic " + Buffer.from(`${USER}:${PASS}`).toString("base64");
 
 const MAX_PER_TICK = parseInt(process.env.AUTO_DESCRIBE_MAX_PER_TICK || "5", 10);
 const METRICS_DIR = "/workspace/metrics";
-const LOG = `${METRICS_DIR}/auto-describe.jsonl`;
-const CURSOR = `${METRICS_DIR}/auto-describe-cursor.json`;
+let LOG = `${METRICS_DIR}/auto-describe.jsonl`;
+let CURSOR = `${METRICS_DIR}/auto-describe-cursor.json`;
 
-// Shapes the planner CANNOT usefully compose from a description: writes,
-// destructive ops, lifecycle/hub/internal tick machinery. We describe DATA /
-// REPORT / QUERY resolvers — the producers operator goals chain together.
+// Shapes the planner CANNOT usefully compose from a description: lifecycle/hub/
+// internal tick machinery. Store writes are NOT skipped: they are what a goal that
+// asks to change something targets (see effectOf below).
+// Walk-minted composites (composedDeliverable_<goal text>) are skipped too: their producer is a learned template, not a
+// vessel, and their names are goal text, so a description of one only draws unrelated goals to it.
 const SKIP_PATTERNS: RegExp[] = [
-  /_write$/i, /_delete$/i, /_deprecate$/i, /_update$/i, /Write$/,
   /dispatch/i, /tick/i, /lifecycle/i, /\bhook\b/i,
   /heartbeat/i, /register/i, /observer$/i, /sentinel/i, /_seed$/i,
+  /^composedDeliverable_/,
 ];
 
-function shouldSkip(shape: string): boolean {
+export function shouldSkip(shape: string): boolean {
   return SKIP_PATTERNS.some((re) => re.test(shape));
+}
+
+/** The effect a store-write shape names, and the object it acts on, read from the shape id alone. */
+// One effect word per suffix, and nothing else shared: every write's line is otherwise its own object's words, so a
+// description never draws a goal by vocabulary all writes have in common (a goal saying "changed" must not recall
+// every store write).
+const EFFECTS: Record<string, string> = { write: "writes", update: "updates", delete: "deletes", deprecate: "deprecates" };
+export function effectOf(shape: string): { stem: string; effect: string } | null {
+  const m = /^(.+?)(?:_(write|update|delete|deprecate)|(Write))$/.exec(shape);
+  return m ? { stem: m[1], effect: m[2] ?? "write" } : null;
+}
+/** "uiPanel" -> ["ui", "panel"]; "human_surface:ui_panel" -> ["human", "surface", "ui", "panel"]. */
+export function objectWords(id: string): string[] {
+  return id.replace(/([a-z0-9])([A-Z])/g, "$1 $2").split(/[^A-Za-z0-9]+/).map((w) => w.toLowerCase()).filter(Boolean);
+}
+
+export interface WriteAdvertisement {
+  /** the live vessel discovery names as this shape's (first local) producer; null = none serves it, so it is not described */
+  vessel: string | null;
+  /** the shapes that vessel advertises, with their descriptions where discovery has one */
+  siblings: Record<string, string | null>;
+}
+
+/**
+ * A store write's description, DERIVED from its advertisement (no LLM, no per-shape text): the effect and object its
+ * id names, the vessel that keeps it, and that vessel's described readers of the same object (a sibling shape whose
+ * words contain every word of the object and which is not itself a write). Deterministic, so the same advertisement
+ * always yields the same line.
+ */
+export function deriveWriteDescription(shape: string, ad: WriteAdvertisement): string | null {
+  const eff = effectOf(shape);
+  if (!eff || !ad.vessel) return null;
+  const object = objectWords(eff.stem);
+  if (object.length === 0) return null;
+  const words = object.join(" ");
+  const does = EFFECTS[eff.effect];
+  const keeper = `the ${objectWords(ad.vessel).join(" ")} (${ad.vessel})`;
+  let line = `${does} the ${words} kept by ${keeper}`;
+  const readers = Object.entries(ad.siblings)
+    .filter(([s, d]) => s !== shape && d && !effectOf(s) && object.every((w) => objectWords(s).includes(w)))
+    .sort(([a], [b]) => a.localeCompare(b));
+  for (const [s, d] of readers) {
+    // the reader's own first clause (what it is), so its object words carry over without its use-for clause
+    const what = (d as string).replace(/\s+/g, " ").split(";")[0].trim().replace(/[.]+$/, "").slice(0, 100);
+    const add = `${line.includes("; read back as ") ? ", " : "; read back as "}${s} (${what})`;
+    if (line.length + add.length > 290) break;
+    line += add;
+  }
+  return line;
 }
 
 async function sql(query: string): Promise<any[]> {
@@ -118,17 +182,45 @@ async function fetchAdvertisedShapes(): Promise<string[]> {
   }
 }
 
-/** Currently-described shapes (advertised OR already learned). */
-async function fetchDescribedShapes(): Promise<Set<string>> {
+/** Currently-described shapes (advertised OR already learned), with their descriptions; null when unreadable. */
+async function fetchDescriptions(): Promise<Record<string, string> | null> {
   try {
     const r = await fetch(`${DISCOVERY}/registry/shape-descriptions`, { signal: AbortSignal.timeout(10000) });
-    if (!r.ok) return new Set();
+    if (!r.ok) return null;
     const d = (await r.json()) as { shape_descriptions?: Record<string, string> };
-    return new Set(Object.keys(d.shape_descriptions ?? {}));
+    return d.shape_descriptions ?? {};
   } catch (e) {
     await appendLog({ event: "fetch_described_failed", error: String(e) });
-    return new Set();
+    return null;
   }
+}
+
+/**
+ * What discovery advertises about a shape's producer: vesselCapability names who serves the shape (the first
+ * local row, as discovery's own pick prefers a direct producer), and GET /vessels/:id lists that vessel's shapes.
+ * Read-only; never resolves the shape itself. Any failure leaves the part it could not read empty.
+ */
+async function fetchAdvertisement(shape: string, described: Record<string, string>): Promise<WriteAdvertisement> {
+  const ad: WriteAdvertisement = { vessel: null, siblings: {} };
+  try {
+    const r = await fetch(`${DISCOVERY}/resolve`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...(API_KEY ? { Authorization: `ApiKey ${API_KEY}` } : {}) },
+      body: JSON.stringify({ pointer: { type: "vesselCapability", shape } }),
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!r.ok) return ad;
+    const rows = (((await r.json()) as { content?: { vessels?: Array<{ vesselId?: string; vesselName?: string; protocol?: string }> } }).content?.vessels) ?? [];
+    const row = rows.find((v) => v.protocol !== "libp2p") ?? rows[0];
+    if (!row?.vesselId) return ad;
+    ad.vessel = String(row.vesselName || row.vesselId);
+    const v = await fetch(`${DISCOVERY}/vessels/${encodeURIComponent(String(row.vesselId))}`, { signal: AbortSignal.timeout(10000) });
+    if (v.ok) {
+      const shapes = ((await v.json()) as { shapes?: unknown }).shapes;
+      if (Array.isArray(shapes)) for (const s of shapes) if (typeof s === "string") ad.siblings[s] = described[s] ?? null;
+    }
+  } catch { /* unreadable: no live vessel named, so nothing is described from it this tick */ }
+  return ad;
 }
 
 /**
@@ -202,7 +294,7 @@ export async function generateDescription(shape: string, evidence: string): Prom
 }
 
 /** POST a learned description to discovery. Returns true on apply. */
-async function postLearnedDescription(shape: string, description: string): Promise<boolean> {
+async function postLearnedDescription(shape: string, description: string, source: string): Promise<boolean> {
   try {
     const r = await fetch(`${DISCOVERY}/registry/shape-descriptions`, {
       method: "POST",
@@ -210,7 +302,7 @@ async function postLearnedDescription(shape: string, description: string): Promi
         "Content-Type": "application/json",
         ...(API_KEY ? { Authorization: `ApiKey ${API_KEY}` } : {}),
       },
-      body: JSON.stringify({ shape, description, source: "auto" }),
+      body: JSON.stringify({ shape, description, source }),
       signal: AbortSignal.timeout(10000),
     });
     return r.ok;
@@ -219,27 +311,57 @@ async function postLearnedDescription(shape: string, description: string): Promi
   }
 }
 
-async function main(): Promise<void> {
+/** `metricsDir` is where the tick's log and cursor live (the timer's run uses the default). */
+export async function main(metricsDir: string = METRICS_DIR): Promise<void> {
   if (!ENABLED) {
     console.log("[auto-describe] AUTO_DESCRIBE_RESOLVERS != 1 — no-op exit");
     return;
   }
+  LOG = `${metricsDir}/auto-describe.jsonl`;
+  CURSOR = `${metricsDir}/auto-describe-cursor.json`;
   try {
-    await Bun.write(`${METRICS_DIR}/.keep`, "").catch(() => {});
+    await Bun.write(`${metricsDir}/.keep`, "").catch(() => {});
   } catch { /* ignore */ }
+  const run = new Date().toISOString();
+  const source = `auto-describe-resolvers@${run}`;
 
   const advertised = await fetchAdvertisedShapes();
-  const described = await fetchDescribedShapes();
+  const descriptions = await fetchDescriptions();
+  if (descriptions === null) {
+    // Unreadable descriptions would make every advertised shape look undescribed: describe nothing this tick.
+    console.log("[auto-describe] shape descriptions unreadable — nothing described this tick");
+    return;
+  }
+  const described = new Set(Object.keys(descriptions));
 
-  // The gap: advertised − described, restricted to data/report/query shapes.
-  const undescribed = advertised
-    .filter((s) => !described.has(s))
-    .filter((s) => !shouldSkip(s))
+  // The gap: advertised − described, minus internal machinery. Served store writes are described first, from their
+  // advertisement (every one, each tick: no LLM is spent on them); the rest go through the bounded LLM window.
+  const gap = advertised.filter((s) => !described.has(s)).filter((s) => !shouldSkip(s));
+  const writes = gap.filter((s) => effectOf(s) !== null).sort();
+  let derived = 0;
+  for (const shape of writes) {
+    try {
+      const description = deriveWriteDescription(shape, await fetchAdvertisement(shape, descriptions));
+      if (!description) {
+        // only a shape a live vessel serves through its own advertisement is described
+        await appendLog({ event: "describe", run, shape, description: null, applied: false, reason: "no_live_vessel" });
+        continue;
+      }
+      const ok = await postLearnedDescription(shape, description, source);
+      if (ok) derived++;
+      await appendLog({ event: "describe", run, shape, description, applied: ok, derived_from: "advertisement" });
+      console.log(`[auto-describe] ${shape}: ${ok ? "APPLIED" : "post-failed"} (derived) :: ${description}`);
+    } catch (e) {
+      await appendLog({ event: "describe", run, shape, description: null, applied: false, reason: String(e) });
+    }
+  }
+  const undescribed = gap
+    .filter((s) => effectOf(s) === null)
     .sort(); // stable order so the round-robin cursor is meaningful
 
   if (undescribed.length === 0) {
-    console.log(`[auto-describe] no undescribed data shapes (advertised=${advertised.length}, described=${described.size})`);
-    await appendLog({ event: "tick_noop", advertised: advertised.length, described: described.size, gap: 0 });
+    console.log(`[auto-describe] no undescribed data shapes (advertised=${advertised.length}, described=${described.size}, writes derived=${derived}/${writes.length})`);
+    await appendLog({ event: "tick_noop", run, advertised: advertised.length, described: described.size, gap: 0, writes: writes.length, derived });
     return;
   }
 
@@ -255,6 +377,10 @@ async function main(): Promise<void> {
   let applied = 0;
   for (const shape of batch) {
     try {
+      if (!(await fetchAdvertisement(shape, descriptions)).vessel) {
+        await appendLog({ event: "describe", run, shape, description: null, applied: false, reason: "no_live_vessel" });
+        continue;
+      }
       const evidence = await gatherEvidence(shape);
       const description = await generateDescription(shape, evidence);
       if (!description) {
@@ -262,9 +388,9 @@ async function main(): Promise<void> {
         console.log(`[auto-describe] ${shape}: LLM produced no line — skipped`);
         continue;
       }
-      const ok = await postLearnedDescription(shape, description);
+      const ok = await postLearnedDescription(shape, description, source);
       if (ok) applied++;
-      await appendLog({ event: "describe", shape, description, applied: ok, evidence_chars: evidence.length });
+      await appendLog({ event: "describe", run, shape, description, applied: ok, evidence_chars: evidence.length });
       console.log(`[auto-describe] ${shape}: ${ok ? "APPLIED" : "post-failed"} :: ${description}`);
     } catch (e) {
       // Per-shape isolation — one failure never aborts the batch.
@@ -273,13 +399,14 @@ async function main(): Promise<void> {
   }
 
   console.log(
-    `[auto-describe] tick done: gap=${undescribed.length} batch=${batch.length} applied=${applied} ` +
+    `[auto-describe] tick done: gap=${undescribed.length} batch=${batch.length} applied=${applied} writes derived=${derived}/${writes.length} ` +
     `(advertised=${advertised.length}, described=${described.size})`,
   );
-  await appendLog({ event: "tick_done", gap: undescribed.length, batch: batch.length, applied, advertised: advertised.length, described: described.size });
+  await appendLog({ event: "tick_done", run, gap: undescribed.length, batch: batch.length, applied, writes: writes.length, derived, advertised: advertised.length, described: described.size });
 }
 
-// Run only as the entry point: credential-refused-branches.test.ts imports generateDescription.
+// Run only as the entry point: credential-refused-branches.test.ts imports generateDescription, and the gate fixture
+// auto-describe-served-writes.sh imports main.
 if (import.meta.main) main().catch((e) => {
   // Top-level guard — the tick must never crash the timer.
   console.error("[auto-describe] fatal (suppressed):", e);
