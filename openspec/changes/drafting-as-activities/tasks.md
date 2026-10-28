@@ -52,11 +52,17 @@ Stage 1 is the minimal pair that makes selection and attribution possible: 1.1 a
   and the gate's refusal reading;
   `f4-clamps.test.ts` passed (42/42), the F5(b) verdict-diff golden passed (1/1), and
   `bun run typecheck` passed. The new contract-read test was observed red before implementation.
-- [ ] 2.2 **[operator build]** Add a `priorQueries` read-request kind: `concept_select_for_prompt`
+- [x] 2.2 **[operator build]** Add a `priorQueries` read-request kind: `concept_select_for_prompt`
   with the variant's query and source types, under a capped token budget. Ids that are shown join the
   `applied_ids` allowlist.
   Must-fail: an over-budget request is truncated rather than refused, or an id that was not shown is
-  credited.
+  credited. **Verified at development-vessel `c74de1da`**: the closed core forwards the variant's
+  query and source types to `concept_select_for_prompt`, with at most four requests and a shared
+  1,500-token budget. Oversized requests/results are dropped whole; only returned ids of an allowed
+  source type reach the assembly, and the existing prompt-visible id filter still gates credit. The
+  must-fail tests were observed red before implementation. `f13-prior-query-read.test.ts` passed
+  (4/4), the existing concept-prior integration passed (3/3), applied-id/credit integration passed
+  (4/4), and the F5(b) golden remained unchanged (1/1).
 - [ ] 2.3 **[operator build]** Declared controls in `test_writing`: a test titled as a control must
   pass at HEAD and is excluded from "every new title fails". It is recorded on the check. Touches the
   arm judge in excluded files.
