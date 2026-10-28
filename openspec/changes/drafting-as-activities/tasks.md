@@ -143,7 +143,10 @@ Stage 1 is the minimal pair that makes selection and attribution possible: 1.1 a
   used is graded by whether credit starts to flow.
   Precondition for fair grading: the clamp that keeps a compose stage's prompt under the model's
   input ceiling lives in the floor (the control arm), not in variants, so no arm is graded on
-  refusals the floor would also have hit.
+  refusals the floor would also have hit. **Pre-registered** in
+  [`measurement-preregistration.md`](measurement-preregistration.md) at 2026-10-28 02:10:34Z,
+  before the v2 module or activity existed; leave this task open until the runtime reports the
+  registered outcomes after the minimum sample.
 - [ ] 6.2 **[system, measurement]** Autonomy criterion: a variant minted by the system (`variant_of` the base, under
   `src/drafter/variants/`, landed by the lane with no operator hands) is selected by Thompson and out-
   grades the floor on the deterministic settlement.
