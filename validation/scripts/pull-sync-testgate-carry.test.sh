@@ -11,9 +11,16 @@
 #   (a) MUST-FAIL: a tick whose budget runs out after the candidate runs defers the overlay; the NEXT tick runs ONLY
 #       the overlay (two runs, no T1 or T2) and reaches a verdict (converged), and the carry is consumed
 #   (b) the deferral writes the carry atomically (valid JSON with the T1 and T2 output, no temp file left)
-#   (c) control: a changed candidate sha discards the carry; the gate re-runs from scratch (four runs)
+#   (c) control: a changed candidate sha discards the carry; the gate re-runs from scratch (four runs); the discard
+#       NAMES the changed part (head), from the key_parts stored with the carry (diagnostic only)
 #   (d) control: a changed test-environment key (the runner's version) discards the carry; four runs
 #   (e) control: no carry, ample budget: the gate runs exactly as before (four runs, converged)
+#   (g) a carry written before key_parts existed (no key_parts) with another id is discarded, logged as
+#       "parts unknown (older carry)"
+#   (f) MUST-FAIL: a per-run wall that changes between the two ticks KEEPS the carry (same HEAD, tree and environment):
+#       the next tick resumes with the overlay alone. Two forms: an explicit TEST_TIMEOUT_SECONDS that differs, and
+#       the derived wall, where the deferring tick's own completed T1 raises "last completed full run x1.5" for the next
+#       tick (what discarded every carry on its first reuse: the wall was part of the carry's key)
 #
 # usage: validation/scripts/pull-sync-testgate-carry.test.sh [path/to/substrate-pull-sync.sh]
 # Needs bash, git, jq, awk, sed, timeout.
@@ -123,6 +130,7 @@ tight; setup activity-api new; echo 2 > "$T/stub/sleep"; tick 1
 echo 'export const x = 3;' > "$d/src/x.ts"; g commit -am change2; echo 0 > "$T/stub/sleep"; ample; tick 0
 grep -q 'carried candidate result DISCARDED' "$LOG" && ok "(c) a new candidate sha discards the carry" || bad "(c) the carry was not discarded for a new sha (log: $(tr '\n' '|' < "$LOG" | cut -c1-300))"
 [ "$(suites)" = 4 ] && converged && ! grep -q RESUMING "$LOG" && ok "(c) the new candidate is gated from scratch (four runs) and converges" || bad "(c) the new candidate ran $(suites) runs (resumed: $(grep -c RESUMING "$LOG"))"
+grep 'carried candidate result DISCARDED' "$LOG" | grep -q 'changed: [a-z_, ]*\bhead\b' && ok "(c) the discard names the changed part: head" || bad "(c) the discard does not name head ($(grep -o 'DISCARDED.*from scratch' "$LOG" | head -1))"
 
 # ── (d) a changed environment key (runner version) discards the carry ─────────────────────────────────────────
 tight; setup activity-api new; echo 2 > "$T/stub/sleep"; echo 1.0.0 > "$T/stub/version"; tick 1
@@ -136,6 +144,33 @@ rm -f "$T/stub/version"
 tight; ample; setup activity-api new; tick 0
 [ "$(suites)" = 4 ] && converged && ! deferred && ! grep -q 'RESUMING\|DISCARDED' "$LOG" && ok "(e) no carry: four runs, converged, no deferral" || bad "(e) the uncarried gate changed (runs $(suites); log: $(tr '\n' '|' < "$LOG" | cut -c1-300))"
 [ -f "$(CARRY)" ] && bad "(e) a gate that finished left a carry" || ok "(e) a finished gate leaves no carry"
+
+
+# ── (g) an older carry (no key_parts) is discarded and says its parts are unknown ───────────────────────────────────────
+tight; ample; setup activity-api new
+printf '{"id":"an-older-id","head":"x","at":%s,"t_out":"x"}\n' "$(date +%s)" > "$(CARRY)"; tick 0
+grep 'carried candidate result DISCARDED' "$LOG" | grep -q 'parts unknown (older carry)' && ok "(g) an older carry is discarded as 'parts unknown (older carry)'" || bad "(g) older carry: $(grep -o 'DISCARDED.*from scratch' "$LOG" | head -1)"
+[ "$(suites)" = 4 ] && converged && ok "(g) and the gate runs from scratch (four runs)" || bad "(g) $(suites) runs after an older carry"
+
+# ── (f) a per-run wall that changes between ticks keeps the carry ────────────────────────────────────────────────────
+# Form 1: TEST_TIMEOUT_SECONDS 3 at the deferral, 4 at the resume (a 13 s unit so the 2 x (4 + 1) s overlay fits).
+tight; setup activity-api new; echo 2 > "$T/stub/sleep"; tick 1
+[ -f "$(CARRY)" ] || bad "(f) setup: no carry after tick 1 (TEST_TIMEOUT_SECONDS form)"
+TEST_TIMEOUT_SECONDS=4; UNIT_TIMEOUT_S=13; tick 0
+grep -q 'carried candidate result DISCARDED' "$LOG" && bad "(f) a changed TEST_TIMEOUT_SECONDS discarded the carry (the wall is not a result input)" || ok "(f) a changed TEST_TIMEOUT_SECONDS keeps the carry"
+{ [ "$(suites)" = 2 ] && converged && grep -q RESUMING "$LOG"; } && ok "(f) the next tick resumed with the overlay alone (two runs) and converged" || bad "(f) TEST_TIMEOUT_SECONDS form: $(suites) runs, converged=$(converged && echo yes || echo no), resumed=$(grep -c RESUMING "$LOG")"
+# Form 2: the derived wall (TEST_TIMEOUT_SECONDS unset). A 4 s floor and a recorded 1 s run give a 4 s wall at tick 1;
+# its own 3 s T1 is recorded as the last completed full run, so tick 2 derives a 5 s wall. 1 s grace, a 40 s unit and a
+# 2 s margin (38 s budget, cap 8 s): from 25 s used, T1 and T2 fit and the 2 x 5 s overlay does not; tick 2 fits it.
+tight; unset TEST_TIMEOUT_SECONDS; SUITE_WALL_FLOOR_S=4; UNIT_TIMEOUT_S=40; setup activity-api new; echo 3 > "$T/stub/sleep"
+echo '{"last_completed_wall_s":1}' > "$MARKER_DIR/$VESSEL.suite-wall"; tick 25
+grep -q 'per-run wall 4s' "$LOG" || bad "(f) setup: tick 1's derived wall is not 4 s ($(grep -o 'per-run wall [0-9]*s' "$LOG" | head -1))"
+[ -f "$(CARRY)" ] || bad "(f) setup: no carry after tick 1 (derived-wall form; log: $(tr '\n' '|' < "$LOG" | cut -c1-300))"
+tick 0
+grep -q 'per-run wall 5s' "$LOG" && ok "(f) setup: tick 2 derives a different wall (5 s) from tick 1's own run" || bad "(f) setup: tick 2's wall did not change ($(grep -o 'per-run wall [0-9]*s' "$LOG" | head -1))"
+grep -q 'carried candidate result DISCARDED' "$LOG" && bad "(f) the derived wall's change discarded the carry" || ok "(f) the derived wall's change keeps the carry"
+{ [ "$(suites)" = 2 ] && converged && grep -q RESUMING "$LOG"; } && ok "(f) derived-wall form: resumed with the overlay alone (two runs) and converged" || bad "(f) derived-wall form: $(suites) runs, converged=$(converged && echo yes || echo no), resumed=$(grep -c RESUMING "$LOG")"
+unset SUITE_WALL_FLOOR_S
 
 echo
 [ "$FAILS" -eq 0 ] && { echo "PASS"; exit 0; } || { echo "$FAILS FAIL"; exit 1; }

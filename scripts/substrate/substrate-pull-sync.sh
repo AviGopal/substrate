@@ -4097,8 +4097,13 @@ EOF
   # dependency's identity now) and the test environment (runner version, the gate's timeouts). Any
   # change re-measures; an unchanged key with a known need larger than the time left is deferred
   # WITHOUT a run. A skip converges nothing and moves no gate state but the deferral count.
-  testgate_key() {
-    local _tk_fd _tk_n _tk_t
+  # testgate_key [carry]: with "carry", the per-run wall is left out of the env line (the carried result's key; see
+  # CARRIED CANDIDATE RESULT below). Without it, unchanged: the need/skip logic keys on the wall too.
+  # testgate_key_lines [carry] prints the lines the key hashes, one component per line ("head ...", "env ...").
+  testgate_key() { testgate_key_lines "$@" | md5sum | cut -d' ' -f1; }
+  testgate_key_lines() {
+    local _tk_fd _tk_n _tk_t _tk_wall="${TEST_TIMEOUT_SECONDS:-${SUITE_WALL_S:-240}} "
+    [ "${1:-}" = carry ] && _tk_wall=""
     _tk_fd="$(clone_file_deps "$d" 2>/dev/null || true)"
     {
       echo "head $HEAD"
@@ -4108,9 +4113,9 @@ EOF
       while IFS=$'\t' read -r _tk_n _tk_t; do
         [ -n "$_tk_n" ] && echo "filedep $_tk_n $( [ -d "$_tk_t" ] && file_dep_identity "$_tk_t" || echo missing)"
       done <<< "$_tk_fd"
-      echo "env $("$BUN_BIN" --version 2>/dev/null || echo none) ${TEST_TIMEOUT_SECONDS:-${SUITE_WALL_S:-240}} ${TEST_KILL_GRACE_SECONDS:-30} ${PROTECTED_TEST_TIMEOUT_SECONDS:-120}"
+      echo "env $("$BUN_BIN" --version 2>/dev/null || echo none) ${_tk_wall}${TEST_KILL_GRACE_SECONDS:-30} ${PROTECTED_TEST_TIMEOUT_SECONDS:-120}"
       [ -z "${SLOW_GLOBS:-}" ] || echo "slow $SLOW_GLOBS"
-    } | md5sum | cut -d' ' -f1
+    }
   }
   TG_NEED_FILE="$MARKER_DIR/$v.testgate-need"; TG_REMEASURE=""
   GV_T0=$(date +%s)
@@ -4179,8 +4184,18 @@ EOF
   # the gate key (HEAD, outstanding set, dependency identity, test environment, slow globs), the exact tree, and
   # the scrubbed environment's definition; any difference discards it and the gate runs from scratch. Consumed
   # when the overlay starts; cleared when the gate finishes measuring.
+  # The PER-RUN WALL IS NOT PART OF THE CARRY'S KEY (testgate_key carry). It is re-derived every tick from the last
+  # completed full run (x1.5), and the deferring tick's own T1 IS such a run, so with the wall in the key the next
+  # tick's key always differed and every carry was discarded on its first reuse. A wall decides only whether a run
+  # is KILLED, and a killed run is not a result (the BLIND and KILLED paths), so it cannot change a carried output.
   TG_CARRY_FILE="$MARKER_DIR/$v.testgate-carry"; TG_CARRY=""; TG_CARRY_AGE=""; TG_L_RAN=""; TG_T2_RAN=""
-  TG_CARRY_ID="$TG_KEY $(git -C "$d" rev-parse --verify --quiet "$HEAD^{tree}" 2>/dev/null || echo notree) $(declare -f scrubbed_env 2>/dev/null | md5sum | cut -d' ' -f1)"
+  _tc_tree="$(git -C "$d" rev-parse --verify --quiet "$HEAD^{tree}" 2>/dev/null || echo notree)"; _tc_env="$(declare -f scrubbed_env 2>/dev/null | md5sum | cut -d' ' -f1)"
+  TG_CARRY_ID="$(testgate_key carry) $_tc_tree $_tc_env"
+  # KEY PARTS, DIAGNOSTIC ONLY: the carry's components by name (head, outstanding, manifest, installed, filedep, env,
+  # slow, tree, scrubbed_env), stored with the carry so a discard can NAME what changed. The decision is the exact
+  # compare of TG_CARRY_ID above; these parts never decide anything.
+  TG_CARRY_PARTS="$({ testgate_key_lines carry; echo "tree $_tc_tree"; echo "scrubbed_env $_tc_env"; } | jq -R -s -c 'split("\n") | map(select(length > 0)) | group_by(split(" ")[0]) | map({key: (.[0] | split(" ")[0]), value: join("\n")}) | from_entries' 2>/dev/null || echo '{}')"
+  printf '%s' "$TG_CARRY_PARTS" | jq -e 'type == "object"' >/dev/null 2>&1 || TG_CARRY_PARTS='{}'
   if [ -s "$TG_CARRY_FILE" ]; then
     _tc_id="$(jq -r '.id // empty' "$TG_CARRY_FILE" 2>/dev/null || true)"; _tc_at="$(jq -r '.at // empty' "$TG_CARRY_FILE" 2>/dev/null || true)"
     case "$_tc_at" in ''|*[!0-9]*) _tc_at="" ;; esac
@@ -4188,7 +4203,8 @@ EOF
       TG_CARRY=1; TG_CARRY_AGE=$(( $(date +%s) - _tc_at ))
       log "$v: TEST GATE RESUMING from a carried candidate result (age ${TG_CARRY_AGE}s, ${HEAD:0:10}, same gate key, tree and environment): the candidate runs are not repeated; the deferred overlay runs next"
     else
-      log "$v: carried candidate result DISCARDED — it was taken for a different candidate, tree or test environment (gate key, tree or scrubbed env changed); the gate runs from scratch"
+      _tc_diff="$(jq -r --argjson now "$TG_CARRY_PARTS" '.key_parts as $old | if ($old | type) == "object" then ([($old | keys[]), ($now | keys[])] | unique | map(select(($now[.] // null) != ($old[.] // null))) | if length == 0 then "none named" else join(", ") end) else "parts unknown (older carry)" end' "$TG_CARRY_FILE" 2>/dev/null || echo "parts unknown (unreadable carry)")"
+      log "$v: carried candidate result DISCARDED — it was taken for a different candidate, tree or test environment (changed: $_tc_diff); the gate runs from scratch"
       rm -f "$TG_CARRY_FILE" 2>/dev/null || true
     fi
   fi
@@ -4680,9 +4696,9 @@ EOF
               # The outputs go through files (--rawfile), never argv: a suite's output can exceed the argument limit.
               _tc_tmp="$TG_CARRY_FILE.tmp.$$"
               if printf '%s' "$T_OUT" > "$_tc_tmp.t" && printf '%s' "${L_OUT:-}" > "$_tc_tmp.l" && printf '%s' "${T2_OUT:-}" > "$_tc_tmp.t2" \
-                 && jq -n --arg id "$TG_CARRY_ID" --arg head "$HEAD" --argjson at "$(date +%s)" --rawfile t "$_tc_tmp.t" \
+                 && jq -n --arg id "$TG_CARRY_ID" --argjson kp "$TG_CARRY_PARTS" --arg head "$HEAD" --argjson at "$(date +%s)" --rawfile t "$_tc_tmp.t" \
                    --rawfile l "$_tc_tmp.l" --arg lr "$TG_L_RAN" --rawfile t2 "$_tc_tmp.t2" --arg t2r "$TG_T2_RAN" \
-                   '{id:$id, head:$head, at:$at, t_out:$t} + (if $lr == "1" then {l_out:$l} else {} end) + (if $t2r == "1" then {t2_out:$t2} else {} end)' > "$_tc_tmp" 2>/dev/null \
+                   '{id:$id, key_parts:$kp, head:$head, at:$at, t_out:$t} + (if $lr == "1" then {l_out:$l} else {} end) + (if $t2r == "1" then {t2_out:$t2} else {} end)' > "$_tc_tmp" 2>/dev/null \
                  && mv -f "$_tc_tmp" "$TG_CARRY_FILE"; then
                 log "$v: candidate result CARRIED to the next tick (T1$([ -n "$TG_L_RAN" ] && echo ", the unnamed-rise re-run")$([ -n "$TG_T2_RAN" ] && echo ", T2")${TG_CARRY:+; itself carried, age ${TG_CARRY_AGE}s}): the overlay resumes there without re-running the candidate"
               else
