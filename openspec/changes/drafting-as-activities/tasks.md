@@ -37,14 +37,21 @@ Stage 1 is the minimal pair that makes selection and attribution possible: 1.1 a
 
 ## 2. Facts the drafter and the check writer lack (closed builds, open use)
 
-- [ ] 2.1 **[operator build]** The contract field itself already exists: `codeIntrospectResult`
+- [x] 2.1 **[operator build]** The contract field itself already exists: `codeIntrospectResult`
   carries the callable contract (`code_introspect` with `include_contract`), filled from the same
   extraction `contractMismatchRefusal` uses, and the check writer's goal already shows signatures.
   What remains is only the drafter-side `contract` read-request kind over that field: it takes
   `{path, fn}` and returns `{shapes, bodyKeys, kinds}` (null when open), clamped by count and bytes like
   `reads`. No second extraction.
   Must-fail (one-source test): on the hollow-check fixtures, the fact differs from the gate's own
-  reading. Mutating the gate's extractor changes the fact.
+  reading. Mutating the gate's extractor changes the fact. **Verified at development-vessel
+  `faf6502a`**: the contract fact is projected from `codeIntrospectResult`'s `exportContract` output,
+  which uses the same `returnedContract` extractor read by `contractMismatchRefusal`; open or
+  partially open contracts return null. `test/drafter-split/f12-contract-read.test.ts` passed (6/6),
+  including the 333be5f hollow-check fixture and a return-contract mutation that changes both the fact
+  and the gate's refusal reading;
+  `f4-clamps.test.ts` passed (42/42), the F5(b) verdict-diff golden passed (1/1), and
+  `bun run typecheck` passed. The new contract-read test was observed red before implementation.
 - [ ] 2.2 **[operator build]** Add a `priorQueries` read-request kind: `concept_select_for_prompt`
   with the variant's query and source types, under a capped token budget. Ids that are shown join the
   `applied_ids` allowlist.
