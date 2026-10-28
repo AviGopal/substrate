@@ -119,6 +119,9 @@ Stage 1 is the minimal pair that makes selection and attribution possible: 1.1 a
 
 - [ ] 4.1 **[operator build]** A settlement maps attempt-record outcomes to the drafting variant's
   posterior through the existing posterior writer, exactly as design Decision 6 states. Fixtures:
+  **Partial prerequisite, not completion:** the closed drafter identity now reaches durable attempt intents and
+  #1/#2 settlement records at development-vessel commit `bb4340c1`; see the OP-DRAFT-4.1 L12 record below.
+  The exactly-once posterior-writer contract and the fixtures below remain open.
   - (a) FAVORABLE alone gives no α;
   - (b) a semantic-gate rejection gives no β;
   - (c) `check_asserts_contract_mismatch` gives β to the drafting variant;
