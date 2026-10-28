@@ -14,12 +14,12 @@ done.
 Stage 1 is the minimal pair that makes selection and attribution possible: 1.1 and 1.2. Stage 1b
 (1.3 and 1.4) follows without blocking variants.
 
-- [ ] 1.1 **[operator build]** Write the drafter record on the structured attempt record. Fields:
+- [x] 1.1 **[operator build]** Write the drafter record on the structured attempt record. Fields:
   `drafter: {variant, version, fell_back}`, in `retry-evidence.ts` `AttemptRecord` and on the
   `feature-compose.ts` attempt write.
   Must-fail: a compose with the module forced to throw writes an attempt record with no
-  `drafter.fell_back`.
-- [ ] 1.2 **[operator build]** Load the named assembly from an allowlist: `drafter_variant` on the
+  `drafter.fell_back`. **Verified present** at development-vessel `e359a02d`; `test/drafter-split/f9-attempt-drafter-record.test.ts` passed in the focused suite (68 passed, 0 failed).
+- [x] 1.2 **[operator build]** Load the named assembly from an allowlist: `drafter_variant` on the
   pointer, `^drafter-v[0-9]+[a-z0-9-]*$` → `src/drafter/variants/<id>/index.ts`, `"floor"` for the
   floor; absent, or the explicit `"drafter-v1"` (the shipped module, `src/drafter/index.ts`), drafts
   exactly as today, so a recorded id always replays its own drafter. Anything else drafts with the floor and records `fell_back: "unknown_variant"`. Extend the
@@ -27,10 +27,10 @@ Stage 1 is the minimal pair that makes selection and attribution possible: 1.1 a
   - F2/F3: purity, and the only importer, over `src/drafter/variants/`;
   - F7: any target under `src/drafter/` drafts with the floor and loads no variant.
   Must-fail: `drafter_variant: "../resolvers/x"` loads a module. A compose targeting a variant's own
-  file loads that variant.
-- [ ] 1.3 **[operator build, stage 1b]** Run the module in a Worker with a wall-clock cap. A timeout is
+  file loads that variant. **Verified present** at development-vessel `e359a02d`; `test/drafter-split/f10-variant-allowlist.test.ts`, `f2-f3-module-boundary.test.ts`, and `f7-floor-self-repair.test.ts` passed in the focused suite (68 passed, 0 failed).
+- [x] 1.3 **[operator build, stage 1b]** Run the module in a Worker with a wall-clock cap. A timeout is
   recorded as `fell_back: "timeout"`.
-  Must-fail: a variant that never returns holds the compose past the cap.
+  Must-fail: a variant that never returns holds the compose past the cap. **Verified locally** in `test/drafter-split/f8-runtime-time-bound.test.ts`: a non-responsive Worker is terminated at the 2 s cap and the drafter falls back with `fell_back: "timeout"`; the same test also confirms the shipped drafter executes successfully in the production Worker. F2/F3's single-importer pin was moved to the Worker and passed.
 - [ ] 1.4 **[operator build, stage 1b]** Remove the duplicated floor assembly from the core, leaving one floor.
   Must-fail: the F5(b) verdict-diff golden, with the module forced to fail, differs from the
   recording.
