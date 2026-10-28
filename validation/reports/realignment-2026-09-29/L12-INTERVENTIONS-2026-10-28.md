@@ -14,6 +14,7 @@ Authority: user direction in this session permits operator-originated pushes whe
 - **TTL:** expires 2026-10-28 05:30Z. If the change has not been pushed by then, do not push under this record; renew with fresh evidence.
 - **Rollback / falsifier:** do not deploy if typecheck, F5(b), or the drafter suite fails. If the live consumer shows a changed floor behavior, revert the operator commit and record the effect. This intervention is excluded from autonomous-authorship and lane-yield counts.
 - **One-change window:** this record covers only the floor de-duplication and its required prerequisite history. No other operator code changes or runtime policy changes are included.
-- **Post-push check:** inspect the live system's consumer trace and effect; this operator-authored change does not count toward the requested ten autonomous-system validations.
+- **Push result:** `development-vessel/dev` advanced from `c09d2071` to `bda6da88` by a fast-forward at 2026-10-28 04:30Z. The operator commit is `bda6da88`; the three prerequisite commits retain their system author. The super-repo pin and live convergence are still pending.
+- **Post-push check:** inspect the live system's consumer trace and effect; this operator-authored change does not count toward the requested ten autonomous-system validations. At 04:30Z, dispatch `279e892b-84df-4f37-a93e-f20aa6781e15` terminated `reached=no`: 3.2 was refused at admission and the fallback had no safe producer for `source_code` or `codeReplaceResult`. This is a blocker observation, not a post-push effect check.
 
-Commit range and remote convergence time will be appended after the push.
+The root pin commit and per-node convergence times will be appended after verification.

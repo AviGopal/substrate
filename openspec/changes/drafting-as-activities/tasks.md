@@ -47,9 +47,14 @@ Stage 1 is the minimal pair that makes selection and attribution possible: 1.1 a
 - [x] 1.3 **[operator build, stage 1b]** Run the module in a Worker with a wall-clock cap. A timeout is
   recorded as `fell_back: "timeout"`.
   Must-fail: a variant that never returns holds the compose past the cap. **Verified locally** in `test/drafter-split/f8-runtime-time-bound.test.ts`: a non-responsive Worker is terminated at the 2 s cap and the drafter falls back with `fell_back: "timeout"`; the same test also confirms the shipped drafter executes successfully in the production Worker. F2/F3's single-importer pin was moved to the Worker and passed.
-- [ ] 1.4 **[operator build, stage 1b]** Remove the duplicated floor assembly from the core, leaving one floor.
+- [x] 1.4 **[operator build, stage 1b]** Remove the duplicated floor assembly from the core, leaving one floor.
   Must-fail: the F5(b) verdict-diff golden, with the module forced to fail, differs from the
-  recording.
+  recording. **Verified and pushed at development-vessel `bda6da88`:** the closed core is the sole
+  floor owner; the shipped drafter returns the exact floor context it receives. F14 asserts object
+  identity, and F5(b) remains byte-identical. `bun run typecheck` passed and the full drafter-split
+  suite passed 175/175 (593 assertions). The contract-read test now pins its workspace root to avoid
+  a `WORKSPACE_ROOT` race under parallel execution. Operator intervention is recorded in
+  [`L12-INTERVENTIONS-2026-10-28.md`](../../../validation/reports/realignment-2026-09-29/L12-INTERVENTIONS-2026-10-28.md).
 
 ## 2. Facts the drafter and the check writer lack (closed builds, open use)
 
