@@ -63,10 +63,15 @@ Stage 1 is the minimal pair that makes selection and attribution possible: 1.1 a
   must-fail tests were observed red before implementation. `f13-prior-query-read.test.ts` passed
   (4/4), the existing concept-prior integration passed (3/3), applied-id/credit integration passed
   (4/4), and the F5(b) golden remained unchanged (1/1).
-- [ ] 2.3 **[operator build]** Declared controls in `test_writing`: a test titled as a control must
+- [x] 2.3 **[operator build]** Declared controls in `test_writing`: a test titled as a control must
   pass at HEAD and is excluded from "every new title fails". It is recorded on the check. Touches the
   arm judge in excluded files.
   Must-fail: a check file with one failing assertion and one passing declared control is refused.
+  **Verified already present on this branch** at `development-vessel` commits `73337838` and
+  `720908c5`: `splitRedGreen` treats HEAD-green new titles as controls, keeps them in the check's
+  `only_tests` predicate, records `control_titles`, and refuses a right-reason red check with no green
+  control. `gap-check-supply-no-control.test.ts` passed (9/9) and
+  `gap-check-supply-forwarding-gates.test.ts` passed (9/9), including the red-plus-control case.
 
 ## 3. The drafting family
 
