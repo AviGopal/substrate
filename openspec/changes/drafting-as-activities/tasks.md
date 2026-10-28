@@ -97,6 +97,12 @@ Stage 1 is the minimal pair that makes selection and attribution possible: 1.1 a
 
 ## 3. The drafting family
 
+- [ ] 3.0 **[operator build + trace-reader contract]** Carry the selected arm across the execution
+  boundary: `feature_compose` writes `metadata.drafter_variant`, and the exact-execution
+  `executionTraceWithSignatures` reader exposes only that validated field to `ribosome-extract`.
+  Preserve the selected arm when drafting falls back to the floor; do not return the whole trace
+  metadata object. The operator producer candidate and the reader change both require live
+  read-back before this item closes.
 - [ ] 3.1 **[system, with an extraction gap as fallback]** The base activity row, by extraction. Once
   5.2 stamps `drafter_variant` on edit executions, the ribosome extracts the base `draft-edit` and
   `draft-check` templates (`gap_compose`, `drafter_variant: "floor"`) from reached executions. If the
