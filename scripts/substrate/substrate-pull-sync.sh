@@ -4170,7 +4170,30 @@ EOF
   if declare -F host_contended >/dev/null 2>&1 && host_contended && { ! declare -F host_contention_settle >/dev/null 2>&1 || host_contention_settle "$v: the suite run" "$SUITE_COST_S"; }; then testgate_budget_defer "the suite run" "$SUITE_COST_S" "$HC_WHY"; skipped=$((skipped + 1)); continue; fi
   if [ "$(gate_left)" -lt "$SUITE_COST_S" ]; then testgate_budget_defer "the suite run" "$SUITE_COST_S"; skipped=$((skipped + 1)); continue; fi
   TG_KEY="$(testgate_key)"; TG_SKIPS=0
-  if [ -s "$TG_NEED_FILE" ]; then
+  # A CARRIED CANDIDATE RESULT RESUMES A DEFERRED OVERLAY. The gate runs the candidate (T1, and when needed the
+  # unnamed-rise re-run and the T2 confirmation) BEFORE the two-run parent/candidate overlay. A flaky suite needs
+  # T2, and T1 + T2 + the overlay may not fit one tick: the overlay deferred, the next tick re-ran the candidate
+  # from scratch with its "fresh budget" and deferred the overlay again, every tick, never reaching a verdict.
+  # So when the overlay defers, the candidate runs' raw output is CARRIED in $v.testgate-carry (written
+  # atomically), and the next tick resumes at the overlay without re-running the candidate. The carry is keyed on
+  # the gate key (HEAD, outstanding set, dependency identity, test environment, slow globs), the exact tree, and
+  # the scrubbed environment's definition; any difference discards it and the gate runs from scratch. Consumed
+  # when the overlay starts; cleared when the gate finishes measuring.
+  TG_CARRY_FILE="$MARKER_DIR/$v.testgate-carry"; TG_CARRY=""; TG_CARRY_AGE=""; TG_L_RAN=""; TG_T2_RAN=""
+  TG_CARRY_ID="$TG_KEY $(git -C "$d" rev-parse --verify --quiet "$HEAD^{tree}" 2>/dev/null || echo notree) $(declare -f scrubbed_env 2>/dev/null | md5sum | cut -d' ' -f1)"
+  if [ -s "$TG_CARRY_FILE" ]; then
+    _tc_id="$(jq -r '.id // empty' "$TG_CARRY_FILE" 2>/dev/null || true)"; _tc_at="$(jq -r '.at // empty' "$TG_CARRY_FILE" 2>/dev/null || true)"
+    case "$_tc_at" in ''|*[!0-9]*) _tc_at="" ;; esac
+    if [ -n "$_tc_id" ] && [ -n "$_tc_at" ] && [ "$_tc_id" = "$TG_CARRY_ID" ]; then
+      TG_CARRY=1; TG_CARRY_AGE=$(( $(date +%s) - _tc_at ))
+      log "$v: TEST GATE RESUMING from a carried candidate result (age ${TG_CARRY_AGE}s, ${HEAD:0:10}, same gate key, tree and environment): the candidate runs are not repeated; the deferred overlay runs next"
+    else
+      log "$v: carried candidate result DISCARDED — it was taken for a different candidate, tree or test environment (gate key, tree or scrubbed env changed); the gate runs from scratch"
+      rm -f "$TG_CARRY_FILE" 2>/dev/null || true
+    fi
+  fi
+  # With a carry the remaining need is the overlay alone, so a need measured for the whole gate is no reason to skip.
+  if [ -s "$TG_NEED_FILE" ] && [ -z "$TG_CARRY" ]; then
     _tg_okey=""; _tg_need=0; _tg_skips=0; { read -r _tg_okey _tg_need _tg_skips < "$TG_NEED_FILE"; } 2>/dev/null || true
     case "$_tg_need" in ''|*[!0-9]*) _tg_need=0 ;; esac
     case "$_tg_skips" in ''|*[!0-9]*) _tg_skips=0 ;; esac
@@ -4332,7 +4355,8 @@ EOF
         while :; do sleep "$_sc_every" & _sc_sl=$!; wait "$_sc_sl"; host_contended && { [ -s "$_sc_file" ] || echo "mid-run: $HC_WHY" > "$_sc_file"; }; done ) &
       _sc_pid=$!
     fi
-    T_OUT="$(run_suite)"; T_FAIL="$(count_pf "$T_OUT" fail)"; T_PASS="$(count_pf "$T_OUT" pass)"; record_suite_wall "$T_OUT"
+    if [ -n "$TG_CARRY" ]; then T_OUT="$(jq -r '.t_out // ""' "$TG_CARRY_FILE" 2>/dev/null)"; T_FAIL="$(count_pf "$T_OUT" fail)"; T_PASS="$(count_pf "$T_OUT" pass)"
+    else T_OUT="$(run_suite)"; T_FAIL="$(count_pf "$T_OUT" fail)"; T_PASS="$(count_pf "$T_OUT" pass)"; record_suite_wall "$T_OUT"; fi
     if [ -n "$_sc_pid" ]; then kill "$_sc_pid" 2>/dev/null; wait "$_sc_pid" 2>/dev/null || true; fi
     [ -n "$_sc_file" ] && { SC_WHY="$(head -1 "$_sc_file" 2>/dev/null)"; rm -f "$_sc_file" 2>/dev/null; }
     if [ -z "$SC_WHY" ] && declare -F host_contended >/dev/null 2>&1 && host_contended; then SC_WHY="at the end: $HC_WHY"; fi
@@ -4528,8 +4552,12 @@ EOF
       if [ -z "$B_UNNAMED" ] && [ -n "$B_SUM_FAIL" ] && [ "$B_SUM_FAIL" -ge "$B_NAMED" ]; then B_UNNAMED=$((B_SUM_FAIL - B_NAMED)); fi
       if [ -s "$B_NAMES_FILE" ] && [ -n "$B_UNNAMED" ]; then
         if [ "$T_UNNAMED" -gt "$B_UNNAMED" ]; then
-          if [ "$(gate_left)" -lt "$SUITE_COST_S" ]; then testgate_budget_defer "the unnamed-rise re-run" "$SUITE_COST_S"; skipped=$((skipped + 1)); continue; fi
-          L_OUT="$(run_suite)"; L_FAIL="$(count_pf "$L_OUT" fail)"
+          if [ -n "$TG_CARRY" ] && jq -e 'has("l_out")' "$TG_CARRY_FILE" >/dev/null 2>&1; then L_OUT="$(jq -r '.l_out' "$TG_CARRY_FILE" 2>/dev/null)"
+          else
+            if [ "$(gate_left)" -lt "$SUITE_COST_S" ]; then testgate_budget_defer "the unnamed-rise re-run" "$SUITE_COST_S"; skipped=$((skipped + 1)); continue; fi
+            L_OUT="$(run_suite)"
+          fi
+          TG_L_RAN=1; L_FAIL="$(count_pf "$L_OUT" fail)"
           L_NAMED="$(fail_names "$L_OUT" | grep -c . || true)"; L_NAMED="$(( ${L_NAMED:-0} + U_EXCL ))"
           if [ -n "$L_FAIL" ] && [ $((L_FAIL - L_NAMED)) -gt "$B_UNNAMED" ]; then
             REG="test file(s) no longer load: unnamed failures $B_UNNAMED -> $T_UNNAMED, $((L_FAIL - L_NAMED)) on a re-run (a file that fails to load hides its failing names and drops its passing tests; pass ${T_PASS:-?})"
@@ -4553,8 +4581,12 @@ EOF
         # 98 then 103 failures on an identical tree). Noise is additive, so the minimum
         # failure count approximates the deterministic one; a single second sample
         # would fire on that spread, the minimum does not.
-        if [ "$(gate_left)" -lt "$SUITE_COST_S" ]; then testgate_budget_defer "the T2 confirmation run" "$SUITE_COST_S"; skipped=$((skipped + 1)); continue; fi
-        T2_OUT="$(run_suite)"; F2="$(count_pf "$T2_OUT" fail)"; P2="$(count_pf "$T2_OUT" pass)"; record_suite_wall "$T2_OUT"
+        if [ -n "$TG_CARRY" ] && jq -e 'has("t2_out")' "$TG_CARRY_FILE" >/dev/null 2>&1; then T2_OUT="$(jq -r '.t2_out' "$TG_CARRY_FILE" 2>/dev/null)"; F2="$(count_pf "$T2_OUT" fail)"; P2="$(count_pf "$T2_OUT" pass)"
+        else
+          if [ "$(gate_left)" -lt "$SUITE_COST_S" ]; then testgate_budget_defer "the T2 confirmation run" "$SUITE_COST_S"; skipped=$((skipped + 1)); continue; fi
+          T2_OUT="$(run_suite)"; F2="$(count_pf "$T2_OUT" fail)"; P2="$(count_pf "$T2_OUT" pass)"; record_suite_wall "$T2_OUT"
+        fi
+        TG_T2_RAN=1
         BEST_F="$T_FAIL"; BEST_P="$T_PASS"
         if [ -n "$F2" ] && [ "$F2" -lt "$BEST_F" ]; then BEST_F="$F2"; fi
         if [ -n "$P2" ] && { [ -z "$BEST_P" ] || [ "$P2" -gt "$BEST_P" ]; }; then BEST_P="$P2"; fi
@@ -4642,7 +4674,24 @@ EOF
             # worktree would be subtracted from the candidate's set and mask a real regression —
             # a fail-open, the one direction this gate must never take. Measuring both refs the
             # same way is what makes the difference attributable to the commit and nothing else.
-            if [ "$(gate_left)" -lt $((2 * SUITE_COST_S)) ]; then testgate_budget_defer "the parent/candidate overlay (two runs)" "$((2 * SUITE_COST_S))"; skipped=$((skipped + 1)); continue; fi
+            if [ "$(gate_left)" -lt $((2 * SUITE_COST_S)) ]; then
+              testgate_budget_defer "the parent/candidate overlay (two runs)" "$((2 * SUITE_COST_S))"
+              # Carry the candidate runs to the next tick (atomically: a temp file renamed over the marker).
+              # The outputs go through files (--rawfile), never argv: a suite's output can exceed the argument limit.
+              _tc_tmp="$TG_CARRY_FILE.tmp.$$"
+              if printf '%s' "$T_OUT" > "$_tc_tmp.t" && printf '%s' "${L_OUT:-}" > "$_tc_tmp.l" && printf '%s' "${T2_OUT:-}" > "$_tc_tmp.t2" \
+                 && jq -n --arg id "$TG_CARRY_ID" --arg head "$HEAD" --argjson at "$(date +%s)" --rawfile t "$_tc_tmp.t" \
+                   --rawfile l "$_tc_tmp.l" --arg lr "$TG_L_RAN" --rawfile t2 "$_tc_tmp.t2" --arg t2r "$TG_T2_RAN" \
+                   '{id:$id, head:$head, at:$at, t_out:$t} + (if $lr == "1" then {l_out:$l} else {} end) + (if $t2r == "1" then {t2_out:$t2} else {} end)' > "$_tc_tmp" 2>/dev/null \
+                 && mv -f "$_tc_tmp" "$TG_CARRY_FILE"; then
+                log "$v: candidate result CARRIED to the next tick (T1$([ -n "$TG_L_RAN" ] && echo ", the unnamed-rise re-run")$([ -n "$TG_T2_RAN" ] && echo ", T2")${TG_CARRY:+; itself carried, age ${TG_CARRY_AGE}s}): the overlay resumes there without re-running the candidate"
+              else
+                log "$v: could not write the carried candidate result ($TG_CARRY_FILE); the next tick re-runs the candidate"
+              fi
+              rm -f "$_tc_tmp" "$_tc_tmp.t" "$_tc_tmp.l" "$_tc_tmp.t2" 2>/dev/null || true
+              skipped=$((skipped + 1)); continue
+            fi
+            [ -n "$TG_CARRY" ] && { rm -f "$TG_CARRY_FILE" 2>/dev/null || true; log "$v: overlay starting on the carried candidate result (age ${TG_CARRY_AGE}s); the carry is consumed"; }
             P_OUT="$(run_suite_at "$PARENT_REF" || true)"
             C_OUT="$(run_suite_at "$HEAD" || true)"
             P_PASS="$(count_pf "$P_OUT" pass)"; C_PASS="$(count_pf "$C_OUT" pass)"
@@ -4830,7 +4879,7 @@ EOF
       log "$v: protected judge tests at ${HEAD:0:10} — $PROT_RED"
     fi
   fi
-  rm -f "$BD_FILE" "$TG_NEED_FILE" "${PT_FILE:-}" 2>/dev/null || true
+  rm -f "$BD_FILE" "$TG_NEED_FILE" "${PT_FILE:-}" "$TG_CARRY_FILE" 2>/dev/null || true
   [ -n "${U_GAP_JSON:-}" ] && emit_gap "$U_GAP_JSON"
   # A NON-MEASUREMENT IS NOT A RED. When the parent/candidate overlay could not measure because a run
   # was killed at the per-run wall, the remaining verdict is the stored-baseline one, which on a node behind its
