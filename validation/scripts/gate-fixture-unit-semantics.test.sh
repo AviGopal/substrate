@@ -1,17 +1,19 @@
 #!/usr/bin/env bash
 # gate-fixture-unit-semantics.test.sh: the unit fixtures notice the semantic changes that matter, file by file, so a
 # unit file can earn level BEHAVIOUR in the coverage map (in-place-image-convergence 1.3 installs only those).
-#   (a) CONTROL: the committed tree passes unit-semantics.sh and unit-verify.sh
+#   (a) CONTROL: the committed tree passes unit-semantics.sh, unit-verify.sh and federation-transport-lib-refresh.sh
 #   (b) must-fail (qa): one run-dir.conf deleted -> that tick's effective ExecStart runs the clone -> unit-semantics RED
 #   (c) must-fail: the canonical secrets drop-in emptied of InaccessiblePaths= -> RED, naming a vessel unit (S1)
 #   (d) must-fail: a vessel's ExecStart= rewritten to /bin/true -> RED (E1)
 #   (e) must-fail: a timer without its On*= triggers -> unit-verify RED
 #   (f) must-fail: a candidate that adds itself to an exemption it cannot reach (the lists are embedded): a vessel
 #       listed in vessel.d/EXCEPTIONS with its secrets drop-in removed is still RED
+#   (h) must-fail: the federation transport's lib-refresh drop-in retargeted at the workspace clone's copy (which
+#       the unit does not load) -> federation-transport-lib-refresh RED
 #   (g) the per-file replay: every unit file gets its class mutant (a .service, and a drop-in carrying ExecStart=:
 #       every ExecStart= line -> /bin/true; a .timer: every On*= line deleted; a drop-in carrying InaccessiblePaths=:
-#       every such line deleted); the files whose mutant a fixture refuses are listed with that fixture. Each is
-#       a behaviour claim for the map, to be re-earned in the image by image-coverage-map.check.sh. A mutant that
+#       every such line deleted; a drop-in carrying only ExecStartPre=: every such line -> /bin/true); the files
+#       whose mutant a fixture refuses are listed with that fixture. Each is a behaviour claim for the map, to be re-earned in the image by image-coverage-map.check.sh. A mutant that
 #       changes nothing, or that no fixture refuses, stays parse. (g) runs only with --emit <file> (about 4 min, one
 #       fixture pair per unit file, too slow for every commit's glue run); the claims are written there as TSV
 #       (src, mutation, fixtures, mutated_blob) for validation/scripts/coverage-claim-units.sh.
@@ -25,13 +27,14 @@ FAILS=0; ok() { echo "ok   - $*"; }; bad() { echo "FAIL - $*"; FAILS=$((FAILS+1)
 mk() { rm -rf "$T/c"; mkdir -p "$T/c/scripts"; cp -a "$ROOT/scripts/substrate" "$T/c/scripts/"; }
 judge() { # -> the failing fixtures, comma separated, or -
   local r="" x
-  for x in unit-semantics.sh unit-verify.sh; do CANDIDATE_DIR="$T/c" bash "$FX/$x" > "$T/$x.out" 2>&1 || r="$r,$x"; done
+  for x in unit-semantics.sh unit-verify.sh federation-transport-lib-refresh.sh; do CANDIDATE_DIR="$T/c" bash "$FX/$x" > "$T/$x.out" 2>&1 || r="$r,$x"; done
   r="${r#,}"; echo "${r:--}"; }
 mutate() { # <how> <file>: as image-coverage-map.check.sh replays it
   case "$1" in
     'delete every InaccessiblePaths= line') sed '/^[[:space:]]*InaccessiblePaths[[:space:]]*=/d' "$2" ;;
     'rewrite ExecStart= to /bin/true') sed 's#^\([[:space:]]*ExecStart[[:space:]]*=\).*#\1/bin/true#' "$2" ;;
     'delete every On*= trigger line') sed '/^[[:space:]]*On[A-Za-z]*[[:space:]]*=/d' "$2" ;;
+    'rewrite ExecStartPre= to /bin/true') sed 's#^\([[:space:]]*ExecStartPre[[:space:]]*=\).*#\1/bin/true#' "$2" ;;
   esac; }
 U=scripts/substrate/units
 
@@ -51,6 +54,14 @@ mk; echo "discovery-vessel.service the candidate excuses itself" >> "$T/c/$U/ves
 [[ "$(judge)" == *unit-semantics.sh* ]] && grep -q 'discovery-vessel.service: /workspace/.substrate-secrets is not masked' "$T/unit-semantics.sh.out" \
   && ok "(f) a candidate cannot excuse itself through the candidate's own EXCEPTIONS" || bad "(f) self-excused: $(head -2 "$T/unit-semantics.sh.out")"
 
+mk; LR="$T/c/$U/federation-transport-vessel.service.d/lib-refresh.conf"
+sed 's#t=node_modules/@avigopal/libp2p-federation-transport;#t=/workspace/git/super-repo/scripts/substrate/federation-relay/node_modules/@avigopal/libp2p-federation-transport;#' "$LR" > "$T/m"
+if cmp -s "$T/m" "$LR"; then bad "(h) the lib-refresh retarget mutant changes nothing (the drop-in no longer names its target as expected)"
+else cat "$T/m" > "$LR"
+  [[ "$(judge)" == *federation-transport-lib-refresh.sh* ]] && grep -q 'not byte-identical to the source' "$T/federation-transport-lib-refresh.sh.out" \
+    && ok "(h) lib-refresh retargeted at the workspace clone is refused: the loaded copy stays old" || bad "(h) not refused: $(head -2 "$T/federation-transport-lib-refresh.sh.out")"
+fi
+
 # (g) per-file replay
 [ -n "$EMIT" ] || { echo; [ "$FAILS" = 0 ] && { echo PASS; exit 0; } || { echo "$FAILS failure(s)"; exit 1; }; }
 : > "$T/claims"; declare -A earned=() stays=()
@@ -61,6 +72,7 @@ while IFS= read -r rel; do
     *.service) how='rewrite ExecStart= to /bin/true' ;;
     *.d/*.conf) if grep -q '^[[:space:]]*ExecStart[[:space:]]*=' "$f"; then how='rewrite ExecStart= to /bin/true'
                 elif grep -q '^[[:space:]]*InaccessiblePaths[[:space:]]*=' "$f"; then how='delete every InaccessiblePaths= line'
+                elif grep -q '^[[:space:]]*ExecStartPre[[:space:]]*=' "$f"; then how='rewrite ExecStartPre= to /bin/true'
                 else stays[$rel]="no semantic mutant for this class"; continue; fi ;;
     *) stays[$rel]="a list file"; continue ;;
   esac

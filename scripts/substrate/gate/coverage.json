@@ -800,16 +800,16 @@
     },
     "/usr/lib/systemd/system/federation-transport-vessel.service.d/lib-refresh.conf": {
       "src": "scripts/substrate/units/federation-transport-vessel.service.d/lib-refresh.conf",
-      "src_blob": "47d9229b1ab1f0054fa19837886c893fbba51f27",
-      "level": "parse",
+      "src_blob": "2b68a443321908f2fab6e68d1875befa62f3d6ff",
+      "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
-        "unit-verify.sh"
+        "federation-transport-lib-refresh.sh"
       ],
       "evidence": {
-        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
-        "mutation": "insert `exit 99` after line 1",
-        "mutated_blob": "7708ce8fd2d2afc0aebddef3208b55798fd7700e"
+        "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
+        "mutation": "rewrite ExecStartPre= to /bin/true",
+        "mutated_blob": "ec5387ccac145bf538fb58619412eeea7d90b30b"
       }
     },
     "/usr/lib/systemd/system/funnel-drain.service": {

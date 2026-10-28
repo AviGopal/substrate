@@ -11,6 +11,7 @@ mutate() { case "$1" in 'insert `exit 99` after line 1') sed '1a exit 99' "$2" ;
   'delete every InaccessiblePaths= line') sed '/^[[:space:]]*InaccessiblePaths[[:space:]]*=/d' "$2" ;;
   'rewrite ExecStart= to /bin/true') sed 's#^\([[:space:]]*ExecStart[[:space:]]*=\).*#\1/bin/true#' "$2" ;;
   'delete every On*= trigger line') sed '/^[[:space:]]*On[A-Za-z]*[[:space:]]*=/d' "$2" ;;
+  'rewrite ExecStartPre= to /bin/true') sed 's#^\([[:space:]]*ExecStartPre[[:space:]]*=\).*#\1/bin/true#' "$2" ;;
   *) return 1 ;; esac; }  # the spellings image-coverage-map.check.sh's mutate() replays
 upd='{}'; n=0
 while IFS=$'\t' read -r dst src blob how; do

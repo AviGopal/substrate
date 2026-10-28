@@ -35,6 +35,7 @@ mutate() { # how src -> mutated content on stdout
     'delete every InaccessiblePaths= line') sed '/^[[:space:]]*InaccessiblePaths[[:space:]]*=/d' "$2" ;;
     'rewrite ExecStart= to /bin/true') sed 's#^\([[:space:]]*ExecStart[[:space:]]*=\).*#\1/bin/true#' "$2" ;;
     'delete every On*= trigger line') sed '/^[[:space:]]*On[A-Za-z]*[[:space:]]*=/d' "$2" ;;
+    'rewrite ExecStartPre= to /bin/true') sed 's#^\([[:space:]]*ExecStartPre[[:space:]]*=\).*#\1/bin/true#' "$2" ;;
     *) return 1 ;;
   esac
 }
