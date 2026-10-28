@@ -9,6 +9,22 @@ Each step carries a **must-fail check**: a test or probe that fails on the tree 
 passes after it. It is written first and seen red. A step whose check cannot be made to fail is not
 done.
 
+## Verified ordering constraint
+
+Items 3.1 and 5.2 have a circular dependency as written: 3.1 needs `drafter_variant` on edit
+executions to extract the base family, while 5.2's Thompson selector needs that base family row.
+Split 5.2 operationally without dropping its selection requirement:
+
+1. **5.2 instrumentation:** stamp `drafter_variant: "floor"` on edit executions, with no arm
+   selection yet.
+2. **3.1:** let the ribosome extract and verify the `draft-edit` and `draft-check` base rows.
+3. **5.2 selection:** only after the base row exists, enable Thompson selection; directed goals use
+   the best posterior mean.
+
+Live verification at 2026-10-28 02:10Z found neither base activity row and `row_found: false` for both
+`thompson_posterior` reads. Do not seed a base row to bypass this dependency; 3.1's extraction rule
+still applies.
+
 ## 1. Prerequisites in the closed core (the drafter-split phase-2 follow-ups)
 
 Stage 1 is the minimal pair that makes selection and attribution possible: 1.1 and 1.2. Stage 1b
