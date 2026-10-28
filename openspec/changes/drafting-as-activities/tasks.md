@@ -15,8 +15,9 @@ Items 3.1 and 5.2 have a circular dependency as written: 3.1 needs `drafter_vari
 executions to extract the base family, while 5.2's Thompson selector needs that base family row.
 Split 5.2 operationally without dropping its selection requirement:
 
-1. **5.2 instrumentation:** stamp `drafter_variant: "floor"` on edit executions, with no arm
-   selection yet.
+1. **5.2 instrumentation:** stamp the actual selected `drafter_variant` on edit executions; a
+   base-arm execution is recorded as `"floor"`. Do not label a shipped-module or variant draft as
+   `"floor"`. This is provenance only, with no Thompson arm selection yet.
 2. **3.1:** let the ribosome extract and verify the `draft-edit` and `draft-check` base rows.
 3. **5.2 selection:** only after the base row exists, enable Thompson selection; directed goals use
    the best posterior mean.
