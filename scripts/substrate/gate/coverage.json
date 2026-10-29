@@ -3350,10 +3350,17 @@
     },
     "/usr/local/share/substrate/secrets-manifest.json": {
       "src": "scripts/substrate/secrets-manifest.json",
-      "src_blob": "69bfa4206da513a5d37bbc6622989dda95f38756",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
+      "src_blob": "0285c95f83b9346e12ffb06b66bbe516396b1677",
+      "level": "behaviour",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "substrate-key-admin-persist.sh"
+      ],
+      "evidence": {
+        "accepted": "claimed from the check's negative control (a none entry the corpus caught); earned by image-coverage-map.check.sh",
+        "mutation": "replace with {}",
+        "mutated_blob": "0967ef424bce6791893e9a57bb952f80fd536e93"
+      }
     },
     "/usr/local/share/substrate/vessels.inventory.json": {
       "src": "scripts/substrate/vessels.inventory.json",
