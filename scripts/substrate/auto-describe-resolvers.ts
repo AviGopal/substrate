@@ -18,9 +18,12 @@
  *
  * SAFE BY CONSTRUCTION:
  *  - It NEVER invokes the resolver it is describing (could be destructive/unknown).
- *    Evidence is gathered read-only from the trace store: the shape id itself,
- *    a sample of recent impulse pointers of that shape, and the names/descriptions
- *    of activities that DECLARE the shape as an output_shape.
+ *    Evidence is the PRODUCER'S OWN CONTRACT, read-only: the shape's resolver_schema
+ *    (what it takes and answers) when its producer publishes one, else the serving
+ *    vessel's discovery advertisement (the vessel and its described shapes), plus a
+ *    recent impulse pointer of the shape. Not the templates that DECLARE the shape as
+ *    an output: those are its internal use sites, and describing a shape by them told
+ *    recall where it is used, not what it answers.
  *  - It SKIPS lifecycle/internal tick machinery. Served STORE WRITES (`*_write`,
  *    `*_delete`, `*_update`, `*_deprecate`, `*Write`) are described FIRST, and
  *    without the LLM: a write's description is DERIVED from what discovery itself
@@ -66,11 +69,13 @@ let CURSOR = `${METRICS_DIR}/auto-describe-cursor.json`;
 
 // Shapes the planner CANNOT usefully compose from a description: lifecycle/hub/
 // internal tick machinery. Store writes are NOT skipped: they are what a goal that
-// asks to change something targets (see effectOf below).
+// asks to change something targets (see effectOf below). Nor are *dispatch* shapes:
+// a dispatch producer can be the very shape that answers a general goal, and an
+// undescribed one is never recalled for it.
 // Walk-minted composites (composedDeliverable_<goal text>) are skipped too: their producer is a learned template, not a
 // vessel, and their names are goal text, so a description of one only draws unrelated goals to it.
 const SKIP_PATTERNS: RegExp[] = [
-  /dispatch/i, /tick/i, /lifecycle/i, /\bhook\b/i,
+  /tick/i, /lifecycle/i, /\bhook\b/i,
   /heartbeat/i, /register/i, /observer$/i, /sentinel/i, /_seed$/i,
   /^composedDeliverable_/,
 ];
@@ -223,29 +228,48 @@ async function fetchAdvertisement(shape: string, described: Record<string, strin
   return ad;
 }
 
+/** The shape's published contract (resolver_schema through discovery), or null when no producer answers one. */
+async function fetchResolverSchema(shape: string): Promise<Record<string, unknown> | null> {
+  try {
+    const r = await fetch(`${DISCOVERY}/resolve`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...(API_KEY ? { Authorization: `ApiKey ${API_KEY}` } : {}) },
+      body: JSON.stringify({ pointer: { type: "resolver_schema", shape } }),
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!r.ok) return null;
+    const d = (await r.json()) as Record<string, any>;
+    const c = (d?.body ?? d?.content ?? d) as Record<string, unknown>;
+    return c && c["shape"] === shape && c["known"] === true ? c : null;
+  } catch { return null; }
+}
+
 /**
- * Gather SAFE evidence for a shape WITHOUT invoking its resolver:
- *  - activities that declare it as an output_shape (their name + description)
+ * Gather SAFE evidence for a shape WITHOUT invoking its resolver, from its PRODUCER'S OWN CONTRACT:
+ *  - the producer that serves it (discovery's advertisement, already read for the live-vessel check)
+ *  - its resolver_schema when the producer publishes one (inputs taken, fields answered), else the producing
+ *    vessel's own described shapes
  *  - a sample of recent impulse pointers of that shape (structure only)
  */
-async function gatherEvidence(shape: string): Promise<string> {
+export async function gatherEvidence(shape: string, ad: WriteAdvertisement): Promise<string> {
   const parts: string[] = [];
+  if (ad.vessel) parts.push(`- produced by vessel ${ad.vessel}`);
 
-  // (a) producing activities — the most reliable, human-authored signal.
-  try {
-    const esc = shape.replace(/"/g, '\\"');
-    const [acts] = await sql(
-      `SELECT name, description FROM activity WHERE output_shapes CONTAINS "${esc}" AND deprecated != true LIMIT 4;`,
-    );
-    for (const a of acts || []) {
-      const name = (a?.name ?? "").toString().slice(0, 80);
-      const desc = (a?.description ?? "").toString().slice(0, 140);
-      if (name || desc) parts.push(`- producer activity "${name}": ${desc}`);
-    }
-  } catch { /* skip this evidence source */ }
+  const schema = await fetchResolverSchema(shape);
+  if (schema) {
+    const fields = Array.isArray(schema["fields"]) ? (schema["fields"] as Array<{ name?: unknown; required?: unknown }>).map((f) => `${String(f?.name ?? "")}${f?.required ? "*" : ""}`).filter((n) => n && n !== "*") : [];
+    const answers = Array.isArray(schema["response_fields"]) ? (schema["response_fields"] as unknown[]).map(String) : [];
+    const env = typeof schema["envelope"] === "string" && schema["envelope"] ? ` under "${schema["envelope"]}"` : "";
+    parts.push(`- contract (resolver_schema): takes ${fields.length ? fields.join(", ") : "no declared fields"}${env}${answers.length ? `; answers ${answers.join(", ")}` : ""}`.slice(0, 300));
+  } else {
+    const siblings = Object.entries(ad.siblings)
+      .filter(([s, d]) => s !== shape && d)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(0, 4);
+    for (const [s, d] of siblings) parts.push(`- the producer also serves ${s}: ${(d as string).replace(/\s+/g, " ").split(";")[0].trim().slice(0, 120)}`);
+  }
 
-  // (b) a recent impulse of this shape — show the LLM the pointer/structure,
-  //     never the resolved content (which would require invoking the resolver).
+  // a recent impulse of this shape: the pointer/structure, never the resolved content (which would invoke the resolver)
   try {
     const esc = shape.replace(/"/g, '\\"');
     const [imps] = await sql(
@@ -377,11 +401,12 @@ export async function main(metricsDir: string = METRICS_DIR): Promise<void> {
   let applied = 0;
   for (const shape of batch) {
     try {
-      if (!(await fetchAdvertisement(shape, descriptions)).vessel) {
+      const ad = await fetchAdvertisement(shape, descriptions);
+      if (!ad.vessel) {
         await appendLog({ event: "describe", run, shape, description: null, applied: false, reason: "no_live_vessel" });
         continue;
       }
-      const evidence = await gatherEvidence(shape);
+      const evidence = await gatherEvidence(shape, ad);
       const description = await generateDescription(shape, evidence);
       if (!description) {
         await appendLog({ event: "describe", shape, description: null, applied: false, reason: "llm_no_output" });

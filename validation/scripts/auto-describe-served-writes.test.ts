@@ -35,7 +35,13 @@ const SURFACE = {
   shapes: ["uiPanel_write", "uiQuestion", "uiFeedback", "human_surface:ui_view", "renderPolicy", "renderPolicy_write", "uiView_write"],
 };
 const REPORTS = { vesselId: "report-vessel", shapes: ["unaccounted_commit_scan", "fleet_summary", "coverage_tick", "composedDeliverable_what_day_is_it_today"] };
-const VESSELS = [SURFACE, REPORTS];
+// A dispatch producer that is the only producer of its shape, and one whose producer publishes a resolver_schema
+// (fixture words from a 5-word draw, 2026-10-29T20:01:10Z: buzz plunder perennial shining swept).
+const DISPATCHER = { vesselId: "plunder-vessel", shapes: ["perennial_shining_dispatch", "buzz_swept_dispatch"] };
+const SCHEMAS: Record<string, unknown> = {
+  buzz_swept_dispatch: { shape: "buzz_swept_dispatch", known: true, fields: [{ name: "question", required: true, type: "string" }, { name: "context", required: false, type: "string" }], response_fields: ["answer"] },
+};
+const VESSELS = [SURFACE, REPORTS, DISPATCHER];
 // advertised in the shape list, but no live vessel row serves them (a retired producer's leftovers)
 const UNSERVED = ["orphanLedger_write", "orphan_digest"];
 const SEEDED: Record<string, string> = {
@@ -51,7 +57,9 @@ let EP = "";
 let descriptions: Record<string, string> = {};
 let posts: Array<{ shape: string; description: string; source: string }> = [];
 let failDescRead = false;
-const reset = () => { descriptions = { ...SEEDED }; posts = []; failDescRead = false; };
+/** The prompts the fake LLM resolver received: what evidence the describer sent for each shape. */
+let prompts: string[] = [];
+const reset = () => { descriptions = { ...SEEDED }; posts = []; failDescRead = false; prompts = []; };
 
 beforeAll(() => {
   reset();
@@ -76,6 +84,11 @@ beforeAll(() => {
           const vessels = VESSELS.filter((v) => v.shapes.includes(b.pointer!.shape!)).map((v) => ({ vesselId: v.vesselId, vesselName: v.vesselId, protocol: "http" }));
           return json({ content: { shape: b.pointer.shape, vessels } });
         }
+        if (b.pointer?.type === "resolver_schema") {
+          const c = SCHEMAS[b.pointer.shape ?? ""];
+          return json({ success: true, shape: "resolver_schema", body: c ?? { shape: b.pointer.shape, known: false } });
+        }
+        prompts.push(String(b.prompt ?? ""));
         // the LLM resolver: a templated line that echoes the shape id (never a hand-written description)
         const shape = /Shape id: (\S+)/.exec(b.prompt ?? "")?.[1] ?? "?";
         return json({ resolved: true, content: `produces ${shape} records; use for goals that read ${shape}` });
@@ -85,7 +98,11 @@ beforeAll(() => {
         const v = VESSELS.find((x) => x.vesselId === decodeURIComponent(m[1]));
         return v ? json({ vesselId: v.vesselId, shapes: v.shapes }) : json({ error: "Vessel not found" }, 404);
       }
-      if (u.pathname === "/sql") return json([{ result: [] }]);
+      // a template that DECLARES every shape as its output: the internal use site the describer must not describe by
+      if (u.pathname === "/sql") {
+        const q = await req.text();
+        return json([{ result: /FROM activity/.test(q) ? [{ name: "swept-shining-template", description: "an internal template that declares this output" }] : [] }]);
+      }
       return json({ error: "not found" }, 404);
     },
   });
@@ -194,5 +211,39 @@ describe("an advertised, undescribed served store write is described (the recall
     await tick(mkdtempSync(join(tmpdir(), "adr-")));
     expect(posts.length).toBe(0);
     expect(descriptions).toEqual(SEEDED);
+  });
+});
+
+describe("a shape is described from its producer's own contract, dispatch producers included (recall can find the answer producer)", () => {
+  const promptFor = (shape: string) => prompts.find((p) => p.includes(`Shape id: ${shape}\n`)) ?? "";
+
+  it("[MUST-FAIL] a dispatch-named shape a live vessel serves, with no other producer, is described, recallable, and its evidence names its producer, not a template", async () => {
+    reset();
+    await tick(mkdtempSync(join(tmpdir(), "adr-")));
+    expect(typeof descriptions.perennial_shining_dispatch).toBe("string");
+    expect(recallUniverse()).toContain("perennial_shining_dispatch");
+    const p = promptFor("perennial_shining_dispatch");
+    expect(p).toContain("produced by vessel plunder-vessel");
+    expect(p).not.toContain("swept-shining-template");
+  });
+
+  it("[MUST-FAIL] when the producer publishes a resolver_schema, the evidence is that contract (what it takes and answers)", async () => {
+    reset();
+    await tick(mkdtempSync(join(tmpdir(), "adr-")));
+    const p = promptFor("buzz_swept_dispatch");
+    expect(p).toContain("contract (resolver_schema): takes question*, context; answers answer");
+    expect(p).not.toContain("swept-shining-template");
+  });
+
+  it("[CONTROL] no shape is described twice, and store writes are still derived without the LLM", async () => {
+    reset();
+    await tick(mkdtempSync(join(tmpdir(), "adr-")));
+    const shapes = posts.map((x) => x.shape);
+    expect(shapes.length).toBeGreaterThan(0);
+    expect(new Set(shapes).size).toBe(shapes.length);
+    for (const w of ["renderPolicy_write", "uiPanel_write", "uiView_write"]) {
+      expect(shapes).toContain(w);
+      expect(promptFor(w)).toBe("");
+    }
   });
 });
