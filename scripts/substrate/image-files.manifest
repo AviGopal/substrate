@@ -293,9 +293,6 @@ scripts/substrate/acceptance/run-upgrade-acceptance.sh	/usr/local/share/substrat
 scripts/substrate/acceptance/secret-leak-scan.sh	/usr/local/share/substrate/super-repo/scripts/substrate/acceptance/secret-leak-scan.sh	0755	B
 scripts/substrate/apply-inventory.sh	/usr/local/share/substrate/super-repo/scripts/substrate/apply-inventory.sh	0755	B
 scripts/substrate/apply-llm-arms.sh	/usr/local/share/substrate/super-repo/scripts/substrate/apply-llm-arms.sh	0644	B
-scripts/substrate/auto-describe-resolvers.d.ts.map	/usr/local/share/substrate/super-repo/scripts/substrate/auto-describe-resolvers.d.ts.map	0644	B
-scripts/substrate/auto-describe-resolvers.js	/usr/local/share/substrate/super-repo/scripts/substrate/auto-describe-resolvers.js	0644	B
-scripts/substrate/auto-describe-resolvers.js.map	/usr/local/share/substrate/super-repo/scripts/substrate/auto-describe-resolvers.js.map	0644	B
 scripts/substrate/auto-describe-resolvers.ts	/usr/local/share/substrate/super-repo/scripts/substrate/auto-describe-resolvers.ts	0644	B
 scripts/substrate/autonomy-landings.ts	/usr/local/share/substrate/super-repo/scripts/substrate/autonomy-landings.ts	0644	B
 scripts/substrate/autonomy-metrics.d.ts.map	/usr/local/share/substrate/super-repo/scripts/substrate/autonomy-metrics.d.ts.map	0644	B
