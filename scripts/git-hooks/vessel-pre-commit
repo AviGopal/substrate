@@ -88,6 +88,7 @@ ALLOWED_VESSEL_DIRS=(
   docs
   assets
   public
+  ui    # a vessel's shipped user-interface tree (its ui/src and built ui/dist)
   dist
   build
   .out
