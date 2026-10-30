@@ -1222,6 +1222,31 @@
       "edit_site": "repos/development-vessel/src/resolvers/self-fact-reconcile.ts",
       "must_fail": "fixture:regressed-settlement-no-revert",
       "window_hours": 168
+    },
+    {
+      "id": "dispatch_context_entries_inherit_the_callers_store",
+      "instrument": "typed_seam_sites",
+      "profiles": [
+        "standalone",
+        "hub"
+      ],
+      "edit_site": "repos/goal-host-vessel/src/index.ts",
+      "must_fail": "a scratch repo holding one planted context entry (canary_site), plus a .test.ts and a .js twin that must not count, must count exactly 1 with this row pattern and pathspecs; a clone whose origin/dev was last fetched or moved more than max_ref_age_hours ago makes the row unobserved, never a lower count",
+      "site_pattern": "enterDispatchContext\\(dispatchContext\\.getStore\\(\\)",
+      "pathspecs": [
+        ":(glob)src/**/*.ts",
+        ":(glob)src/**/*.tsx",
+        ":(exclude,glob)**/*.test.ts",
+        ":(exclude,glob)**/*.test.tsx",
+        ":(exclude,glob)**/*.spec.ts",
+        ":(exclude,glob)**/test/**",
+        ":(exclude,glob)**/__tests__/**"
+      ],
+      "canary_site": "  dispatchContext.enterWith(enterDispatchContext(dispatchContext.getStore(), planted));",
+      "max": 2,
+      "max_ref_age_hours": 6,
+      "linked_gap": "a-goal-dispatched-from-inside-another-dispatch-inherits-its-gap-id-so-the-child-is-graded-against-the-parents-gap-oracle",
+      "notes": "A dispatch-context entry that starts from the caller's store inherits the caller's dispatch identity (its gap id among it). Two entries are same-dispatch by design; any other is a site where a goal started from inside another dispatch can be graded against the wrong gap. The ceiling is the two same-dispatch entries."
     }
   ]
 }
