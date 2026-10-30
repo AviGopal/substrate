@@ -18,12 +18,14 @@
  *
  * SAFE BY CONSTRUCTION:
  *  - It NEVER invokes the resolver it is describing (could be destructive/unknown).
- *    Evidence is the PRODUCER'S OWN CONTRACT, read-only: the shape's resolver_schema
- *    (what it takes and answers) when its producer publishes one, else the serving
- *    vessel's discovery advertisement (the vessel and its described shapes), plus a
- *    recent impulse pointer of the shape. Not the templates that DECLARE the shape as
- *    an output: those are its internal use sites, and describing a shape by them told
- *    recall where it is used, not what it answers.
+ *    Evidence is the shape's OWN, read-only: the vessel that serves it, its resolver_schema
+ *    (what it takes and answers) when its producer publishes one, the store write the same
+ *    vessel serves for it (which makes it a store READ, described as "reads …"), and a
+ *    recent impulse pointer of the shape. Never the descriptions of the vessel's OTHER
+ *    shapes: a one-line summary given them borrowed their use clauses, so a store read
+ *    was described as a product of whatever else its vessel does. Nor the templates that
+ *    DECLARE the shape as an output: those are its internal use sites, and describing a
+ *    shape by them told recall where it is used, not what it answers.
  *  - It SKIPS lifecycle/internal tick machinery. Served STORE WRITES (`*_write`,
  *    `*_delete`, `*_update`, `*_deprecate`, `*Write`) are described FIRST, and
  *    without the LLM: a write's description is DERIVED from what discovery itself
@@ -40,7 +42,18 @@
  *    described; walk-minted composites (composedDeliverable_*) never are.
  *  - PROVENANCE: every learned description it posts names this tick and its run
  *    (source "auto-describe-resolvers@<run start ISO>"), which discovery keeps on the
- *    learned entry; the tick's log line carries the same run id.
+ *    learned entry; the tick's log line carries the same run id and the DESCRIBER_VERSION
+ *    that wrote it. The version lives in the log, the record this tick reads back:
+ *    discovery's read serves the description text only, not its source.
+ *  - SELF-HEAL: each run re-derives up to SWEEP_PER_RUN rows an OLDER describer version
+ *    wrote (its log entry has no version or a lower one), store reads and other non-writes
+ *    first (a write's derived line quotes its reader's first clause). A row is this
+ *    describer's only while discovery still serves the exact text its log says it posted,
+ *    so an advertised description, a walk_composite entry, or a row another writer set is
+ *    never touched; nor is any pre-provenance row (a log entry with no run). A re-derivation
+ *    identical to the served text is not posted (it is logged "unchanged", which marks the row
+ *    current); every re-derived row's log line carries its before and after text, so each row's
+ *    change, and any recall shift that follows, is attributable to this sweep.
  *  - NON-FATAL throughout: any LLM / discovery / DB failure → log + skip, never throw.
  *
  * Env-gated: AUTO_DESCRIBE_RESOLVERS=1 to run (anything else = no-op exit).
@@ -63,6 +76,14 @@ const SQL_URL = (process.env.SURREALDB_URL || "http://127.0.0.1:8000").replace(/
 const sqlAuth = "Basic " + Buffer.from(`${USER}:${PASS}`).toString("base64");
 
 const MAX_PER_TICK = parseInt(process.env.AUTO_DESCRIBE_MAX_PER_TICK || "5", 10);
+/**
+ * The version of how this describer gathers evidence and words a line. Bump it when a change makes rows it wrote before
+ * wrong, so the sweep re-derives them. 1 = the unversioned rows (log entries with no describer_version); 2 = own
+ * evidence only (no sibling descriptions) and the "reads" verb for a store read.
+ */
+export const DESCRIBER_VERSION = 2;
+/** Bootstrap cap on older-version rows re-derived per run (the script reads no rhythm shape for it). */
+export const SWEEP_PER_RUN = 5;
 const METRICS_DIR = "/workspace/metrics";
 let LOG = `${METRICS_DIR}/auto-describe.jsonl`;
 let CURSOR = `${METRICS_DIR}/auto-describe-cursor.json`;
@@ -96,6 +117,12 @@ export function effectOf(shape: string): { stem: string; effect: string } | null
 /** "uiPanel" -> ["ui", "panel"]; "human_surface:ui_panel" -> ["human", "surface", "ui", "panel"]. */
 export function objectWords(id: string): string[] {
   return id.replace(/([a-z0-9])([A-Z])/g, "$1 $2").split(/[^A-Za-z0-9]+/).map((w) => w.toLowerCase()).filter(Boolean);
+}
+
+/** The store write a vessel serves for `shape` (shape_write, shapeWrite, …), making `shape` its store read; else null. */
+export function pairedWriteOf(shape: string, siblings: Record<string, string | null>): string | null {
+  if (effectOf(shape)) return null;
+  return Object.keys(siblings).filter((s) => effectOf(s)?.stem === shape).sort()[0] ?? null;
 }
 
 export interface WriteAdvertisement {
@@ -245,11 +272,13 @@ async function fetchResolverSchema(shape: string): Promise<Record<string, unknow
 }
 
 /**
- * Gather SAFE evidence for a shape WITHOUT invoking its resolver, from its PRODUCER'S OWN CONTRACT:
+ * Gather SAFE evidence for a shape WITHOUT invoking its resolver, from the shape's OWN advertisement and contract:
  *  - the producer that serves it (discovery's advertisement, already read for the live-vessel check)
- *  - its resolver_schema when the producer publishes one (inputs taken, fields answered), else the producing
- *    vessel's own described shapes
+ *  - its resolver_schema when the producer publishes one (inputs taken, fields answered)
+ *  - the store write its producer serves for it, when there is one (the shape is then that store's read)
  *  - a sample of recent impulse pointers of that shape (structure only)
+ * Never another shape's description: the LLM summarised those into the line, so a shape read as whatever else its
+ * vessel serves.
  */
 export async function gatherEvidence(shape: string, ad: WriteAdvertisement): Promise<string> {
   const parts: string[] = [];
@@ -261,13 +290,9 @@ export async function gatherEvidence(shape: string, ad: WriteAdvertisement): Pro
     const answers = Array.isArray(schema["response_fields"]) ? (schema["response_fields"] as unknown[]).map(String) : [];
     const env = typeof schema["envelope"] === "string" && schema["envelope"] ? ` under "${schema["envelope"]}"` : "";
     parts.push(`- contract (resolver_schema): takes ${fields.length ? fields.join(", ") : "no declared fields"}${env}${answers.length ? `; answers ${answers.join(", ")}` : ""}`.slice(0, 300));
-  } else {
-    const siblings = Object.entries(ad.siblings)
-      .filter(([s, d]) => s !== shape && d)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .slice(0, 4);
-    for (const [s, d] of siblings) parts.push(`- the producer also serves ${s}: ${(d as string).replace(/\s+/g, " ").split(";")[0].trim().slice(0, 120)}`);
   }
+  const write = pairedWriteOf(shape, ad.siblings);
+  if (write) parts.push(`- a store read: the producer also serves its write ${write}, so this shape reads back what that write keeps`);
 
   // a recent impulse of this shape: the pointer/structure, never the resolved content (which would invoke the resolver)
   try {
@@ -283,12 +308,13 @@ export async function gatherEvidence(shape: string, ad: WriteAdvertisement): Pro
 }
 
 /** Ask the canonical LLM resolver for ONE concrete line. Returns null on failure. */
-export async function generateDescription(shape: string, evidence: string): Promise<string | null> {
+/** `verb` "reads" is a store read (its vessel serves the shape's write): the line says what it reads back, not "produces". */
+export async function generateDescription(shape: string, evidence: string, verb: "produces" | "reads" = "produces"): Promise<string | null> {
   const prompt =
     `You are cataloguing a software substrate's data resolvers so an automated planner ` +
     `can match goals to them. Write a SINGLE concise line (one sentence, <200 chars) ` +
-    `describing the resolver that produces the shape "${shape}". ` +
-    `Format strictly as: "produces <what>; use for <which goals>". ` +
+    `describing the resolver that ${verb === "reads" ? "reads back the stored records of" : "produces"} the shape "${shape}". ` +
+    `Format strictly as: "${verb} <what>; use for <which goals>". ` +
     `Be concrete and grounded in the evidence; do not invent capabilities. ` +
     `Output ONLY the line, no preamble, no quotes.\n\n` +
     `Shape id: ${shape}\n` +
@@ -315,6 +341,40 @@ export async function generateDescription(shape: string, evidence: string): Prom
   } catch {
     return null;
   }
+}
+
+/** One LLM-described line for a non-write shape a live vessel serves, from its own evidence; null when none. */
+async function describeShape(shape: string, ad: WriteAdvertisement): Promise<{ description: string | null; evidence: string }> {
+  const evidence = await gatherEvidence(shape, ad);
+  return { description: await generateDescription(shape, evidence, pairedWriteOf(shape, ad.siblings) ? "reads" : "produces"), evidence };
+}
+
+/**
+ * The rows an OLDER describer version wrote that discovery still serves as written: per shape, its latest applied
+ * describe entry (or "unchanged" resweep entry) in this tick's log, when that entry carries a run (pre-provenance entries do not), has no
+ * describer_version or a lower one, and its description is exactly the text discovery serves now (anything else
+ * means another writer or an advertisement owns the shape). Non-writes first, then writes; each group sorted.
+ */
+export function olderVersionRows(logText: string, served: Record<string, string>): string[] {
+  const latest = new Map<string, { run?: unknown; description?: unknown; describer_version?: unknown }>();
+  for (const l of logText.split("\n")) {
+    if (!l.trim()) continue;
+    let e: any;
+    try { e = JSON.parse(l); } catch { continue; }
+    if (typeof e?.shape !== "string") continue;
+    if ((e.event === "describe" && e.applied === true) || (e.event === "resweep" && e.outcome === "unchanged")) latest.set(e.shape, e);
+  }
+  const rows: string[] = [];
+  for (const [shape, e] of latest) {
+    if (typeof e.run !== "string" || !e.run) continue;
+    const v = typeof e.describer_version === "number" ? e.describer_version : 1;
+    if (v >= DESCRIBER_VERSION) continue;
+    if (typeof e.description !== "string" || served[shape] !== e.description.trim()) continue;
+    if (shouldSkip(shape)) continue;
+    rows.push(shape);
+  }
+  const isWrite = (s: string) => effectOf(s) !== null;
+  return [...rows.filter((s) => !isWrite(s)).sort(), ...rows.filter(isWrite).sort()];
 }
 
 /** POST a learned description to discovery. Returns true on apply. */
@@ -358,6 +418,40 @@ export async function main(metricsDir: string = METRICS_DIR): Promise<void> {
   }
   const described = new Set(Object.keys(descriptions));
 
+  // Self-heal first: re-derive up to SWEEP_PER_RUN rows an older describer version wrote, readers before writes, each
+  // post folded into the run's descriptions so a write re-derived after its reader quotes the reader's new line.
+  let logText = "";
+  try { if (await Bun.file(LOG).exists()) logText = await Bun.file(LOG).text(); } catch { /* no log: nothing to heal */ }
+  let resweeps = 0;
+  for (const shape of olderVersionRows(logText, descriptions).slice(0, SWEEP_PER_RUN)) {
+    try {
+      const ad = await fetchAdvertisement(shape, descriptions);
+      if (!ad.vessel) {
+        await appendLog({ event: "resweep", run, shape, applied: false, reason: "no_live_vessel" });
+        continue;
+      }
+      const write = effectOf(shape) !== null;
+      const got = write ? { description: deriveWriteDescription(shape, ad), evidence: "" } : await describeShape(shape, ad);
+      if (!got.description) {
+        await appendLog({ event: "resweep", run, shape, applied: false, reason: write ? "not_derivable" : "llm_no_output" });
+        continue;
+      }
+      const before = descriptions[shape];
+      if (got.description === before) {
+        // identical to what discovery serves: no write; the entry marks the row current so it is not re-derived again
+        await appendLog({ event: "resweep", run, shape, outcome: "unchanged", description: before, before, after: got.description, describer_version: DESCRIBER_VERSION });
+        continue;
+      }
+      const ok = await postLearnedDescription(shape, got.description, source);
+      if (ok) { resweeps++; descriptions[shape] = got.description; }
+      await appendLog({ event: "describe", run, shape, description: got.description, applied: ok, describer_version: DESCRIBER_VERSION, resweep: true, before, after: got.description,
+        ...(write ? { derived_from: "advertisement" } : { evidence_chars: got.evidence.length }) });
+      console.log(`[auto-describe] ${shape}: ${ok ? "RE-DERIVED" : "post-failed"} (older describer version) :: ${got.description}`);
+    } catch (e) {
+      await appendLog({ event: "resweep", run, shape, applied: false, reason: String(e) });
+    }
+  }
+
   // The gap: advertised − described, minus internal machinery. Served store writes are described first, from their
   // advertisement (every one, each tick: no LLM is spent on them); the rest go through the bounded LLM window.
   const gap = advertised.filter((s) => !described.has(s)).filter((s) => !shouldSkip(s));
@@ -373,7 +467,7 @@ export async function main(metricsDir: string = METRICS_DIR): Promise<void> {
       }
       const ok = await postLearnedDescription(shape, description, source);
       if (ok) derived++;
-      await appendLog({ event: "describe", run, shape, description, applied: ok, derived_from: "advertisement" });
+      await appendLog({ event: "describe", run, shape, description, applied: ok, describer_version: DESCRIBER_VERSION, derived_from: "advertisement" });
       console.log(`[auto-describe] ${shape}: ${ok ? "APPLIED" : "post-failed"} (derived) :: ${description}`);
     } catch (e) {
       await appendLog({ event: "describe", run, shape, description: null, applied: false, reason: String(e) });
@@ -385,7 +479,7 @@ export async function main(metricsDir: string = METRICS_DIR): Promise<void> {
 
   if (undescribed.length === 0) {
     console.log(`[auto-describe] no undescribed data shapes (advertised=${advertised.length}, described=${described.size}, writes derived=${derived}/${writes.length})`);
-    await appendLog({ event: "tick_noop", run, advertised: advertised.length, described: described.size, gap: 0, writes: writes.length, derived });
+    await appendLog({ event: "tick_noop", run, advertised: advertised.length, described: described.size, gap: 0, writes: writes.length, derived, resweeps });
     return;
   }
 
@@ -406,8 +500,7 @@ export async function main(metricsDir: string = METRICS_DIR): Promise<void> {
         await appendLog({ event: "describe", run, shape, description: null, applied: false, reason: "no_live_vessel" });
         continue;
       }
-      const evidence = await gatherEvidence(shape, ad);
-      const description = await generateDescription(shape, evidence);
+      const { description, evidence } = await describeShape(shape, ad);
       if (!description) {
         await appendLog({ event: "describe", shape, description: null, applied: false, reason: "llm_no_output" });
         console.log(`[auto-describe] ${shape}: LLM produced no line — skipped`);
@@ -415,7 +508,7 @@ export async function main(metricsDir: string = METRICS_DIR): Promise<void> {
       }
       const ok = await postLearnedDescription(shape, description, source);
       if (ok) applied++;
-      await appendLog({ event: "describe", run, shape, description, applied: ok, evidence_chars: evidence.length });
+      await appendLog({ event: "describe", run, shape, description, applied: ok, describer_version: DESCRIBER_VERSION, evidence_chars: evidence.length });
       console.log(`[auto-describe] ${shape}: ${ok ? "APPLIED" : "post-failed"} :: ${description}`);
     } catch (e) {
       // Per-shape isolation — one failure never aborts the batch.
@@ -424,10 +517,10 @@ export async function main(metricsDir: string = METRICS_DIR): Promise<void> {
   }
 
   console.log(
-    `[auto-describe] tick done: gap=${undescribed.length} batch=${batch.length} applied=${applied} writes derived=${derived}/${writes.length} ` +
+    `[auto-describe] tick done: gap=${undescribed.length} batch=${batch.length} applied=${applied} writes derived=${derived}/${writes.length} resweeps=${resweeps} ` +
     `(advertised=${advertised.length}, described=${described.size})`,
   );
-  await appendLog({ event: "tick_done", run, gap: undescribed.length, batch: batch.length, applied, writes: writes.length, derived, advertised: advertised.length, described: described.size });
+  await appendLog({ event: "tick_done", run, gap: undescribed.length, batch: batch.length, applied, writes: writes.length, derived, resweeps, advertised: advertised.length, described: described.size });
 }
 
 // Run only as the entry point: credential-refused-branches.test.ts imports generateDescription, and the gate fixture

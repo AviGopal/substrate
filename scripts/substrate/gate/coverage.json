@@ -2958,7 +2958,7 @@
     },
     "/usr/local/share/substrate/active-scripts/auto-describe-resolvers.ts": {
       "src": "scripts/substrate/auto-describe-resolvers.ts",
-      "src_blob": "c8333146b0a607a5cfaab64e3b5051e250b067e7",
+      "src_blob": "f175895b85970dcac5b89c7229f6a43609b19153",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -2967,7 +2967,7 @@
       "evidence": {
         "accepted": "e35b8815b6fb748524a3d244c88b86e6ffa8e9bf",
         "mutation": "insert `exit 99` after line 1",
-        "mutated_blob": "f2f6ec97d1b15710277ae717f4042bab7992e6ab"
+        "mutated_blob": "61d4468a5c83a060a999fc31f218f565d2afd845"
       }
     },
     "/usr/local/share/substrate/active-scripts/autonomy-landings.ts": {

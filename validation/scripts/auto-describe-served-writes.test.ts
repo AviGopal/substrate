@@ -17,6 +17,10 @@ import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+// a namespace import, so a describer without these exports still loads and each case below reports on its own
+import * as describer from "../../scripts/substrate/auto-describe-resolvers.ts";
+const DESCRIBER_VERSION: number = (describer as Record<string, any>).DESCRIBER_VERSION;
+const SWEEP_PER_RUN: number = (describer as Record<string, any>).SWEEP_PER_RUN;
 
 const ROOT = resolve(import.meta.dir, "../..");
 const SCRIPT = join(ROOT, "scripts/substrate/auto-describe-resolvers.ts");
@@ -41,7 +45,10 @@ const DISPATCHER = { vesselId: "plunder-vessel", shapes: ["perennial_shining_dis
 const SCHEMAS: Record<string, unknown> = {
   buzz_swept_dispatch: { shape: "buzz_swept_dispatch", known: true, fields: [{ name: "question", required: true, type: "string" }, { name: "context", required: false, type: "string" }], response_fields: ["answer"] },
 };
-const VESSELS = [SURFACE, REPORTS, DISPATCHER];
+// A store read and its write on one vessel, beside described shapes of the same vessel (fixture words from a 5-word
+// draw, 2026-10-30T04:04:00Z: sprung headscarf reviving doorknob fantasize).
+const KEEPER = { vesselId: "doorknob-vessel", shapes: ["headscarfLedger", "headscarfLedger_write", "sprung_reviving_digest", "reviving_doorknob_report", "doorknob_sprung_status"] };
+const VESSELS = [SURFACE, REPORTS, DISPATCHER, KEEPER];
 // advertised in the shape list, but no live vessel row serves them (a retired producer's leftovers)
 const UNSERVED = ["orphanLedger_write", "orphan_digest"];
 const SEEDED: Record<string, string> = {
@@ -50,6 +57,11 @@ const SEEDED: Record<string, string> = {
   uiFeedback: "produces feedback a human left on the surface; use for goals that read operator feedback.",
   renderPolicy: "produces the surface's render policy; use for goals that read how content is drawn.",
   unaccounted_commit_scan: "produces a scan of commits no record accounts for; use for goals that audit commits.",
+  headscarfLedger_write: "writes the headscarf ledger kept by the doorknob vessel (doorknob-vessel)",
+  sprung_reviving_digest: "produces a digest of sprung latches reviving overnight; use for goals that fantasize about doorknob repairs",
+  // a row an older describer wrote from its siblings: it carries another shape's use clause
+  reviving_doorknob_report: "produces the reviving doorknob report; use for goals that fantasize about headscarf colours",
+  doorknob_sprung_status: "produces the sprung status of each doorknob; use for goals that check doorknobs",
 };
 
 let server: ReturnType<typeof Bun.serve>;
@@ -89,9 +101,10 @@ beforeAll(() => {
           return json({ success: true, shape: "resolver_schema", body: c ?? { shape: b.pointer.shape, known: false } });
         }
         prompts.push(String(b.prompt ?? ""));
-        // the LLM resolver: a templated line that echoes the shape id (never a hand-written description)
+        // the LLM resolver: a templated line that echoes the shape id and the format's verb (never a hand-written description)
         const shape = /Shape id: (\S+)/.exec(b.prompt ?? "")?.[1] ?? "?";
-        return json({ resolved: true, content: `produces ${shape} records; use for goals that read ${shape}` });
+        const verb = /Format strictly as: "(\w+) /.exec(b.prompt ?? "")?.[1] ?? "produces";
+        return json({ resolved: true, content: `${verb} ${shape} records; use for goals that read ${shape}` });
       }
       const m = /^\/vessels\/(.+)$/.exec(u.pathname);
       if (m) {
@@ -246,4 +259,133 @@ describe("a shape is described from its producer's own contract, dispatch produc
       expect(promptFor(w)).toBe("");
     }
   });
+});
+
+describe("a shape is described from its OWN evidence, never its vessel's other shapes (a store read reads as a read)", () => {
+  const promptFor = (shape: string) => prompts.find((p) => p.includes(`Shape id: ${shape}\n`)) ?? "";
+  const siblingsOf = (vessel: { shapes: string[] }, shape: string) => vessel.shapes.filter((s) => s !== shape && SEEDED[s]);
+
+  it("[MUST-FAIL] a store read (its vessel serves its write) is described as what it reads, with no other shape's text in its evidence", async () => {
+    reset();
+    await tick(mkdtempSync(join(tmpdir(), "adr-")));
+    const p = promptFor("headscarfLedger");
+    expect(p).toContain('Format strictly as: "reads <what>; use for <which goals>"');
+    expect(p).toContain("produced by vessel doorknob-vessel");
+    expect(p).toContain("a store read: the producer also serves its write headscarfLedger_write");
+    for (const s of siblingsOf(KEEPER, "headscarfLedger").filter((x) => x !== "headscarfLedger_write")) {
+      expect([s, p.includes(s)]).toEqual([s, false]);
+      expect([s, p.includes(SEEDED[s].split(";")[0])]).toEqual([s, false]);
+    }
+    expect(p).not.toContain("fantasize");
+    expect(descriptions.headscarfLedger).toBe("reads headscarfLedger records; use for goals that read headscarfLedger");
+  });
+
+  it("[CONTROL] a no-contract shape that is not a store read still says \"produces\"", async () => {
+    reset();
+    await tick(mkdtempSync(join(tmpdir(), "adr-")));
+    const p = promptFor("fleet_summary");
+    expect(p).toContain('Format strictly as: "produces <what>; use for <which goals>"');
+    expect(p).not.toContain("a store read:");
+    expect(descriptions.fleet_summary).toBe("produces fleet_summary records; use for goals that read fleet_summary");
+  });
+
+  it("[MUST-FAIL] the same no-contract shape's evidence holds none of its vessel's other shapes", async () => {
+    reset();
+    await tick(mkdtempSync(join(tmpdir(), "adr-")));
+    const p = promptFor("fleet_summary");
+    expect(p).toContain("produced by vessel report-vessel");
+    expect(siblingsOf(REPORTS, "fleet_summary").length).toBeGreaterThan(0);
+    for (const s of siblingsOf(REPORTS, "fleet_summary")) {
+      expect([s, p.includes(s)]).toEqual([s, false]);
+      expect([s, p.includes(SEEDED[s].split(";")[0])]).toEqual([s, false]);
+    }
+  });
+});
+
+describe("a describer fix re-derives the rows an older describer version wrote (self-heal, capped, its own rows only)", () => {
+  const OLD_RUN = "2026-10-29T22:07:42.121Z";
+  const entry = (shape: string, extra: Record<string, unknown> = {}) =>
+    JSON.stringify({ ts: OLD_RUN, event: "describe", run: OLD_RUN, shape, description: SEEDED[shape], applied: true, ...extra });
+  const seededDir = (lines: string[]) => {
+    const dir = mkdtempSync(join(tmpdir(), "adr-"));
+    writeFileSync(join(dir, "auto-describe.jsonl"), lines.join("\n") + "\n");
+    return dir;
+  };
+  const sweptPosts = () => posts.filter((p) => p.shape in SEEDED).map((p) => p.shape);
+  const promptFor = (shape: string) => prompts.find((p) => p.includes(`Shape id: ${shape}\n`)) ?? "";
+
+  it("[MUST-FAIL] an unversioned row this describer wrote, still served as written, is re-derived on the next run from own evidence", async () => {
+    reset();
+    await tick(seededDir([entry("reviving_doorknob_report", { evidence_chars: 387 })]));
+    expect(sweptPosts()).toEqual(["reviving_doorknob_report"]);
+    expect(descriptions.reviving_doorknob_report).toBe("produces reviving_doorknob_report records; use for goals that read reviving_doorknob_report");
+    expect(promptFor("reviving_doorknob_report")).not.toContain("fantasize");
+    expect(posts.find((p) => p.shape === "reviving_doorknob_report")!.source).toMatch(/^auto-describe-resolvers@\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/);
+  });
+
+  it("[MUST-FAIL] a re-derivation identical to the served text posts nothing, is logged unchanged, and is not re-derived again", async () => {
+    reset();
+    // derive the write's current line once, then serve exactly that line as an older describer's row
+    await tick(mkdtempSync(join(tmpdir(), "adr-")));
+    const same = descriptions.uiView_write;
+    expect(typeof same).toBe("string");
+    reset();
+    descriptions.uiView_write = same;
+    const dir = seededDir([JSON.stringify({ ts: OLD_RUN, event: "describe", run: OLD_RUN, shape: "uiView_write", description: same, applied: true, derived_from: "advertisement" })]);
+    await tick(dir);
+    expect(posts.some((p) => p.shape === "uiView_write")).toBe(false);
+    const lines = readFileSync(join(dir, "auto-describe.jsonl"), "utf8").trim().split("\n").map((l) => JSON.parse(l));
+    const u = lines.find((l) => l.event === "resweep" && l.shape === "uiView_write");
+    expect(u && { outcome: u.outcome, before: u.before, after: u.after, v: u.describer_version }).toEqual({ outcome: "unchanged", before: same, after: same, v: DESCRIBER_VERSION });
+    const n = lines.length;
+    await tick(dir);
+    const again = readFileSync(join(dir, "auto-describe.jsonl"), "utf8").trim().split("\n").slice(n).map((l) => JSON.parse(l));
+    expect(again.some((l) => l.shape === "uiView_write" && (l.event === "resweep" || l.resweep === true))).toBe(false);
+  });
+
+  it("[MUST-FAIL] each re-derived row's log line carries its before and after text", async () => {
+    reset();
+    const dir = seededDir([entry("reviving_doorknob_report", { evidence_chars: 387 })]);
+    await tick(dir);
+    const lines = readFileSync(join(dir, "auto-describe.jsonl"), "utf8").trim().split("\n").map((l) => JSON.parse(l));
+    const r = lines.find((l) => l.event === "describe" && l.shape === "reviving_doorknob_report" && l.resweep === true);
+    expect(r && { before: r.before, after: r.after, applied: r.applied }).toEqual({
+      before: SEEDED.reviving_doorknob_report, after: descriptions.reviving_doorknob_report, applied: true });
+    expect(r.after).not.toBe(r.before);
+  });
+
+  it("[CONTROL] a current-version row, a row served with other text, a pre-provenance row and an unlogged row are not touched", async () => {
+    reset();
+    const dir = seededDir([
+      entry("doorknob_sprung_status", { describer_version: DESCRIBER_VERSION }), // current version
+      JSON.stringify({ ts: OLD_RUN, event: "describe", run: OLD_RUN, shape: "sprung_reviving_digest", description: "an older line discovery no longer serves", applied: true }), // another writer or an advertisement owns it now
+      JSON.stringify({ ts: "2026-06-28T09:54:07.057Z", event: "describe", shape: "uiFeedback", description: SEEDED.uiFeedback, applied: true, evidence_chars: 120 }), // pre-provenance (source "auto")
+      entry("uiQuestion", { applied: false }), // a post that never applied
+    ]);
+    await tick(dir);
+    expect(posts.length).toBeGreaterThan(0); // the run described its gap, so the silence below is the sweep's choice
+    expect(sweptPosts()).toEqual([]);
+    for (const s of Object.keys(SEEDED)) expect([s, descriptions[s]]).toEqual([s, SEEDED[s]]);
+  });
+
+  it("[MUST-FAIL] at most SWEEP_PER_RUN rows per run, non-writes before writes, and the sweep converges (a healed row is not re-derived)", async () => {
+    reset();
+    const old = Object.keys(SEEDED).sort();
+    const dir = seededDir(old.map((s) => entry(s)));
+    const reads = old.filter((s) => !/_write$/.test(s));
+    await tick(dir);
+    expect(SWEEP_PER_RUN).toBeGreaterThan(0);
+    expect(sweptPosts()).toEqual(reads.slice(0, SWEEP_PER_RUN));
+    posts = [];
+    await tick(dir);
+    expect(sweptPosts()).toEqual([...reads.slice(SWEEP_PER_RUN), ...old.filter((s) => /_write$/.test(s))].slice(0, SWEEP_PER_RUN));
+    // the healed write is re-derived, without the LLM, from its advertisement
+    expect(promptFor("headscarfLedger_write")).toBe("");
+    expect(descriptions.headscarfLedger_write).toStartWith("writes the headscarf ledger kept by the doorknob vessel (doorknob-vessel)");
+    posts = [];
+    await tick(dir);
+    await tick(dir);
+    expect(sweptPosts()).toEqual([]);
+  });
+
 });
