@@ -108,7 +108,8 @@ compared against a prior report with
 ## Claim 6 — Substrate-authored improvement commits
 
 **Expectation:** substrate-authored commits land on `origin/dev` with no operator
-intervention, and at least one is causally tied to a measured delta in the expectations above
+intervention (standing configuration the person set in advance, applied by a commit
+citing their ruling, is not an intervention), and at least one is causally tied to a measured delta in the expectations above
 — the commit's change being the enabling mechanism of the delta, verified by measurement
 taken before and after its landing.
 

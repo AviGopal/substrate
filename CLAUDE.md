@@ -236,6 +236,10 @@ structurally non-load-bearing.
   its own observations; an operator writing them by hand is the gap.
 - **Autonomy has a hard success criterion**: a substrate-authored commit landing
   on the remote working branch with no operator hands. "It fired" is not success.
+  Standing configuration is not an intervention: a scope or policy the person set
+  in advance, applied by a commit that cites their ruling, leaves later landings
+  hands-free. A landing counts as hands-free when no operator authored, directed,
+  approved or landed that specific change.
 - **Adversarial duty**: post-lift, the operator introduces probes, hostile peers,
   and untrusted inputs — testing the system's resistance is part of the role.
 

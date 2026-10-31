@@ -9,7 +9,8 @@ editing the document to match.
 ## What qualifies
 
 A substrate is *qualified* for a task family when, continuously and without
-operator hands:
+operator hands (standing configuration the person set in advance is not an
+intervention; see the autonomy criterion in `CLAUDE.md`):
 
 1. **Correctness** — the family's probes reach with a *deterministic* verdict
    source (an independent in-process recomputation or an authoritative-store
