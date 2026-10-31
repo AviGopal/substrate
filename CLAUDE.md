@@ -38,9 +38,12 @@ Its ontology, in five sentences:
 **What it is for, in one line.** The system factorizes the environment into
 observable shapes, learns to produce the shapes necessary for reach, and chooses
 what to do next based on the shapes. **Continuity** is the shape outputs of an
-activity being consumed by another activity, whose outputs another activity uses,
-until reach. Every choice is a measured state transition, and everything needed
-to make it is already built.
+activity being consumed by another activity, whose outputs another activity uses.
+Reach ends a walk, not the chain: goal-host stops when it judges a goal reached,
+but learning composes, so the reached path becomes an activity in its own right,
+reused wherever another goal's path passes through the same point. Every choice
+is a measured state transition, and everything needed to make it is already
+built.
 A break anywhere in that chain is recovered by the system itself within seconds,
 not minutes, hours or days.
 
