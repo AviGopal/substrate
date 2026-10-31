@@ -30,7 +30,7 @@ The two halves are split across vessels. `goal-host-vessel` owns the walk (`runG
 
 ```mermaid
 sequenceDiagram
-    participant User as Dispatch<br/>(mcp__metabob__run_goal)
+    participant User as Dispatch<br/>(run_goal)
     participant GH as goal-host-vessel<br/>handleRunGoal
     participant Walk as runGoalWithRecovery<br/>→ runGoalAsPoolWalk
     participant API as activity-api<br/>(:8080)
@@ -355,7 +355,7 @@ The learning machinery is identical for both. The same posteriors rank the produ
 ## Data Flow Summary
 
 ```
-Dispatch (mcp__metabob__run_goal → POST /run-goal, handleRunGoal)
+Dispatch (run_goal → POST /run-goal, handleRunGoal)
   ↓
 inferGoalTargetShapes(goal) + goalHashOf(goal)
   ↓

@@ -49,7 +49,8 @@ UI vessels have no fleet unit, so their port is simply their dev-server port.
 
 The agent-facing MCP cockpit is **metabob-mcp**, an external MCP server rather
 than a vessel in this repo — it speaks stdio, has no port, and is not started or
-hot-reloaded by anything here. Drive it through its `mcp__metabob__*` tools.
+hot-reloaded by anything here. Drive it through its metabob cockpit tools (`run_goal_async`, `goal_status`, …);
+the prefix a client shows in front of them depends on how it registered the server.
 
 ### Substrate-hosted vessels
 

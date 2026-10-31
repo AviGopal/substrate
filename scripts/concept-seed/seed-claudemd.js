@@ -189,7 +189,7 @@ async function main() {
         }
         console.log(`Wired ${crossEdges} cross-file derived_from edges to the impulse/activity foundation.\n`);
     }
-    console.log("Done. Verify via mcp__metabob__concept_search({source_type: 'vessel_construction_pattern'}).");
+    console.log("Done. Verify via concept_search({source_type: 'vessel_construction_pattern'}).");
 }
 main().catch((err) => {
     console.error("FATAL:", err);

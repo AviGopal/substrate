@@ -41,7 +41,7 @@ On randomly drawn goals, against an agent running in a conventional harness, und
 An example goal, sent from the agent cockpit (a person types the same sentence into the human surface):
 
 ```
-mcp__metabob__run_goal_async  goal="list the HTTP routes activity-api serves, and which of them require authentication"
+run_goal_async  goal="list the HTTP routes activity-api serves, and which of them require authentication"
 ```
 
 **What the walk does.**
@@ -106,7 +106,7 @@ In plain terms: a **vessel** is a service; an **impulse** is a reference to a pi
 
 ## How development works: dispatch through the substrate
 
-The default development loop is **not** "hand-edit a file and run tests." It is to **dispatch the change as a goal** so it runs as a traced activity and feeds the learning loop. The agent-facing dispatch surface is the **metabob-mcp** cockpit — `mcp__metabob__run_goal` for short one-shot goals, `mcp__metabob__run_goal_async` for anything non-trivial (both reach `goal-host-vessel`). Goals can also be sent over plain HTTP, with an API key issued by `substrate-key issue` (see *Usage patterns*):
+The default development loop is **not** "hand-edit a file and run tests." It is to **dispatch the change as a goal** so it runs as a traced activity and feeds the learning loop. The agent-facing dispatch surface is the **metabob-mcp** cockpit — `run_goal` for short one-shot goals, `run_goal_async` for anything non-trivial (both reach `goal-host-vessel`). These are the metabob cockpit tools, named by their bare names; the prefix a client shows in front of them depends on how it registered the MCP server. Goals can also be sent over plain HTTP, with an API key issued by `substrate-key issue` (see *Usage patterns*):
 
 ```bash
 curl -s -X POST http://127.0.0.1:18210/run-goal \
@@ -116,8 +116,8 @@ curl -s http://127.0.0.1:18210/executions/<dispatchId> -H "Authorization: ApiKey
 ```
 
 ```
-mcp__metabob__run_goal  goal="fix the failing tests in activity-api"
-mcp__metabob__run_goal  goal="add input validation to the impulse endpoint"
+run_goal  goal="fix the failing tests in activity-api"
+run_goal  goal="add input validation to the impulse endpoint"
 ```
 
 Conscious one-off direct edits to vessel source are gated by a PreToolUse hook and require `SUBSTRATE_ALLOW_DIRECT_EDIT=1`; docs, scripts, tests and config are never gated. See CLAUDE.md → *How work happens: dispatch, don't edit*.
@@ -556,7 +556,7 @@ docker exec <container> vessel-ctl sync <vessel>     # git pull --ff-only + mirr
 
 # validate against the local substrate:
 docker exec <container> substrate-status --wait usable
-mcp__metabob__run_goal  goal="verify the change works"
+run_goal  goal="verify the change works"
 ```
 
 Scripting against HTTP instead of the cockpit: `POST /run-goal` on goal-host (`P210`)

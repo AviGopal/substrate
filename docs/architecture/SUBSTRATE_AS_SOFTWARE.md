@@ -253,7 +253,7 @@ same learning sinks.
   phrasings. Where the record's key is text-derived, that is a gap against this
   expectation, not the expectation itself.
   This is the unified goal-learning mechanism — goals from the MCP surface
-  (`mcp__metabob__run_goal`) and from the human surface (human-surface-vessel, or an optional Obsidian vault) both dispatch through
+  (the cockpit's `run_goal`) and from the human surface (human-surface-vessel, or an optional Obsidian vault) both dispatch through
   the same goal-host `/run-goal`+`/resolve`, both gated, both recorded. Canonical:
   [`GOAL_EXECUTION_PATHS_SCHEMA.md`](GOAL_EXECUTION_PATHS_SCHEMA.md).
 

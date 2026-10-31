@@ -39,7 +39,7 @@ it. Each idiom in §2 below is tagged with its classification.
 | 6 | Ribosome extraction | **Yes** | Required for topology growth. Foundation §"The Ribosome: Extracting Activities from Traces". |
 | 7 | Closure-audit | **Yes** | Required before the substrate can be said to stand on its own primitives. |
 | 8 | Composition-chain credit propagation | **Yes** | Foundation §"4. Record Trace"; `propagateCreditAlongChain` in activity-api. |
-| 9 | State-space-signature conditional learning | **Yes** | Foundation §"Computed Thompson Scores" ("shape-conditioned learning"); the `v_shape_conditioned_score` read path. |
+| 9 | State-space-signature conditional learning | **Yes** | Foundation §"Computed Thompson Scores" (the state-conditioned belief, `context_thompson_scores`, keyed by state-space signature). |
 | 10 | Forge variant testing | **Borderline** | Operator-dispatched pre-lift; substrate-dispatched post-lift. |
 | 11 | Push-away with cited rationale | **Borderline** | Data primitives needed pre-lift; the refusal-rate trend is a post-lift measure. |
 | 12 | External-resolver-vesselization | **No — S2→S3 extension** | Post-lift acceleration; ribosome repointed at external calls. Foundation §"External Resolver Vesselization". |

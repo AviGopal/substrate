@@ -5,8 +5,10 @@
 > re-derive concepts — it points at the
 > source-of-truth doc that owns each one.
 >
-> **Source-of-truth map.** Ontology (the four primitives impulse/pointer/resolver/vessel,
-> and activity, which is derived from them) → [`architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](architecture/IMPULSE_ACTIVITY_FOUNDATION.md).
+> **Source-of-truth map.** The governing statement of what the system is (impulses
+> and their shapes, activities, resolvers, vessels, traces, the walk) → `CLAUDE.md`.
+> Ontology in depth (the four-primitive minimum set impulse/pointer/resolver/vessel,
+> and activity expressed in it) → [`architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](architecture/IMPULSE_ACTIVITY_FOUNDATION.md).
 > The three states, durability groups, and what is implementation detail →
 > [`architecture/SUBSTRATE_AS_SOFTWARE.md`](architecture/SUBSTRATE_AS_SOFTWARE.md).
 > The three math lenses and their shared dictionary →
@@ -47,24 +49,27 @@ obeys"). The Informational state splits in two by change-authority.
 
 Canonical: these four are the **authored-software layer**, not the learning itself
 (`SUBSTRATE_AS_SOFTWARE.md` §4.2, "Which primitives are implementation detail").
-Foundation: IMPULSE_ACTIVITY_FOUNDATION §"Minimum Self-Stable Set".
+Foundation: IMPULSE_ACTIVITY_FOUNDATION §"Minimum Self-Stable Set". The system's core
+concepts (`CLAUDE.md`) are impulses with their shapes, activities, resolvers and vessels;
+these four are the minimum set the core concepts are expressed in.
 
 | Term | Definition | Notes / aliases |
 |---|---|---|
 | **impulse** | a pointer + metadata + (lazily resolved) body — data in any form | the data envelope; *content* is ephemeral, *relevance* is learned |
 | **pointer** | the shape of an impulse; the bootstrap key all resolution and learning are keyed on | "pointer-as-shape" (the principle); `pointer.type` dispatches resolution |
 | **resolver** | a function from pointer → content; lives where the data is | tiers are a binning of its *directional certainty* (§5); implicit resolvers live inside executors |
-| **vessel** | a collection of activities and resolvers | **two senses** — *structural* (code) vs *operational* (running service instance); see SUBSTRATE_AS_SOFTWARE §2.1 |
+| **vessel** | a collection of activities and resolvers, placed where their data lives; advertises the shapes it serves through the discovery registry | **two senses** — *structural* (code) vs *operational* (running service instance); see SUBSTRATE_AS_SOFTWARE §2.1 |
 
-> The minimum set is these **four**; activity is *derived* (§4). Impulse and activity are
-> not "the two primitives".
+> The minimum set is these **four**. Activity is a core concept of the system, not a fifth
+> primitive: it is expressed in these four as an impulse of shape `activity_template` (§4).
+> Impulse and activity are not "the two primitives".
 
 ## 4. Derived constructs
 
 | Term | Definition | Source / aliases |
 |---|---|---|
-| **activity** | a constrained state transition linking input-impulse sets to output-impulse sets; concretely "an impulse of shape `activity_template`" | FOUNDATION; *derived, not a primitive* |
-| **shape** | the pointer's `type` + metadata, viewed as a **learned type**; observed/refined/pruned from traces, not declared in a global registry | FOUNDATION; "pointer-as-shape", `ImpulseShape` |
+| **activity** | a constrained state transition linking input-impulse sets to output-impulse sets: it declares the shapes it consumes and produces and dispatches its tasks to resolvers; concretely "an impulse of shape `activity_template`" | `CLAUDE.md`; FOUNDATION; a core concept, expressed in the four primitives rather than a fifth one |
+| **shape** | the routing-and-reasoning key an impulse's metadata names (the pointer's `type` + metadata) — a key, not a schema. Vessels advertise the shapes they serve through the discovery registry, the one routing fixed point; shapes are not pre-declared there as a global type system but are **learned types**, observed when advertised, refined from traces, pruned when no resolver claims them | `CLAUDE.md`; FOUNDATION; "pointer-as-shape", `ImpulseShape` |
 | **trace** / **execution trace** | the recorded set of impulses (in / intermediate / out) + state transition + outcome for one execution | canonical DB table: **`activity_execution_traces`** (plural); impulse shape: **`activityExecutionTrace`**; avoid the table names `execution` and `activity_execution_trace` (singular) |
 | **trajectory** | one path through the composition graph; structurally identical to an activity, differing only in granularity | FOUNDATION |
 | **composition graph** | the graph of templates connected by input/output shapes; discovered through execution, not designed | edges carry α/β posteriors |
@@ -139,7 +144,7 @@ Write the term on the right. The term on the left names nothing in the running s
 | **Instructional state** | **Informational state** |
 | **Functional state** | **Observational state** |
 | **process-of-becoming** | **Transient state** / "the becoming" |
-| **"The Two Primitives"** | the **four** primitives (activity is derived) |
+| **"The Two Primitives"** | the **four** primitives (activity is a core concept expressed in them) |
 | **`resolver_tier` as a fixed kind** | a binning of **directional certainty** (§5) |
 | table `execution` / `activity_execution_trace` | **`activity_execution_traces`** |
 
@@ -158,8 +163,11 @@ against the running system.
 | `devbob` | **`substrate`** — the self-developing deployment, not a separate agent |
 
 **One name stays:** the **metabob MCP server**. It is the agent-facing cockpit — the tool
-surface an operator's agent calls into — and its tool identifiers (`mcp__metabob__*`) are a
-published interface.
+surface an operator's agent calls into — and its tool names (`run_goal`, `run_goal_async`,
+`goal_status`, `goal_reasoning`, `provide_feedback`, `registry_query`, …) are a published
+interface. The client-side prefix on those names depends on how the server is registered:
+the metabob plugin gives `mcp__plugin_metabob_metabob__*`, and a server added by hand under
+the name `metabob` gives `mcp__metabob__*`.
 
 **A refusal that names an avoided term is deliberate.** Where one appears in a refusal path — a
 `410 Gone` body naming a method that does not exist — it is a signal, not residue. Deleting it

@@ -650,7 +650,7 @@ docker exec <container> substrate-status --wait usable
 bun run validation/scripts/stratified-harness.ts
 
 # Single goal to produce a trace — dispatch through the metabob-mcp cockpit
-# (`mcp__metabob__run_goal` / `run_goal_async`), which lands the goal as a
+# (`run_goal` / `run_goal_async`), which lands the goal as a
 # traced execution. Agents drive validation through the cockpit, not a CLI.
 
 # Check the trace appeared

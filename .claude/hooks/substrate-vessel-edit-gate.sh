@@ -48,12 +48,12 @@ ie_resp="$( { if [ -n "$ie_key" ]; then printf 'header = "Authorization: ApiKey 
   | curl -K - -s --max-time 9 -X POST "$dev/v2/impulses/resolve" -H 'Content-Type: application/json' -d "$ie_body" 2>/dev/null)"
 if [ "$(printf '%s' "$ie_resp" | jq -r '.body.verdict // empty' 2>/dev/null)" = "REFUSE" ]; then
   basis="$(printf '%s' "$ie_resp" | jq -r '.body.refusal_basis // .body.reason // "substrate refused this intervention"' 2>/dev/null)"
-  pushback="SUBSTRATE PUSH-AWAY (S3): the substrate REFUSED this operator edit to $rel with cited evidence — ${basis}. The substrate gates its own authored code. To proceed, either supply cited evidence justifying the change (dispatch via mcp__metabob__run_goal so the substrate authors it), or set SUBSTRATE_ALLOW_DIRECT_EDIT=1 for a conscious operator override."
+  pushback="SUBSTRATE PUSH-AWAY (S3): the substrate REFUSED this operator edit to $rel with cited evidence — ${basis}. The substrate gates its own authored code. To proceed, either supply cited evidence justifying the change (dispatch via run_goal so the substrate authors it), or set SUBSTRATE_ALLOW_DIRECT_EDIT=1 for a conscious operator override."
   jq -nc --arg r "$pushback" '{hookSpecificOutput:{hookEventName:"PreToolUse",permissionDecision:"deny",permissionDecisionReason:$r}}'
   exit 0
 fi
 
-reason="Direct edit to vessel source ($fp) is gated by the substrate-vessel-edit-gate. The default path for a code change is to dispatch it so the change produces a trace and feeds the learning loop: use \`mcp__metabob__run_goal_async\` with a goal whose lead sentence names this exact file, then read \`reached\` (not \`status\`) with \`mcp__metabob__goal_status\`. Name ONE file per goal — multi-file asks drop parts silently. Quote the exact current line you want changed, verbatim; plans addressed by line number rather than by quoted content are the ones that fabricate. For a deliberate one-off direct edit, set SUBSTRATE_ALLOW_DIRECT_EDIT=1 and retry. See CLAUDE.md §'How work happens: dispatch, don't edit'."
+reason="Direct edit to vessel source ($fp) is gated by the substrate-vessel-edit-gate. The default path for a code change is to dispatch it so the change produces a trace and feeds the learning loop: use \`run_goal_async\` with a goal whose lead sentence names this exact file, then read \`reached\` (not \`status\`) with \`goal_status\`. Name ONE file per goal — multi-file asks drop parts silently. Quote the exact current line you want changed, verbatim; plans addressed by line number rather than by quoted content are the ones that fabricate. For a deliberate one-off direct edit, set SUBSTRATE_ALLOW_DIRECT_EDIT=1 and retry. See CLAUDE.md §'How work happens: dispatch, don't edit'."
 
 jq -nc --arg r "$reason" '{hookSpecificOutput:{hookEventName:"PreToolUse",permissionDecision:"deny",permissionDecisionReason:$r}}'
 exit 0

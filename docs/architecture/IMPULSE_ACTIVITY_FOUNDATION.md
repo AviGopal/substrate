@@ -264,13 +264,15 @@ The full `ImpulseShape` metadata (descriptions, collection hints) exists at extr
 
 ### Computed Thompson Scores
 
-Thompson parameters (`alpha`, `beta`) are computed from execution traces rather than stored directly on activities:
+Thompson parameters (`alpha`, `beta`) are **stored beliefs**, computed from each judged execution as it lands and then kept. They are not recomputed from the trace history at query time. Selection reads the stored values. The trace store is the evidence the beliefs were derived from, not the place they are read from.
 
-- **Views** (`v_activity_score`, `v_shape_conditioned_score`) aggregate success/failure counts at query time
-- **Shape-conditioned learning** enables goal-aware success rates (activity X performs better when input includes shape Y)
-- **Flexible grouping** allows per-user, per-vessel, or per-context learning without schema changes
+- **Two stores, two grains.** A per-variant belief (`variant_performance_metrics`) is the canonical posterior for an activity. A state-conditioned belief (`context_thompson_scores`) is kept per activity per context bucket, keyed by the state-space signature, so selection can prefer an activity that does better under the conditions at hand. Shape-conditioned counters serve the same goal-aware role for input shapes.
+- **One update rule.** Every write goes through a single outcome-to-delta mapping. A judged outcome and its failure mode decide the alpha and beta increments, so no call site invents its own arithmetic.
+- **Credit along the chain.** When a step's output was consumed by a later step that reached, credit or blame also flows to its ancestors in the composition chain. It decays per depth by an eligibility-trace factor (TD(λ)), read from a tuning parameter.
+- **Concurrent-safe by construction.** Deltas are coalesced per key and applied in one transaction, with compare-and-set or upsert semantics, so concurrent executions add up rather than overwrite. A failed flush is retried, never dropped, and pending deltas are flushed on shutdown.
+- **Exclusions.** Executions that measure lifecycle mechanics rather than goal reach update their own variant belief but are kept out of the state-conditioned belief, so hook traffic cannot steer goal selection.
 
-**Rationale**: Storing α/β on the activity record would create update race conditions under concurrent execution. Computing from traces ensures consistency and enables richer conditioning without modifying the core activity schema.
+**Rationale**: Selection needs a fresh, cheap read on every decision, and a query-time aggregation over the full trace history is neither. Storing the belief makes the read cheap. Applying each outcome as a coalesced, atomic delta keeps concurrent updates consistent, which was the concern that once argued for computing at query time.
 
 ---
 
@@ -1021,7 +1023,7 @@ The impulse-activity loop is not a recipe executor. It is a **topology discovery
 
 Each iteration reduces uncertainty about the composition graph in the vicinity of the goal. Convergence — reliably reaching goal-satisfying states — is evidence that enough topology has been learned, not that the graph is fully known.
 
-> **Schema and mechanism detail:** [`GOAL_EXECUTION_PATHS_SCHEMA.md`](GOAL_EXECUTION_PATHS_SCHEMA.md). The same gate fires whether a goal is dispatched via `mcp__metabob__run_goal` (MCP `/resolve` path) or a human surface (human-surface-vessel, or an optional Obsidian vault) — both route through goal-host `/run-goal`, both are reach-gated and recorded.
+> **Schema and mechanism detail:** [`GOAL_EXECUTION_PATHS_SCHEMA.md`](GOAL_EXECUTION_PATHS_SCHEMA.md). The same gate fires whether a goal is dispatched via `run_goal` (MCP `/resolve` path) or a human surface (human-surface-vessel, or an optional Obsidian vault) — both route through goal-host `/run-goal`, both are reach-gated and recorded.
 
 ### Reuse Before Mint
 

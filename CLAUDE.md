@@ -80,18 +80,20 @@ absorb the work.
 Development flows **through** the substrate so every change produces a trace and
 feeds the learning loop. The agent-facing surface is the **metabob-mcp cockpit**
 (the IDE analogue of the human's Obsidian surface; not an internal component).
-Full workflow guidance: the `metabob-substrate` skill.
+Full workflow guidance: the `metabob-substrate` skill. The tools below are the
+metabob cockpit tools, named here by their bare names; the prefix a client shows
+in front of them depends on how it registered the MCP server.
 
 | Plane | Tool | Use |
 |---|---|---|
-| ACT | `mcp__metabob__run_goal` | Dispatch and wait: `goalDispatchAsync` through discovery, then short `goalWalkState` polls until the goal leaves running or ~290 s pass; past that the reply carries the `dispatchId` for `goal_status`. No request is held open. Short one-shot goals. |
-| ACT | `mcp__metabob__run_goal_async` | Default for anything non-trivial; returns a `dispatchId`. |
-| TRACK | `mcp__metabob__goal_status` | Poll a dispatch; the primary line is the honest `reached` verdict. |
-| REASON | `mcp__metabob__goal_reasoning` | Reconstruct the walk's decision log — *why* it reached or fell short. |
-| FEEDBACK | `mcp__metabob__provide_feedback` | Record an operator verdict into the oracle corpus. Measured feedback, not advice. |
-| INSPECT | `mcp__metabob__registry_query` | The live shape vocabulary and who serves what. |
-| INSPECT | `mcp__metabob__execution_trace` | Durable trace by execution id. |
-| INSPECT | `mcp__metabob__resolve_impulse` | Escape hatch: resolve/write any impulse shape. Prefer dedicated tools. |
+| ACT | `run_goal` | Dispatch and wait: `goalDispatchAsync` through discovery, then short `goalWalkState` polls until the goal leaves running or ~290 s pass; past that the reply carries the `dispatchId` for `goal_status`. No request is held open. Short one-shot goals. |
+| ACT | `run_goal_async` | Default for anything non-trivial; returns a `dispatchId`. |
+| TRACK | `goal_status` | Poll a dispatch; the primary line is the honest `reached` verdict. |
+| REASON | `goal_reasoning` | Reconstruct the walk's decision log — *why* it reached or fell short. |
+| FEEDBACK | `provide_feedback` | Record an operator verdict into the oracle corpus. Measured feedback, not advice. |
+| INSPECT | `registry_query` | The live shape vocabulary and who serves what. |
+| INSPECT | `execution_trace` | Durable trace by execution id. |
+| INSPECT | `resolve_impulse` | Escape hatch: resolve/write any impulse shape. Prefer dedicated tools. |
 
 **The canonical loop:** `run_goal_async` → `goal_status` (read `reached`) →
 `goal_reasoning` (why) → `provide_feedback` (verdict → corpus).

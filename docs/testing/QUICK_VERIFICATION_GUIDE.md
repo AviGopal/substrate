@@ -90,7 +90,7 @@ bun run typecheck
 ```
 
 Then dispatch against the running substrate through the cockpit
-(`mcp__metabob__run_goal_async`) and read `reached`, not `status`.
+(`run_goal_async`) and read `reached`, not `status`.
 
 ### Activity API code changed
 
@@ -164,7 +164,7 @@ curl -H "Authorization: ApiKey $METABOB_API_KEY" \
   "$ACTIVITY_API_URL/v2/activities/templates/$TEMPLATE_ID" | jq '.metrics | {thompson_alpha, thompson_beta}'
 
 # 2. Execute it — dispatch through the cockpit:
-#    mcp__metabob__run_goal_async { goal: "run $TEMPLATE_ID" }
+#    run_goal_async { goal: "run $TEMPLATE_ID" }
 
 # 3. Verify α increased (success) or β increased (failure)
 curl -H "Authorization: ApiKey $METABOB_API_KEY" \
@@ -202,7 +202,7 @@ curl -X POST $ACTIVITY_API_URL/v2/activities/templates \
   -H "Content-Type: application/json" \
   -d @new-activity.json
 
-# 2. Execute it — mcp__metabob__run_goal_async { goal: "run my-new-activity" }
+# 2. Execute it — run_goal_async { goal: "run my-new-activity" }
 
 # 3. Check execution trace
 curl -H "Authorization: ApiKey $METABOB_API_KEY" \
@@ -326,7 +326,7 @@ curl $ACTIVITY_API_URL/health
 curl -H "Authorization: ApiKey $METABOB_API_KEY" $ACTIVITY_API_URL/v2/activities/templates
 
 # Run goal
-# mcp__metabob__run_goal_async { goal: "your goal here" }
+# run_goal_async { goal: "your goal here" }
 
 # Latest trace
 curl -H "Authorization: ApiKey $METABOB_API_KEY" \
