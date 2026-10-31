@@ -27,6 +27,7 @@
       "repos/development-vessel/src/resolvers/vessel-mitosis-evaluate.ts",
       "scripts/bootstrap-seeder.ts",
       "repos/development-vessel/src/resolvers/scope-earn-in.ts",
+      "repos/development-vessel/src/resolvers/shell-quote.ts",
       "repos/development-vessel/test/resolvers/scope-earn-in.test.ts",
       "repos/development-vessel/test/resolvers/evaluator-grant-scan.test.ts",
       "repos/development-vessel/test/resolvers/scope-change-pin.test.ts",
