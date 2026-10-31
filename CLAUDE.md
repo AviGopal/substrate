@@ -35,6 +35,15 @@ Its ontology, in five sentences:
   flow shape-to-shape, and judging afterward whether the goal was actually
   **reached** — not merely whether the process exited cleanly.
 
+**What it is for, in one line.** The system factorizes the environment into
+observable shapes, learns to produce the shapes necessary for reach, and chooses
+what to do next based on the shapes. **Continuity** is the shape outputs of an
+activity being consumed by another activity, whose outputs another activity uses,
+until reach. Every choice is a measured state transition, and everything needed
+to make it is already built.
+A break anywhere in that chain is recovered by the system itself within seconds,
+not minutes, hours or days.
+
 The system develops itself: it authors its own code changes, verifies them, lands
 its own commits, detects its own gaps, and fills idle capacity with condition-driven
 work. Your role is defined relative to that (see "The operator role").
