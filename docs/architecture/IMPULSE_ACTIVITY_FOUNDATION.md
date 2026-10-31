@@ -61,7 +61,7 @@ The system is building a **topology of the informational state** by alternating 
 
 This is the bootstrap concept: pointer-as-shape is what makes everything else addressable. Resolvers dispatch on `pointer.type`. Activity matching compares `inputSchema.required` shapes against the pointer types in the available pool. Impulse-relevance posteriors are keyed on `(activity, pointer-shape)`. Composition edges are typed by output-shape → input-shape compatibility.
 
-When this document refers to a "shape" in the abstract, the concrete artifact is always the pointer's type field plus its metadata. Shapes are not declared in a global registry; they are learned types — observed when vessels advertise resolvers, refined when traces show co-occurrence patterns, and pruned when no resolver claims them.
+When this document refers to a "shape" in the abstract, the concrete artifact is always the pointer's type field plus its metadata. Vessels advertise the shapes they serve through the discovery registry, the one routing fixed point, but shapes are not pre-declared there as a global type system; they are learned types — observed when vessels advertise resolvers, refined when traces show co-occurrence patterns, and pruned when no resolver claims them.
 
 ---
 
@@ -364,7 +364,7 @@ Vessels can advertise new shape-typed parameters as they learn them. The system'
 
 ## Vessel Discovery
 
-Vessels are NOT discovered through a registry. They are **introspected** at the point of use.
+Vessels advertise the shapes they serve to the discovery registry, the routing fixed point: each registers its shapes and resolve endpoint and keeps them alive by heartbeat, and a resolve is placed by looking up who serves the shape. What a vessel can resolve is **introspected** where it runs, at the point of use, and that is what it advertises.
 
 ### The Codebase as Vessel
 
@@ -685,7 +685,7 @@ When improvisation succeeds, the **ribosome** extracts a reusable activity:
 1. Analyze the successful trace
 2. Identify the input impulse shapes that triggered it
 3. Extract the step sequence as activity tasks
-4. Create a new activity template with α=1, β=0
+4. Create a new activity template with the uninformed prior Beta(1,1) (α=1, β=1)
 5. Register it for future matching
 
 Next time similar inputs arrive, this activity is available.
@@ -823,28 +823,11 @@ The backend is NOT a universal resolver. It is:
 - This is the same as any other resolver querying its data source
 - The backend serves its stored data (traces, metrics, patterns)
 
-```
-Minimal Backend API:
-
-POST /v2/traces
-  Store execution trace from vessel
-
-POST /v2/traces/query
-  Resolve trace-type impulse pointers:
-    { type: "executionTrace", traceId: "..." }
-    { type: "recentExecutions", activityId: "...", limit: N }
-    { type: "failurePatterns", activityId: "..." }
-    { type: "compositionPatterns", goalCategory: "..." }
-    { type: "systemHealth", window: "1h" }
-
-POST /v2/activities/recommend
-  Thompson-sampled activity recommendation for goal + context
-```
-
-Everything else is either:
-- A query type passed to `/v2/traces/query`
-- Derived from stored traces
-- Not a separate endpoint
+The backend is a vessel like any other. Trace-type shapes (an execution trace, recent
+executions of an activity, failure or composition patterns) are resolved through the same
+impulse resolve path as every other shape (`/v2/impulses/resolve`), and discovery places
+the call on the vessel that serves them. The learner also serves a Thompson-sampled
+activity recommendation for a goal and context.
 
 ---
 

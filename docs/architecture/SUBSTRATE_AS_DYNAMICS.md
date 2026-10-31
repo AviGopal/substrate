@@ -57,7 +57,7 @@ columns rather than duplicating the whole.
 
 | Quantity in the substrate | MDP lens (the rule) | DEC lens (the structure) | Dynamics lens (this doc — the flow) |
 |---|---|---|---|
-| the learned content | Beta posterior `(α,β)` per `(s,a)` | Hodge star `⋆₁` = posterior precision | position of the **slow variable** |
+| the learned content | Beta posterior `(α,β)` per `(s,a)` | Hodge star `⋆₁` = posterior precision | the posterior moves on every completion (**fast**); its history-averaged precision `⋆` is the **slow variable** |
 | selection | Thompson `argmax` over `A(s)` | sampling against `⋆` | **fast variable** at quasi-equilibrium |
 | credit propagation | n-step TD / Monte-Carlo backup | heat flow `e^{−tL}` under the Hodge Laplacian | transport along the slow flow |
 | convergence rate | per-cell regret `O(√(T log T))` | `λ₁(L)·ρ_sample·κ(⋆)⁻¹` | **spectral gap = slowest mode = mixing time** |
