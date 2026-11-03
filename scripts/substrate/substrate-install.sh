@@ -74,6 +74,9 @@ Prints an installer for this image. Pipe it to sh; options go after `sh -s --`.
   --adopt                  keep the existing volumes of this name: move a fleet launched
                            another way onto the manifest (remove its container first;
                            learning state, keys and secrets in the volumes are kept)
+  --recreate               recreate the container even when its image is unchanged; a changed
+                           key reaches a running fleet only this way (every unit restarts,
+                           in-flight work is lost, volumes are kept)
 
 Install inputs may also be given as environment variables of the sh: a provider key
 (ANTHROPIC_API_KEY, OPENAI_API_KEY, …), METABOB_API_KEY, SUBSTRATE_GIT_PAT +
@@ -83,6 +86,10 @@ Re-running updates a fleet: run it inside the fleet directory (or where it was f
 run, with the same --name). Inputs you pass replace their lines, the rest are kept, and
 the container is recreated when the image changed. To upgrade, run the install command
 again: its --pull always fetches the newer image.
+A key that differs from the one in the fleet's .env is first validated by the hub's
+identity (a rejected key changes nothing), the prior .env is kept beside it as
+.env.before-key-change.<UTC time>, and a running container keeps its old key until the
+command is re-run with --recreate.
 EOF
     exit 0 ;;
   *) echo "usage: substrate-install [--help]   (options belong to the printed script: … | sh -s -- <options>)" >&2; exit 2 ;;
@@ -102,7 +109,7 @@ cat <<'EOF'
 say() { printf '[install] %s\n' "$*" >&2; }
 die() { say "$*"; exit 1; }
 
-engine=""; dir=""; wait_level=usable; connect=1; adopt=0
+engine=""; dir=""; wait_level=usable; connect=1; adopt=0; recreate_flag=0
 set_name=""; set_prefix=""; set_profile=""; set_public_ip=""; set_join=""; set_key=""
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -117,6 +124,7 @@ while [ $# -gt 0 ]; do
     --wait) wait_level="${2:?--wait needs a level}"; shift 2 ;;
     --no-connect) connect=0; shift ;;
     --adopt) adopt=1; shift ;;
+    --recreate) recreate_flag=1; shift ;;
     -h|--help) die "options are listed by: docker run --rm <image> install --help" ;;
     *) die "unknown option '$1' (docker run --rm <image> install --help lists them)" ;;
   esac
@@ -235,6 +243,85 @@ if [ -r /proc/sys/fs/inotify/max_user_instances ] && [ "$(id -u)" != 0 ]; then
   fi
 fi
 
+# ── A changed key on a fleet that already has one ──────────────────────────────
+# A new key (a join token, --key, or SUBSTRATE_API_KEY/METABOB_API_KEY in the shell) replaces
+# the one the node runs on, and identity returns a key's plaintext only once, so the old key
+# may exist nowhere but this .env. So before anything here is written, the hub's identity
+# must validate the new key: a refusal, or no verdict, changes nothing. A fresh fleet has no
+# key to lose and is not checked here; the image still judges every input at boot.
+# The effective key is the one gen-env takes: SUBSTRATE_API_KEY wins over METABOB_API_KEY.
+key_change=0
+if [ -f .env ]; then
+  prior_key="$(envval SUBSTRATE_API_KEY)"; prior_key="${prior_key:-$(envval METABOB_API_KEY)}"
+  new_key="${SUBSTRATE_API_KEY:-$(envval SUBSTRATE_API_KEY)}"; new_key="${new_key:-${METABOB_API_KEY:-$(envval METABOB_API_KEY)}}"
+  if [ -n "$new_key" ] && [ "$new_key" != "$prior_key" ]; then key_change=1; fi
+fi
+url_host() { printf '%s' "$1" | sed -E 's#^[a-zA-Z]+://##; s#[/?].*##; s#:[0-9]+$##'; }
+# http to these never leaves the host or its private network; any other host could be public,
+# so a key is never sent to it in cleartext. A name is not an address: it counts as public.
+private_host() {
+  case "$1" in localhost|::1|'[::1]') return 0 ;; esac
+  case "$1" in ''|*[!0-9.]*) return 1 ;; esac
+  case "$1" in 127.*|10.*|192.168.*|172.1[6-9].*|172.2[0-9].*|172.3[01].*) return 0 ;; esac
+  return 1
+}
+if [ "$key_change" = 1 ]; then
+  keep="$(pwd)/.env was left as it is and the node keeps its key"
+  command -v curl >/dev/null 2>&1 || die "curl is needed to validate the new key with the hub's identity before it replaces this node's key; $keep"
+  case "$new_key" in *'"'*|*'\'*) die "the new key contains a quote or a backslash, so it is not a key the hub issued; $keep" ;; esac
+  # The hub's identity, found the way gen-env finds it for a joiner, but only from what this
+  # installer already trusts: the anchor is the endpoint the join token (or --join) names,
+  # else the fleet's .env; never the shell, where an ambient value could steer the key to
+  # any validator. Then an IDENTITY_VESSEL_URL in .env wins; then what the anchor's
+  # /bootstrap advertises (not loopback, never a downgrade of the anchor's TLS, answering
+  # /health); then the port-relative sibling of the discovery port (an offset 18xxx block:
+  # identity is discovery + 1).
+  anchor="${set_join:-$(envval DISCOVERY_ENDPOINT)}"
+  anchor="${anchor:-http://localhost:${prefix}100}"
+  id_url="$(envval IDENTITY_VESSEL_URL)"
+  # A loopback anchor is this host's own fleet, whose /bootstrap names container-internal
+  # addresses; only the port arithmetic holds from the host.
+  case "$id_url:$(url_host "$anchor")" in
+    :localhost|:127.*|:::1|:'[::1]') ;;
+    :*)
+      bs="$(curl -sf --max-time 5 "${anchor%/}/bootstrap" 2>/dev/null || true)"
+      adv="$(printf '%s' "$bs" | grep -o '"identity_endpoint" *: *"[^"]*"' | head -1 | sed 's/.*"\([^"]*\)"$/\1/')"
+      case "$anchor:$adv" in
+        *:|*://127.*|*://localhost*|*://\[::1\]*|*://0.0.0.0*) ;;
+        https://*:http://*) ;;
+        *) if curl -sf --max-time 4 -o /dev/null "${adv%/}/health" 2>/dev/null; then id_url="${adv%/}"; fi ;;
+      esac ;;
+  esac
+  if [ -z "$id_url" ]; then
+    a_port="$(printf '%s' "$anchor" | sed -E 's#^[a-zA-Z]+://##; s#[/?].*##; s#^.*:##; s#^[^0-9]*$##')"
+    if [ -n "$a_port" ] && [ "$a_port" -ge 18100 ] 2>/dev/null && [ "$a_port" -le 47534 ]; then
+      id_url="$(printf '%s' "${anchor%/}" | sed -E 's#^([a-zA-Z]+://[^/?]*):[0-9]+.*#\1#'):$((a_port + 1))"
+    else
+      die "cannot tell where the hub's identity is from $anchor (no usable /bootstrap advertisement, and the port is not in an 18xxx block); set IDENTITY_VESSEL_URL in $(pwd)/.env and re-run. $keep"
+    fi
+  fi
+  case "$anchor" in https://*) case "$id_url" in http://*)
+    die "the anchor is https but its identity would be reached over http ($id_url), which would send the key in cleartext; $keep" ;; esac ;; esac
+  case "$id_url" in
+    https://*) ;;
+    http://*) private_host "$(url_host "$id_url")" \
+      || die "the hub's identity is at $id_url: plain http to a host that may be public would send the new key in cleartext. Use the hub's https endpoint (a join token from a TLS-fronted hub, or IDENTITY_VESSEL_URL=https://… in .env); $keep" ;;
+    *) die "the hub's identity URL '$id_url' is neither http nor https; $keep" ;;
+  esac
+  # One call: the key rides in the body on stdin (printf is a builtin), never on curl's argv.
+  # The endpoint answers 200 either way and gives its verdict in the body, so read `valid`.
+  v="$(printf '{"api_key":"%s"}' "$new_key" \
+        | curl -s --max-time 10 -X POST "${id_url%/}/v1/keys/validate" -H 'Content-Type: application/json' --data-binary @- 2>/dev/null || true)"
+  if printf '%s' "$v" | grep -q '"valid" *: *true'; then
+    say "the new key validates against the hub's identity at $id_url"
+  elif printf '%s' "$v" | grep -q '"valid" *: *false'; then
+    why="$(printf '%s' "$v" | sed -n 's/.*"error" *: *"\([^"]*\)".*/\1/p' | head -1)"
+    die "the hub's identity at $id_url REJECTED the new key (${why:-no reason given}); $keep. Ask the hub for a new join token (substrate-key join <name>)"
+  else
+    die "the hub's identity at $id_url gave no verdict on the new key ($(printf '%s' "${v:-no answer}" | tr -d '\n' | head -c 120)); $keep"
+  fi
+fi
+
 # The manifest this image was built with (re-running rewrites it, which is how an
 # image upgrade reaches the declaration).
 cat > docker-compose.yml <<'SUBSTRATE_MANIFEST_EOF'
@@ -247,6 +334,14 @@ SUBSTRATE_MANIFEST_EOF
 
 # Carry each install input set in this environment into .env, replacing its line.
 umask 077
+# A validated key change keeps the prior .env (and the only copy of the old key) first, so
+# the change can be undone by moving it back.
+if [ "$key_change" = 1 ]; then
+  bak=".env.before-key-change.$(date -u +%Y%m%dT%H%M%SZ)"
+  [ ! -e "$bak" ] || bak="$bak.$$"
+  { cp .env "$bak" && chmod 600 "$bak"; } || die "could not keep the prior .env as $(pwd)/$bak; .env was left as it is"
+  say "the prior .env (with the key it held) is kept as $(pwd)/$bak (mode 600); to undo the change, move it back over .env"
+fi
 touch .env
 carried=""
 for n in $CARRY_NAMES; do
@@ -305,8 +400,9 @@ recreate=""
 # project on the container. Running compose here under the directory's project then never
 # matched that container: `up --force-recreate` recreated nothing and compose only started
 # the stopped container again, still on the old image, while the installer reported the
-# upgrade done (node 2, 2026-10-02: project compose2, directory node2). The container's own
-# label names the project it belongs to, so every compose call below uses that one.
+# upgrade done (a fleet whose compose project and directory had different names). The
+# container's own label names the project it belongs to, so every compose call below uses
+# that one.
 if [ -z "${COMPOSE_PROJECT_NAME:-}" ]; then
   _proj="$("$engine" container inspect -f '{{ index .Config.Labels "com.docker.compose.project" }}' "$container" 2>/dev/null || true)"
   case "$_proj" in ""|"<no value>") ;; *) export COMPOSE_PROJECT_NAME="$_proj" ;; esac
@@ -319,6 +415,18 @@ if "$engine" container inspect "$container" >/dev/null 2>&1; then
     say "$container runs an older image than $want_ref; recreating it (volumes kept)"
     recreate="--force-recreate"
   fi
+fi
+# A container takes its key when it is created (gen-env reads it from the container's
+# environment at boot; a restart keeps the old one), so a changed key reaches a running
+# fleet only by a recreate, which restarts every unit and loses in-flight work. That is
+# never a side effect of a key change: with the image unchanged the container is kept
+# (Docker's compose would otherwise recreate it for the changed .env), and --recreate asks.
+if [ "$recreate_flag" = 1 ]; then
+  [ -n "$recreate" ] || say "recreating $container as asked (--recreate; volumes kept)"
+  recreate="--force-recreate"
+elif [ "$key_change" = 1 ] && [ -z "$recreate" ] && "$engine" container inspect "$container" >/dev/null 2>&1; then
+  recreate="--no-recreate"
+  say "the new key is in .env, but $container keeps running on its old key until it is recreated (every unit restarts). To apply it: re-run this command with --recreate"
 fi
 "$engine" compose up -d $recreate || die "compose up failed; the manifest and .env are in $(pwd)"
 
