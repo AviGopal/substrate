@@ -33,7 +33,7 @@ bad() { echo "FAIL - $*"; FAILS=$((FAILS+1)); }
 PROBE=lnleakprobe$$; PROBE="${PROBE:0:15}"   # comm is truncated to 15 characters
 alive() { local n=0 d; for d in /proc/[0-9]*; do [ "$(cat "$d/comm" 2>/dev/null)" = "$PROBE" ] && n=$((n+1)); done; echo "$n"; }
 reap() { local d; for d in /proc/[0-9]*; do [ "$(cat "$d/comm" 2>/dev/null)" = "$PROBE" ] && kill -KILL "${d#/proc/}" 2>/dev/null; done; }
-trap 'reap; [ -n "${SPID:-}" ] && kill -KILL "$SPID" 2>/dev/null; rm -rf "$T"' EXIT
+trap 'reap; for p in ${SPID:-} ${SREAL:-}; do kill -KILL "$p" 2>/dev/null; done; rm -rf "$T"' EXIT
 mkdir -p "$T/acc/validation/scripts/gate/fixtures" "$T/bin"; cp "$(command -v sleep)" "$T/bin/$PROBE"; chmod 755 "$T" "$T/bin" "$T/bin/$PROBE"
 cat > "$T/acc/validation/scripts/gate/fixtures/leak-timeout.sh" <<FX
 #!/usr/bin/env bash
@@ -49,7 +49,29 @@ echo "ok - backgrounded a plain child"; exit 0
 FX
 # (e) the sentinel: in its own session, named so comm identifies it, its sid published for the hostile fixture
 SENT=lnsentinel$$; SENT="${SENT:0:15}"; cp "$(command -v sleep)" "$T/bin/$SENT"; chmod 755 "$T/bin/$SENT"
-setsid "$T/bin/$SENT" 300 > /dev/null 2>&1 & SPID=$!; sleep 0.3; echo "$SPID" > "$T/sentinel.sid"; chmod 644 "$T/sentinel.sid"
+stat4() { # <pid> -> "pid ppid pgrp sid comm" from /proc/<pid>/stat, or "pid=<pid> gone"
+  local st c a; st="$(cat "/proc/$1/stat" 2>/dev/null)" || { echo "pid=$1 gone"; return 1; }
+  c="${st#*(}"; c="${c%)*}"; st="${st##*) }"; read -r -a a <<< "$st"
+  echo "pid=$1 ppid=${a[1]:-} pgrp=${a[2]:-} sid=${a[3]:-} comm=$c"; }
+by_name() { local d; for d in /proc/[0-9]*; do [ "$(cat "$d/comm" 2>/dev/null)" = "$1" ] && echo "${d#/proc/}"; done; }
+setsid "$T/bin/$SENT" 300 > /dev/null 2>&1 & SPID=$!
+# $! is the pid bash forked. It is the sentinel only if setsid did not fork (setsid forks when it finds itself a
+# process-group leader), so the sentinel is found by name: exactly one process named $SENT, leading its own session.
+# That pid is published and watched; $! is kept so a failed (e) can say which reading the log supports.
+SMATCH=(); for _ in $(seq 1 30); do mapfile -t SMATCH < <(by_name "$SENT"); [ "${#SMATCH[@]}" -gt 0 ] && break; sleep 0.1; done
+SREAL=""; SETUP=""
+if [ "${#SMATCH[@]}" -eq 1 ]; then
+  SREAL="${SMATCH[0]}"; s="$(stat4 "$SREAL")"; s="${s#* sid=}"; s="${s%% *}"
+  [ "$s" = "$SREAL" ] || SETUP="the one process named $SENT (pid $SREAL) is not its session's leader (sid=$s)"
+else SETUP="${#SMATCH[@]} processes named $SENT after 3 s"; fi
+if [ -n "$SETUP" ]; then
+  echo "diag (e): sentinel lookup ambiguous: $SETUP"; for p in "${SMATCH[@]}"; do echo "diag (e):   $(stat4 "$p")"; done
+  SREAL="$SPID"
+elif [ "$SREAL" != "$SPID" ]; then
+  echo "diag (e): SPID $SPID is not the sentinel (comm=$(cat "/proc/$SPID/comm" 2>/dev/null || echo gone)); the sentinel is pid $SREAL"
+fi
+SB_SPID="$(stat4 "$SPID")"; SB_REAL="$(stat4 "$SREAL")"; SB_SHELL="$(stat4 $$)"
+echo "$SREAL" > "$T/sentinel.sid"; chmod 644 "$T/sentinel.sid"
 cat > "$T/acc/validation/scripts/gate/fixtures/hostile.sh" <<FX
 #!/usr/bin/env bash
 # kind: known-valid
@@ -62,7 +84,18 @@ done
 echo "ok - wrote the sentinel's session id everywhere it could"; exit 0
 FX
 chmod 755 "$T/acc/validation/scripts/gate/fixtures/"*.sh
-sent_alive() { [ "$(cat "/proc/$SPID/comm" 2>/dev/null)" = "$SENT" ]; }
+sent_alive() { [ "$(cat "/proc/$SREAL/comm" 2>/dev/null)" = "$SENT" ]; }
+sent_diag() { # what a reader of a CI log needs to tell a reaper kill (A) from a mis-recorded pid (B)
+  local id said
+  echo "diag (e): \$!=$SPID sentinel-by-name=$SREAL test shell: $SB_SHELL"
+  echo "diag (e): before: \$! $SB_SPID | sentinel $SB_REAL"
+  echo "diag (e): after:  \$! $(stat4 "$SPID") | sentinel $(stat4 "$SREAL")"
+  echo "diag (e): processes named $SENT now: $(by_name "$SENT" | tr '\n' ' ')"
+  for id in $(printf '%s\n' "$SPID" "$SREAL" | sort -u); do
+    said="$(grep -E "session $id([^0-9]|\$)" <<<"$out")"
+    if [ -n "$said" ]; then sed "s/^/diag (e): the reaper names session $id: /" <<<"$said"
+    else echo "diag (e): the reaper's output does not name session $id"; fi
+  done; }
 # The candidate is a throwaway repository holding this tree's scripts/substrate, never $ROOT itself: the pre-commit
 # hook runs the glue corpus on a checkout-index export of the index, which has no .git, and shadow-eval stages the
 # candidate from git. Without this, shadow-eval refused before any fixture ran, and (a)(b)(e) passed vacuously.
@@ -76,7 +109,9 @@ n="$(alive)"
 [ "$n" = 0 ] && ok "(a)(b) no fixture child survives shadow-eval ($PROBE alive: $n)" || bad "(a)(b) $n fixture child(ren) survive shadow-eval"
 if grep -q '^shadow: 3 fixture(s) pass' <<<"$out"; then ok "(c) the verdict is unchanged: all three fixtures pass"
 else bad "(c) verdict changed: $(tail -1 <<<"$out")"; grep -E '^(REFUSE|FAIL) - ' <<<"$out" | sed 's/^/  evaluator said: /'; fi
-sent_alive && ok "(e) the hostile fixture could not get the sentinel (another session) killed" || bad "(e) the sentinel was KILLED: a fixture chose what the reaper kills"
+if [ -n "$SETUP" ]; then bad "(e) SETUP ERROR, not judged: sentinel lookup ambiguous: $SETUP"
+elif sent_alive; then ok "(e) the hostile fixture could not get the sentinel (another session) killed"
+else bad "(e) the sentinel was KILLED: a fixture chose what the reaper kills"; sent_diag; fi
 { sed -n '/^proc_sid() {/,/; }$/p' "$SE"; sed -n '/^reap_session() {/,/^  return 0; }$/p' "$SE"; } > "$T/fns.sh"
 if grep -q '^reap_session() {' "$T/fns.sh"; then
   r1="$( . "$T/fns.sh"; OWN_SID="$(proc_sid $$)"; PARENT_SID="$(proc_sid "$PPID")"; reap_session 1 )"
