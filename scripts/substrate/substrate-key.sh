@@ -139,6 +139,13 @@ case "$cmd" in
     ;;
 
   issue)
+    # Internal, set only by `join`: declare the minted key a peer key owned by that node.
+    # Plain `issue` declares no owner, exactly as before.
+    peer_node=""
+    if [[ "${1:-}" == "--peer-node" ]]; then
+      peer_node="${2:-}"; [[ -n "$peer_node" ]] || die "--peer-node needs the joining node's name"
+      shift 2
+    fi
     name="${1:-}"; [[ -n "$name" ]] || die "usage: substrate-key issue <name> [scopes] [expires_days]"
     scopes="${2:-read,write}"
     days="${3:-}"
@@ -147,6 +154,7 @@ case "$cmd" in
     mint_jwt admin 300
     body="{\"user_id\":\"$USER_ID\",\"org_id\":\"$ORG_ID\",\"scopes\":$scopes_json,\"name\":\"$name\""
     if [[ -n "$days" ]]; then body+=",\"expires_in_days\":$days"; fi
+    if [[ -n "$peer_node" ]]; then body+=",\"owner_kind\":\"peer\",\"owner_node\":$(jq -nc --arg n "$peer_node" '$n')"; fi
     body+="}"
     resp=$(curl -s "$IDENTITY/v1/keys/issue" -H "Content-Type: application/json" \
              -H "Authorization: Bearer $JWT" -d "$body")
@@ -181,7 +189,9 @@ case "$cmd" in
     disc="$(curl -s -m 10 "${DISCOVERY_LOCAL_URL:-http://127.0.0.1:8100}/bootstrap" | jq -r '.discovery_endpoint // empty')"
     [[ -n "$disc" ]] || die "this fleet advertises no public discovery endpoint (/bootstrap discovery_endpoint is empty): a hub needs PUBLIC_IP (install with --profile hub --public-ip <address>)"
     case "$disc" in *://127.*|*://localhost*) die "this fleet advertises a loopback discovery endpoint ($disc); a joiner elsewhere cannot use it — set PUBLIC_IP" ;; esac
-    key="$("$0" issue "$name" "${2:-read,write}" ${3:+"$3"})" || die "key issuance failed"
+    # The joiner's key is a peer key, owned by the joining node: identity accepts owner_kind
+    # "peer" only together with an owner_node, so the node's name rides along.
+    key="$("$0" issue --peer-node "$name" "$name" "${2:-read,write}" ${3:+"$3"})" || die "key issuance failed"
     token="sj1.$(printf '%s\n%s' "$disc" "$key" | base64 -w0 | tr '+/' '-_' | tr -d '=')"
     echo "Join token for '$name' (endpoint $disc). It carries the key: give it only to that node's operator." >&2
     echo "The joiner runs:" >&2
