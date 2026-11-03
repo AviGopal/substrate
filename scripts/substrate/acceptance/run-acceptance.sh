@@ -27,9 +27,9 @@
 #                  published port, and this run is what makes that request.
 #   4. connection  the client config the page wrote (~/.metabob/config.json in the fresh
 #                  HOME) names a local endpoint; one authenticated request through the
-#                  published port answers 2xx; the cockpit itself (`npx @metabob/mcp`,
-#                  the registration the page prints) answers a registry_query with at
-#                  least one shape
+#                  published port answers 2xx; the cockpit itself (@metabob/mcp, at a
+#                  pinned version with every tool listed) answers a registry_query with
+#                  at least one shape
 #   5. contract    the published manifest is Docker-format (so HEALTHCHECK survives
 #                  Podman), the launched container carries a healthcheck, the image
 #                  carries its revision label and file, and the container's stop timeout
@@ -645,15 +645,18 @@ if [ "$(jq -r '.client_config.result' <<<"$checks")" = "pass" ]; then
   r=fail; [[ "$code" =~ ^2 ]] && r=pass
   set_check auth_request "$r" "$(jq -nc --arg u "${endpoint%/}/v2/activities/execution-traces?limit=1" --arg c "$code" '{url: $u, http_status: $c}')"
 
-  # The cockpit itself: the registration the page prints is `npx -y @metabob/mcp`,
+  # The cockpit itself: the package the page's registration runs (@metabob/mcp),
   # launched from an empty directory so no project-local config can shadow the one
-  # the page wrote.
+  # the page wrote. The version and the tool set are both pinned here: from 0.4.0
+  # the package lists only its ledger and memory tools unless METABOB_TOOLS=all, and
+  # refuses registry_query (-32601), so an unpinned default change failed this check
+  # on every build without saying why. Moving the pin is a deliberate edit.
   if command -v npx >/dev/null 2>&1; then
     cdir="$root/cockpit"; mkdir -p "$cdir/cwd"; mkfifo "$cdir/in"
     # The cockpit runs on Bun, which the page lists as a cockpit prerequisite. It is kept
     # off the fences' PATH (a warm-host finding there) and added for this check only.
     cockpit_path="$bin_dir:$PATH"; [ -n "${COCKPIT_BUN_DIR:-}" ] && cockpit_path="$COCKPIT_BUN_DIR:$cockpit_path"
-    ( cd "$cdir/cwd" && env -i "${fence_env[@]}" "PATH=$cockpit_path" timeout 300 npx -y @metabob/mcp <"$cdir/in" >"$cdir/out" 2>"$RESULT_DIR/diag/cockpit.err" ) &
+    ( cd "$cdir/cwd" && env -i "${fence_env[@]}" "PATH=$cockpit_path" METABOB_TOOLS=all timeout 300 npx -y --package=metabob-mcp-server@npm:@metabob/mcp@0.4.1 metabob-mcp <"$cdir/in" >"$cdir/out" 2>"$RESULT_DIR/diag/cockpit.err" ) &
     cpid=$!
     exec 7>"$cdir/in"
     wait_for_id() {  # id seconds
