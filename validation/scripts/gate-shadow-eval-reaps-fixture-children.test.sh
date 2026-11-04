@@ -34,7 +34,14 @@ PROBE=lnleakprobe$$; PROBE="${PROBE:0:15}"   # comm is truncated to 15 character
 alive() { local n=0 d; for d in /proc/[0-9]*; do [ "$(cat "$d/comm" 2>/dev/null)" = "$PROBE" ] && n=$((n+1)); done; echo "$n"; }
 reap() { local d; for d in /proc/[0-9]*; do [ "$(cat "$d/comm" 2>/dev/null)" = "$PROBE" ] && kill -KILL "${d#/proc/}" 2>/dev/null; done; }
 trap 'reap; for p in ${SPID:-} ${SREAL:-}; do kill -KILL "$p" 2>/dev/null; done; rm -rf "$T"' EXIT
-mkdir -p "$T/acc/validation/scripts/gate/fixtures" "$T/bin"; cp "$(command -v sleep)" "$T/bin/$PROBE"; chmod 755 "$T" "$T/bin" "$T/bin/$PROBE"
+# The probe and the sentinel are /bin/sh loop scripts, never renamed copies of sleep: a multicall coreutils (the Rust
+# one) picks its program from its own file name, so a renamed copy exits at once and every by-name count reads 0.
+# A script's comm is its file name. Its only child is a `sleep 1` in the same session: the reaper kills both in one
+# pass, and if the script escapes, by_name counts it; the child outlives it by at most 1 s, so it is not counted.
+# The argument bounds its life in seconds, as `sleep N` did.
+SLEEP="$(command -v sleep)"
+loop_script() { printf '#!/bin/sh\ni=0; while [ "$i" -lt "${1:-120}" ]; do "%s" 1; i=$((i+1)); done\n' "$SLEEP" > "$1"; chmod 755 "$1"; }
+mkdir -p "$T/acc/validation/scripts/gate/fixtures" "$T/bin"; loop_script "$T/bin/$PROBE"; chmod 755 "$T" "$T/bin"
 cat > "$T/acc/validation/scripts/gate/fixtures/leak-timeout.sh" <<FX
 #!/usr/bin/env bash
 # kind: known-valid
@@ -48,7 +55,7 @@ cat > "$T/acc/validation/scripts/gate/fixtures/leak-plain.sh" <<FX
 echo "ok - backgrounded a plain child"; exit 0
 FX
 # (e) the sentinel: in its own session, named so comm identifies it, its sid published for the hostile fixture
-SENT=lnsentinel$$; SENT="${SENT:0:15}"; cp "$(command -v sleep)" "$T/bin/$SENT"; chmod 755 "$T/bin/$SENT"
+SENT=lnsentinel$$; SENT="${SENT:0:15}"; loop_script "$T/bin/$SENT"
 stat4() { # <pid> -> "pid ppid pgrp sid comm" from /proc/<pid>/stat, or "pid=<pid> gone"
   local st c a; st="$(cat "/proc/$1/stat" 2>/dev/null)" || { echo "pid=$1 gone"; return 1; }
   c="${st#*(}"; c="${c%)*}"; st="${st##*) }"; read -r -a a <<< "$st"
@@ -104,9 +111,25 @@ mkdir -p "$T/super/scripts" && cp -a "$ROOT/scripts/substrate" "$T/super/scripts
   && git -C "$T/super" -c user.name=reaper-test -c user.email=reaper-test@localhost commit -qm candidate \
   || { echo "FAIL - could not build the throwaway candidate repository"; exit 1; }
 run() { TMPDIR="$T" bash "$1" --accepted "$T/acc" --super "$T/super" --candidate HEAD 2>&1; }
+# Positive control, before shadow-eval: the probe runs under its name here (started as the fixtures start it, then
+# reaped) and the sentinel is alive, by the same by-name lookup. A probe or sentinel that never ran would make
+# "0 alive" and "survives" pass on nothing, so a miss is a SETUP ERROR naming which, never a pass.
+live_n() { local n=0; for _ in $(seq 1 30); do n="$(by_name "$1" | wc -l)"; [ "$n" -ge "$2" ] && break; sleep 0.1; done; echo "$n"; }
+"$T/bin/$PROBE" 120 > /dev/null 2>&1 & C1=$!
+( exec timeout 120 "$T/bin/$PROBE" 120 ) > /dev/null 2>&1 & C2=$!
+PLIVE="$(live_n "$PROBE" 2)"; SLIVE="$(by_name "$SENT" | wc -l)"
+{ reap; wait "$C1" "$C2"; } 2>/dev/null; PLEFT="$(alive)"   # 2>/dev/null: the shell's "Killed" job notices
+for _ in $(seq 1 30); do [ "$PLEFT" = 0 ] && break; sleep 0.1; PLEFT="$(alive)"; done
+PSETUP=""
+[ "$PLIVE" -ge 2 ] || PSETUP="the probe $PROBE is not running: $PLIVE of 2 control copies (plain, under timeout) alive after 3 s"
+[ "$PLEFT" = 0 ] || PSETUP="${PSETUP:+$PSETUP; }$PLEFT control probe(s) named $PROBE still alive after reaping them"
+[ "$SLIVE" -gt 0 ] || [ -n "$SETUP" ] || SETUP="the sentinel $SENT is not running: 0 processes named $SENT before shadow-eval"
+echo "  liveness control before shadow-eval: $PROBE alive: $PLIVE (of 2), $SENT alive: $SLIVE"
 out="$(run "$SE")"
 n="$(alive)"
-[ "$n" = 0 ] && ok "(a)(b) no fixture child survives shadow-eval ($PROBE alive: $n)" || bad "(a)(b) $n fixture child(ren) survive shadow-eval"
+if [ -n "$PSETUP" ]; then bad "(a)(b) SETUP ERROR, not judged: $PSETUP"
+elif [ "$n" = 0 ]; then ok "(a)(b) no fixture child survives shadow-eval ($PROBE alive: $PLIVE before, $n after)"
+else bad "(a)(b) $n fixture child(ren) survive shadow-eval"; fi
 if grep -q '^shadow: 3 fixture(s) pass' <<<"$out"; then ok "(c) the verdict is unchanged: all three fixtures pass"
 else bad "(c) verdict changed: $(tail -1 <<<"$out")"; grep -E '^(REFUSE|FAIL) - ' <<<"$out" | sed 's/^/  evaluator said: /'; fi
 if [ -n "$SETUP" ]; then bad "(e) SETUP ERROR, not judged: sentinel lookup ambiguous: $SETUP"
