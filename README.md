@@ -437,6 +437,11 @@ What joining means, and how to tell it happened:
   over the relay circuit and answered by the spoke, with its own files and tools. A
   resolve that names no vessel is answered by the hub's own producer of the shape first:
   data locality, not an outage.
+- **Joined is not supplied.** Every goal on a spoke recalls lessons from the hub's
+  concept-db, and every check above can pass while that recall fails. After a goal on the
+  spoke, the latest recall line should read `SUCCEEDED`:
+  `docker exec <container> journalctl -u goal-host-vessel -n 2000 --no-pager | grep '\[walk-concepts\] recall' | tail -1`.
+  `SKIPPED`, `REFUSED` or `FAILED` mean the spoke's goals run without the hub's lessons.
 
 Protocol and concepts: [`docs/FEDERATION.md`](docs/FEDERATION.md).
 
