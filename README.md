@@ -521,6 +521,50 @@ whose vessels are private, scope any URL rewrite to that one org
 (`git config --global url."git@github.com:your-org/".insteadOf "https://github.com/your-org/"`);
 the unscoped form rewrites every GitHub URL and breaks anonymous cloning everywhere.
 
+#### H. Moving a fleet to another host
+
+A fleet is its directory (the manifest and `.env`) plus its two volumes, so moving one means
+carrying all three. On the old host, inside the fleet directory (the one the installer
+created, `./substrate` by default):
+
+```bash
+docker compose stop
+for v in substrate-workspace substrate-surreal; do
+  docker run --rm -v "$v":/v:ro -v "$PWD":/out alpine tar -C /v -czf "/out/$v.tgz" .
+done
+```
+
+Copy the whole directory to the new host by any means, for example
+`scp -r substrate <new host>:`. Then, on the new host, inside the copied directory:
+
+```bash
+for v in substrate-workspace substrate-surreal; do
+  docker volume create "$v" >/dev/null
+  docker run --rm -v "$v":/v -v "$PWD":/in alpine tar -C /v -xzf "/in/$v.tgz"
+done
+docker compose up -d
+docker exec <container> substrate-status --wait seeded
+```
+
+The fleet keeps everything the volumes hold: learning state, issued keys, secrets and its
+federation id. Compose warns that the volumes were "not created by Docker Compose"; that is
+expected for restored volumes. Use `docker compose up -d` here, not the install command:
+the installer over restored volumes on a new host is not part of this sequence. Clients
+still point at the old host, so on each client re-run the `substrate-connect` merge from
+the manual sequence in A, against the new host.
+
+- The archives contain the persisted secrets store and every key the fleet issued. Move
+  them only over an encrypted channel, and delete them from both hosts once the new host
+  reads `seeded`.
+- Run one copy at a time. Two live copies of the same volumes are one node with one
+  identity in two places; tear down the old host's fleet (`docker compose down`) once the
+  new one serves.
+- A fleet installed with `--name <name>` has volumes `<name>-workspace` and
+  `<name>-surreal` (substitute them in the loops above); `<container>` is `<name>-live`.
+- This sequence moves a fleet that other nodes do not anchor to. Spokes reach a hub at the
+  address it advertises (`--public-ip`) and in their join anchor, so moving a hub also needs
+  each spoke repointed, which this sequence does not cover.
+
 ### Usage patterns
 
 | Want | Do | Notes |
@@ -537,7 +581,8 @@ the unscoped form rewrites every GitHub URL and breaks anonymous cloning everywh
 | Add or remove one vessel at runtime | `docker exec <c> vessel-ctl install <v>` / `uninstall <v>` | persisted in the workspace; survives recreate |
 | Issue or revoke keys | `docker exec <c> substrate-key issue <name>` / `revoke <id>` | hub-issued keys join spokes |
 | Point a client elsewhere | re-run `substrate-connect` against that fleet | one config home (`~/.substrate/config.json`, linked from `~/.metabob/config.json`); the cockpit's override is `METABOB_CONFIG_PATH` |
-| Back up | `docker compose stop`, then archive both volumes | restore volumes, then `docker compose up -d` |
+| Back up | `docker compose stop`, then archive both volumes | restore volumes, then `docker compose up -d`; the commands are in [H. Moving a fleet to another host](#h-moving-a-fleet-to-another-host) |
+| Move to another host | [H. Moving a fleet to another host](#h-moving-a-fleet-to-another-host) | the fleet directory and both volumes travel together; clients re-run `substrate-connect` |
 | Leave a network | remove the anchor pair from `.env`, then `docker compose up -d` | becomes standalone and needs a provider key |
 | Tear down, keep state | `docker compose down` | |
 | Tear down, destroy state | `docker compose down -v`; remove the fleet's entry from `~/.substrate/config.json` (`~/.metabob/config.json` is a link to it); `claude mcp remove metabob` | destroys all learning state: posteriors, traces, concept graph, memory. It removes the volumes this directory's `SUBSTRATE_NAME` names, whichever fleet created them: with the default name that is any `substrate-*` fleet on the host |
