@@ -343,6 +343,7 @@ if [ "$key_change" = 1 ]; then
   say "the prior .env (with the key it held) is kept as $(pwd)/$bak (mode 600); to undo the change, move it back over .env"
 fi
 touch .env
+prev_profile="$(envval PROFILE)"
 carried=""
 for n in $CARRY_NAMES; do
   eval "v=\${$n:-}"
@@ -386,6 +387,25 @@ for n in $INPUT_NAMES; do
   unset "$n"
 done
 [ -z "$ignored" ] || say "ignored from your shell (advanced inputs are read from .env only; add them there to use them):$ignored"
+# A hub's memory (P090) and concept (P260) ports hold the network's private learning state
+# and are never plain ports on a public network. The manifest publishes every port on every
+# interface, and a host firewall does not close a Docker-published port, so the mapping is
+# the only gate: a new hub (or a fleet turning into one) publishes those two on the local
+# host. A line already in .env, or SUBSTRATE_PUBLISH_IP, wins. An existing hub is told,
+# never changed, so an upgrade cannot cut off whatever uses those ports today.
+case "$(envval PROFILE)" in
+  hub|hub-minimal)
+    loopback=""
+    for n in DEV_VESSEL_PUBLISH_IP CONCEPT_DB_PUBLISH_IP; do
+      grep -q "^$n=" .env || grep -q '^SUBSTRATE_PUBLISH_IP=' .env || loopback="$loopback $n"
+    done
+    if [ -n "$loopback" ] && { [ "$new_fleet" = 1 ] || [ "$prev_profile" != "$(envval PROFILE)" ]; }; then
+      for n in $loopback; do printf '%s=127.0.0.1\n' "$n" >> .env; done
+      say "a hub keeps its memory and concept ports on the local host:$loopback set to 127.0.0.1 in .env (a host firewall does not close Docker-published ports). To publish one elsewhere, set its line in .env to that address and run 'compose up -d'"
+    elif [ -n "$loopback" ]; then
+      say "notice: this hub publishes its memory and concept ports on every interface, and a host firewall does not close Docker-published ports. To keep them on the local host, add to $(pwd)/.env:$(for n in $loopback; do printf ' %s=127.0.0.1' "$n"; done), then run 'compose up -d'. Nothing was changed"
+    fi ;;
+esac
 say "fleet directory: $(pwd)  (inputs written:${carried:- none, defaults only})"
 
 # ── Launch ─────────────────────────────────────────────────────────────────────

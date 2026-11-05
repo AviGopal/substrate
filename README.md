@@ -227,6 +227,16 @@ the hub's lessons and memory; that is the cost of keeping them closed. Exposure 
 manifest's port mapping, set in the fleet's `.env` (these two are not taken from your shell) rather than by a compose override (an override
 merges port lists and cannot narrow one): `HUMAN_SURFACE_PUBLISH_IP=127.0.0.1` in `.env` keeps
 the surface on the local host, and `SUBSTRATE_PUBLISH_IP=127.0.0.1` keeps every port there.
+A host firewall does not close these ports: Docker publishes a port ahead of the host's own
+rules (ufw and firewalld included), so a port the mapping publishes on every interface
+answers from the network whatever the firewall says. The mapping is the only gate.
+When the install command creates a hub (or turns a fleet into one), it writes
+`DEV_VESSEL_PUBLISH_IP=127.0.0.1` and `CONCEPT_DB_PUBLISH_IP=127.0.0.1` to `.env`, so those two
+answer on the hub's own host only; a line already in `.env`, or `SUBSTRATE_PUBLISH_IP`, wins.
+A hub installed before that keeps what it publishes, and the install command names the two
+lines to add. A cockpit on the hub's host is unaffected (its config names `127.0.0.1`); one
+on another machine reaches those two through an SSH tunnel (`ssh -L <prefix>090:127.0.0.1:<prefix>090 <hub>`),
+or by setting the address in `.env` deliberately.
 
 ### Configuration
 
@@ -356,8 +366,9 @@ docker exec substrate-live substrate-key join <spoke-name>
 It prints the token and the exact command the joiner runs. The token carries the discovery
 endpoint this hub advertises (from `PUBLIC_IP` and the published ports) and a key issued
 for that node, printed once and never stored, so nobody types or configures a port. The
-manifest publishes the ports on every interface; if the host sits behind a firewall, it must
-admit the ones the table marks "spokes". The hub reaches `usable` on its own because it dispatches: the `hub`
+manifest publishes the ports on every interface except the hub's memory and concept ports,
+which the install command keeps on the local host ([Ports](#ports)); if the host sits behind
+a firewall, it must admit the ones the table marks "spokes". The hub reaches `usable` on its own because it dispatches: the `hub`
 profile carries goal-host and the compute vessels next to the posteriors. `hub-minimal`
 leaves compute out for a control-plane or relay-only node. The federation relay runs inside
 the container on `P333`, and `/bootstrap` advertises it at `PUBLIC_IP`, which is why the
