@@ -236,7 +236,10 @@ answer on the hub's own host only; a line already in `.env`, or `SUBSTRATE_PUBLI
 A hub installed before that keeps what it publishes, and the install command names the two
 lines to add. A cockpit on the hub's host is unaffected (its config names `127.0.0.1`); one
 on another machine reaches those two through an SSH tunnel (`ssh -L <prefix>090:127.0.0.1:<prefix>090 <hub>`),
-or by setting the address in `.env` deliberately.
+or by setting the address in `.env` deliberately. The same holds for a node whose
+`GAP_STORE_ENDPOINT` names a hub (a spoke on the `fleet` or `hold` channel that runs
+development-vessel writes its gap credits and verdicts to the hub's `P090` directly): set
+that hub's `DEV_VESSEL_PUBLISH_IP` to an address the node reaches, or give the node a tunnel.
 
 ### Configuration
 
