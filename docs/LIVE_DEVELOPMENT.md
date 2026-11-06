@@ -43,9 +43,6 @@ UI vessels have no fleet unit, so their port is simply their dev-server port.
 | `discovery-vessel` | `bun --watch run index.ts` | 8100 | --watch | Singleton; restart gap ~1s. Entry point is `index.ts` at the repo root, not `src/` |
 | `identity-vessel` | `bun --hot src/index.ts` | 8101 | --hot | Redis/Valkey required |
 | `concept-db` | `bun run --watch src/index.ts` | 8260 | --watch | Concept graph + prose knowledge |
-| `react-renderer` | `bun run dev:server` | 3000 | --hot | `buildHandler()` pattern. Plain `dev` runs the server *and* a Vite client concurrently |
-| `terminal` | `bun --hot src/index.ts` | 9090 (auto) | --hot | `buildHandler()` pattern; MCP stdio unaffected |
-| `workbench` | `vite` | 3000 | Vite HMR | Full Vite dev server |
 
 The agent-facing MCP cockpit is **metabob-mcp**, an external MCP server rather
 than a vessel in this repo — it speaks stdio, has no port, and is not started or
