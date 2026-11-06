@@ -16,8 +16,8 @@
 > the idiom vocabulary in one queryable place rather than leave it scattered across
 > foundation prose and per-change design docs.
 >
-> **Scope**: 13 idioms (idiom 13, "Neutral emitter", is an S2→S3 extension
-> appended to the original 12). The list is closed against the foundation
+> **Scope**: 12 idioms, numbered 1–13. Numbers are stable keys, so 7 is unused
+> (idiom 13, "Neutral emitter", is an S2→S3 extension). The list is closed against the foundation
 > model; new idioms enter via spec proposals, not via this file.
 
 ---
@@ -38,7 +38,6 @@ it. Each idiom in §2 below is tagged with its classification.
 | 4 | Lifecycle hook subscription | **Yes** | Required for the meta-activity layer. Foundation §"Minimum Self-Stable Set" ("lifecycle event = an impulse of shape `lifecycle:*`"). |
 | 5 | Validator-as-activity | **Yes** | Required for failure-mode detection. Foundation §"Minimum Self-Stable Set" ("validator = a resolver whose output is `validation_result`-shaped"). |
 | 6 | Ribosome extraction | **Yes** | Required for topology growth. Foundation §"The Ribosome: Extracting Activities from Traces". |
-| 7 | Closure-audit | **Yes** | Required before the substrate can be said to stand on its own primitives. |
 | 8 | Composition-chain credit propagation | **Yes** | Foundation §"4. Record Trace"; `propagateCreditAlongChain` in activity-api. |
 | 9 | State-space-signature conditional learning | **Yes** | Foundation §"Computed Thompson Scores" (the state-conditioned belief, `context_thompson_scores`, keyed by state-space signature). |
 | 10 | Forge variant testing | **Borderline** | Operator-dispatched pre-lift; substrate-dispatched post-lift. |
@@ -358,56 +357,6 @@ template is hollow: it splits selection traffic while carrying no evidence.
 
 ---
 
-### Idiom 7 — Closure-audit
-
-**Definition.** A self-containment check: for each property required by
-substrate operation, ask "what would happen if external tool X were removed?"
-If the answer is "the property would no longer hold", closure for that
-property is open. A closure audit walks
-each property and runs substrate-only resolvers to attempt it, taking
-`--without=<property>` to simulate the absence of a specific external
-dependency. It reports a closure status and exits non-zero while any tested
-property is still open.
-
-**Recurrence.** Run on a rhythm rather than a fixed timer (`CLAUDE.md` law 5).
-The script enumerates seven closure properties, each expressed as the external
-crutch whose removal it simulates:
-
-| `--without=` | The question it asks |
-|---|---|
-| `operator-memory` | does substrate memory work without operator-side memory files? |
-| `slash-skills` | can skill-equivalent operations run through substrate resolvers alone? |
-| `subagents` | can complex tasks execute without operator-side subagents? |
-| `github-actions` | does CI and merge gating work through the substrate alone? |
-| `operator-shell` | can the substrate self-heal without operator shell access? |
-| `operator-spec-authoring` | can the substrate author specs without the operator? |
-| `push-away` | does the substrate refuse incompetent interventions with cited evidence? |
-
-**Composability.** Composes Goal → Activity → Trace (the audit dispatches
-activities and reads traces) and Discovery + Resolve (the audit asks
-"is anyone advertising this shape?"). The audit runs today as an operator-side
-`bun` script under `validation/scripts/`, and the seven properties it enumerates
-are all external crutches — none of them is the audit's own liveness. Moving the
-audit inside the substrate, so that its own execution does not depend on the
-harness it is auditing, is the open item named in the anti-pattern below.
-
-**Lift-critical / S2→S3 extension.** Lift-critical. The audit's exit code is the
-gate: zero only when every property it tested is closed, non-zero while any gap
-remains. A single green run is weak evidence — the property that matters is that
-it stays green across runs, since a closure that holds only when the operator
-happens to be present is not closure.
-
-**Example invocation.** The audit asks "if the operator-side memory directory
-were removed, could the substrate still recall a given finding?" It resolves a
-`memoryNote` impulse against development-vessel; if development-vessel cannot
-resolve it, the audit records `memory: open`.
-
-**Anti-pattern.** Auditing closure with operator-side scripts. The audit
-needs to run from inside the substrate to count — otherwise its own
-liveness depends on the harness it claims to audit.
-
----
-
 ### Idiom 8 — Composition-chain credit propagation
 
 **Definition.** When a composed execution succeeds or fails, α/β deltas
@@ -519,10 +468,8 @@ dispatch the forge itself.
 
 **Composability.** Composes Goal → Activity → Trace (the forge run is an
 ordinary traced activity, so its failures are ordinary failure modes),
-Lifecycle hook subscription (idiom 4; `slot-binding`'s escalation branch is the
-path a no-producer case travels),
-and Closure-audit (idiom 7; the forge must operate without operator shell
-access to count as closed). Recursive self-application: a forged vessel may
+and Lifecycle hook subscription (idiom 4; `slot-binding`'s escalation branch is the
+path a no-producer case travels). Recursive self-application: a forged vessel may
 itself need a shape nobody produces.
 
 **Lift-critical / S2→S3 extension.** Borderline lift-critical. Pre-lift the
@@ -603,9 +550,8 @@ anticipation.
 
 **Composability.** Composes ribosome (idiom 6; the extraction mechanism),
 Discovery + Resolve (idiom 2; the minted vessel registers and advertises),
-Forge variant testing (idiom 10; minting the vessel is a forge run, invariant
-probes included), and Closure-audit (idiom 7; the minted vessel must be
-substrate-resident).
+and Forge variant testing (idiom 10; minting the vessel is a forge run, invariant
+probes included).
 
 **Lift-critical / S2→S3 extension.** S2 → S3 extension. The substrate
 sustains its loop without this idiom; the idiom accelerates it.
@@ -695,12 +641,6 @@ input to its own machinery.
   the operator-authored bootstrap forge — and is bounded on the way down by the
   depth guard that is the forge's first task.
 
-- **Closure-audit** (idiom 7) walks substrate properties, each named as an
-  external crutch whose removal it simulates. The recursive question — "if the
-  operator-side audit script were removed, could the substrate still verify its
-  own closure?" — is not among the properties the script enumerates; it is the
-  test the audit does not yet apply to itself.
-
 - **Validator-as-activity** (idiom 5) gates resolver outputs. The gate that
   checks a change against the foundation is itself a validator, so it gates
   changes to the validator framework too.
@@ -726,4 +666,4 @@ recursive application of a finite idiom set across an unbounded shape space.
 - [`architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](../architecture/IMPULSE_ACTIVITY_FOUNDATION.md) — the canonical model; every §-citation above names a section, not a line number.
 - [`architecture/SUBSTRATE_AS_SOFTWARE.md`](../architecture/SUBSTRATE_AS_SOFTWARE.md) — the execution walk and the durability groups the idioms move between.
 - [`GLOSSARY.md`](../GLOSSARY.md) — canonical term spellings and the terms to avoid.
-- `CLAUDE.md` — the laws and the operator role that idioms 7, 10, 11, and 13 are measured against.
+- `CLAUDE.md` — the laws and the operator role that idioms 10, 11, and 13 are measured against.
