@@ -125,8 +125,10 @@ committed inventory change does reach a running fleet's volume without a rebuild
 > docker exec <container> systemctl list-units --state=active --no-pager
 > ```
 >
-> No command reconciles or reports this drift for you; `substrate-doctor` reads
-> the inventory but does not compare it against git or against the running set.
+> `vessel-ctl drift` reports this drift (volume against image, the selection in
+> force, and what applying it would change) and `vessel-ctl apply` converges the
+> running set; see [`drift` and `apply`](#drift-and-apply). Neither compares the
+> inventory against git.
 
 > **The human surface serves out-of-box.** `human-surface-vessel` (`:8310` →
 > host `:18310`) ships as a baked, *enabled* vendor unit with the built UI in
@@ -217,12 +219,12 @@ entrypoint.sh ──runs──▶ gen-env.sh ──renders──▶ /etc/substra
                              │                     (every systemd unit reads it via
                              │                      EnvironmentFile=/etc/substrate/env)
                              ▼
-             /workspace/.substrate-secrets  (persisted → survives restart)
+             /workspace/.substrate-private/substrate-secrets  (persisted → survives restart)
 ```
 
-`gen-env.sh` writes `/etc/substrate/env` and persists its secrets to `/workspace/.substrate-secrets` (on the `<name>-workspace` named volume), so a restart reuses the same values instead of regenerating and breaking auth. The persisted set covers the generated secrets (`JWT_SECRET`, `SURREAL_PASS`, `API_KEY_SECRET` and its previous value), the fleet's identity (`FED_SUBSTRATE_ID`, `METABOB_API_KEY`), push capability and its scope (`SUBSTRATE_GIT_PAT`, `GITHUB_TOKEN`, and `SUBSTRATE_REPO_OWNER` once someone chose it), **the operator-supplied provider keys and model settings** (the provider keys, `OPENAI_BASE_URL`, `LLM_DEFAULT_MODEL`, the `VLLM_*` and `RUNPOD_*` settings), and a few peering choices. Provider keys are read from the run environment when present and then round-tripped into `.substrate-secrets`, so a recreate whose `.env` no longer carries them retains them. `RUNPOD_ENDPOINT_ID` round-trips the same way despite not being a secret: `llm-resolver-vessel` registers the RunPod Serverless arm only when the endpoint id is present, so losing it on a recreate would silently un-register that lane. The exact list is whatever `gen-env.sh` reads back, so read it there: `grep -oE 'persisted_secret [A-Z_]+' scripts/substrate/gen-env.sh | sort -u`. (`FEDERATION_SIGNING_SECRET` is carried forward by gen-env when it is already present, but gen-env does not generate it; `secrets.env.sh` generates it on the dynamic-vessel path, when the federation transport is installed.)
+`gen-env.sh` writes `/etc/substrate/env` and persists its secrets to `/workspace/.substrate-private/substrate-secrets` (on the `<name>-workspace` named volume), so a restart reuses the same values instead of regenerating and breaking auth. The persisted set covers the generated secrets (`JWT_SECRET`, `SURREAL_PASS`, `API_KEY_SECRET` and its previous value), the fleet's identity (`FED_SUBSTRATE_ID`, `METABOB_API_KEY`), push capability and its scope (`SUBSTRATE_GIT_PAT`, `GITHUB_TOKEN`, and `SUBSTRATE_REPO_OWNER` once someone chose it), **the operator-supplied provider keys and model settings** (the provider keys, `OPENAI_BASE_URL`, `LLM_DEFAULT_MODEL`, the `VLLM_*` and `RUNPOD_*` settings), and a few peering choices. Provider keys are read from the run environment when present and then round-tripped into the persisted store, so a recreate whose `.env` no longer carries them retains them. `RUNPOD_ENDPOINT_ID` round-trips the same way despite not being a secret: `llm-resolver-vessel` registers the RunPod Serverless arm only when the endpoint id is present, so losing it on a recreate would silently un-register that lane. The exact list is whatever `gen-env.sh` reads back, so read it there: `grep -oE 'persisted_secret [A-Z_]+' scripts/substrate/gen-env.sh | sort -u`. (`FEDERATION_SIGNING_SECRET` is carried forward by gen-env when it is already present, but gen-env does not generate it; `secrets.env.sh` generates it on the dynamic-vessel path, when the federation transport is installed.)
 
-**Routing anchors are never persisted.** Endpoint-shaped names — the hub discovery URL, the discovery/identity/activity-api endpoints, the metabob endpoint, the relay multiaddr — are dropped from `.substrate-secrets` on every write rather than carried forward, and both writers (`gen-env.sh` and `secrets.env.sh`) drop them. They are derived fresh into `/etc/substrate/env` on each boot instead. The reason is that an address is a fact about *where this deployment currently is*: a persisted one outlives the host it named, and a substrate then boots pointing at a machine that no longer exists. Units that load both files list `.substrate-secrets` **first** and `/etc/substrate/env` **last**, so the derived value wins; a later `EnvironmentFile=` beats an earlier one. (`PEER_DISCOVERY_ENDPOINTS` is the deliberate exception — it is an operator-set peering choice rather than a derived anchor, so it does round-trip, and un-peering means clearing it there.)
+**Routing anchors are never persisted.** Endpoint-shaped names — the hub discovery URL, the discovery/identity/activity-api endpoints, the metabob endpoint, the relay multiaddr — are dropped from the persisted store on every write rather than carried forward, and both writers (`gen-env.sh` and `secrets.env.sh`) drop them. They are derived fresh into `/etc/substrate/env` on each boot instead. The reason is that an address is a fact about *where this deployment currently is*: a persisted one outlives the host it named, and a substrate then boots pointing at a machine that no longer exists. No unit loads the persisted store: gen-env reads it back and re-emits its non-scoped names into `/etc/substrate/env`, so the value a unit sees is the derived one. (`PEER_DISCOVERY_ENDPOINTS` is the deliberate exception — it is an operator-set peering choice rather than a derived anchor, so it does round-trip, and un-peering means clearing it there.)
 
 `secrets.env.sh` is **safe to commit** — it declares *names and non-secret defaults only*, never real secret values (those come from the environment or the persisted file). `vessel-ctl.sh` sources the same file when installing a dynamic vessel, so a vessel's declared `secrets` are guaranteed present in `/etc/substrate/env` and persisted at install time.
 
@@ -559,20 +561,21 @@ which is why an operator's freshly-supplied key can appear not to take.
 ## Iteration loop
 
 **The channel is git.** A change reaches running vessels — here and on every
-other substrate — by being committed and pushed to `origin/dev`. Each
+other substrate — by landing on `origin/dev`, and you get it there by dispatching
+the change as a goal: the substrate drafts it, verifies it, and lands a traced
+commit. Each
 substrate's own `substrate-pull-sync` converges its `/vessels` runtime on the
 next tick (and at boot), mirrors the new source in, and restarts the affected
 units behind a health gate. Nothing pushes source into a container from a host,
 so **an uncommitted or unpushed local edit does not propagate** — see
 [Landing a change](#landing-a-change).
 
-```bash
-vim repos/development-vessel/src/resolvers/...
-git -C repos/development-vessel commit -am "fix(development-vessel): ..."
-git -C repos/development-vessel push origin dev
+```
+run_goal_async  goal="In repos/development-vessel/src/resolvers/<file>.ts, <the change>"
+goal_status     dispatchId=<id>        # read reached, not status
 
 # Verify once the substrate has converged
-curl http://localhost:18090/health
+docker exec <container> substrate-status --wait usable
 ```
 
 ### Hot-reloading one local container (the escape hatch)
@@ -596,26 +599,19 @@ curl http://localhost:18090/health
 > safe refresh, and there is no separate "in-container ff-only pull" to prefer
 > over it.
 >
-> The clobber hazard belongs to `docker cp` (below), whose source *is* your
-> working tree. Use that only when you know the host tree is the newer one, and
-> compare against the container copy first. Note also that a `docker cp` is
-> erased by the next `substrate-pull-sync`, which is the correct behaviour: git
-> is the channel, and anything not in git is not a change the fleet can keep.
+> Copying source from a host working tree into a container bypasses git: it can
+> clobber a commit the substrate landed, and the next `substrate-pull-sync` erases
+> it, which is the correct behaviour. Git is the channel, and anything not in git
+> is not a change the fleet can keep.
 
 `vessel-ctl restart` works on **any** unit the fleet has — there is no list
 of blessed vessels. `docker exec <container> vessel-ctl status` shows what
 is there to act on.
 
 The core vessels — `activity-api`, `identity-vessel`, `discovery-vessel`,
-`surrealdb` — have **no** make restart target. Push reaches them like every
-other vessel. For the same deliberate single-machine hatch, copy source in and
-restart the unit directly (or rebuild for a clean deploy) — with the same
-clobber caveat, since the copy source is again your working tree:
-
-```bash
-docker cp repos/activity-api/src substrate-live:/vessels/activity-api/
-docker exec substrate-live systemctl restart activity-api
-```
+`surrealdb` — have **no** make restart target. A landed change reaches them like
+every other vessel, through pull-sync, and `vessel-ctl sync <vessel>` or
+`vessel-ctl restart <vessel>` acts on them on one machine without waiting for it.
 
 ### How long an in-container edit lasts — three classes, one appearance
 
@@ -834,13 +830,9 @@ docker exec <container> vessel-ctl uninstall metric-collector-vessel
 
 ## Landing a change
 
-Once a change validates locally, commit and push it to `dev` in the vessel's own repo:
-
-```bash
-git add repos/<vessel>
-git commit -m "feat(<vessel>): <description>"
-git push origin dev
-```
+A change lands on `dev` in the vessel's own repo when it is dispatched as a goal that
+names the file and describes the change: the substrate drafts it, typecheck-verifies it,
+and lands a traced commit, then judges whether the goal behind it reached.
 
 `origin/dev` is the convergence point: every substrate's `substrate-pull-sync.timer`
 (and any peer's) ff-only pulls it and health-gates the restart — pushing to `dev` *is*
@@ -856,9 +848,9 @@ therefore only ever changes by rebuild or by that same hatch.
 
 ## Development-vessel specifics
 
-`development-vessel` is the meta-vessel for substrate self-development: the failure-mode harness, topology-discovery activities, `coverage-tick`, and `substrate-health-tick` all run as activities inside it. The `development-vessel.service` unit runs `seed-templates` automatically via `ExecStartPost` on every start — seeds are idempotent UPSERTs so re-running is safe.
+`development-vessel` is the meta-vessel for substrate self-development: the failure-mode harness and the topology-discovery activities run inside it. `coverage_tick` and `substrate_health_tick` are resolvers it calls in-process when the registry changes, at most once every 30 seconds; they are not selectable activities. The `development-vessel.service` unit runs `seed-templates` automatically via `ExecStartPost` on every start — seeds are idempotent UPSERTs so re-running is safe.
 
-**goal-host-vessel async dispatch.** `POST /run-goal` returns HTTP 202 immediately; goal execution happens asynchronously. Callers (goal-host-vessel clients and boredom-vessel) must poll for execution status rather than waiting for a synchronous response. This means a 202 from `/run-goal` does not indicate goal success — check the execution trace in activity-api to confirm completion.
+**goal-host-vessel async dispatch.** `POST /run-goal` returns HTTP 202 immediately; goal execution happens asynchronously. Callers (goal-host-vessel clients and boredom-vessel) must poll for execution status rather than waiting for a synchronous response. This means a 202 from `/run-goal` does not indicate goal success — read the dispatch's `reached` verdict (`goalWalkState`, or `goal_status` in the cockpit), not its completion status.
 
 The topology-discovery loop runs autonomously inside the substrate. The boredom-vessel is a dispatch-pool daemon: each selection pass scores a pool of candidate templates on learned momentum, input-shape availability, and priority-weight folds derived from current conditions, then dispatches winners concurrently up to a slot cap. Selection momentum persists across restarts, so learned preferences survive cutovers.
 
@@ -878,7 +870,7 @@ activityRegistryChange → learned-topology-snapshot → reachable-unlearned-rep
 
 ## Event bus
 
-All lifecycle events — task binding, execution completion, gap classification, LLM dispatch — flow on the activity-api WebSocket broadcaster (`ws://localhost:18080/ws`) in addition to any in-process eventSink. Discovery-vessel emits four additional event types on the same bus: `vessel.registered`, `vessel.heartbeat`, `vessel.deregistered`, and `vessel.expired`. Any vessel subscribing to the bus receives all of these without any per-emitter configuration.
+All lifecycle events — task binding, execution completion, gap classification, LLM dispatch — flow on the activity-api WebSocket broadcaster (`/ws` on activity-api's endpoint, resolved through discovery) in addition to any in-process eventSink. Discovery-vessel emits four additional event types on the same bus: `vessel.registered`, `vessel.heartbeat`, `vessel.deregistered`, and `vessel.expired`. Any vessel subscribing to the bus receives all of these without any per-emitter configuration.
 
 This has a practical consequence for vessel startup: goal-host-vessel subscribes to `vessel.registered` and uses those events to reactively register proxy resolvers for newly-appearing vessels. This is what makes registration order irrelevant: a vessel that starts after goal-host-vessel is picked up automatically rather than staying invisible until the next restart cycle.
 
@@ -896,11 +888,11 @@ Combined with the substrate's existing Thompson-managed candidate selection, thi
 
 ## Substrate self-deployment
 
-The substrate closes the deployment loop via substrate-resident git authorship. Substrate-authored changes — proposals verified by the forge, approved by the CI-closure criterion — are committed, PR'd, and merged by the substrate itself, not by the operator. The operator retains an unforeseeable-failure override (closing a PR manually, force-merging an emergency fix), but this is an exceptional path rather than the normal one. Self-deployment is what makes the substrate honestly self-maintaining: it can author, verify, deploy, and observe its own changes without operator git access being on the critical path.
+The substrate closes the deployment loop via substrate-resident git authorship. Substrate-authored changes — drafted from a goal, typecheck-verified, and judged after landing on whether the goal behind them reached — are landed on `dev` by the substrate itself through the mitosis cutover, not by the operator; development-vessel also serves `gh_pr_create` and `gh_pr_merge` for changes that go through a pull request. The operator retains an unforeseeable-failure override (closing a PR manually, force-merging an emergency fix), but this is an exceptional path rather than the normal one. Self-deployment is what makes the substrate honestly self-maintaining: it can author, verify, deploy, and observe its own changes without operator git access being on the critical path.
 
 ## Vessel federation (inter-substrate routing)
 
-Federation routes capability queries across substrates: hub/spoke over a shared identity namespace, plus discovery peer fan-out, with a public libp2p Circuit Relay v2 for NAT traversal. A capability query with no local producer fans out to configured peers, and goal-host routes the result over the relay; from the perspective of any vessel above discovery the routing is invisible — they call `POST /resolve` and receive a vessel record, whether it lives in the same container or a peer. The federation transport primitives ship as **dynamic vessels** (`federation-relay`, `federation-transport-vessel` in `vessels.manifest.json`; the `transport` role in `vessels.inventory.json`).
+Federation routes capability queries across substrates: hub/spoke over a shared identity namespace, plus discovery peer fan-out, with a public libp2p Circuit Relay v2 for NAT traversal. A capability query fans out to configured peers and merges their producers behind the local ones (union is the default fan-out mode), and goal-host routes the result over the relay; from the perspective of any vessel above discovery the routing is invisible — they call `POST /resolve` and receive a vessel record, whether it lives in the same container or a peer. The federation transport primitives ship as **dynamic vessels** (`federation-relay`, `federation-transport-vessel` in `vessels.manifest.json`; the `transport` role in `vessels.inventory.json`).
 
 **[`docs/FEDERATION.md`](FEDERATION.md) is the authoritative reference** for the two topologies (shared-namespace hub+spokes vs. fan-out peers), the relay/sidecar for NATed vessels, and the end-to-end loop. This doc does not duplicate it — see there for the operator commands and identity-namespace mechanics.
 

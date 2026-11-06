@@ -54,7 +54,7 @@ the prefix a client shows in front of them depends on how it registered the serv
 
 ### Substrate-hosted vessels
 
-These vessels run as systemd units **inside the substrate container** and are not started directly with `bun run dev`. Nothing on the host is bind-mounted into the container: editing `repos/<vessel>/` and restarting the unit runs the old code. Commit and push the change to `origin/dev`, then pull it into the container's own clone and restart:
+These vessels run as systemd units **inside the substrate container** and are not started directly with `bun run dev`. Nothing on the host is bind-mounted into the container: editing `repos/<vessel>/` and restarting the unit runs the old code. A change reaches them by being dispatched as a goal: the substrate drafts, verifies and lands it on `origin/dev`, and the fleet pulls it into the container's own clone. To pull and restart one vessel without waiting:
 
 ```bash
 docker exec <container> vessel-ctl sync <vessel>      # pull origin/dev in the container's clone, mirror, restart
@@ -90,14 +90,15 @@ persists across restarts.
 
 **Cadence is still driven by clocks, and that is the standing gap.** The law on
 pace expects cadence to live in the pool as time-shaped rhythm impulses a selector
-reads. No such shape is advertised by any vessel, and no selector consumes one:
-every recurring behaviour in the fleet is scheduled by a systemd timer, including
-boredom-vessel itself. The daemon additionally reads fixed millisecond intervals
+reads. development-vessel serves them — `timeShapedRhythm` records, `rhythmPacing`
+thresholds, and the `rhythm_conductor_tick` that scores which families are due — and
+each boredom selection pass folds rhythm due-state into its priority weights. What
+still runs on clocks is the scheduling: recurring behaviour across the fleet is
+started by systemd timers, including boredom-vessel itself. The daemon additionally reads fixed millisecond intervals
 from its unit — minimum dispatch spacing, pool loop period, idle window. Those are
 clock values: frozen at process start, invisible to traces, and therefore
 unlearnable. Read whatever numbers are in force from the unit rather than from this
-document, and treat the absence of a rhythm shape as the gap to close, not as a
-mechanism to extend.
+document, and treat the timers as the gap to close, not as a mechanism to extend.
 
 ```bash
 docker exec substrate-live systemctl cat boredom-vessel.service boredom-vessel.timer
@@ -217,7 +218,7 @@ echo '{"foo": "bar"}' > repos/react-renderer/config/shape-mapping.json
 # Server logs: [ConfigReload] shape-mapping.json reloaded
 ```
 
-Other vessels can adopt the same `fs.watch` + `server.reload()` pattern for their own config files.
+Behaviour that should change while the system runs belongs in a shaped impulse the vessel reads at use time, not in a watched config file.
 
 ---
 
@@ -237,7 +238,7 @@ With `--hot` and `buildHandler()`, the process never restarts, so the registrati
 
 ## WS Bus Subscription for Development
 
-The activity-api WebSocket broadcaster (`ws://localhost:18080/ws` in the local substrate) carries three event classes that are useful for development tooling:
+The activity-api WebSocket broadcaster (`/ws` on activity-api's endpoint, resolved through discovery's `vesselEndpoint` shape) carries three event classes that are useful for development tooling:
 
 - **Execution lifecycle events** (`task.started`, `task.completed`, `task.failed`, `tool.call`, `impulse.resolved`, `lifecycle:task:preBinding`, `lifecycle:gap:classified`, `lifecycle:llm:dispatched`) — the same events the workbench uses for its live execution overlay, available to any subscriber. Subscribe to these to observe goal-host-vessel activity in real time.
 - **Vessel registration events** (`vessel.registered`, `vessel.heartbeat`, `vessel.deregistered`, `vessel.expired`) — fired by discovery-vessel whenever the registry changes. Subscribe to these instead of polling `/shapes` to detect topology changes reactively.
@@ -246,7 +247,7 @@ The activity-api WebSocket broadcaster (`ws://localhost:18080/ws` in the local s
 Connection pattern (same as the workbench):
 
 ```typescript
-const ws = new WebSocket("ws://localhost:18080/ws")
+const ws = new WebSocket(`${activityApiWsBase}/ws`)   // activity-api endpoint, resolved through discovery
 ws.onopen = () => {
   ws.send(JSON.stringify({ type: "authenticate", token: METABOB_API_KEY }))
 }
