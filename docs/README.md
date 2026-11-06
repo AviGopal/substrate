@@ -134,7 +134,6 @@ cockpit's tool surface is enumerated in the root `CLAUDE.md` linked at the top o
 - [Human project lifecycle](guides/HUMAN_PROJECT_LIFECYCLE.md) — what a human can expect across starting or joining, configuring, maintaining, deploying, interacting and checking health, with acceptance criteria per activity.
 - [Human goals, evidence, and learning](architecture/EXPLICABILITY_SURFACE.md) — the interaction contract for how a surface shows a person what was asked, what came back and the evidence behind it, with an offline prototype.
 - [Human participation](architecture/HUMAN_PARTICIPATION.md) — the behaviour and evidence contract for a human's questions, answers and feedback reaching the substrate as shaped exchanges.
-- [Workbench Chain-Based UX Design](architecture/WORKBENCH_CHAIN_UX_DESIGN.md) — the chain vocabulary of the workbench surface, a contract for any surface that edits chains (the workbench itself is a separate repository, not part of the running fleet).
 
 ## 8. Operations and bootstrap
 
