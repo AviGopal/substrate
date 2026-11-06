@@ -5,8 +5,7 @@
 > open-world MDP, with four orthogonal axes and a five-step pattern
 > recursing across trajectory / vessel / federation scales. This document
 > situates that framing against published LLM and agent research:
-> where it aligns with established results, where it diverges, and what
-> falsifiable predictions it makes that the literature has not yet tested.
+> where it aligns with established results and where it diverges.
 >
 > The survey draws on arXiv, USENIX, NeurIPS proceedings, and primary
 > blog/repo sources. Citations are by arXiv id and venue where possible.
@@ -18,12 +17,10 @@ per-cell Bayesian decision-making over LLM-mediated action spaces; the
 three-scale recursive composition pattern; and the granularity of its
 measurement suite. It is **vulnerable** in two: the strong
 factorization-invariance claim under shared backbones, and the
-undercounting of federated sample-size benefit on shared cells. It makes
-**five falsifiable predictions** the published literature has not yet
-operationalized — most pointedly, the prediction that mature federation
-equilibrium is *mutual push-away with cited evidence* rather than
-consensus, which contradicts the default failure mode in multi-agent
-debate work.
+undercounting of federated sample-size benefit on shared cells. Its
+sharpest divergence is the claim that mature federation equilibrium is
+*mutual push-away with cited evidence* rather than consensus, which
+contradicts the default failure mode in multi-agent debate work.
 
 ## 1. Modular and factored architectures
 
@@ -316,8 +313,7 @@ negative transfer (TIES interference) — all corroborated.
 mature federation = mutual push-away with cited evidence, not consensus.
 Multi-agent literature finds the *opposite* default: sycophancy-driven
 convergence and mode collapse when push-away mechanisms are absent.
-This is coherent (push-away requires explicit refusal mechanisms) and
-is one of the predictions of §9.
+This is coherent: push-away requires explicit refusal mechanisms.
 
 ## 8. Measurement frameworks
 
@@ -356,96 +352,6 @@ growth rate, autonomous-detection coverage fraction) is *more granular*
 than anything in published agent evaluation. AgentProcessBench operates
 on hand-labeled step quality, not posterior variance. The substrate's
 framing is ahead of operationalized work.
-
-## 9. Five falsifiable predictions
-
-These are claims the substrate's framing makes that the literature has
-not yet operationalized. Each is testable via substrate-internal
-observables.
-
-### 9.1 Joint scaling law
-
-**Prediction:** Federation information yield = n^β × variance-decay
-(Heaps × Bayesian-bandit), **not linear** in peer count.
-
-**Test:** Track per-cell (α, β) trajectories across peer-count regimes;
-fit yield curve as a function of n.
-
-**Status:** No published federated-LLM study measures per-cell
-variance trajectories across peer-count regimes.
-
-### 9.2 Vessel-vs-debate asymmetry
-
-**Prediction:** Tool-style vessel addition is factorization-preserving;
-agent-style debater addition perturbs the group's effective policy
-through coordination overhead.
-
-**Test:** Controlled experiment comparing posterior stability when
-adding a tool-vessel vs. when adding a debate-agent at fixed action
-budget.
-
-**Status:** Multi-agent literature documents debate-addition
-perturbation but does not contrast against tool-addition as a control.
-
-### 9.3 Push-away ↔ replay-success correlation
-
-**Prediction:** Higher mutual intervention-refusal rates correlate with
-*higher* behavioral-continuation replay-success on imported templates.
-Inverse of current MAD findings (where consensus correlates with
-quality).
-
-**Test:** Federation replay-experiment where intervention-refusal
-counts and replay-success rates are tracked over windows; measure
-correlation.
-
-**Status:** No benchmark measures intervention-refusal-with-cited-
-evidence as a primary metric.
-
-### 9.4 Spectral poisoning detection
-
-**Prediction:** Posterior poisoning is detectable by spectral
-anomalies in the co-firing cell topology, not by direct posterior
-comparison.
-
-**Test:** Inject BO-FLPA-style poisoning into a controlled federation;
-compare detection rate of spectral-topology monitor vs. direct
-posterior comparison.
-
-**Status:** BO-FLPA (arXiv:2501.08002) shows poisoning is cheap and
-surgical; no FL-poisoning study uses spectral topology metrics on the
-posterior dependency graph.
-
-### 9.5 Embedding-distance phase transition
-
-**Prediction:** Behavioral-continuation replay-success decays
-sub-linearly with embedding-distance between source and target
-substrates, with a measurable d* beyond which transfer is worse than
-scratch.
-
-**Test:** Voyager-style cross-substrate skill reuse experiment
-parametrized by embedding-distance; locate phase transition.
-
-**Status:** Voyager demonstrates cross-world skill reuse anecdotally
-but does not measure d*. No measurement of d* exists.
-
-## 10. Confidence calibration
-
-Claims about LoRAHub, Voyager, OMNI, Chinchilla, METR, TIES, BO-FLPA,
-AgentProcessBench, and the Mirage paper are **established results**
-with multiple independent sources.
-
-Claims about the substrate's specific predictions (push-away inversion,
-spectral poisoning detection, d* transition) are **predictions**. The
-substrate's framing is internally consistent and lineage-aligned with
-active research, but the falsifiable predictions in §9 are not yet
-operationalized in any published benchmark.
-
-The actionable consequence: predictions 9.1, 9.3, and 9.4 can be
-operationalized substrate-internally via metrics already adjacent to
-existing observables (per-cell variance export, `interventionRefused`
-impulse counters, spectral analyzer over the co-firing graph).
-Predictions 9.2 and 9.5 are federation-dependent and gate on that
-hardening; they are runnable experiments over a federated substrate.
 
 ## Primary sources
 
