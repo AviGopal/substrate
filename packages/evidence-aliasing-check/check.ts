@@ -109,10 +109,10 @@ function sourceFiles(root: string): string[] {
         continue;
       }
       if (st.isDirectory()) walk(p);
-      // .test. files are excluded: a test may legitimately write a field
-      // directly to construct a fixture, and flagging that trains people to
-      // ignore the check.
-      else if (e.endsWith('.ts') && !e.includes('.test.')) out.push(p);
+      // .test. and .check. (gap falsifier) files are excluded: a test may
+      // legitimately write a field directly to construct a fixture, and
+      // flagging that trains people to ignore the check.
+      else if (e.endsWith('.ts') && !e.includes('.test.') && !e.includes('.check.')) out.push(p);
     }
   };
   walk(root);
