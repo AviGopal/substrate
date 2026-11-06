@@ -468,15 +468,8 @@ ports `24xxx`; replace `substrate-live` with `lab-live` in the `docker exec` com
 Prefixes 19–32 avoid the ephemeral range. Each fleet keeps its manifest and `.env` in its
 own directory, which is where re-running the installer updates it.
 
-Under a rootless engine every fleet also draws about 25 kernel keys (systemd's session
-keyrings) from the user's quota, which is often 200. When it runs out, the next container
-fails to start with `unable to create session key: disk quota exceeded`. The installer
-warns when fewer than 40 remain; raise the limit with
-`sudo sysctl -w kernel.keys.maxkeys=2000 kernel.keys.maxbytes=2000000` (persist it in
-`/etc/sysctl.d/`). The inotify budget is the same kind of limit: when it runs out, a new
-fleet stays `initializing` with every unit waiting and its journal reports
-`inotify watch limit reached`. Raise it with
-`sudo sysctl -w fs.inotify.max_user_instances=8192 fs.inotify.max_user_watches=2097152`.
+Several fleets under a rootless engine can exhaust the user's kernel-key or inotify quota:
+[SUBSTRATE § Troubleshooting](docs/SUBSTRATE.md#troubleshooting).
 
 #### F. Enabling self-development
 
