@@ -204,11 +204,13 @@ selection in two places:
 - **The recommend ranking** blends it additively onto the Thompson
   sample: `θ_{s,a} + w · v/(1+v)` with configurable weight `w` and
   `v = ⟨ψ, R⟩` squashed into [0,1) so it can never dominate a Beta
-  sample. Honesty on gating: the ψ-*write* path and the
-  discover-by-shapes readout are normal operation, but the recommend
-  *blend* is a gated selection-layer refinement whose default preserves
-  the pure Thompson order byte-for-byte — the blend must be
-  deliberately enabled to alter selection.
+  sample. The ψ-*write* path and the discover-by-shapes readout are
+  normal operation. The recommend *blend* is a selection-layer flag the
+  ranking reads at use time as a tuning parameter. It starts off, so the
+  ranking is the pure Thompson order; a recurring flag-policy job turns
+  it on once the successor-feature store holds enough rows (200) to
+  inform it. It then stays on until a recorded off verdict turns it
+  off and holds it off.
 
 The payoff is the multi-horizon / transfer meaning: ψ is a property of
 **(π, P, φ, γ) only** — it factors the transition structure out of the
@@ -508,9 +510,11 @@ $$
 \text{shapes}(s_{\text{join}}) \;=\; \bigcup_{i=1}^{k} \text{shapes}(s_{\tau_i,\text{end}})
 $$
 
-This is representable in the data model — `parent_execution_id` admits
-siblings under the same parent — but a one-at-a-time task dispatcher
-forecloses it. The gap is in the dispatcher, not the schema.
+The executor carries it as a task kind: a `compose_parallel` task names
+k sub-activities and dispatches them together from the parent's state.
+All k siblings share the parent's composition chain (not a deeper chain
+each), each lands its own trace, and each trace records the fan-out width
+k so the learner can normalize the shared credit.
 
 ### Why it's needed
 
@@ -592,8 +596,10 @@ $$
 $$
 
 — average over siblings, not sum — to avoid k-fold credit inflation
-at the shared ancestor. This is a dispatcher change, not a schema
-change.
+at the shared ancestor. The learner applies exactly this: each sibling's
+per-ancestor delta is divided by the recorded fan-out width k, so the k
+siblings sum to one averaged ancestor update, and vertical (k = 1)
+traces are unaffected. No schema change was needed.
 
 ### What it does **not** require
 
@@ -605,14 +611,14 @@ change.
   ready.
 - The Thompson posterior already factorizes per-cell; the math is
   ready.
-- The only mechanical work is in the dispatcher's task-stepping loop
-  and in the averaging-vs-summing of sibling deltas in chain-credit.
+- The mechanical work is two pieces: the executor's `compose_parallel`
+  task, and the averaging of sibling deltas in chain-credit.
 
 Horizontal compositionality is not a new substrate primitive. It is the
 **breadth-first dual** of the vertical primitive `composition_chain`
 already exists in. The math demands it for sample-efficient topology
-discovery; the data model already accommodates it; the dispatcher is one
-well-scoped change away from supporting it.
+discovery; the data model accommodates it, the executor dispatches it,
+and the learner credits it without inflation.
 
 ## 8. Vessel-level horizontal scaling
 
@@ -1012,10 +1018,9 @@ typed-action gate. The scope hierarchy is the prior. The drafter is
 active model expansion. Federation is the next horizontal lift. None
 of these are renames.
 
-The standing design demand supporting all of this is parallel sibling
-dispatch under a shared `parent_execution_id` — the dispatcher change
-§7 argues for — so the system can do breadth-first what it already
-does depth-first.
+Parallel sibling dispatch under a shared parent (§7's `compose_parallel`
+task, credited by sibling averaging) supports all of this: the system
+does breadth-first what it also does depth-first.
 
 ## 11. Scorecard — what is theorem-grounded, what is frontier
 
