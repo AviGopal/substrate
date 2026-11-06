@@ -6,7 +6,7 @@
 // direct hole-punch, and for the ~30% symmetric-NAT floor the connection is relayed
 // here (ciphertext only — Noise is end-to-end, the relay never sees plaintext).
 // This is the L3 reachability layer beneath discovery-vessel (the L7 control plane),
-// per docs/architecture/SUBSTRATE_AS_NETWORK.md §3.
+// per docs/theory/SUBSTRATE_AS_NETWORK.md §3.
 //
 // IDENTITY: the relay persists its keypair (RELAY_KEY_FILE) so its peerId — and thus
 // the RELAY_MULTIADDR vessels are configured with — is STABLE across restarts.
