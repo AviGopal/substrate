@@ -295,31 +295,12 @@ documents why*.
 
 ## 4. Scale, and what the measurement cannot see
 
-| Dimension | How |
-|---|---|
-| Names emitted into `/etc/substrate/env` | `grep -cE '^[A-Z_]' /etc/substrate/env` after a boot. **Emission depends on what you supplied** (an absent provider key emits no arm), so this is a range and the command cannot reproduce a single number. A fixed count was carried here once and disagreed with `config-surface-baseline.txt` in the same repo. |
-| Names offered by each launch lane | `config-surface-probe.sh` (the cross-lane differential) |
-| Distinct names read across vessels and packages | dot + bracket + helper forms, `sort -u` |
-| Names in unit `Environment=` lines | §1 |
-| `.service.d` drop-in files | `grep -l Environment= …/*.service.d/*.conf` |
-| Names documented in `scripts/substrate/.env.example` | `grep -oE '^#? ?[A-Z_][A-Z0-9_]*=' … \| sort -u` |
-| `_ENV_SUPPLIED` provenance snapshot | `gen-env.sh` |
-
-**The scanner's own blind spots**, stated because a count presented without them invites
-false conclusions:
-
-- `process.env["FOO"]` bracket form is dominant in six vessels. **A dot-only grep misses
-  a large share of the fleet's reads.**
-- Helper forms — `parseEnvInt('NAME', …)`, `envOr("NAME", …)` — are invisible to both. The
-  `TRACE_*` family is read exclusively this way.
-- `concept-db` calls `parseEnvInt(key, …)` with a **caller-supplied** key. Those reads cannot
-  be statically enumerated by any scanner.
-- Shell consumers (`scripts/substrate/*.sh`, the tick scripts) are a separate population.
-  Several names that look unread by vessels are read by scripts.
-
-Consequence: the honest statement is "N names are read *by the forms this scan covers*". A
-name absent from a scan is not evidence of a name absent from the system — the same
-distinction as "a zero read through a filter measures the filter".
+`config-surface-probe.sh` (§6) counts the names each launch lane offers and gen-env emits.
+How many names are emitted depends on what you supplied (an absent provider key emits no
+arm), so the count is a range, not one number. A source scan sees only the read forms it
+covers: `process.env.FOO`, `process.env["FOO"]` and helpers such as `parseEnvInt('NAME', …)`.
+A key built at run time cannot be enumerated, and shell scripts read names too, so a name
+absent from a scan is not evidence that nothing reads it.
 
 ---
 
@@ -363,43 +344,12 @@ scripts/substrate/config-surface-probe.sh --baseline   # accept the current stat
 PROBE_USE_IMAGE=1 scripts/substrate/config-surface-probe.sh   # measure the published image
 ```
 
-By default the probe runs the **worktree's** `gen-env.sh` — a pre-commit check. It costs no
-LLM tokens and writes no traces, so unlike `substrate-doctor`'s arm check (which POSTs a real
-completion to every arm) and `--smoke` (which writes a real execution trace), it is safe to
-run in a loop.
-
-What it reports, and why each exists:
-
-| Section | Catches |
-|---|---|
-| `DROPPED` | a lane passes a name gen-env never emits — delivered to nothing |
-| `HARDCODED` | the name is emitted but your value was replaced by a literal |
-| cross-lane differential | two lanes that claim to launch the same thing and do not |
-| `UNOFFERED` | `scripts/substrate/.env.example` documents the name and this lane never passes it — the axis the other rows cannot reach, because every one of them starts from what a lane *already* passes. |
-| `MANGLED` | the name is emitted and the value still carries the sentinel marker, but is not byte-identical to what was supplied — a value CORRUPTED in transit. Scoped to names documented as JSON, because gen-env legitimately *derives* many values and an unscoped byte-comparison reports false positives |
-| `PHANTOM` | a persisted read with no matching write |
-
-Sentinels for names documented as JSON are **JSON**, quotes included. An alphanumeric
-sentinel cannot observe a quoting defect, such as a raw `NAME="${VAR}"` wrap with no escaping
-that delivers a documented JSON value to its consumer as invalid JSON. A probe that only
-supplies easy inputs measures how the system handles easy inputs.
-
-**A probe that cannot run must say so, never produce a number.** The script guards three
-ways a probe like this one misleads:
-
-1. A swallowed daemon-side `mounts denied` would report every lane as emitting **zero** names —
-   a harness failure wearing the costume of the most alarming possible finding. stderr is
-   kept and an empty emission set is a fatal error, because gen-env either fails closed
-   (writing nothing *and* exiting non-zero) or writes ~72 names. Zero with a clean exit is
-   impossible.
-2. A sentinel check that counts the probe's own abstentions (the provider key and the
-   endpoints it deliberately does not fake) reports discarded values that are not. It judges
-   only names that actually carried a sentinel.
-3. Executing the image's baked `gen-env` while grepping the worktree's compares two revisions
-   and attributes the difference to the substrate; the probe runs one revision for both.
-
-The third is the general form and the one worth carrying: **when a check reads one artifact
-and exercises another, its findings describe the gap between them, not the system.**
+By default the probe runs the worktree's `gen-env.sh`. It costs no LLM tokens and writes no
+traces, so it is safe to run in a loop. It reports a name a lane passes that gen-env never
+emits, a supplied value replaced by a literal or corrupted in transit, a name the example env
+documents that a lane never passes, two lanes that claim to launch the same thing and differ,
+and a persisted read with no matching write. A probe that cannot run says so and exits
+non-zero rather than reporting zero names.
 
 ---
 
