@@ -190,7 +190,7 @@ A surface container can be stopped and started; it re-registers with the hub and
 its shapes reappear in the registry without help. Two invariants make that true:
 
 - **The secrets are persisted.** Generated secrets live in
-  `/workspace/.substrate-secrets` on the workspace volume. A substrate with a local
+  `/workspace/.substrate-private/substrate-secrets` on the workspace volume. A substrate with a local
   datastore refuses to boot if `API_KEY_SECRET` is missing there — it will not sign
   keys with a secret it cannot reproduce — so a lost secrets file shows up at the next
   restart, not while the container keeps running.
