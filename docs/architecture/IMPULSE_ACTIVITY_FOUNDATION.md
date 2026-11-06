@@ -94,8 +94,7 @@ discovery and POSTs the typed-pointer envelope
 discovery-advertised `resolve_endpoint`. The endpoint *path* is per-vessel
 advertised data, not part of the contract. Control-plane exchanges (discovery
 register/heartbeat, identity auth, health probes) and a vessel accessing *its
-own* store are exempt. Known violations, per-seam migration decisions, and the
-dual-parse conformance prerequisite are tracked in
+own* store are exempt. How a violating seam is migrated:
 [`IMPULSE_CONFORMANCE_LEDGER.md`](../process/IMPULSE_CONFORMANCE_LEDGER.md).
 
 ---

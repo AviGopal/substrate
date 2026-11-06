@@ -16,29 +16,10 @@
 > goal-host, concept-db, and llm-resolver `/resolve` handlers accept
 > `body.impulse.pointer.*` (preferred) with legacy `body.*` fallback.
 
-This ledger tracks every known violation. Migration is decided **per-seam**
-(audit-first): each row becomes an individually-scoped goal/openspec change
-when its time comes. The ledger reproduces the biggest seams rather than the
-full inventory; a seam absent from the table is unaudited, not compliant.
-
-## Seam template
-
-For each seam decide: **target shape** (existing or minted), **who moves
-first** (lowest-stakes caller), **dual-serve window + retirement trigger**
-(old surface stays until callers are gone), **risk**.
-
-## Ledger
-
-| # | Seam | Caller(s) → Callee | Target shape | Who moves first | Status |
-|---|------|--------------------|--------------|-----------------|--------|
-| 1 | `POST /run-goal` (bespoke REST) | boredom-vessel, dev-vessel dispatch sites, metabob-mcp → goal-host | `goal_execution` (exists on goal-host `/resolve`) | boredom-vessel (lowest stakes; watch a full boredom cycle) → dev-vessel → mcp. `run_goal_async` fire-and-forget may need a `dispatch_mode: async` param on the shape — decide before migrating mcp; don't block sync callers | **scheduled** (first migration) |
-| 2 | goal-host → activity-api `recommend` / `discover-by-shapes` / `feedback` REST | goal-host → activity-api | `activityTemplateRecommendation`, `discoverByShapesQuery`, `activityFeedback_write` (all exist) | goal-host (pure caller-side change; requires the dual-parse fix first) | **scheduled** (second migration) |
-| 3 | `POST /penalty` (no shape at all) | activity-api `posterior-update.ts` → relevance-sink-vessel | `impulseRelevancePenalty_write` on relevance-sink `/v2/impulses/resolve` | relevance-sink dual-serves the shape + registers it; activity-api's caller switched to the shaped resolve | **done** (relevance-sink + caller migrated; `/penalty` retained as legacy dual-serve) |
-| 4 | activity-api `/ws` WebSocket events + `POST /v2/events/publish` bus | ribosome-vessel, concept-db ExecutionObserver, workbench, dashboards ← activity-api | `eventStream` read shape (cursor over the broadcaster's sequence buffer) is the poll-equivalent; the shaped-stream protocol is the live fast path | **read-side done** (`eventStream` shape live; ribosome consumes `execution_completed`). Live libp2p fan-out awaits the `/substrate/stream/1.0.0` protocol (shaped-stream design) |
-| 5 | activity-api REST-only routes goal-host calls: `/v2/goal-paths`, `/v2/goal-paths/recommend`, `select-activity-for-goal`, `validate-composition` | goal-host → activity-api | mint `goalPath_write`, `goalPathRecommendation`, `activitySelection`, `compositionValidation` | activity-api adds shapes to its `/v2/impulses/resolve` dispatcher (delegating to the same handlers, like the existing 14 `*_write`s) | open |
-| 6 | metabob-mcp `/v2/connections/*` lifecycle | metabob-mcp → activity-api | mint or exempt (connection lifecycle is arguably control-plane) | — | open (decide exemption) |
-| 7 | Direct SurrealDB access bypassing the resolver surface | dev-vessel scan/export resolvers (`surrealdb-export.ts`, `orphaned-capability-scan.ts`, `compose-topology-tick.ts`, …), boredom-vessel → activity-api's store | route through existing read shapes or mint aggregate-read shapes | per-resolver decisions; **exempt**: identity-vessel (own store) | open |
-| 8 | discovery `POST /register` + `POST /heartbeat` | every vessel → discovery | — | — | **exempt** (control-plane: registration/liveness is what makes shape-routing possible; expressing it as a shape is circular) |
+Known violations are tracked as gaps, one per seam; each is migrated on its own
+goal. For each seam, decide the **target shape** (existing or minted), **who moves
+first** (the lowest-stakes caller), the **dual-serve window and retirement trigger**
+(the old surface stays until its callers are gone), and the **risk**.
 
 ## Why migrate at all
 
