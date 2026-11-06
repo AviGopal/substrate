@@ -168,6 +168,8 @@ so can never be trusted when it passes.
 
 ## For agents and contributors
 
+To take part, start with [Contributing](CONTRIBUTING.md): send changes as goals, when a direct change fits, and where tests live.
+
 The working notes under `process/` govern how the system's own development is run: how documents
 reach the drafter, the gates a proposal passes, the qualification envelope, and the probes and
 methods agents use. They are read by the substrate and by the people and agents developing it.

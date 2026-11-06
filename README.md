@@ -32,6 +32,7 @@ On randomly drawn goals, against an agent running in a conventional harness, und
 - **What it is:** [Overview](#overview) and [Core concepts](#core-concepts) below. The canonical definition is [`docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md).
 - **Run one:** [Quick start](#quick-start) (one command), part of [Installation](#installation), the only place setup commands appear.
 - **Use one as a person:** [`docs/HUMAN_SURFACE.md`](docs/HUMAN_SURFACE.md).
+- **Take part in its development:** [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md).
 - **Read next:** [`docs/README.md`](docs/README.md), the documentation index, grouped by what each document is for.
 
 **Agents working in this repository** start from [`CLAUDE.md`](CLAUDE.md), the operating manual: the laws, the dispatch loop and the operator role. When a document disagrees with the running substrate, the running substrate wins.
