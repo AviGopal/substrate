@@ -528,5 +528,4 @@ Before cutting the first release:
 - [`IMPULSE_ACTIVITY_FOUNDATION.md`](IMPULSE_ACTIVITY_FOUNDATION.md) — the conceptual model, including discovery-vessel integration. Read first.
 - [`GOAL_EXECUTION_PATHS_SCHEMA.md`](GOAL_EXECUTION_PATHS_SCHEMA.md) — how a dispatched goal's path and reach verdict are recorded.
 - [`../SUBSTRATE.md`](../SUBSTRATE.md) — operating the single-container substrate your vessel runs in (setup is README § Installation).
-- [`../guides/CONCEPT_INTEGRATION_TEMPLATES.md`](../guides/CONCEPT_INTEGRATION_TEMPLATES.md) — example activity templates that consume a vessel's shapes.
 - `packages/shape-dispatch-check/README.md` — the shape-dispatch checker's own contract and suppression syntax.

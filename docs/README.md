@@ -85,7 +85,6 @@ the system's own memory lives — the substrate's store is authoritative and ope
 memory files are a derived cache.
 
 - [Investigating and benchmarking concept-db](guides/CONCEPT_DB_INVESTIGATION.md) — how to interrogate the prose-knowledge vessel the authoring path depends on.
-- [Concept Integration Templates](guides/CONCEPT_INTEGRATION_TEMPLATES.md) — calling concept shapes from an activity template.
 - [The substrate earns sovereignty](architecture/SUBSTRATE_AS_SOVEREIGN.md) — the expectation that refusal, revision and answering are authorities the system earns with evidence, never flags an operator sets.
 
 ## 5. Topology and federation — where a vessel runs, how substrates peer
