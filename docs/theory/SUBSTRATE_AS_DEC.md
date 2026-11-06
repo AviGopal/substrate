@@ -6,9 +6,9 @@
 >   Bayesian Q-learning).
 > - [`SUBSTRATE_AS_DEC.md`](SUBSTRATE_AS_DEC.md) — the *structure* (a weighted directed
 >   cell complex and its Hodge operators). **This document.**
-> - [`SUBSTRATE_AS_DYNAMICS.md`](SUBSTRATE_AS_DYNAMICS.md) — the *flow in time* (a
+> - [`SUBSTRATE_AS_DYNAMICS.md`](../architecture/SUBSTRATE_AS_DYNAMICS.md) — the *flow in time* (a
 >   slow–fast dynamical system with a conditional-stability threshold).
-> - [`SUBSTRATE_AS_SOFTWARE.md`](SUBSTRATE_AS_SOFTWARE.md) — the *engineering* (durability
+> - [`SUBSTRATE_AS_SOFTWARE.md`](../architecture/SUBSTRATE_AS_SOFTWARE.md) — the *engineering* (durability
 >   groups: what persists / is ephemeral / is appended).
 > - [`SUBSTRATE_AS_REPRESENTATION.md`](SUBSTRATE_AS_REPRESENTATION.md) — the *representation*
 >   (an open basis of shape-axes; the momentum-space dual of the transformer).

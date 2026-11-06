@@ -4,11 +4,11 @@
 > **Companions**: this document is the conceptual model; four lenses read the *same
 > system* in other vocabularies, and you should prefer cross-referencing them over
 > restating their content here:
-> - [`SUBSTRATE_AS_MDP.md`](SUBSTRATE_AS_MDP.md) — the **learning rule** (Bayesian
+> - [`SUBSTRATE_AS_MDP.md`](../theory/SUBSTRATE_AS_MDP.md) — the **learning rule** (Bayesian
 >   Q-learning): Thompson mechanics (§2), credit propagation (§3),
 >   orthogonality/factorization (§4), the dual-arm invariant manifold (§4.6), the
 >   theorem-vs-frontier scorecard (§11).
-> - [`SUBSTRATE_AS_DEC.md`](SUBSTRATE_AS_DEC.md) — the **structure** (discrete
+> - [`SUBSTRATE_AS_DEC.md`](../theory/SUBSTRATE_AS_DEC.md) — the **structure** (discrete
 >   exterior calculus / Hodge): shapes as cells, activities as hyperedges, the
 >   learned metric `⋆`, livelock as harmonic residual.
 > - [`SUBSTRATE_AS_DYNAMICS.md`](SUBSTRATE_AS_DYNAMICS.md) — the **flow in time**

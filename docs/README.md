@@ -12,8 +12,8 @@ stay stable and keep growing. A document appears under exactly one purpose: the 
 load-bearing for. New here? Start with the root README's [walk-through of one goal](../README.md#a-goal-end-to-end), and keep the
 [Glossary](GLOSSARY.md) open. To run and operate one, read [`SUBSTRATE.md`](SUBSTRATE.md). The
 canonical reference for what is real is `IMPULSE_ACTIVITY_FOUNDATION.md`; the formal lenses
-(`SUBSTRATE_AS_SOFTWARE.md`, `SUBSTRATE_AS_DYNAMICS.md` and the others) are deeper reading,
-each linked under its purpose below. Behavioural guidance for agents working in this repository lives in
+(`SUBSTRATE_AS_SOFTWARE.md`, `SUBSTRATE_AS_DYNAMICS.md` in `architecture/`, the others in
+`theory/`) are deeper reading, each linked under its purpose below. Behavioural guidance for agents working in this repository lives in
 the root [`CLAUDE.md`](../CLAUDE.md), which also enumerates the agent cockpit's tool surface.
 
 ## 1. Ontology — what is real
@@ -25,8 +25,8 @@ fifth primitive is drift; a document that describes an existing primitive under 
 splits the concept graph and costs the drafter a correct recall.
 
 - [Impulse-Activity Foundation](architecture/IMPULSE_ACTIVITY_FOUNDATION.md) — the canonical ontology; read before implementing anything.
-- [The substrate is an open representation](architecture/SUBSTRATE_AS_REPRESENTATION.md) — shapes as axes of an open representation.
-- [The substrate as a weighted cell complex](architecture/SUBSTRATE_AS_DEC.md) — the discrete-exterior-calculus lens on the same objects.
+- [The substrate is an open representation](theory/SUBSTRATE_AS_REPRESENTATION.md) — shapes as axes of an open representation.
+- [The substrate as a weighted cell complex](theory/SUBSTRATE_AS_DEC.md) — the discrete-exterior-calculus lens on the same objects.
 - [Glossary](GLOSSARY.md) — canonical terms; the tie-breaker when two documents disagree on a name.
 - [Impulse Shape Definitions](shapes/README.md) — how a shape document declares metadata, pointer, and resolved content.
 - [Impulse-Write Resolver Path](specs/impulse-write-resolver.md) — how a shape is *written*, not only read.
@@ -46,7 +46,7 @@ outcomes, so any document here that equates status with success is wrong on the
 load-bearing point.
 
 - [The substrate as software](architecture/SUBSTRATE_AS_SOFTWARE.md) — the execution walk end to end, and its durability physics.
-- [The substrate is a Bayesian Q-learning MDP](architecture/SUBSTRATE_AS_MDP.md) — the walk as a decision process, including horizontal composition.
+- [The substrate is a Bayesian Q-learning MDP](theory/SUBSTRATE_AS_MDP.md) — the walk as a decision process, including horizontal composition.
 - [Goal Execution Paths Schema](architecture/GOAL_EXECUTION_PATHS_SCHEMA.md) — how a goal's path is recorded and reused by a later instance of the same goal.
 - [Execution sequence diagrams](architecture/sequences/README.md) — index of the step-by-step walkthroughs below.
   - [Activity selection from the impulse state space](architecture/sequences/01-activity-selection.md)
@@ -97,8 +97,8 @@ does not move, and duplicating a vessel means duplicating access to its data.
 
 - [Federation](FEDERATION.md) — topologies, the relay, what joining as a spoke means and how to confirm it, and the operational space.
 - [Federation genres](operations/FEDERATION_GENRES.md) — the distribution-policy taxonomy that decides which of N producers of a shape a caller gets, and the identity-secret namespace boundary.
-- [The substrate as a fleet](architecture/SUBSTRATE_AS_FLEET.md) — durability across containers, and what may cross the boundary.
-- [The substrate as a network](architecture/SUBSTRATE_AS_NETWORK.md) — how work, identity, trust, and the system itself cross the boundary.
+- [The substrate as a fleet](theory/SUBSTRATE_AS_FLEET.md) — durability across containers, and what may cross the boundary.
+- [The substrate as a network](theory/SUBSTRATE_AS_NETWORK.md) — how work, identity, trust, and the system itself cross the boundary.
 - [Schema Ownership](SCHEMA_OWNERSHIP.md) — which vessel owns which tables, and therefore where its resolver must live.
 
 ## 6. Identity and trust

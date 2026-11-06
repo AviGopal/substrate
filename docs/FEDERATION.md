@@ -12,8 +12,8 @@ B, C and D), the only place setup commands appear.
 The network is meant to be decentralised: every substrate is a full member that runs the
 whole loop and owns its own learning, wherever it is deployed and in any constellation.
 The mechanism-level design is in
-[`SUBSTRATE_AS_NETWORK.md`](architecture/SUBSTRATE_AS_NETWORK.md) (how the crossings are
-realised) and [`SUBSTRATE_AS_FLEET.md`](architecture/SUBSTRATE_AS_FLEET.md) (what may
+[`SUBSTRATE_AS_NETWORK.md`](theory/SUBSTRATE_AS_NETWORK.md) (how the crossings are
+realised) and [`SUBSTRATE_AS_FLEET.md`](theory/SUBSTRATE_AS_FLEET.md) (what may
 cross). Every topology in this document is judged against these expectations:
 
 - **Calls route by shape, never by place.** Nothing above discovery sees a substrate.

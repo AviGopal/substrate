@@ -1,6 +1,6 @@
 # Substrate framing vs. the LLM literature
 
-> Companion to [`SUBSTRATE_AS_MDP.md`](SUBSTRATE_AS_MDP.md). That document
+> Companion to [`SUBSTRATE_AS_MDP.md`](../theory/SUBSTRATE_AS_MDP.md). That document
 > derived the substrate's behavior as factored Bayesian Q-learning on an
 > open-world MDP, with four orthogonal axes and a five-step pattern
 > recursing across trajectory / vessel / federation scales. This document

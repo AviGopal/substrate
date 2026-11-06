@@ -12,8 +12,8 @@
 > The three states, durability groups, and what is implementation detail →
 > [`architecture/SUBSTRATE_AS_SOFTWARE.md`](architecture/SUBSTRATE_AS_SOFTWARE.md).
 > The three math lenses and their shared dictionary →
-> [`architecture/SUBSTRATE_AS_MDP.md`](architecture/SUBSTRATE_AS_MDP.md),
-> [`SUBSTRATE_AS_DEC.md`](architecture/SUBSTRATE_AS_DEC.md),
+> [`theory/SUBSTRATE_AS_MDP.md`](theory/SUBSTRATE_AS_MDP.md),
+> [`SUBSTRATE_AS_DEC.md`](theory/SUBSTRATE_AS_DEC.md),
 > [`SUBSTRATE_AS_DYNAMICS.md`](architecture/SUBSTRATE_AS_DYNAMICS.md) (dictionary in
 > DYNAMICS §0). Idioms (named compositions) → [`CORE_IDIOMS.md`](process/CORE_IDIOMS.md).
 > Shapes vocabulary → [`shapes/README.md`](shapes/README.md). Operational behavior

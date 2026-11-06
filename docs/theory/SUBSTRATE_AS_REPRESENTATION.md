@@ -4,9 +4,9 @@
 > different coordinate charts: [`SUBSTRATE_AS_MDP.md`](SUBSTRATE_AS_MDP.md) (the
 > learning *rule* — factored-MDP Bayesian Q-learning), [`SUBSTRATE_AS_DEC.md`](SUBSTRATE_AS_DEC.md)
 > (the *structure* — a weighted directed cell complex and its Hodge operators),
-> [`SUBSTRATE_AS_DYNAMICS.md`](SUBSTRATE_AS_DYNAMICS.md) (the *flow in time* — a
+> [`SUBSTRATE_AS_DYNAMICS.md`](../architecture/SUBSTRATE_AS_DYNAMICS.md) (the *flow in time* — a
 > slow–fast dynamical system with a conditional-stability threshold), and
-> [`SUBSTRATE_AS_SOFTWARE.md`](SUBSTRATE_AS_SOFTWARE.md) (the *engineering* — durability
+> [`SUBSTRATE_AS_SOFTWARE.md`](../architecture/SUBSTRATE_AS_SOFTWARE.md) (the *engineering* — durability
 > groups). Two further companions carry the durability lens across the container line:
 > [`SUBSTRATE_AS_FLEET.md`](SUBSTRATE_AS_FLEET.md) (the fleet — what may cross the
 > substrate boundary) and [`SUBSTRATE_AS_NETWORK.md`](SUBSTRATE_AS_NETWORK.md) (the

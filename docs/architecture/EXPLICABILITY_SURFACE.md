@@ -139,7 +139,7 @@ Pipeline diagnostics show detect → select → author → exercise → promote/
 propagate learning, with stage-specific throughput, latency, backlog and evidence
 completeness. Do not compare incompatible units to choose a numerical minimum.
 The spectral rate expression remains an architectural hypothesis until its operator,
-normalization and time mapping are validated. See [DEC rate model](./SUBSTRATE_AS_DEC.md)
+normalization and time mapping are validated. See [DEC rate model](../theory/SUBSTRATE_AS_DEC.md)
 and [dynamics limitations](./SUBSTRATE_AS_DYNAMICS.md).
 
 ## Review and acceptance

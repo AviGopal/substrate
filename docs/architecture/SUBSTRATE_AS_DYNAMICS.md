@@ -1,20 +1,20 @@
 # The substrate is a slow–fast dynamical system on a growing complex
 
 > Companion to the formal-lens documents, all reading one running system through
-> different coordinate charts: [`SUBSTRATE_AS_MDP.md`](SUBSTRATE_AS_MDP.md) (the
+> different coordinate charts: [`SUBSTRATE_AS_MDP.md`](../theory/SUBSTRATE_AS_MDP.md) (the
 > learning *rule* — factored-MDP Bayesian Q-learning),
-> [`SUBSTRATE_AS_DEC.md`](SUBSTRATE_AS_DEC.md) (the *structure* — a weighted
+> [`SUBSTRATE_AS_DEC.md`](../theory/SUBSTRATE_AS_DEC.md) (the *structure* — a weighted
 > directed cell complex and its Hodge operators),
 > [`SUBSTRATE_AS_DYNAMICS.md`](SUBSTRATE_AS_DYNAMICS.md) (this doc — the *flow in
 > time*: a slow–fast dynamical system with a conditional-stability threshold),
 > [`SUBSTRATE_AS_SOFTWARE.md`](SUBSTRATE_AS_SOFTWARE.md) (the *engineering* —
 > durability groups: what persists / is ephemeral / is appended), and
-> [`SUBSTRATE_AS_REPRESENTATION.md`](SUBSTRATE_AS_REPRESENTATION.md) (the
+> [`SUBSTRATE_AS_REPRESENTATION.md`](../theory/SUBSTRATE_AS_REPRESENTATION.md) (the
 > *representation* — an open basis of shape-axes; the momentum-space dual of the
 > transformer). Two further companions carry the durability lens across the
-> container line: [`SUBSTRATE_AS_FLEET.md`](SUBSTRATE_AS_FLEET.md) (the fleet —
+> container line: [`SUBSTRATE_AS_FLEET.md`](../theory/SUBSTRATE_AS_FLEET.md) (the fleet —
 > cross-container durability; what may cross the substrate boundary) and
-> [`SUBSTRATE_AS_NETWORK.md`](SUBSTRATE_AS_NETWORK.md) (the network — the protocol
+> [`SUBSTRATE_AS_NETWORK.md`](../theory/SUBSTRATE_AS_NETWORK.md) (the network — the protocol
 > layer; how the crossings are realized).
 >
 > Where the other charts read the *same running system* as a learning rule, a
@@ -44,13 +44,13 @@ chart — the same system sorted by durability — is
 [`SUBSTRATE_AS_SOFTWARE.md`](SUBSTRATE_AS_SOFTWARE.md), which extends this table
 with a "where does it live / how durable is it" column (SOFTWARE §0). A fifth,
 **representation** chart — the same system read as an open basis of shape-axes —
-is [`SUBSTRATE_AS_REPRESENTATION.md`](SUBSTRATE_AS_REPRESENTATION.md), which adds
+is [`SUBSTRATE_AS_REPRESENTATION.md`](../theory/SUBSTRATE_AS_REPRESENTATION.md), which adds
 the representation column (REPRESENTATION §0: learned content as the metric on the
 open shape-basis, a shape as a basis axis, an impulse as a momentum component, and
 so on). The durability lens is then carried across the container line by two
-further companions: [`SUBSTRATE_AS_FLEET.md`](SUBSTRATE_AS_FLEET.md) (what may
+further companions: [`SUBSTRATE_AS_FLEET.md`](../theory/SUBSTRATE_AS_FLEET.md) (what may
 cross the substrate boundary, per durability group) and
-[`SUBSTRATE_AS_NETWORK.md`](SUBSTRATE_AS_NETWORK.md) (the protocol/engineering
+[`SUBSTRATE_AS_NETWORK.md`](../theory/SUBSTRATE_AS_NETWORK.md) (the protocol/engineering
 layer that realizes those crossings). Read this table as the dictionary; each row
 is **one quantity** named in each chart, and the companion charts add their
 columns rather than duplicating the whole.

@@ -2,20 +2,20 @@
 
 > Companion to the formal-lens documents, all reading one running system through
 > different coordinate charts:
-> [`SUBSTRATE_AS_MDP.md`](SUBSTRATE_AS_MDP.md) — the learning *rule* (factored-MDP
+> [`SUBSTRATE_AS_MDP.md`](../theory/SUBSTRATE_AS_MDP.md) — the learning *rule* (factored-MDP
 > Bayesian Q-learning);
-> [`SUBSTRATE_AS_DEC.md`](SUBSTRATE_AS_DEC.md) — the *structure* (a weighted directed
+> [`SUBSTRATE_AS_DEC.md`](../theory/SUBSTRATE_AS_DEC.md) — the *structure* (a weighted directed
 > cell complex and its Hodge operators);
 > [`SUBSTRATE_AS_DYNAMICS.md`](SUBSTRATE_AS_DYNAMICS.md) — the *flow in time* (a
 > slow–fast dynamical system with a conditional-stability threshold);
 > **this chart, `SUBSTRATE_AS_SOFTWARE.md`** — the *engineering* (the execution walk
 > as software: which step runs where, what persists, who is allowed to change it);
-> [`SUBSTRATE_AS_REPRESENTATION.md`](SUBSTRATE_AS_REPRESENTATION.md) — the
+> [`SUBSTRATE_AS_REPRESENTATION.md`](../theory/SUBSTRATE_AS_REPRESENTATION.md) — the
 > *representation* (an open basis of shape-axes; the momentum-space dual of the
 > transformer);
-> [`SUBSTRATE_AS_FLEET.md`](SUBSTRATE_AS_FLEET.md) — the *fleet* (cross-container
+> [`SUBSTRATE_AS_FLEET.md`](../theory/SUBSTRATE_AS_FLEET.md) — the *fleet* (cross-container
 > durability; what may cross the boundary);
-> [`SUBSTRATE_AS_NETWORK.md`](SUBSTRATE_AS_NETWORK.md) — the *network* (the protocol
+> [`SUBSTRATE_AS_NETWORK.md`](../theory/SUBSTRATE_AS_NETWORK.md) — the *network* (the protocol
 > layer; how the crossings are realized).
 >
 > The math charts read the substrate as mathematics. This one reads the **same
@@ -387,7 +387,7 @@ Inside it run as many loops as there are horizons. Examples:
 Each is **the same cycle**, select → act → trace → grade → update, applied to its own
 shapes on its own timescale. That generalizes the two timescales of
 [`SUBSTRATE_AS_DYNAMICS.md`](SUBSTRATE_AS_DYNAMICS.md) §1 and the one-operation
-"three scales" of [`SUBSTRATE_AS_DEC.md`](SUBSTRATE_AS_DEC.md) §0.3 to N horizons, each
+"three scales" of [`SUBSTRATE_AS_DEC.md`](../theory/SUBSTRATE_AS_DEC.md) §0.3 to N horizons, each
 orthogonal to the others' shapes.
 
 Three expectations follow:
@@ -685,5 +685,5 @@ topology.**
 - **[OCI]** Open Container Initiative, *OCI Image Format Specification* — content-addressed (digest-identified) image manifests. — *verification: carried.*
 - **[OTel]** OpenTelemetry, *Trace Semantic Conventions* — span/trace model and semantic attributes for distributed tracing. — *verification: carried.*
 - **[Miller]** Miller, M. S., *Robust Composition: Towards a Unified Approach to Access Control and Concurrency Control*, PhD thesis, Johns Hopkins University, 2006. — *verification: carried.*
-- Companion charts: [`SUBSTRATE_AS_MDP.md`](SUBSTRATE_AS_MDP.md), [`SUBSTRATE_AS_DEC.md`](SUBSTRATE_AS_DEC.md), [`SUBSTRATE_AS_DYNAMICS.md`](SUBSTRATE_AS_DYNAMICS.md), [`SUBSTRATE_AS_REPRESENTATION.md`](SUBSTRATE_AS_REPRESENTATION.md), [`SUBSTRATE_AS_NETWORK.md`](SUBSTRATE_AS_NETWORK.md), [`SUBSTRATE_AS_FLEET.md`](SUBSTRATE_AS_FLEET.md).
+- Companion charts: [`SUBSTRATE_AS_MDP.md`](../theory/SUBSTRATE_AS_MDP.md), [`SUBSTRATE_AS_DEC.md`](../theory/SUBSTRATE_AS_DEC.md), [`SUBSTRATE_AS_DYNAMICS.md`](SUBSTRATE_AS_DYNAMICS.md), [`SUBSTRATE_AS_REPRESENTATION.md`](../theory/SUBSTRATE_AS_REPRESENTATION.md), [`SUBSTRATE_AS_NETWORK.md`](../theory/SUBSTRATE_AS_NETWORK.md), [`SUBSTRATE_AS_FLEET.md`](../theory/SUBSTRATE_AS_FLEET.md).
 - Execution detail: [`IMPULSE_ACTIVITY_FOUNDATION.md`](IMPULSE_ACTIVITY_FOUNDATION.md), [`GOAL_EXECUTION_PATHS_SCHEMA.md`](GOAL_EXECUTION_PATHS_SCHEMA.md).
