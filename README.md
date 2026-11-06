@@ -621,18 +621,7 @@ Each `repos/<vessel>` is a submodule pinned to a commit on that vessel's `dev` b
      -H "Authorization: ApiKey $KEY" | jq -r '.templates[] | "\(.created_at)  \(.id)"' | sort -r
    ```
 
-**Reuse before minting:** before minting a new activity/resolver, prefer an existing producer of the needed output shape. Reuse sharpens posteriors and adds a composition edge; minting is the justified exception, not the default. (In the learning dynamics, reuse is what raises the credit-mixing rate λ₁, the rate at which credit spreads across the activity graph, which has to outpace the rate at which new, untested activities are minted: [`docs/architecture/SUBSTRATE_AS_DYNAMICS.md`](docs/architecture/SUBSTRATE_AS_DYNAMICS.md).) See CLAUDE.md → *The laws*, law 3.
-
-## Key design principles
-
-1. **Impulses are universal data** — everything is an impulse with metadata; resolvers access content.
-2. **Activities constrain search** — without activities, infinite options; with them, ranked finite options.
-3. **Resolvers live where data lives** — don't centralize resolution. `activity-api` is the trace store *and* the learner: it also serves the Thompson posteriors and template writes. What it must not become is a general-purpose resolver for other vessels' data. (The LLM model policy is the worked example of the rule: it is owned by llm-resolver-vessel, where the arms live, not by the learner.)
-4. **Metadata first, content later** — reasoners see metadata to decide; resolvers load content to execute.
-5. **Record everything** — every execution is traced; this is the raw material for learning.
-6. **Learn from traces** — Thompson Sampling, relevance scores, and template extraction from executions that reached their goal (see *Learning loop*, step 5).
-7. **Reserve improvisation** — when nothing matches, try something new, but record it.
-8. **LLMs are tools, not controllers** — use LLMs for reasoning; deterministic resolvers for everything else.
+The laws these mechanisms follow, reuse before minting among them, are in [`CLAUDE.md`](CLAUDE.md) → *The laws*.
 
 ## Documentation
 
