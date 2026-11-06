@@ -58,11 +58,16 @@ peer.
 
 ## Where the policy changes the pick
 
-Three independent selection sites read the policy, and they agree on the rule so that a
-walk's own pick cannot silently override what a vessel declared:
+Three independent selection sites read the row policy, and they agree on its rule so that
+a walk's own pick cannot silently override what a vessel declared:
 
 - **Discovery's `/resolve` gateway.** For a non-discovery shape, it collects the healthy
-  producers, then prefers the first row declaring `unique_authoritative` or
+  producers. A producer may also declare policies per shape (`shape_policies`). For a shape
+  any producer pins per shape as held data (`stateful_data_owner_pin`), the local holder
+  row wins whatever the registration order; with no local row, the one peer row that holds
+  the data is chosen, and otherwise the resolve is refused with a named reason. A row that
+  advertises a held shape as interchangeable is flagged as a mismatch on the routing
+  record. For every other shape it prefers the first row declaring `unique_authoritative` or
   `stateful_data_owner_pin`. Among pinned rows, one additionally marked authoritative in
   its metadata wins. Failing any pinned owner, it prefers a direct non-libp2p local
   producer over a libp2p facade row, and only then falls back to the first candidate.
@@ -108,23 +113,27 @@ forwarding it would simply 401 and the fan-out would return nothing.
 ## Query-time pull: bounds, dedup, and provenance
 
 Cross-substrate resolution has two distinct legs. The pull leg lives in discovery itself
-and is what a caller experiences on a local miss.
+and is what a caller experiences on every capability query and on a local miss for any
+other shape.
 
 Peer endpoints are read from the environment **at use time**, not frozen at module load, so
 a substrate federated after boot participates without a restart. Two forwarding paths
-exist: a capability query fans out to every peer in parallel and merges the results, while
-a general non-discovery shape is forwarded peer by peer and returns the first successful
+exist: a capability query fans out to every peer in parallel and merges the results into
+the local ones — union is the default fan-out mode, so it fans out even when local
+producers exist — while a general non-discovery shape with no local producer is forwarded peer by peer and returns the first successful
 resolution.
 
 Both are bounded the same way. Each hop carries an incremented depth header, and a request
-arriving at or beyond the maximum peer depth — two hops by default — is not forwarded
+arriving at or beyond the maximum peer depth — one hop, as the fleet's units set it — is not forwarded
 again, so peer-to-peer-to-peer can neither loop nor fan out unbounded. With no peer
 endpoints configured, both paths are no-ops and single-substrate behaviour is unchanged.
 
 Merged capability results are filtered and tagged rather than trusted wholesale:
 
 - **Dedup.** Peer rows are deduplicated by vessel id as they are merged, and a local row
-  always wins a collision with a peer row of the same id.
+  always wins a collision with a peer row of the same id. The one exception is a shape the
+  vessel declares node-distinct (`stateful_data_owner_merge` on both rows): a peer node's
+  own instance of that role, on this host, is listed after the local rows.
 - **Dialability.** A peer row must be reachable from here — it needs a libp2p multiaddr, or
   a non-loopback endpoint. A peer's `127.0.0.1` is not this host's `127.0.0.1`.
 - **Self-echo rejection.** A row whose libp2p peer id matches a locally registered vessel,

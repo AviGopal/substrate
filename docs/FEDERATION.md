@@ -151,8 +151,9 @@ hub-and-spoke deployment as decentralised.
 
 ### 2. Federation peers — separate substrates that fan out
 
-Each instance runs its own full stack; a capability query with **no local producer**
-fans out to configured peers.
+Each instance runs its own full stack. A capability query fans out to configured peers
+and merges their producers behind the local ones (union is the default fan-out mode); a
+resolve of any other shape is forwarded to peers when it has **no local producer**.
 
 ```
   substrate A  ⇄  substrate B     (each: PEER_DISCOVERY_ENDPOINTS points at the other)
@@ -160,11 +161,11 @@ fans out to configured peers.
 
 Set `PEER_DISCOVERY_ENDPOINTS=http://<peer>:<P100>` (the peer's discovery port, `P` its
 port prefix; + optional shared `FEDERATION_SIGNING_SECRET`). Discovery forwards
-unresolved `vesselCapability` queries, tags peer results `discoveredVia:"peer"`, and
+`vesselCapability` queries, tags peer results `discoveredVia:"peer"`, and
 goal-host routes those over the relay.
 
-**A local producer shadows the network.** Fan-out fires only when there is *no* local
-producer of the shape. A local vessel that advertises a shape but cannot serve it — a
+**A local producer shadows the network.** A shape resolve is forwarded only when there
+is *no* local producer of the shape, and discovery's pick prefers the local row. A local vessel that advertises a shape but cannot serve it — a
 goal-host with no reachable model, say — is still a local producer, so the query never
 leaves the node and a working producer elsewhere is never asked. Every vessel a node
 advertises must have its own consumed shapes produced locally or on the hub; one that
@@ -320,14 +321,9 @@ IDENTITY_VESSEL_URL=...`); outbound-only, since the hub cannot dial back.
 A vessel **behind NAT** (e.g. a host Obsidian plugin) that can't be dialed directly uses
 the **libp2p ingress sidecar** — the vessel stays plain HTTP, the sidecar carries libp2p.
 The sidecar takes the two underlying join values, a **discovery endpoint** and an
-**API key**, rather than a join token (Obsidian's `sidecar/federation-sidecar.ts` shown;
-the generic `@avigopal/libp2p-federation-transport` sidecar takes the same inputs):
-
-```
-METABOB_API_KEY=<api-key> \
-DISCOVERY_ENDPOINT=<discovery-endpoint> \
-bun sidecar/federation-sidecar.ts
-```
+**API key**, rather than a join token (Obsidian's `sidecar/federation-sidecar.ts`; the
+generic `@avigopal/libp2p-federation-transport` sidecar takes the same inputs). The surface
+install that starts it is in [README § Installation](../README.md#installation) (D. Surface).
 
 Everything else is resolved from `<discovery-endpoint>/bootstrap` (an explicit env
 always wins as an override): the relay anchor and identity endpoint come from the
