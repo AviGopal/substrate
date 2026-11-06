@@ -874,18 +874,6 @@ All lifecycle events — task binding, execution completion, gap classification,
 
 This has a practical consequence for vessel startup: goal-host-vessel subscribes to `vessel.registered` and uses those events to reactively register proxy resolvers for newly-appearing vessels. This is what makes registration order irrelevant: a vessel that starts after goal-host-vessel is picked up automatically rather than staying invisible until the next restart cycle.
 
-## Vessel self-replacement
-
-Vessels that accumulate idiom-purity gaps are candidates for substrate-driven self-replacement. Purity gaps include: serving legacy REST endpoints alongside the resolver contract, implementing built-in tools (bash, read, write, git) instead of routing through discovery-resolved ones, or maintaining internal state that belongs in the substrate's shared store. The substrate audits purity against the canonical idiom set, mints a replacement vessel via the forge, validates the replacement in shadow against live traffic, and promotes it on evidence. The original vessel is archived rather than modified in-place.
-
-A vessel carries a purity gap when it serves legacy REST endpoints that predate the resolver contract, or ships built-in tools (bash/read/write/edit/git) that bypass discovery instead of routing through discovery-resolved ones. Self-replacement for such a vessel is substrate-driven and not operator-led — the operator's role is adversarial testing of the replacement, not authoring it. Which vessels carry gaps is a live fact: query the purity audit rather than trusting a list here.
-
-## Forge vessel (parallel variant exploration)
-
-The substrate forge vessel enables parallel variant exploration at the substrate level. Instead of evaluating candidate changes serially — author → deploy → measure → decide — the forge spawns N ephemeral substrate clones, each pursuing a different candidate change, observes N outcomes in parallel, and promotes the winner via Thompson. Variant exploration moves from O(N × deploy_time) to O(1 × deploy_time + N × measurement_time).
-
-Combined with the substrate's existing Thompson-managed candidate selection, this turns development into autonomous A/B testing at the substrate level. A fork is not a privileged substrate twin — it is a substrate-resident vessel set whose discovery advertisements are scoped to a fork namespace. Fork outcomes feed the main substrate's posteriors; the fork is archived afterward.
-
 ## Substrate self-deployment
 
 The substrate closes the deployment loop via substrate-resident git authorship. Substrate-authored changes — drafted from a goal, typecheck-verified, and judged after landing on whether the goal behind them reached — are landed on `dev` by the substrate itself through the mitosis cutover, not by the operator; development-vessel also serves `gh_pr_create` and `gh_pr_merge` for changes that go through a pull request. The operator retains an unforeseeable-failure override (closing a PR manually, force-merging an emergency fix), but this is an exceptional path rather than the normal one. Self-deployment is what makes the substrate honestly self-maintaining: it can author, verify, deploy, and observe its own changes without operator git access being on the critical path.
