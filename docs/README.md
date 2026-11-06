@@ -112,7 +112,7 @@ the whole mechanism rather than merely skipping a check.
 - [JWT Claims Structure](AUTH_JWT_CLAIMS.md) — the claims every vessel can rely on being present.
 - [RBAC Guide](RBAC_GUIDE.md) — roles, scopes, and how PERMISSIONS enforce them.
 - [RBAC Troubleshooting](RBAC_TROUBLESHOOTING.md) — diagnosing a denial without reaching for root.
-- [`auth_token_source` Contract Field](specs/auth-token-source-field.md) — which credential a caller must present to a given vessel.
+- [`auth_token_source` Contract Field](specs/auth-token-source-field.md) — the registration field that names which credential a caller must present to a given vessel.
 - Credentials are issued and validated by the in-fleet identity-vessel, reached at its fleet address (see [README § Installation](../README.md#installation) for the port table); there is no out-of-fleet identity host.
 
 ## 7. Interface — the agent cockpit and the human surfaces
