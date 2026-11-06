@@ -467,6 +467,5 @@ Discovery-vessel's registry is deliberately **not** in this list: it is in-memor
 
 - [Activity Selection](./01-activity-selection.md) — how activities are chosen and graded
 - [Resolver Processing](./03-resolver-processing.md) — how resolvers consume and produce impulses
-- [RESOLVER_TRACKING.md](../RESOLVER_TRACKING.md) — resolver attribution in traces
 - [IMPULSE_STATE_SPACE_SPEC.md](../IMPULSE_STATE_SPACE_SPEC.md) — the state-space model
 - [IMPULSE_ACTIVITY_FOUNDATION.md](../IMPULSE_ACTIVITY_FOUNDATION.md) — the foundational model

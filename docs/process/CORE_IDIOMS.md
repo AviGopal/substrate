@@ -142,9 +142,8 @@ Learning Duality".
 **Recurrence.** Activity selection (activity-api `POST /v2/activities/recommend`),
 impulse-pool selection (the `impulse_preparation` and `impulse_pool_selection`
 resolvers in the executor), and model selection inside the LLM resolver, which
-Thompson-ranks per-model sub-resolver ids (`llmText@<model>`) as described in
-[`architecture/RESOLVER_TRACKING.md`](../architecture/RESOLVER_TRACKING.md)
-§"Per-model LLM sub-resolvers".
+Thompson-samples one Beta draw per model arm from its reach evidence
+(llm-resolver-vessel `src/model-policy.ts`).
 
 **Composability.** Composes trace recording (the data source) and
 state-space-signature conditional learning (idiom 9; conditions the posterior
@@ -726,6 +725,5 @@ recursive application of a finite idiom set across an unbounded shape space.
 
 - [`architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](../architecture/IMPULSE_ACTIVITY_FOUNDATION.md) — the canonical model; every §-citation above names a section, not a line number.
 - [`architecture/SUBSTRATE_AS_SOFTWARE.md`](../architecture/SUBSTRATE_AS_SOFTWARE.md) — the execution walk and the durability groups the idioms move between.
-- [`architecture/RESOLVER_TRACKING.md`](../architecture/RESOLVER_TRACKING.md) — resolver tiers, per-model sub-resolvers, and the tier-versus-dispatch-pathway distinction.
 - [`GLOSSARY.md`](../GLOSSARY.md) — canonical term spellings and the terms to avoid.
 - `CLAUDE.md` — the laws and the operator role that idioms 7, 10, 11, and 13 are measured against.

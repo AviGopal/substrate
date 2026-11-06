@@ -100,7 +100,7 @@ these four are the minimum set the core concepts are expressed in.
 | Term | Canonical meaning | Disambiguation |
 |---|---|---|
 | **`resolver_tier`** | `{deterministic, pattern, llm}` — coarse bins of directional certainty (§5) | **NOT** the dispatch-pathway set; see next row |
-| **dispatch pathway** | which leg of resolution served the impulse: `LOCAL / CUSTOM / DISCOVERY / MCP / FALLBACK / ERROR` | a *routing* fact, not a certainty bin. `RESOLVER_TRACKING.md` owns both vocabularies and states the separation explicitly — do not conflate the two fields |
+| **dispatch pathway** | which leg of resolution served the impulse: `LOCAL / CUSTOM / DISCOVERY / MCP / FALLBACK / ERROR` | a *routing* fact, not a certainty bin; do not conflate the two fields |
 | **meta-trace layer** | `L1` = the per-goal wrapper, `L2` = the per-activity wrapper, `L3` = leaf / per-resolver `impulse_resolutions`. The wrappers are recognisable on a trace by their synthetic `variant_id`: `_goal_resolve` and `_activity_execute` | **NOT** the same numbering as *instrumentation level* |
 | **instrumentation level** | tracing overhead tier: Level 1 request / Level 2 function / Level 3 full | distinct axis from meta-trace layer |
 | **`composition_chain`** | denormalized root-first ancestor list on a trace | `parent_execution_id` = direct parent only |

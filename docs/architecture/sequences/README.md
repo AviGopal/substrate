@@ -267,7 +267,6 @@ When reading any arrow that shows an emitter pushing to a consumer: it passes th
 - [`SUBSTRATE_AS_SOFTWARE.md`](../SUBSTRATE_AS_SOFTWARE.md) — the execution model these sequences implement
 - [`SUBSTRATE_AS_DYNAMICS.md`](../SUBSTRATE_AS_DYNAMICS.md) — the learning dynamics the posteriors participate in
 - [`GOAL_EXECUTION_PATHS_SCHEMA.md`](../GOAL_EXECUTION_PATHS_SCHEMA.md) — per-goal record and reuse
-- [`RESOLVER_TRACKING.md`](../RESOLVER_TRACKING.md) — resolver attribution in traces
 - [`IMPULSE_STATE_SPACE_SPEC.md`](../IMPULSE_STATE_SPACE_SPEC.md) — the state-space model selection conditions on
 - [README § Installation](../../../README.md#installation) — deployment procedure
 

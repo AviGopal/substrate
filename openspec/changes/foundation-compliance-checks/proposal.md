@@ -188,7 +188,7 @@ Twenty checks total. Severity legend:
 **Check ID:** FC-009
 **Title:** Resolver tier classified
 **Foundation citation:** FND §692–§711, FND §337–§349 (Performance Tracking); CLAUDE.md "Resolver Tiers" (deterministic / pattern / llm).
-**Invariant:** Every new resolver introduced by the proposal MUST declare its tier: `deterministic`, `pattern`, or `llm`. This is required so the learning loop can stratify cost and reliability per tier (CLAUDE.md, RESOLVER_TRACKING.md).
+**Invariant:** Every new resolver introduced by the proposal MUST declare its tier: `deterministic`, `pattern`, or `llm`. This is required so the learning loop can stratify cost and reliability per tier (CLAUDE.md; the `resolver_tier` row of docs/GLOSSARY.md).
 **Substrate-evaluable predicate:** For each new resolver declaration, locate a `tier:` / `resolver_tier:` field with one of the three allowed values.
 **Example violation:** "Introduce `pdf-extract` resolver" with no tier.
 **Example pass:** "Introduce `pdf-extract` resolver, tier: `deterministic`."
@@ -492,7 +492,6 @@ A closure audit evaluates CC-001..CC-007. Three consecutive green runs across al
 ## References
 
 - [`docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](../../../docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md) — canonical foundation document; cited throughout.
-- [`docs/architecture/RESOLVER_TRACKING.md`](../../../docs/architecture/RESOLVER_TRACKING.md) — resolver-tier definitions used in FC-009.
 - **The adapter-layer principle** behind FC-004, stated here rather than cited so
   it outlives the product surface it was first written for: when a frozen
   dependency does not expose what a caller needs, the missing functionality lands

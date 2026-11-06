@@ -626,5 +626,4 @@ The reason the split is drawn there rather than anywhere else is latency and loc
 - [Impulse Resolution](./02-impulse-resolution.md) — how pointers become content
 - [Activity Selection](./01-activity-selection.md) — how activities are chosen and graded
 - [Improvisation & Failure Modes](./04-improvisation-failure-modes.md) — the failure taxonomy and recovery
-- [RESOLVER_TRACKING.md](../RESOLVER_TRACKING.md) — resolver attribution in traces
 - [IMPULSE_ACTIVITY_FOUNDATION.md](../IMPULSE_ACTIVITY_FOUNDATION.md) — the foundational model

@@ -70,7 +70,6 @@ to prefer whatever exits cleanly.
 
 - [The substrate is a slow–fast dynamical system](architecture/SUBSTRATE_AS_DYNAMICS.md) — the learning dynamics on a growing complex.
 - [Failure modes](learning/FAILURE_MODES.md) — the failure taxonomy the schema defines (six typed members plus the untyped `execution_error`), why the store must be counted before reasoning from it, and the outcome-conditional posterior step sizes.
-- [Resolver Tracking](architecture/RESOLVER_TRACKING.md) — recording which resolver served each impulse so selection is learned, not configured.
 - [`thompson_posterior` shape](impulse-types/thompson_posterior.md) — the posterior itself, as a resolvable shape.
 - [Learning-Loop Write Resolvers](impulse-types/LEARNING_LOOP_WRITE_RESOLVERS.md) — the write side of the loop, shape by shape.
 - [Activity Template Lifecycle and Deprecation](guides/ACTIVITY_LIFECYCLE_DEPRECATION.md) — how an arm leaves selection without discarding a working posterior.
