@@ -269,8 +269,14 @@ healthy, and is joined to nothing. Under rootless Podman the host's LAN address 
 reachable from inside a container either, and the join is refused at boot; address the
 hub by the engine's host name instead (`host.containers.internal` on Podman,
 `host.docker.internal` on Docker). The hub's `PUBLIC_IP` can stay the LAN address: the
-relay is dialled by the joiner's transport, which reaches it. Sequence C of the install
-page carries the exact form.
+relay is dialled by the joiner's transport, which reaches it. The join flag takes the form
+`--join http://host.containers.internal:18100` on Podman or
+`http://host.docker.internal:18100` on Docker (on Linux Docker, add
+`extra_hosts: ["host.docker.internal:host-gateway"]` in a compose override). Give each fleet
+its own `--name` and `--prefix` (install page, sequence E). The client config the joiner
+writes then names the engine's host name, which the host itself does not resolve; point the
+cockpit at `http://127.0.0.1:<hub prefix>080` instead (not `localhost`: rootless Podman
+publishes on IPv4 only, and `localhost` tries `::1` first).
 
 ## Running a spoke
 

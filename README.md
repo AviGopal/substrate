@@ -398,17 +398,8 @@ model resolver of its own, and its `llm_completion` is answered by its hub's arm
 discovery, so it reaches `usable` exactly when its hub can. (A provider key in a spoke's
 `.env` is not used.) Run the `claude mcp add …` line it printed, as in A.
 
-**A hub on the same host.** From inside a container, the host's own LAN address is not
-reachable on rootless Podman, and the join is refused at boot ("derived IDENTITY_VESSEL_URL
-… is unreachable"). Address the hub by the engine's host name instead:
-`--join http://host.containers.internal:18100` on Podman, or
-`http://host.docker.internal:18100` on Docker (on Linux, add
-`extra_hosts: ["host.docker.internal:host-gateway"]` in a compose override). The hub's
-`PUBLIC_IP` can still be the host's LAN address: the relay is dialled by the spoke's
-transport, which reaches it. Give each fleet its own `--name` and `--prefix` (sequence E).
-The client config the spoke writes then names `host.containers.internal`, which the host
-itself does not resolve; point the cockpit at `http://127.0.0.1:<hub prefix>080` instead
-(not `localhost`: rootless Podman publishes on IPv4 only, and `localhost` tries `::1` first).
+**A hub on the same host** is addressed by the engine's host name, not `localhost` or the
+LAN address: [FEDERATION § Running a hub](docs/FEDERATION.md#running-a-hub).
 
 What joining means, and how to tell it happened:
 
