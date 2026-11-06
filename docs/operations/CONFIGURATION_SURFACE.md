@@ -14,7 +14,7 @@ with a notice, so set it in the fleet's `.env`.
 |---|---|---|---|---|
 | **Install inputs** | `SUBSTRATE_NAME`, `SUBSTRATE_PORT_PREFIX`, `PROFILE`, `DISCOVERY_ENDPOINT` + `METABOB_API_KEY`, one provider key, `PUBLIC_IP`, `SUBSTRATE_GIT_PAT` + `SUBSTRATE_REPO_OWNER` | host `.env` | at boot, by gen-env | no (bootstrap, by design) |
 | **Advanced bootstrap** | the variables below | host `.env`, forwarded by the manifest | at boot | no |
-| **Generated secrets** | `JWT_SECRET`, `SURREAL_PASS`, API-key signing secret, the operator key | workspace `.substrate-secrets` | at boot | n/a (never hand-edited) |
+| **Generated secrets** | `JWT_SECRET`, `SURREAL_PASS`, API-key signing secret, the operator key | workspace `.substrate-private/substrate-secrets` | at boot | n/a (never hand-edited) |
 | **Runtime policy** | vessel additions (`vessel-ctl install`), `pushPolicy`, `llmModelPolicy`, rhythms | impulses in the substrate | at use time | **yes** |
 | **Client** | endpoint + key | `~/.substrate/config.json`, reached by the cockpit through the link `~/.metabob/config.json` (overrides: the installer honours `SUBSTRATE_CONFIG_PATH`, then `METABOB_CONFIG_PATH`; the cockpit honours only `METABOB_CONFIG_PATH`; a project-local `.metabob/config.json` shadows it for the cockpit) | by the cockpit | n/a |
 
@@ -143,8 +143,11 @@ docker run --rm -e ANTHROPIC_API_KEY=… --entrypoint bash <image> \
 | 4 | side files | `render-llm-arms.sh`, `gen-env.sh` | a second `EnvironmentFile=` | **no** |
 
 Channel 4 has two members with different lifetimes: `/etc/substrate/llm-<arm>.env` (per-arm
-model pin, regenerated every boot) and `/workspace/.substrate-secrets` (**the only durable
-container-side config** — `/etc/substrate` is not on a volume).
+model pin, regenerated every boot) and the scoped trust-root files
+`/etc/substrate/private/env.d/<unit>.env`, which only the units that need them load.
+The persisted store `/workspace/.substrate-private/substrate-secrets` is **the only durable
+container-side config** (`/etc/substrate` is not on a volume). No unit loads it: gen-env
+reads it back at boot and re-emits its non-scoped names into `/etc/substrate/env`.
 
 ### Channels 2 and 3 are a blind spot, not an override
 
@@ -216,13 +219,13 @@ systemctl show <unit> -p FragmentPath -p DropInPaths
 ```
   docker run -e   >   shell env at compose time   >   .env beside the manifest   >   compose ":-" default
       └── these four are indistinguishable to gen-env: they are just "the run environment"
-   >  /workspace/.substrate-secrets      (per-field grep — never sourced, so an operator
+   >  /workspace/.substrate-private/substrate-secrets  (per-field grep — never sourced, so an operator
    >  gen-env generated (openssl)         value cannot be clobbered by the persisted one)
    >  gen-env hardcoded literal
   ─────────── resolution ends; the value is written to /etc/substrate/env ───────────
    >  unit Environment=
-   >  EnvironmentFile=-/workspace/.substrate-secrets (listed FIRST, so env outranks it)
    >  EnvironmentFile=/etc/substrate/env          (beats Environment=, see §1)
+   >  EnvironmentFile=/etc/substrate/private/env.d/<unit>.env (scoped secrets, listed after env)
    >  EnvironmentFile=-/etc/substrate/llm-<id>.env (later file wins → per-arm pin)
    >  .service.d/*.conf Environment=              (applied last, beats everything)
    >  post-boot mutation (seed-identity.ts rewrites METABOB_API_KEY in both files)
@@ -239,7 +242,7 @@ Three sub-chains deviate:
   **Routing anchors are never persisted.** `HUB_DISCOVERY_URL`, `DISCOVERY_ENDPOINT`,
   `IDENTITY_VESSEL_URL`, `ACTIVITY_API_ENDPOINT` and their aliases describe where this
   substrate is pointed *right now*; they are re-derived every boot and are excluded from
-  `.substrate-secrets` by both of its writers — gen-env's merge loop and `secrets.env.sh`'s
+  the persisted store by both of its writers — gen-env's merge loop and `secrets.env.sh`'s
   carry-through — so a value that once reached the file cannot outlive the hub it named.
   This is not a precaution: one such anchor, carried forward by a merge loop designed to
   preserve keys it did not recognise, pinned the fleet to a decommissioned host and held
@@ -259,7 +262,7 @@ halves are required, and the probe checks for the mismatch:
 
 **Known limit, shared by all ~20 persisted names:** `${VAR:-…}` cannot distinguish *unset*
 from *explicitly emptied*, so `-e VAR=` does not clear a persisted value. Clearing one means
-editing `/workspace/.substrate-secrets`. Carrying a value by presence rather than by value
+editing `/workspace/.substrate-private/substrate-secrets`. Carrying a value by presence rather than by value
 would fix it; gen-env does not do that yet.
 
 ---
