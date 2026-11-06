@@ -175,7 +175,6 @@ methods agents use. They are read by the substrate and by the people and agents 
 - [Doc ingestion](process/DOC_INGESTION.md) — the contract governing every other document in this tree, and how `docs/architecture/**` reaches the code-authoring prompt.
 - [Core Idioms](process/CORE_IDIOMS.md) — the recurring compositions of the four primitives, in foundation vocabulary.
 - [Impulse Conformance Ledger](process/IMPULSE_CONFORMANCE_LEDGER.md) — the invariant that every data-plane hop is a typed impulse, and the control-plane exemptions.
-- [Foundation Compliance Checks](process/FOUNDATION_COMPLIANCE_CHECKS.md) — the gate between a substrate-authored proposal and admission into the change tree.
 - [Memory As Substrate](process/MEMORY_AS_SUBSTRATE.md) — the `memoryNote` store, its read and write directions, and why the files are a cache.
 - [The qualification envelope](process/QUALIFICATION.md) — the tasks, faults, budgets and escalation conditions the substrate must handle without operator hands, and the metrics that judge it.
 - [Shape→Action→Evidence Expectations](process/SHAPE_ACTION_EVIDENCE_EXPECTATIONS.md) — falsifiable expectations with named metrics and floors.

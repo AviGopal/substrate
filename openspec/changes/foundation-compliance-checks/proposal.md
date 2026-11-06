@@ -1,10 +1,12 @@
 # Foundation Compliance Checks
 
+**Proposed change.** No validator implements these checks yet; this is the design for one.
+
 > Authoritative check-list for the `foundation-compliance` validator-as-activity —
 > the gate standing between substrate-authored spec proposals and admission into
 > the change tree.
 >
-> **Companion to:** [`docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](../architecture/IMPULSE_ACTIVITY_FOUNDATION.md)
+> **Companion to:** [`docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](../../../docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md)
 > (cited throughout as **FND §N**).
 
 ---
@@ -489,8 +491,8 @@ A closure audit evaluates CC-001..CC-007. Three consecutive green runs across al
 
 ## References
 
-- [`docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](../architecture/IMPULSE_ACTIVITY_FOUNDATION.md) — canonical foundation document; cited throughout.
-- [`docs/architecture/RESOLVER_TRACKING.md`](../architecture/RESOLVER_TRACKING.md) — resolver-tier definitions used in FC-009.
+- [`docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](../../../docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md) — canonical foundation document; cited throughout.
+- [`docs/architecture/RESOLVER_TRACKING.md`](../../../docs/architecture/RESOLVER_TRACKING.md) — resolver-tier definitions used in FC-009.
 - **The adapter-layer principle** behind FC-004, stated here rather than cited so
   it outlives the product surface it was first written for: when a frozen
   dependency does not expose what a caller needs, the missing functionality lands
@@ -498,4 +500,4 @@ A closure audit evaluates CC-001..CC-007. Three consecutive green runs across al
   small vessel that calls the dependency as a client — and never as a patch to
   the frozen thing. Patching what you have declared frozen is how a boundary
   stops being one.
-- [`CLAUDE.md`](../../CLAUDE.md) — "Red flags" section feeding FC-001, FC-004, FC-016, FC-018.
+- [`CLAUDE.md`](../../../CLAUDE.md) — "Red flags" section feeding FC-001, FC-004, FC-016, FC-018.
