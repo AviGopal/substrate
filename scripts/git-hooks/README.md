@@ -69,7 +69,7 @@ A commit is rejected when it adds (or renames into) a file that violates any of 
 
 ## The env ratchet: behaviour switches in units can only shrink
 
-Separately from placement, the hook judges every ADDED line under `scripts/substrate/units/` (unit files and every `*.d/*.conf` drop-in), modifications included. An `Environment=` line is frozen at process start and invisible to traces and the walk, so a unit may only set **bootstrap** names: ports, bind hosts, ids, endpoints and URLs, filesystem paths. The names and the `EnvironmentFile=` paths a unit may use are pinned in `env-ratchet/bootstrap-allowlist.txt`, one per line with a reason; adding one is allowed, and its reason is the review surface. The behaviour names units already set are pinned in `env-ratchet/grandfathered-behaviour.txt`: their existing lines stay, but the list only shrinks, and a new or changed line naming one is refused like any other non-bootstrap name. A behaviour change belongs in a shaped impulse read at use time. Both lists are read from the index, so a commit is judged by the lists it carries; `validation/scripts/pre-commit-env-ratchet.test.sh` pins the hook's behaviour. A hook can be skipped (`--no-verify`, an uninstalled clone), so `validation/scripts/env-ratchet-committed-tree.test.sh` judges the committed tree itself: every name and env file a unit uses is classified, the grandfathered list stays within a frozen copy, every allowlist entry has a reason. It runs wherever the glue corpus runs (this hook, the acceptance run); pull-sync does not run the glue corpus, so it does not block convergence of a bypassed commit. The blocking form is the gate fixture `validation/scripts/gate/fixtures/env-ratchet-units.sh`: on a gated node every commit touching `scripts/substrate` is a gate candidate, its units stay the accepted copies until the accepted fixture corpus passes it, and this fixture refuses any unclassified name or unpinned env file. It carries its own copy of both lists (the gate exports only `scripts/substrate`). So once the fixture is accepted, **adding any bootstrap name (or pinned env file) is a gate widening**: the commit must edit the fixture, nothing promotes it automatically, and it lands only through the operator break-glass `gate-runner rollback-gate --to <sha>` on each gated node. That holds for operators too; new bootstrap names should be rare and deliberate. Shrinking needs nothing: removing a unit line and its list entry promotes after the soak like any edit. A refusal names the line to revert (`scripts/substrate/units/<path>:<line>: <NAME>`), and that text reaches the `gate_candidate_refused` gap. `validation/scripts/gate-fixture-env-ratchet.test.sh` fails the glue run when the lists name something the fixture lacks.
+Separately from placement, the hook judges every added line under `scripts/substrate/units/`. An `Environment=` line is frozen at process start and invisible to traces and the walk, so a unit may only set **bootstrap** names (ports, hosts, ids, endpoints, paths), pinned with a reason in `env-ratchet/bootstrap-allowlist.txt`. The behaviour names units already set are pinned in `env-ratchet/grandfathered-behaviour.txt`, which only shrinks. A behaviour change belongs in a shaped impulse read at use time. A refusal names the line to revert. The rules, what they do not cover, and the gate fixture that blocks bypassed commits are described in the comment above the ratchet in `pre-commit`.
 
 ## Why "in commit history, not the tree"
 
@@ -80,11 +80,7 @@ Use docs (`docs/`) for things that are still true a year from now. Use openspec 
 ## What the pre-commit hook does NOT do
 
 - It does not build, and it runs only the glue tests (vessel tests run in each vessel's repo).
-- It does not deploy.
-- It does not call kubectl or helmfile.
-- It does not validate openspec contracts.
-
-The previous deploy-on-commit hook was removed — deployment runs from CI on push to `dev`, not from the developer's laptop on every commit.
+- It does not deploy or validate openspec contracts.
 
 ## Gitleaks
 
