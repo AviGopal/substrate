@@ -465,7 +465,7 @@ bash repos/obsidian-vessel/install.sh                    # interactive: vault â†
 ```
 
 At start the plugin's federation sidecar reads `<discovery-endpoint>/bootstrap` for the
-relay anchor. See [`repos/obsidian-vessel/README.md`](repos/obsidian-vessel/README.md) and
+relay anchor. See the [obsidian-vessel README](https://github.com/AviGopal/obsidian-vessel#readme) and
 [`docs/HUMAN_SURFACE.md`](docs/HUMAN_SURFACE.md).
 
 #### E. A second fleet on one host
