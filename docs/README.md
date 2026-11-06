@@ -75,7 +75,6 @@ to prefer whatever exits cleanly.
 - [Learning-Loop Write Resolvers](impulse-types/LEARNING_LOOP_WRITE_RESOLVERS.md) — the write side of the loop, shape by shape.
 - [Activity Template Lifecycle and Deprecation](guides/ACTIVITY_LIFECYCLE_DEPRECATION.md) — how an arm leaves selection without discarding a working posterior.
 - [Template Upkeep Pipeline](guides/TEMPLATE_UPKEEP.md) — how template drift is observed and corrected through the loop itself.
-- [Dashboard Analytics](guides/DASHBOARD_ANALYTICS.md) — reading the learning loop from its analytics panels.
 - [Substrate framing vs. the LLM literature](architecture/LITERATURE_COMPARISON.md) — where this learning model sits against published agent research.
 
 ## 4. Self-development — the system authors and lands its own change
