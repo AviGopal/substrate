@@ -9,9 +9,10 @@
 >
 > **Purpose**: the substrate reads its own documentation. `scripts/substrate/ingest-docs-as-concepts.ts`
 > walks `docs/**` (an `archive/` directory there would be skipped) and mints one concept per section,
-> keyed `"<relpath>#<slug(heading)>"`. This file ingests as `shape=docSection`;
-> only `docs/architecture/**` ingests as `shape=architecturePrinciple` and is
-> dense-searched into the code-authoring prompt. So this document's job is to hold
+> keyed `"<relpath>#<slug(heading)>"`. This file ingests as `shape=docSection`.
+> The drafter's principle search runs at prompt-build with a few words of the change
+> spec and no shape filter, so any of its sections can reach the code-authoring prompt
+> (see [`DOC_INGESTION.md`](DOC_INGESTION.md)). So this document's job is to hold
 > the idiom vocabulary in one queryable place rather than leave it scattered across
 > foundation prose and per-change design docs.
 >

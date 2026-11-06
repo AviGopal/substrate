@@ -9,8 +9,9 @@
 >
 > **These are expectations, not readings.** A measurement belongs in a trace, in a report
 > under `validation/results/`, or in a commit message — never inlined here. Sections of
-> `docs/architecture/**` are ingested as `architecturePrinciple` concepts and dense-searched
-> into the code-authoring prompt, so a number pinned in this file would be fed to a drafter as
+> `docs/**` are ingested as concepts, and the drafter's principle search at prompt-build carries
+> no shape filter, so a section of this file can reach the code-authoring prompt (see
+> [`DOC_INGESTION.md`](DOC_INGESTION.md)). A number pinned here would be fed to a drafter as
 > the current state of the world long after it stopped being true. Query the running substrate
 > for the value; this document tells you what value to expect and what it means when you do
 > not get it.

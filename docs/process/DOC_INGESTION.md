@@ -2,13 +2,13 @@
 
 `docs/**` is a **runtime input**, not prose about the runtime. Each document is split into
 sections and written into concept-db as embedded concepts, where the substrate's own
-code-authoring path reads them back at drafting time and the documentation-alignment scan
-reads them to find which documents "expect" a landed code change. A document that no
-reader consumes is an archive; every Markdown document in this tree has a reader, and the
-shape it ingests under decides which one.
+code-authoring path reads them back while it drafts a change. A document that no reader
+consumes is an archive. The intent is that every principle in this tree is read where a
+choice is made.
 
-The ingester is `scripts/substrate/ingest-docs-as-concepts.ts`. The primary consumer is
-`consultPrinciples` in `repos/development-vessel/src/resolvers/feature-compose.ts`.
+The ingester is `scripts/substrate/ingest-docs-as-concepts.ts`, run on a timer. The reader
+is `consultPrinciples` in `repos/development-vessel/src/resolvers/feature-compose.ts`,
+called when the drafter builds its prompt.
 
 ## What gets ingested
 
@@ -59,19 +59,22 @@ Path decides shape. A section under `docs/architecture/` ingests as
 All of them carry `source_type=doc_expectation` and a pointer recording the document path,
 the heading, and the `section_key`.
 
-That distinction is the whole reason the split exists:
+The reader filters on neither. `consultPrinciples` runs when the drafter builds its prompt
+for a code change, and at no other point:
 
-- **`architecturePrinciple`** is what `consultPrinciples` dense-searches. Before drafting a
-  code change, it queries concept-db's search endpoint with the first 400 characters of the
-  spec, filtered to `shape=architecturePrinciple`, and takes the **top 4**. Those four
-  summaries and their content (each truncated to 400 characters) are pasted into the
-  decomposition prompt that authors the change. So a section under `docs/architecture/` is
-  not documentation about the drafter — it is an input to the drafter, competing with every
-  other architecture section for four slots.
-- **`docSection`** is not consulted by the authoring prompt. The alignment scan searches on
-  `source_type=doc_expectation` regardless of shape, so every ingested section participates
-  in the document-versus-code tie; only the architecture sections additionally steer
-  authoring.
+- It reduces the spec to its three longest salient words, with stopwords and path
+  fragments dropped, and searches concept-db with them. If that returns nothing it retries
+  with two words, then one.
+- The search carries no shape or `source_type` filter, so any concept in the store can
+  match, whatever its shape or origin. It asks for the **top 4**.
+- Concepts of shape `rejected_approach` are dropped from the result, so fewer than four can
+  remain. Each one left is pasted into the decomposition prompt that authors the change,
+  with its id, shape and `source_type`, its summary, and its content truncated to 400
+  characters.
+
+So a section of either shape is an input to the drafter, competing with every concept in
+the store for four slots. The shape records where a section came from; it does not route
+the section to a different reader.
 
 The consult is best-effort: a failed or slow search returns an empty block and the drafter
 proceeds ungrounded rather than failing. A principle that never ingests therefore produces
@@ -82,8 +85,8 @@ no error anywhere — only slightly worse code, indefinitely.
 Create, update, and skip alone would make the surface append-only: a section that is
 renamed, split, shrunk below the floor, or whose file is deleted or moved keeps its concept
 forever, because the `section_key` changed and a changed key simply mints a new concept
-beside the old one. For architecture sections that is actively harmful — the stale section
-competes with its own replacement for one of the drafter's four slots.
+beside the old one. That is actively harmful: the stale section competes with its own
+replacement for one of the drafter's four slots.
 
 So after ingest, any manifest key not re-seen this run is deleted from concept-db and
 dropped from the manifest. The reap is deliberately timid, because deleting live
@@ -112,9 +115,9 @@ headings as the stable key they are.
 
 The rest follows from the same contract:
 
-- Write for a reader at the moment of use, not for a browser of the tree. An architecture
-  section is retrieved by dense search against a change spec, in isolation from its
-  neighbours, so it must carry its own context.
+- Write for a reader at the moment of use, not for a browser of the tree. A section is
+  retrieved by a search on a few words of a change spec, in isolation from its neighbours,
+  so it must carry its own context.
 - Keep every section past 200 characters, including after an edit that removes material.
 - Keep the load-bearing claim early in the section — the body is truncated at 2400
   characters and the excerpt handed to the drafter is truncated at 400.
