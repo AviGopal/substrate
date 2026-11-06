@@ -426,7 +426,15 @@ observe-and-drain half firing) is an operational fact, not an architectural one.
   through the feature composer: detect→spec→author→verify→stage), `feature_compose` +
   `apply_proposal_as_patch` (development-vessel), the **mitosis cutover**
   (commit→push origin/dev→restart with typecheck-evidence), `funnel-drain` (fires the
-  funnel entry on a steady cadence so the boredom selector doesn't starve it). The
+  funnel entry on a steady cadence so the boredom selector doesn't starve it).
+  Before a gap is drafted, an own-check baseline activity runs the gap's own check at
+  the vessel's origin/dev and labels it `green_at_parent`, `red_code_reachable`,
+  `red_environmental` or `unrunnable`. Admission consumes the label: it holds back a
+  gap whose check already passes or fails for environmental reasons, and it can ground
+  a gap on the files the failing check's call path reaches. The composer that drafts
+  the gap posts a grade on the baseline's execution when its draft agrees or
+  disagrees with the label, once per baseline, so the classifier is graded by its
+  consumer. The
   boundary: the substrate can author *surgical* edits and whole
   net-new vessels via feature-compose, but feature-authoring breadth is the
   S1→S2 frontier.
