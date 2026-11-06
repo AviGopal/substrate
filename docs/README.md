@@ -132,7 +132,7 @@ cockpit's tool surface is enumerated in the root `CLAUDE.md` linked at the top o
 
 - [Running a human surface](HUMAN_SURFACE.md) — what a surface needs (a relayed hub and the join token it issues; the launch is sequence D of the install page), what runs locally versus on the hub, and why a surface that loads but cannot dispatch is a hub-link problem.
 - [Human project lifecycle](guides/HUMAN_PROJECT_LIFECYCLE.md) — what a human can expect across starting or joining, configuring, maintaining, deploying, interacting and checking health, with acceptance criteria per activity.
-- [Human goals, evidence, and learning](architecture/EXPLICABILITY_SURFACE.md) — the interaction contract for how a surface shows a person what was asked, what came back and the evidence behind it, with an offline prototype.
+- [Human goals, evidence, and learning](architecture/EXPLICABILITY_SURFACE.md) — the interaction contract for how a surface shows a person what was asked, what came back and the evidence behind it.
 - [Human participation](architecture/HUMAN_PARTICIPATION.md) — the behaviour and evidence contract for a human's questions, answers and feedback reaching the substrate as shaped exchanges.
 
 ## 8. Operations and bootstrap

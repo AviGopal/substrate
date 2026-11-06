@@ -1,8 +1,6 @@
 # Human goals, evidence, and learning
 
-Status: interaction contract, with an [offline prototype](./prototypes/explicability.html)
-and a companion [participation contract](./HUMAN_PARTICIPATION.md). The prototype runs
-offline on sample content.
+An interaction contract, with a companion [participation contract](./HUMAN_PARTICIPATION.md).
 
 ## Purpose
 
@@ -72,19 +70,6 @@ preserving those meanings. Existing [interaction conformance checks](../../packa
 provide a partial guard and teachable rules; their documented static limitations require
 behavioral checks as well. A new surface should expose the same underlying activities
 and records rather than accumulating a private learning loop inside browser state.
-
-## Evaluation isolation during the initial design
-
-The initial design delivery was a standalone HTML file and this document. It does not load the
-live application, poll services, dispatch goals, emit interaction telemetry, submit
-grades, install dependencies, or change evaluation configuration. All prototype inputs
-remain in page memory and disappear on reload. Its content security policy blocks
-connections and form submission. Open the file directly in a browser.
-
-The evaluation has since completed and local implementation has begun; see the linked
-participation contract for scope and tests. Human activity must be attributable before
-enabling it in a measured cohort. A read-only live viewer still creates load; the tests
-use isolated records and servers.
 
 ## Interaction contract
 
@@ -159,13 +144,13 @@ and [dynamics limitations](./SUBSTRATE_AS_DYNAMICS.md).
 
 ## Review and acceptance
 
-Use the prototype's reached, contradicted, and awaiting-clarification cases with people
+Use reached, contradicted, and awaiting-clarification cases with people
 who did not author the UI. Ask each person to identify the goal, distinguish completion
 from verified reach, find contradictory evidence, identify who acts next, and explain
 whether a drafted correction has changed the system. Record accuracy, time, unsupported
 trust decisions and moderator assistance. Compare against the existing interface using
 the same frozen cases and counterbalanced order; choose acceptance thresholds before
-the study. Prototype usability is not a system convergence result.
+the study.
 
 Before integration, exercise missing/stale evidence, conflicting assessments, goal
 revision, failed/ambiguous acknowledgement, duplicate submission, restart, and feedback
