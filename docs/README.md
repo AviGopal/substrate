@@ -25,7 +25,6 @@ fifth primitive is drift; a document that describes an existing primitive under 
 splits the concept graph and costs the drafter a correct recall.
 
 - [Impulse-Activity Foundation](architecture/IMPULSE_ACTIVITY_FOUNDATION.md) — the canonical ontology; read before implementing anything.
-- [Impulse State Space Specification](architecture/IMPULSE_STATE_SPACE_SPEC.md) — the pool as a state space, and what selecting over it means.
 - [The substrate is an open representation](architecture/SUBSTRATE_AS_REPRESENTATION.md) — shapes as axes of an open representation.
 - [The substrate as a weighted cell complex](architecture/SUBSTRATE_AS_DEC.md) — the discrete-exterior-calculus lens on the same objects.
 - [Glossary](GLOSSARY.md) — canonical terms; the tie-breaker when two documents disagree on a name.
