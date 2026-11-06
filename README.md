@@ -29,7 +29,7 @@ On randomly drawn goals, against an agent running in a conventional harness, und
 ## Where to go next
 
 - **See it work:** [A goal, end to end](#a-goal-end-to-end), one goal from request to verdict.
-- **What it is:** [Overview](#overview) and [Core concepts](#core-concepts) below. The canonical definition is [`docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md).
+- **What it is:** [Core concepts](#core-concepts) below. The canonical definition is [`docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md).
 - **Run one:** [Quick start](#quick-start) (one command), part of [Installation](#installation), the only place setup commands appear.
 - **Use one as a person:** [`docs/HUMAN_SURFACE.md`](docs/HUMAN_SURFACE.md).
 - **Take part in its development:** [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md).
@@ -60,21 +60,11 @@ run_goal_async  goal="list the HTTP routes activity-api serves, and which of the
 
 **Code changes are goals too.** A goal that names a source file in one of the vessel repositories and describes the change is routed to a composer that drafts the edit, checks that it typechecks, and lands it as a traced commit, which is then judged like any other goal.
 
-## Overview
+**It develops itself under a contract.** The substrate detects its own operational gaps, drafts changes, and lands them through the **mitosis cutover** loop. What counts is defined by a contract, not by activity. A landing is judged after it lands: was the goal behind it reached (a clean exit is not enough), and did verification run against the landed tree ([`docs/process/QUALIFICATION.md`](docs/process/QUALIFICATION.md))? Dissent is part of the same contract. The system may decline a goal or resist an intervention, but it must give its reason as evidence, never as a silent failure ([`docs/architecture/SUBSTRATE_AS_SOVEREIGN.md`](docs/architecture/SUBSTRATE_AS_SOVEREIGN.md)).
 
-The substrate is built from:
-
-- **Impulse–Activity architecture** — universal data (*impulses*) processed through constrained state transitions (*activities*).
-- **The walk** — goal execution as backward-chaining over the shape graph. It is held to a floor and a ceiling: at worst it does what a reason–act–observe agent would, with every step traced; at best it runs a pathway it has already learned.
-- **Learning loop** — Thompson Sampling for activity selection, Bayesian relevance scoring for impulses, and extraction of reusable templates from executions that reached their goal (see *Learning loop* below).
-- **Vessel pattern** — capabilities are provided by *vessels* (bundles of activities + resolvers + lifecycle hooks) that live where their data lives.
-- **Self-development under a contract** — the substrate detects its own operational gaps, drafts changes, and lands them through the **mitosis cutover** loop. What counts is defined by a contract, not by activity. A landing is judged after it lands: was the goal behind it reached (a clean exit is not enough), and did verification run against the landed tree ([`docs/process/QUALIFICATION.md`](docs/process/QUALIFICATION.md))? Dissent is part of the same contract. The system may decline a goal or resist an intervention, but it must give its reason as evidence, never as a silent failure ([`docs/architecture/SUBSTRATE_AS_SOVEREIGN.md`](docs/architecture/SUBSTRATE_AS_SOVEREIGN.md)).
-
-## Architecture foundation
+## Core concepts
 
 > **Canonical reference:** [`docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md)
-
-### Core concepts
 
 In plain terms: a **vessel** is a service; an **impulse** is a reference to a piece of data, with metadata; a **shape** is the type key that routes it; an **activity** is a reusable, graded procedure; a **resolver** is the function that does one step's work; the **walk** is the planner that chains activities from a goal back to what is already known; the **ribosome** turns a run that reached its goal into a reusable activity. The [glossary](docs/GLOSSARY.md) has the full list.
 
