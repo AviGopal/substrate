@@ -180,4 +180,3 @@ methods agents use. They are read by the substrate and by the people and agents 
 - [The qualification envelope](process/QUALIFICATION.md) — the tasks, faults, budgets and escalation conditions the substrate must handle without operator hands, and the metrics that judge it.
 - [Shape→Action→Evidence Expectations](process/SHAPE_ACTION_EVIDENCE_EXPECTATIONS.md) — falsifiable expectations with named metrics and floors.
 - [The learning-loop selftest](process/LEARNING_LOOP_SELFTEST.md) — a probe with known ground truth that follows one execution through every learning seam.
-- [Substrate-Narration Protocol](process/SUBSTRATE_NARRATION_PROTOCOL.md) — the operator-side narration and gap-accumulation methodology.
