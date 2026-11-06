@@ -1,6 +1,6 @@
 # Super-repo git hooks
 
-Versioned git hooks for the `metabob-devbob` super-repo. Installed by running:
+Versioned git hooks for the `substrate` super-repo. Installed by running:
 
 ```bash
 scripts/git-hooks/install.sh
@@ -21,7 +21,8 @@ The super-repo is a thin coordinator over:
 - `openspec/` — future-change proposals + designs + tasks + specs
 - `scripts/` — operational tooling
 - `packages/` — shared TypeScript packages used across vessels
-- `validation/` — head-to-head agent benchmark harness (manual prompt-iteration tool)
+- `validation/` — install, gate and glue checks, with their fixtures
+- `.claude/`, `.github/`, `.githooks/`, `.well-known/` — tool directories
 
 Anything else accumulates as cruft. The pre-commit hook rejects new cruft at commit time so the tree stays readable. Existing files are grandfathered — the hook only checks newly-added or renamed-into entries.
 
@@ -30,7 +31,7 @@ Anything else accumulates as cruft. The pre-commit hook rejects new cruft at com
 | You have | Put it in |
 |---|---|
 | Stateless reference doc (architecture, API contract, how-to) | `docs/<topic>.md` |
-| Future-change proposal | `openspec/changes/<YYYY-MM-DD>-<slug>/proposal.md` |
+| Future-change proposal | `openspec/changes/<slug>/proposal.md` |
 | Design doc for a future change | `openspec/changes/<...>/design.md` |
 | Task list for a future change | `openspec/changes/<...>/tasks.md` |
 | Formal spec (Requirements + Scenarios) | `openspec/changes/<...>/specs/<name>/spec.md` |
@@ -42,18 +43,24 @@ Anything else accumulates as cruft. The pre-commit hook rejects new cruft at com
 
 ## What the pre-commit hook does
 
-The hook runs two layers, in order:
+The hook runs these checks, in order, and stops at the first refusal:
 
-1. **Placement check** — rejects newly-added or renamed-into entries that violate the placement rules below. Pre-existing files are grandfathered.
-2. **Secrets scan (`gitleaks protect --staged`)** — scans the staged diff for credentials. If gitleaks isn't installed, the scan is skipped with a one-line install hint; the hook does not block commits over a missing optional dependency.
+1. **Placement** — rejects newly-added or renamed-into entries that violate the placement rules below. Pre-existing files are grandfathered.
+2. **Env ratchet** — judges added lines in unit files (below).
+3. **Ignored paths stay untracked** — refuses a staged addition whose path `.gitignore` ignores.
+4. **SOPS** — a staged `secrets/*.secrets.yaml` must be encrypted.
+5. **Secrets scan (`gitleaks protect --staged`)** — scans the staged diff for credentials. If gitleaks isn't installed, the scan is skipped with a one-line install hint.
+6. **Human-surface bundle** — a staged UI source change must carry its rebuilt `ui/dist`.
+7. **Verdict-token copies** — the vendored copies of `packages/verdict-token` must stay byte-identical.
+8. **Glue tests** — a commit touching `scripts/substrate/`, `validation/scripts/`, the seeder, the vendored packages or this hook runs `validation/scripts/run-glue-tests.sh` against the staged tree.
 
-If the placement check fails the secrets scan does not run — fix placement first, then re-stage. Bypass with `git commit --no-verify` (don't make a habit of it; the secrets scan in particular exists because we had a real Anthropic key committed at one point).
+Fix the first refusal, re-stage, and commit again. Bypass with `git commit --no-verify` only for a known refusal unrelated to the commit.
 
 ## What the pre-commit hook blocks
 
 A commit is rejected when it adds (or renames into) a file that violates any of these rules. Modifying existing tracked files is never blocked by these rules (the env ratchet below judges modified unit files too).
 
-1. **Files at the super-repo root** are limited to a small allowlist (project metadata: `CLAUDE.md`, `README.md`, `.gitignore`, `.gitmodules`, lockfiles, dotfile configs, and the launch manifest `docker-compose.yml` with its image recipe `Dockerfile.substrate`). Everything else needs a home under `repos/`, `docs/`, `openspec/`, `scripts/`, `packages/`, `.claude/`, `.github/`, or `.githooks/`.
+1. **Files at the super-repo root** are limited to a small allowlist (project metadata: `CLAUDE.md`, `README.md`, `.gitignore`, `.gitmodules`, lockfiles, dotfile configs, and the launch manifest `docker-compose.yml` with its image recipe `Dockerfile.substrate`). Everything else needs a home under one of the directories `ALLOWED_TOPLEVEL_DIRS` lists in the hook.
 2. **No new top-level markdown** outside `docs/` or `openspec/`. If you wrote a writeup that only matters for the current commit, put it in the commit message instead.
 3. **No new test files at root or in non-test areas**. Tests live alongside the code under `repos/<vessel>/test{,s}/`. The super-repo never holds tests.
 4. **No new image / video / archive files outside `repos/*` and `docs/assets/`**. Screenshots and playwright output should be gitignored, not committed.
@@ -72,7 +79,7 @@ Use docs (`docs/`) for things that are still true a year from now. Use openspec 
 
 ## What the pre-commit hook does NOT do
 
-- It does not run tests or builds.
+- It does not build, and it runs only the glue tests (vessel tests run in each vessel's repo).
 - It does not deploy.
 - It does not call kubectl or helmfile.
 - It does not validate openspec contracts.
@@ -99,7 +106,7 @@ If gitleaks is not on `PATH` the hook prints a one-line install hint and lets th
 example_key = "AKIAEXAMPLE..."  # gitleaks:allow
 ```
 
-Or extend the project rule set at `scripts/git-hooks/.gitleaks.toml` (file does not exist by default; create it only when needed and check it in).
+Or extend the project rule set in `scripts/git-hooks/.gitleaks.toml`, which the hook passes to gitleaks.
 
 **If a secret slips through.** Rotate it immediately. The leaked value lives in git history forever; rotation is what makes the cheap `git rm` recovery path safe.
 

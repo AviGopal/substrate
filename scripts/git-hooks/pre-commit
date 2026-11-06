@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# metabob-devbob super-repo pre-commit hook.
+# substrate super-repo pre-commit hook.
 #
 # Enforces placement rules so the super-repo stays a thin coordinator over
 # repos/* + docs/ + openspec/. New cruft is rejected at commit time; the
