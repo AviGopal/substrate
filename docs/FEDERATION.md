@@ -294,7 +294,12 @@ store, and identity endpoints from that one URL. At boot, `entrypoint.sh`
 auto-enables the federation-transport-vessel whenever a hub is set, and the
 transport self-derives its relay from `<hub-discovery>/bootstrap` — so the
 ingress/egress fall out of the discovery anchor alone, with no relay multiaddr
-or federation id to supply.
+or federation id to supply. It must be `DISCOVERY_ENDPOINT`: `HUB_DISCOVERY_URL` alone is
+refused rather than guessed.
+
+**A joining spoke writes to the hub.** Its seeder registers the shared activity templates
+into the hub's trace store with the issued key (idempotent upserts). A spoke you do not fully
+trust should get a read-scoped key, or have its `bootstrap-seeder` unit masked.
 
 **The federation id is minted, not supplied.** A node's first boot mints
 `FED_SUBSTRATE_ID=spoke-<hex>` and persists it in the workspace volume, so it survives
@@ -354,7 +359,12 @@ node is joined when all of these hold:
   the authoritative number. `.transport.activeReservations` counts circuit *listen
   addresses*, which can outlive the reservation behind them, and
   `.transport.phantomSuspected` is `true` when a circuit is advertised with no
-  reservation held. `reservationsHeld` of `0` means not federated.
+  reservation held. `reservationsHeld` of `0` means not federated. An anchorless transport
+  runs direct-only and reports `active` while mirroring nothing, and without a circuit the
+  spoke also loses the hub's `llm_completion` and concept-db.
+- **Reachable is not joinable.** A standalone substrate answers `/bootstrap` too, with an
+  empty relay list. The hub's `/bootstrap` should list a relay address on the hub's own
+  host; an address on another host is an advertisement that outlived its relay.
 - **Identity came from the hub.** A spoke runs no identity-vessel, so a valid
   `docker exec <container> substrate-key whoami` can only have been answered by the hub.
 - **The rows are on the hub, with a circuit.** The spoke's vessels are listed in the
@@ -367,6 +377,11 @@ node is joined when all of these hold:
   spoke, a hub-owned shape resolves.
 - **A goal reaches.** A goal dispatched on the spoke is `reached`, and its execution trace
   is durable in the hub's trace store.
+- **Joined is not supplied.** Every goal on a spoke recalls lessons from the hub's
+  concept-db, and every check above can pass while that recall fails. After a goal on the
+  spoke, the latest recall line should read `SUCCEEDED`:
+  `docker exec <container> journalctl -u goal-host-vessel -n 2000 --no-pager | grep '\[walk-concepts\] recall' | tail -1`.
+  `SKIPPED`, `REFUSED` or `FAILED` mean the spoke's goals run without the hub's lessons.
 
 The same checks hold after a stop/start or a recreate: the persisted identity and
 federation id mean a restarted node re-registers under the same rows. When judging that,

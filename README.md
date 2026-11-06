@@ -401,39 +401,7 @@ discovery, so it reaches `usable` exactly when its hub can. (A provider key in a
 **A hub on the same host** is addressed by the engine's host name, not `localhost` or the
 LAN address: [FEDERATION § Running a hub](docs/FEDERATION.md#running-a-hub).
 
-What joining means, and how to tell it happened:
-
-- **It must be `DISCOVERY_ENDPOINT`.** That variable naming a remote host is what makes the
-  container a spoke; `HUB_DISCOVERY_URL` alone is refused rather than guessed.
-- **Reachable is not joinable.** A standalone substrate answers `/bootstrap` too, with an
-  empty relay list. `curl -s http://<hub-host>:18100/bootstrap` should list a relay address
-  on the hub's own host; an address on another host is an advertisement that outlived its
-  relay.
-- **A running transport is not a joined one.** An anchorless transport runs direct-only and
-  reports `active` while mirroring nothing, and without a circuit the spoke also loses the
-  hub's `llm_completion` and concept-db. The evidence is the reservation, read inside the
-  container (the transport's health port is not published):
-  `docker exec substrate-live curl -s http://127.0.0.1:8401/health`, where
-  `.transport.reservationsHeld` of `0` means not federated (`activeReservations` counts
-  listen addresses, and `phantomSuspected: true` is a circuit advertised with no reservation held). Identity is the other
-  discriminator: a spoke runs no identity-vessel, so a valid
-  `docker exec substrate-live substrate-key whoami` can only have come from the hub.
-- **A joining spoke writes to the hub.** Its seeder registers the shared activity templates
-  into the hub's trace store with the issued key (idempotent upserts). A spoke you do not
-  fully trust should get a read-scoped key, or `DISABLED_VESSELS=bootstrap-seeder`.
-- **A joined spoke is reachable from the hub with no further step.** Its first boot mints
-  a federation id (`spoke-<hex>`, persisted in the workspace volume), and its vessels
-  appear in the hub registry as `<vessel>@spoke-<hex>` with `protocol: libp2p` and the
-  spoke's circuit address (the spoke transport logs `hub-register per-vessel (<n> rows)
-  -> all ok`). A resolve that names one of them (a goal's `target_vessel_id`) is carried
-  over the relay circuit and answered by the spoke, with its own files and tools. A
-  resolve that names no vessel is answered by the hub's own producer of the shape first:
-  data locality, not an outage.
-- **Joined is not supplied.** Every goal on a spoke recalls lessons from the hub's
-  concept-db, and every check above can pass while that recall fails. After a goal on the
-  spoke, the latest recall line should read `SUCCEEDED`:
-  `docker exec <container> journalctl -u goal-host-vessel -n 2000 --no-pager | grep '\[walk-concepts\] recall' | tail -1`.
-  `SKIPPED`, `REFUSED` or `FAILED` mean the spoke's goals run without the hub's lessons.
+How to tell a join happened: [FEDERATION § Verifying a join](docs/FEDERATION.md#verifying-a-join).
 
 Protocol and concepts: [`docs/FEDERATION.md`](docs/FEDERATION.md).
 
