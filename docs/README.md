@@ -158,7 +158,6 @@ its metric and its floor so it can be falsified; an expectation that cannot fail
 expectation, and a verification gate with no call sites can never be observed failing and
 so can never be trusted when it passes.
 
-- [Testing documentation](testing/README.md) — index of the verification material.
 - [Quick Verification Guide](testing/QUICK_VERIFICATION_GUIDE.md) — the short path to confirming a running substrate behaves, starting from the five-level `substrate-status` verdict.
 
 ## For agents and contributors

@@ -52,6 +52,10 @@ cd repos/activity-api && bun test
 cd repos/identity-vessel && bun test
 ```
 
+Tests live in each vessel's repository (`test/`, or beside the source as `*.test.ts`) and run
+with `bun test` there. The super-repo holds no vessel tests; `validation/` holds the install,
+gate and glue checks.
+
 ---
 
 ## Pre-Push Smoke Test
