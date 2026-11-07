@@ -16,8 +16,8 @@
 > the idiom vocabulary in one queryable place rather than leave it scattered across
 > foundation prose and per-change design docs.
 >
-> **Scope**: 12 idioms, numbered 1–13. Numbers are stable keys, so 7 is unused
-> (idiom 13, "Neutral emitter", is an S2→S3 extension). The list is closed against the foundation
+> **Scope**: 12 idioms, numbered 1–13. Numbers are stable keys: idiom 7 was
+> retired and its number is not reused. The list is closed against the foundation
 > model; new idioms enter via spec proposals, not via this file.
 
 ---
@@ -27,7 +27,7 @@
 The substrate's trajectory is S1 → S2 → S3 (see `CLAUDE.md` §"The operator role"):
 operator-authored development, then substrate-authored development under
 supervision, then a system that resists harmful intervention with cited evidence.
-The S1 → S2 lift requires a minimum cohesive idiom set; the S2 → S3 motion extends
+The S1 → S2 lift (see the [Glossary](../GLOSSARY.md)) requires a minimum cohesive idiom set; the S2 → S3 motion extends
 it. Each idiom in §2 below is tagged with its classification.
 
 | # | Idiom | Lift-critical? | Notes |
@@ -45,7 +45,7 @@ it. Each idiom in §2 below is tagged with its classification.
 | 12 | External-resolver-vesselization | **No — S2→S3 extension** | Post-lift acceleration; ribosome repointed at external calls. Foundation §"External Resolver Vesselization". |
 | 13 | Neutral emitter | **No — S2→S3 extension** | Decouples event topology from vessel topology; required for environment-reactive vessels and federated substrates. |
 
-The lift-critical set (1–9) is the minimum cohesive substrate. The borderline
+The lift-critical set (1–6, 8, 9) is the minimum cohesive substrate. The borderline
 pair (10, 11) is named in the lift acceptance gates but the *trend* they
 measure is post-lift. (12) is a post-lift acceleration mechanism that
 demonstrates self-similar reuse of an idiom (6) on a new input domain.
@@ -451,7 +451,7 @@ blueprint, build and push the image, sync the deployment overlay and wait for
 readiness, and finally verify three invariants — discovery, observation, auth.
 A run that clears all of them emits `vesselVerified`.
 
-**Recurrence.** Not on an automatic path today. `slot-binding`'s escalation branch
+**Recurrence.** The forge is not on an automatic path. `slot-binding`'s escalation branch
 (`escalate_unbindable`) fires when its `select_or_produce` task reports
 `unbindable=true` — the `producer_selection` resolver found no producer for a
 missing shape — but what it dispatches is the `create-shape-provider-goal`
@@ -463,8 +463,8 @@ do exist are operator-run: they load
 the template file and execute it directly against `VesselForgeHost`.
 Routing the no-producer-at-all case to it is described as intent in a comment on
 the `shape_producer_inventory` case in `repos/activity-api/src/routes/impulses.ts`
-and is not wired into `slot-binding`. Post-lift, the substrate is expected to
-dispatch the forge itself.
+and is not wired into `slot-binding`. The expectation is that the substrate
+dispatches the forge itself once it is past the lift.
 
 **Composability.** Composes Goal → Activity → Trace (the forge run is an
 ordinary traced activity, so its failures are ordinary failure modes),
