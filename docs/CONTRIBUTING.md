@@ -25,4 +25,7 @@ Or sign in on the human surface, type the goal, and give your verdict there. Rea
 
 Tests live in each vessel repo (`bun test` there). `validation/` here holds install and gate checks.
 
-<!-- CI-GATES: wording after vessel CI is green -->
+- Here: `install-acceptance.yml` runs the install page, network and upgrade checks on Docker and Podman against each built image. Submodule bumps carry no status check.
+- activity-api: build, typecheck, lint, tests. Integration tests run only when `SURREALDB_URL`, `ACTIVITY_API_URL` or `TEST_API_URL` is set and answers. A failing test fails CI unless it is a known source defect listed in `.github/known-red.txt`.
+- concept-db: typecheck, tests, shape-dispatch check.
+- Other vessels have no test CI: run `bun test` before you push.
