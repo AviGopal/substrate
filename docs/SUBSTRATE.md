@@ -131,13 +131,13 @@ committed inventory change does reach a running fleet's volume without a rebuild
 > inventory against git.
 
 > **The human surface serves out-of-box.** `human-surface-vessel` (`:8310` →
-> host `:18310`) ships as a baked, *enabled* vendor unit with the built UI in
+> host `:<prefix>310`, where `<prefix>` is the port prefix, `18` by default) ships as a baked, *enabled* vendor unit with the built UI in
 > the image, and it sits outside `apply-inventory`'s selection loop — so it is
 > up even under a restricted `ENABLED_VESSELS` roster, and `/` answers the UI
 > itself (200), not just `/health`. Verify with the page, not the health probe:
 >
 > ```bash
-> curl -s -o /dev/null -w '%{http_code}\n' http://localhost:18310/   # expect 200 — the UI itself
+> curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:<prefix>310/   # expect 200 — the UI itself
 > ```
 >
 > To exclude it from a deployment, name it in `DISABLED_VESSELS` — that masks
@@ -590,7 +590,7 @@ delivered.
 
 ```bash
 docker exec <container> vessel-ctl restart development-vessel
-curl http://localhost:18090/health
+curl http://127.0.0.1:<prefix>090/health   # this machine's copy, deliberately
 ```
 
 > **`vessel-ctl sync <vessel>` does not read your working tree.** It runs
@@ -650,12 +650,12 @@ bun run validation/scripts/stratified-harness.ts
 # (`run_goal` / `run_goal_async`), which lands the goal as a
 # traced execution. Agents drive validation through the cockpit, not a CLI.
 
-# Check the trace appeared
-# The trace store requires auth — the key is in ~/.metabob/config.json
-# (or `docker exec substrate-live substrate-key show`).
+# Check the trace appeared on this machine's trace store (a spoke resolves the
+# trace store on its hub, so ask the hub there). The trace store requires auth — the key is in ~/.metabob/config.json
+# (or `docker exec <container> substrate-key show`).
 KEY=$(jq -r .metabob.apiKey ~/.metabob/config.json)
 curl -s -H "Authorization: ApiKey $KEY" \
-  "http://localhost:18080/v2/activities/execution-traces?limit=1" | jq .
+  "http://127.0.0.1:<prefix>080/v2/activities/execution-traces?limit=1" | jq .
 ```
 
 ## Monitoring
