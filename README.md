@@ -463,8 +463,10 @@ client config only when run with `CONNECT_WRITE=1`. Building needs git with
 submodule access and bun in addition to the engine.
 
 `.gitmodules` pins each vessel by a URL relative to the superproject (`../<vessel>.git`), so
-a fork resolves its own submodules with no rewrite rule. The vessel repos are public; verify
-with `git config -f .gitmodules --get-regexp url` and `git ls-remote <url>`. For a fork
+a fork looks for the vessels under its own owner. Fork them too, or clone without
+`--recurse-submodules` and point them at upstream before `git submodule update --init`:
+`git config -f .gitmodules --get-regexp '\.url$' | while read k u; do git config "$k" "https://github.com/AviGopal/${u#../}"; done`.
+The vessel repos are public. For a fork
 whose vessels are private, scope any URL rewrite to that one org
 (`git config --global url."git@github.com:your-org/".insteadOf "https://github.com/your-org/"`);
 the unscoped form rewrites every GitHub URL and breaks anonymous cloning everywhere.
