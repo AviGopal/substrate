@@ -23,9 +23,8 @@ when the substrate is down, never the source of truth.
 Three reasons the direction matters:
 
 1. **Closure.** A substrate that cannot sustain its own loop without an external
-   stateful resolver is not closed. Operator memory is one of the properties the
-   closure audit tests; while memory lives only on the operator's disk, wiping
-   that disk removes something the system depends on.
+   stateful resolver is not closed. While memory lives only on the operator's
+   disk, wiping that disk removes something the system depends on.
 
 2. **Self-understanding.** When the substrate holds its own memory, what the
    operator sees is what the substrate sees. Alignment between the operator's

@@ -35,12 +35,11 @@ severity that determines the validator's aggregate verdict.
 - It does **not** evaluate proposals for correctness, novelty, or
   product-strategic fit. Those are operator/review concerns and remain
   out of band.
-- It does **not** replace the substrate-closure-properties §27.3.j
-  closure-audit. Foundation-compliance asks "does this proposal honour
-  the four-primitive minimum and its derived rules"; closure-audit
-  asks "does this proposal preserve substrate-resident execution of
-  IAL §27.1/§27.2 properties". Both gates are required; neither
-  implies the other.
+- It does **not** replace the closure audit proposed in §E.
+  Foundation-compliance asks "does this proposal honour the
+  four-primitive minimum and its derived rules"; the closure audit
+  asks "does the substrate still hold its properties when an external
+  tool is removed". Both gates are required; neither implies the other.
 - It does **not** evolve the foundation. Foundation evolution happens
   by operator-authored proposals that explicitly amend
   `IMPULSE_ACTIVITY_FOUNDATION.md`. Updates to *this* document
@@ -407,7 +406,7 @@ promote them to §B as the substrate's parsing capacity grows.
 
 **Foundation citation:** the closure audit.
 
-**Why operator-only:** Whether a proposal *strengthens* or *weakens* the substrate's closure relative to a given external tool requires synthetic-removal evaluation under the closure-audit harness. Foundation-compliance can name the dependency (FC-013); it cannot run the audit. The closure-audit script runs independently and complements foundation-compliance.
+**Why operator-only:** Whether a proposal *strengthens* or *weakens* the substrate's closure relative to a given external tool requires synthetic-removal evaluation under the closure-audit harness. Foundation-compliance can name the dependency (FC-013); it cannot run the audit. The closure audit (§E) is a separate gate that complements foundation-compliance.
 
 ### O-005 — Foundation-amendment soundness
 
