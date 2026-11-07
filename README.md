@@ -630,7 +630,7 @@ The laws these mechanisms follow, reuse before minting among them, are in [`CLAU
 - [`CLAUDE.md`](CLAUDE.md) — authoritative working guide (the laws, the dispatch loop, the operator role, fleet anchors).
 - [`docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md) — canonical system definition.
 - [`docs/SUBSTRATE.md`](docs/SUBSTRATE.md) — operating reference for the single-container substrate: inventory and profiles, `vessel-ctl`, the iteration loop, troubleshooting.
-- [`docs/architecture/`](docs/architecture/) — the canonical model, the software, dynamics and sovereignty lenses, and supporting design docs.
+- [`docs/architecture/`](docs/architecture/) — the canonical model, the software, dynamics and sovereignty [lenses](docs/GLOSSARY.md), and supporting design docs.
 - [`docs/theory/`](docs/theory/) — the formal lenses (MDP, cell complex, representation, network, fleet): framing, not behaviour a reader can check.
 - [`docs/RBAC_GUIDE.md`](docs/RBAC_GUIDE.md), [`docs/AUTH_JWT_CLAIMS.md`](docs/AUTH_JWT_CLAIMS.md) — multi-tenant isolation and auth claims.
 - [`openspec/changes/`](openspec/changes/) — change proposals: the design and tasks for each change in progress.

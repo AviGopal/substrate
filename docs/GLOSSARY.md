@@ -11,7 +11,7 @@
 > and activity expressed in it) → [`architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](architecture/IMPULSE_ACTIVITY_FOUNDATION.md).
 > The three states, durability groups, and what is implementation detail →
 > [`architecture/SUBSTRATE_AS_SOFTWARE.md`](architecture/SUBSTRATE_AS_SOFTWARE.md).
-> The three math lenses and their shared dictionary →
+> The math lenses (see **lens**, §6.1) and their shared dictionary →
 > [`theory/SUBSTRATE_AS_MDP.md`](theory/SUBSTRATE_AS_MDP.md),
 > [`SUBSTRATE_AS_DEC.md`](theory/SUBSTRATE_AS_DEC.md),
 > [`SUBSTRATE_AS_DYNAMICS.md`](architecture/SUBSTRATE_AS_DYNAMICS.md) (dictionary in
@@ -131,6 +131,7 @@ The words used for how the running system behaves and is operated.
 | **pull-sync** | the timer that converges each running vessel to its repository's `origin/dev`: fast-forward pull, mirror, health-gated restart | `substrate-pull-sync` |
 | **profile** | which vessels a container runs, named by the data it holds: `standalone`, `hub`, `hub-minimal`, `spoke`, `surface`, `compute` | [README § Installation](../README.md#installation) |
 | **hub / spoke** | a hub holds a network's learning state and the compute next to it; a spoke runs its own vessels and resolves the hub's shapes through discovery | federation: [`FEDERATION.md`](FEDERATION.md) |
+| **lens** | a `SUBSTRATE_AS_*` document that describes the whole system in one formalism. Software, dynamics and sovereignty are in `architecture/`; MDP, DEC (cell complex), representation, network and fleet are in `theory/`. The cross-lens dictionary (§8) aligns four of them | [`docs/README.md`](README.md) lists each under its purpose |
 | **cockpit** | the agent-facing tool surface (the metabob MCP server) through which agents dispatch goals and read verdicts | `CLAUDE.md` |
 | **S1 / S2 / S3** | the substrate's trajectory: S1 operator-authored development; S2 substrate-authored development under operator supervision; S3 a system that resists harmful intervention with cited evidence | `CLAUDE.md` §"The operator role" |
 | **lift** | the S1 → S2 transition: the substrate authors, verifies and lands its own changes, and the operator stops being load-bearing. *Pre-lift* and *post-lift* name the two sides; an idiom is *lift-critical* when S2 cannot hold without it | [`SUBSTRATE_AS_SOFTWARE.md`](architecture/SUBSTRATE_AS_SOFTWARE.md) §5; [`CORE_IDIOMS.md`](process/CORE_IDIOMS.md) §1 |

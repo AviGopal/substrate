@@ -11,9 +11,8 @@ This index is organised by the nine architectural purposes the substrate must ma
 stay stable and keep growing. A document appears under exactly one purpose: the one it is
 load-bearing for. New here? Start with the root README's [walk-through of one goal](../README.md#a-goal-end-to-end), and keep the
 [Glossary](GLOSSARY.md) open. To run and operate one, read [`SUBSTRATE.md`](SUBSTRATE.md). The
-canonical reference for what is real is `IMPULSE_ACTIVITY_FOUNDATION.md`; the formal lenses
-(`SUBSTRATE_AS_SOFTWARE.md`, `SUBSTRATE_AS_DYNAMICS.md` in `architecture/`, the others in
-`theory/`) are deeper reading, each linked under its purpose below. Behavioural guidance for agents working in this repository lives in
+canonical reference for what is real is `IMPULSE_ACTIVITY_FOUNDATION.md`; the formal
+[lenses](GLOSSARY.md) (the `SUBSTRATE_AS_*` documents in `architecture/` and `theory/`) are deeper reading, each linked under its purpose below. Behavioural guidance for agents working in this repository lives in
 the root [`CLAUDE.md`](../CLAUDE.md), which also enumerates the agent cockpit's tool surface.
 
 ## 1. Ontology — what is real
