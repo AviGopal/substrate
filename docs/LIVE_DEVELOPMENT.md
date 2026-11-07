@@ -35,7 +35,6 @@ The **port** column is the port the vessel binds inside the substrate — the va
 its systemd unit pins via `PORT`. A bare `bun run dev` on the host with no `PORT`
 set falls back to whatever the repo's own default is, which is *not* always the
 fleet port; export `PORT` explicitly if anything else needs to find the vessel.
-UI vessels have no fleet unit, so their port is simply their dev-server port.
 
 | Vessel | `dev` command | Port | Hot-reload type | Notes |
 |---|---|---|---|---|
@@ -102,13 +101,6 @@ docker exec substrate-live systemctl cat boredom-vessel.service boredom-vessel.t
 docker exec substrate-live journalctl -u boredom-vessel -f
 ```
 
-Run `bun run dev:debug` (where available) to include ISO timestamps in hot-reload log lines:
-
-```bash
-cd repos/react-renderer && bun run dev:debug
-cd repos/terminal       && bun run dev:debug
-```
-
 ---
 
 ## The `buildHandler()` Pattern
@@ -155,7 +147,7 @@ import { resolve } from "path"
 
 const VESSEL_DIR = resolve(import.meta.dir, "../../")
 
-describe("react-renderer HTTP API", () => {
+describe("concept-db HTTP API", () => {
   let vessel: VesselHandle
 
   beforeAll(async () => {
@@ -174,7 +166,7 @@ describe("react-renderer HTTP API", () => {
     const res = await fetch(`${vessel.baseUrl}/health`)
     expect(res.status).toBe(200)
     const body = await res.json() as Record<string, unknown>
-    expect(body.status).toBe("ok")
+    expect(body.status).toBe("healthy")
   })
 })
 ```
@@ -207,13 +199,7 @@ This avoids the ~1s startup overhead in tight iteration cycles.
 
 ## Config Hot Reload
 
-`react-renderer` watches `config/shape-mapping.json`. Editing the file reloads the mapping and calls `server.reload(buildHandler())` — no process restart:
-
-```bash
-# Edit the mapping while dev server is running
-echo '{"foo": "bar"}' > repos/react-renderer/config/shape-mapping.json
-# Server logs: [ConfigReload] shape-mapping.json reloaded
-```
+A vessel that watches a file can apply a change the same way: on change, call `server.reload(buildHandler())`, with no process restart.
 
 Behaviour that should change while the system runs belongs in a shaped impulse the vessel reads at use time, not in a watched config file.
 
@@ -237,11 +223,11 @@ With `--hot` and `buildHandler()`, the process never restarts, so the registrati
 
 The activity-api WebSocket broadcaster (`/ws` on activity-api's endpoint, resolved through discovery's `vesselEndpoint` shape) carries three event classes that are useful for development tooling:
 
-- **Execution lifecycle events** (`task.started`, `task.completed`, `task.failed`, `tool.call`, `impulse.resolved`, `lifecycle:task:preBinding`, `lifecycle:gap:classified`, `lifecycle:llm:dispatched`) — the same events the workbench uses for its live execution overlay, available to any subscriber. Subscribe to these to observe goal-host-vessel activity in real time.
+- **Execution lifecycle events** (`task.started`, `task.completed`, `task.failed`, `tool.call`, `impulse.resolved`, `lifecycle:task:preBinding`, `lifecycle:gap:classified`, `lifecycle:llm:dispatched`) — available to any subscriber. Subscribe to these to observe goal-host-vessel activity in real time.
 - **Vessel registration events** (`vessel.registered`, `vessel.heartbeat`, `vessel.deregistered`, `vessel.expired`) — fired by discovery-vessel whenever the registry changes. Subscribe to these instead of polling `/shapes` to detect topology changes reactively.
 - **Concept-db internal events** (`concept:created`, `edge:created`) — forwarded onto the bus when concept-db records new knowledge.
 
-Connection pattern (same as the workbench):
+Connection pattern:
 
 ```typescript
 const ws = new WebSocket(`${activityApiWsBase}/ws`)   // activity-api endpoint, resolved through discovery
