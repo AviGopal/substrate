@@ -132,8 +132,8 @@ MDP action-space expansion with invariance guarantees." The substrate
 claims existing posteriors are factorization-protected against new
 vessels; multi-agent literature finds adding agents systematically
 perturbs the group's effective policy. This is detectable by
-behavioral-continuation replay-success but not yet operationalized
-anywhere.
+behavioral-continuation replay-success; the substrate runs no such
+check.
 
 ## 4. Bayesian / probabilistic methods with LLMs
 
