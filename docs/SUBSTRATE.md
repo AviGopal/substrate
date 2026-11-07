@@ -582,10 +582,11 @@ docker exec <container> substrate-status --wait usable
 
 `docker exec <container> vessel-ctl sync <vessel>` pulls the vessel's
 in-container clone, mirrors it into the live runtime and restarts the unit. This
-is a **deliberate, single-machine** path, sanctioned for seeing an exceptional
-manual edit run before it is committed — it acts on one container on one daemon
-and reaches no other substrate, so it is a local convenience, never the way a
-change is delivered.
+is a **deliberate, single-machine** path: it runs a pushed commit on one
+container before pull-sync reaches it, or an exceptional manual edit made inside
+that container's own clone. It acts on one container on one daemon and reaches no
+other substrate, so it is a local convenience, never the way a change is
+delivered.
 
 ```bash
 docker exec <container> vessel-ctl restart development-vessel
@@ -609,7 +610,7 @@ of blessed vessels. `docker exec <container> vessel-ctl status` shows what
 is there to act on.
 
 The core vessels — `activity-api`, `identity-vessel`, `discovery-vessel`,
-`surrealdb` — have **no** make restart target. A landed change reaches them like
+`surrealdb` — take no special path. A landed change reaches them like
 every other vessel, through pull-sync, and `vessel-ctl sync <vessel>` or
 `vessel-ctl restart <vessel>` acts on them on one machine without waiting for it.
 
