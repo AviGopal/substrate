@@ -13,10 +13,12 @@ What the fleet does:
   `repos/discovery-vessel/src/types.ts`, and discovery applies their defaults.
 - activity-api and concept-db declare `auth_token_source: 'caller_identity'` on
   registration (each in `src/services/discovery-client.ts`).
-- Callers attach credentials with their own helpers and do not yet read either
-  field. The caller-side lookup, the missing-token policy and cross-vessel
+- Callers attach credentials with their own helpers and read neither field.
+  The caller-side lookup, the missing-token policy and cross-vessel
   delegation (calling a vessel "as the user") are a proposed change:
   the [delegation proposal](../../openspec/changes/auth-token-delegation/proposal.md).
+  Section numbers are shared between the two documents: §4.2, §4.4 and §5–§7
+  are in the proposal.
 
 ---
 
@@ -45,13 +47,12 @@ The gap appears as soon as a vessel needs a *different* credential:
 
 There is no way for these vessels to say "give me the user's token, not
 yours." Callers resolve credentials by out-of-band convention, and that
-convention says one thing only: service identity from env. The Wave-1
-typology investigation flagged this — vessels declare "I need Bearer
-auth" but callers must externally resolve the credential, blocking
-fully automated discovery-driven invocation.
+convention says one thing only: service identity from env. Vessels
+declare "I need Bearer auth" but callers must resolve the credential
+out of band, which blocks fully automated discovery-driven invocation.
 
-This spec adds the missing field and the delegation surface that makes
-the field safe to use end to end.
+This spec defines the missing field. Making it safe to use end to end
+(caller-side lookup and delegation) is the proposal's scope.
 
 ---
 
