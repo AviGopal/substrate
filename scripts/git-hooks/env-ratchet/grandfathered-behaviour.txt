@@ -22,13 +22,11 @@ BOREDOM_POOL_LOOP_INTERVAL_MS      cadence
 BOREDOM_STATE_REFRESH_MS           cadence
 DB_MAINTENANCE                     on/off switch
 EMIT_GAPS                          on/off switch
-EXTRA_WORKSPACE_ROOTS              widens what tools may read (a path, but a reach grant)
 GOAL_HOST_BEHAVIOR_LIMIT           cap
 GOAL_HOST_BEHAVIOR_WINDOW_HOURS    window
 GOAL_HOST_DRAIN_MS                 drain timeout
 GOAL_HOST_WS_SUBSCRIBER            on/off switch
 MAX_PEER_DEPTH                     federation fan-out cap
-MITOSIS_DIRECT_PUSH                landing-path switch
 OBSIDIAN_LEARN_GRANT               grant level
 OBSIDIAN_LEARN_MAX                 cap
 OBSIDIAN_LEARN_MODE                mode switch
@@ -40,7 +38,6 @@ REPAIR                             on/off switch
 SELF_DEV_TREND                     on/off switch
 SURGICAL_SCAN_CAP                  cap
 SURREAL_ROCKSDB_BLOCK_CACHE_SIZE   database cache tuning
-TASK_GENERATION_ENABLED            on/off switch
 VESSEL_DRAIN_MS                    drain timeout
 WATCHDOG_RELEVANT_SHAPE            what a watchdog counts as progress
 WATCHDOG_RESTART_IMPULSE           what a watchdog dispatches on a stall

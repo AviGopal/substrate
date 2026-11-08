@@ -13,18 +13,9 @@
 	url = ../identity-vessel.git
 	branch = dev
 
-[submodule "repos/activity-api"]
-	path = repos/activity-api
-	url = ../activity-api.git
-	branch = dev
-
 [submodule "repos/cpg-inference-ts"]
 	path = repos/cpg-inference-ts
 	url = ../cpg-inference-ts.git
-	branch = dev
-[submodule "repos/development-vessel"]
-	path = repos/development-vessel
-	url = ../development-vessel.git
 	branch = dev
 [submodule "repos/analysis-vessel"]
 	path = repos/analysis-vessel

@@ -44,7 +44,6 @@
       "roles": ["hub", "autonomy"],
       "vessels": [
         "goal-host-vessel.service",
-        "development-vessel.service",
         "local-tools-vessel.service",
         "ribosome-vessel.service",
         "light-dispatch-vessel.service",
@@ -55,9 +54,7 @@
         "runtime-drift.service",
         "runtime-drift.timer",
         "gap-store-census.service",
-        "gap-store-census.timer",
-        "rhythm-cadence.service",
-        "rhythm-cadence.timer"
+        "gap-store-census.timer"
       ]
     },
     "hub-minimal": {
@@ -79,15 +76,12 @@
     "compute": [
       "discovery-vessel.service",
       "goal-host-vessel.service",
-      "development-vessel.service",
       "local-tools-vessel.service",
       "light-dispatch-vessel.service",
       "boredom-vessel.service",
       "boredom-vessel.timer",
       "gap-store-census.service",
       "gap-store-census.timer",
-      "rhythm-cadence.service",
-      "rhythm-cadence.timer",
       "federation-transport-vessel.service",
       "substrate-ready.service",
       "journald-stdout-forwarder.service",
@@ -99,15 +93,12 @@
     "compute_node": [
       "discovery-vessel.service",
       "goal-host-vessel.service",
-      "development-vessel.service",
       "local-tools-vessel.service",
       "light-dispatch-vessel.service",
       "boredom-vessel.service",
       "boredom-vessel.timer",
       "gap-store-census.service",
       "gap-store-census.timer",
-      "rhythm-cadence.service",
-      "rhythm-cadence.timer",
       "federation-transport-vessel.service",
       "substrate-ready.service",
       "journald-stdout-forwarder.service",
@@ -153,26 +144,6 @@
       "repo": "identity-vessel",
       "health_port": 8101,
       "core": true
-    },
-    {
-      "unit": "activity-api.service",
-      "role": "api",
-      "repo": "activity-api",
-      "health_port": 8080,
-      "core": true
-    },
-    {
-      "unit": "development-vessel.service",
-      "role": "compute",
-      "repo": "development-vessel",
-      "health_port": 8090
-    },
-    {
-      "_comment": "Template seeding, split out of development-vessel's start phase so it cannot hold multi-user.target. Same role, so any selection that runs the vessel runs its seed — and any that masks the vessel masks the seed with it, which matters because the seed Requires= the vessel.",
-      "unit": "development-vessel-seed.service",
-      "_comment": "role=seed, NOT compute. It seeds templates once and exits (Restart=no), but its unit is deliberately Type=simple — declared oneshot, systemd holds multi-user.target until it EXITS, and the boot then sits behind ~98 template uploads (measured, and the unit file records it). substrate-ready classifies a resting unit as healthy on `role=seed OR Type=oneshot`; under role=compute this matched neither, so a unit that had logged 'Catalogue already populated — skipping seed' and deactivated successfully was reported `down`. That made substrate-doctor print FAILURES with all seven checks passing, and a readiness gate that fails on healthy units gets ignored — worse than no gate. seed is in every role group (hub/spoke/full), so this changes no topology.",
-      "role": "seed",
-      "repo": "development-vessel"
     },
     {
       "unit": "local-tools-vessel.service",
@@ -282,10 +253,6 @@
       "health_port": 8401
     },
     {
-      "unit": "bootstrap-seeder.service",
-      "role": "seed"
-    },
-    {
       "unit": "identity-seeder.service",
       "role": "seed"
     },
@@ -320,10 +287,6 @@
     {
       "unit": "self-recovery.timer",
       "role": "infra"
-    },
-    {
-      "unit": "m1-trainer.timer",
-      "role": "autonomy"
     },
     {
       "unit": "funnel-drain.timer",
@@ -409,8 +372,6 @@
     { "unit": "db-maintenance.service", "role": "store" },
     { "unit": "gap-store-census.timer", "role": "compute" },
     { "unit": "gap-store-census.service", "role": "compute" },
-    { "unit": "rhythm-cadence.timer", "role": "compute" },
-    { "unit": "rhythm-cadence.service", "role": "compute" },
     { "unit": "joint-liveness.timer", "role": "store" },
     { "unit": "joint-liveness.service", "role": "store" },
     { "unit": "compose-drift.timer", "role": "store" },
@@ -434,7 +395,6 @@
     { "unit": "funnel-drain.service", "role": "autonomy" },
     { "unit": "ingest-docs.service", "role": "autonomy" },
     { "unit": "light-dispatch-healthcheck.service", "role": "infra" },
-    { "unit": "m1-trainer.service", "role": "autonomy" },
     { "unit": "model-reality-audit.service", "role": "store" },
     { "unit": "observe-orthogonal-refresh.service", "role": "autonomy" },
     { "unit": "obsidian-collaborate.service", "role": "ui", "repo": "obsidian-vessel" },

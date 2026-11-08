@@ -116,7 +116,9 @@ rundir_units="$(grep -lE 'ExecStart=.*\$\{?SUBSTRATE_RUN_DIR\}?/' "$U"/*.service
 for p in $(jq -r '(.profiles|keys[]),(.composed_profiles|keys[])' "$INV"); do
   out="$(DRY_RUN=1 PROFILE="$p" VESSELS_INVENTORY="$INV" bash "$ROOT/scripts/substrate/apply-inventory.sh" 2>&1)"
   kept() { ! grep -q "would disable: $1\$" <<<"$out"; }
-  if kept development-vessel.service && ! kept substrate-pull-sync.timer; then bad "H: profile $p keeps development-vessel without the pull-sync timer (no .gate-public marker: the self-fact reader fails closed)"; fi
+  # An inventory without development-vessel keeps nothing that reads the marker.
+  if jq -e 'any(.vessels[]; .unit == "development-vessel.service")' "$INV" >/dev/null \
+    && kept development-vessel.service && ! kept substrate-pull-sync.timer; then bad "H: profile $p keeps development-vessel without the pull-sync timer (no .gate-public marker: the self-fact reader fails closed)"; fi
   for ru in $rundir_units; do
     if kept "$ru" && ! kept substrate-active-scripts-seed.service && ! kept substrate-pull-sync.timer; then bad "H: profile $p keeps $ru (runs from the run dir) with neither the seed nor pull-sync"; fi
   done
