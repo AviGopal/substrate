@@ -165,6 +165,11 @@ against the running system.
 | `minibob`, `MiniBob` | nothing; no such component exists, and its signin routes answer `410 Gone` by design |
 | `devbob` | **`substrate`** — the self-developing deployment, not a separate agent |
 
+**Naming new pieces.** A process that registers with discovery is named `<domain>-vessel`;
+`activity-api` and `concept-db` keep their names, because a rename is a supersede, never an
+in-place change. Shared code lives in `packages/` as `@avigopal/<name>`. Shape names follow
+[`shapes/README.md` § Shape naming](shapes/README.md#shape-naming).
+
 **One name stays:** the **metabob MCP server**. It is the agent-facing cockpit — the tool
 surface an operator's agent calls into — and its tool names (`run_goal`, `run_goal_async`,
 `goal_status`, `goal_reasoning`, `provide_feedback`, `registry_query`, …) are a published

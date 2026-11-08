@@ -59,16 +59,29 @@ not exist, however plausible the name.
 
 ## Shape naming
 
-Names are camelCase for the activity-api families (`activityExecutionTrace`,
-`executionTraceList`, `traceAggregateReport`). Snake_case names appear in the
-tree — `shape_gap_resolution`, `test_audit_report`, `goal_verification_label` —
-and they are correct exactly as advertised. The pointer type is the advertised string, verbatim; there is no
-normalisation step that would forgive a case difference.
+A shape name is a routing key: posteriors, traces and template steps are keyed on
+it. The rules below govern every new name. Existing names stay as advertised.
 
-Beyond casing: name the data the shape returns, not the query that produced it.
-Indicate granularity where it matters (`Summary`, `List`, `Report`, `Metrics`).
-Suffix `_write` for a mutation shape and keep the read shape's name as the stem,
-so a reader can see the pair.
+1. **Name the data, not the query** that produced it.
+2. **The kind lives in the suffix, never in the case.** Resolution takes the
+   pointer type verbatim, but the event bus maps camelCase to snake_case and
+   payload matching falls back between the two, so two names that differ only by
+   case are one key on the bus with two producers. Mixed casing exists in the tree
+   (`activityExecutionTrace`, `goal_verification_label`) and carries no meaning.
+   - **Data shapes** have no suffix, or end in a granularity suffix: `Summary`,
+     `List`, `Report`, `Metrics` (`executionTraceList`). A report is data.
+   - **Activity shapes** end in a role: `_scan` (an on-demand detector that only
+     reads; audits and checks are scans), `_observer` (passive, records what it
+     sees) or `_tick` (fired by a rhythm).
+3. **Writes pair with their read.** A mutation is `<readStem>_write`, and its
+   acknowledgement carries `<readStem>_write_result` in `metadata.shape`, so a reader
+   can see the pair and tell an ack from a read payload. Create, update,
+   deprecate and delete are fields of the write, not separate shapes.
+4. **`:` is the one namespace separator**, for surfaces and lifecycle events alike
+   (`lifecycle:task:preBinding`). Shape names contain no spaces and no hyphens.
+5. **Never rename in place.** A rename is a supersede: the new name is an alias
+   that resolves to the same key. A second key would split selection between two
+   cells and orphan the learning keyed on the first.
 
 ## Activity-api shapes
 
