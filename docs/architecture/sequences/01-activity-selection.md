@@ -2,8 +2,10 @@
 
 > **How to read this.** Dispatch enters `goal-host-vessel` (`:8210` in-container,
 > `:18210` host-mapped) at `POST /run-goal` or `POST /resolve`. Selection posteriors,
-> template storage and tiered candidate retrieval live in `activity-api`
-> (`:8080` / `:18080`). Participants below are named by the symbol that implements
+> template storage and tiered candidate retrieval live in the trace store: the
+> vessel that advertises those shapes in discovery. The trace-store symbols below
+> are those of its `activity-api` implementation; the contract is the shapes, not
+> the symbols. Participants below are named by the symbol that implements
 > them, never by line number — this system rewrites its own source, so line
 > citations rot within a day.
 

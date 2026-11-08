@@ -6,7 +6,11 @@
 > subscriptions attach behaviour. Every participant is named by the **symbol**
 > that implements it and the **vessel** it runs in. There are no line-number
 > citations anywhere in this directory, deliberately: the substrate rewrites its
-> own source, so a line citation is wrong before it is read.
+> own source, so a line citation is wrong before it is read. The symbols are
+> those of one implementation; the contract is the shapes they serve. Where a
+> participant is the trace store (traces, templates, posteriors), the symbols
+> are its `activity-api` implementation's, and the vessel serving those shapes
+> is whichever one advertises them in discovery.
 
 ## Overview
 
