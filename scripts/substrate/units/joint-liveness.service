@@ -5,7 +5,7 @@ Description=Joint-liveness detector — flags write->read-severed joints (the fr
 # execution row. A bound reader-table frozen while the fleet is active is the
 # frozen-table signature; each severed joint emits a substrateGap. Meta-guarded:
 # gaps on itself if it checks nothing. Read-only except gap emission.
-After=activity-api.service surrealdb.service development-vessel.service
+After=surrealdb.service
 
 # Runs the gate-ACCEPTED copy: ${SUBSTRATE_RUN_DIR} is filled from the accepted gate (pull-sync, and
 # substrate-active-scripts-seed at boot), never from the super-repo clone, whose HEAD is an unjudged candidate.

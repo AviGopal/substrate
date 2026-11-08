@@ -5,7 +5,7 @@ Description=Composition-edge reconciler — derive activity_composition_graph fr
 # GET /v2/activities/composition/graph (and the topological / backward-chaining
 # model) reads. This oneshot re-derives the full edge set from the trace store
 # and UPSERTs it (idempotent), keeping the backward-model substrate fresh.
-After=activity-api.service surrealdb.service
+After=surrealdb.service
 Wants=surrealdb.service
 
 # Smoke test:

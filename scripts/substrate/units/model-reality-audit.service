@@ -6,7 +6,7 @@ Description=Model-reality audit — aggregate forward/backward-model vs trace-re
 # backward model (composition graph, parent links) match the reality recorded in
 # traces. Emits substrateGaps for divergences (EMIT_GAPS=1) so model-reality
 # mismatches flow into the self-alteration loop instead of going undetected.
-After=activity-api.service surrealdb.service
+After=surrealdb.service
 Wants=surrealdb.service
 
 # Smoke test:

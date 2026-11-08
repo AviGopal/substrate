@@ -1,6 +1,6 @@
 [Unit]
 Description=Gap-compose — route an open substrateGap through the feature composer (detect->author->verify->stage)
-After=activity-api.service development-vessel.service llm-resolver-vessel.service
+After=llm-resolver-vessel.service
 # AUTONOMOUS author+verify+stage by default (no human switch). GAP_COMPOSE_TRIAGE=1 opts out.
 # Smoke: docker exec substrate-live systemctl start gap-compose.service
 [Service]

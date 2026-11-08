@@ -18,7 +18,7 @@ Description=Compose-drift detector — flags the composer degrading its own anch
 # exists to recover — this is that stated bootstrap-tier exception, and the
 # precedent is a one-line inverted boolean that degraded the composer
 # threefold for two days while passing every gate on the way in.
-After=activity-api.service surrealdb.service development-vessel.service
+After=surrealdb.service
 
 # Runs the gate-ACCEPTED copy: ${SUBSTRATE_RUN_DIR} is filled from the accepted gate (pull-sync, and
 # substrate-active-scripts-seed at boot), never from the super-repo clone, whose HEAD is an unjudged candidate.

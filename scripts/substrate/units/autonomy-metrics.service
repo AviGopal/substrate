@@ -5,7 +5,7 @@ Description=Autonomy metrics collector (READ-ONLY) — snapshots autonomy KPIs t
 # own (lift gate, forward/backward model health, self-alteration funnel, open
 # model-reality gaps, DEC rate-limiters, S3 push-away) so we can OBSERVE
 # self-correction without nudging.
-After=activity-api.service surrealdb.service development-vessel.service
+After=surrealdb.service
 
 [Service]
 Type=oneshot

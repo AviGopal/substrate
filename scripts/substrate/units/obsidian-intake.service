@@ -1,6 +1,5 @@
 [Unit]
 Description=obsidian-intake — fast pickup of operator requests from Substrate/Inbox.md (human↔substrate async loop)
-After=development-vessel.service
 # Responsive intake is SEPARATE from the heavy 30-min obsidian-learn pass: the
 # human writes a request and should see "🔄 working on it" in Now.md within a
 # couple of minutes, not half an hour. This runs ONLY the request-scan (intake +

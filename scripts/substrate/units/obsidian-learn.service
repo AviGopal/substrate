@@ -1,6 +1,6 @@
 [Unit]
 Description=obsidian-learn — autonomous Obsidian command-effect learning (side loop, 2026-06-15)
-After=development-vessel.service concept-db.service
+After=concept-db.service
 # Deliberately a SIDE loop, NOT a core boredom goal: Obsidian is a disconnectable
 # external app; its availability must not perturb the substrate's self-optimizing
 # core rotation. See memory feedback_external_apps_outside_core_loop.

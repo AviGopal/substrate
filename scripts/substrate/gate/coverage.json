@@ -44,7 +44,7 @@
     },
     "/usr/lib/systemd/system/auto-describe-resolvers.service": {
       "src": "scripts/substrate/units/auto-describe-resolvers.service",
-      "src_blob": "31f7e6490a23c83e11015643ac425123280ff1d7",
+      "src_blob": "dc4138196901205e0b8b032f6bb1ac044f5fda85",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -53,7 +53,7 @@
       "evidence": {
         "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
         "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "7dd0028a56816e96bad08be521c300117a0dfa65"
+        "mutated_blob": "e2c57be3431e93b6956371d4f8976bd90e90d85e"
       }
     },
     "/usr/lib/systemd/system/auto-describe-resolvers.service.d/run-dir.conf": {
@@ -100,7 +100,7 @@
     },
     "/usr/lib/systemd/system/autonomy-metrics.service": {
       "src": "scripts/substrate/units/autonomy-metrics.service",
-      "src_blob": "a06859f1e3cb07acd61c87ba27c51a0211ad66ae",
+      "src_blob": "eb06ff7ab6375c0e1d4e6762725e6bf8a9c75d85",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -109,7 +109,7 @@
       "evidence": {
         "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
         "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "d1ba7a73ca97dd3bad249536b53e4fc08126d6ac"
+        "mutated_blob": "46b6e3f3b16b5ae6be79a2d2518487f9a2daa8c4"
       }
     },
     "/usr/lib/systemd/system/autonomy-metrics.service.d/run-dir.conf": {
@@ -156,7 +156,7 @@
     },
     "/usr/lib/systemd/system/boredom-vessel.service": {
       "src": "scripts/substrate/units/boredom-vessel.service",
-      "src_blob": "3bb2dfbe87faf0923d3354a79866e46cf496a199",
+      "src_blob": "0c47abf923f7f64643dee56224f78b986a21bea2",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -165,7 +165,7 @@
       "evidence": {
         "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
         "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "935a2286ce4c3daaadd8752457f8fe0d379dbbd0"
+        "mutated_blob": "29e2e0415e01966055b4d5211895ae2396d8cff8"
       }
     },
     "/usr/lib/systemd/system/boredom-vessel.service.d/10-secrets-out-of-reach.conf": {
@@ -226,7 +226,7 @@
     },
     "/usr/lib/systemd/system/coherence-metric.service": {
       "src": "scripts/substrate/units/coherence-metric.service",
-      "src_blob": "3f2e1411e02d97241f13404f815337cfaa5c5eac",
+      "src_blob": "4ff39b47bde3c80655d87ff4bbf97b6d8c359ec7",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -235,7 +235,7 @@
       "evidence": {
         "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
         "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "0aa75616641a7f22193c2e0749618071cb689077"
+        "mutated_blob": "636bed05f214c5b2c572dd1920cd536f6c804ba3"
       }
     },
     "/usr/lib/systemd/system/coherence-metric.service.d/run-dir.conf": {
@@ -268,7 +268,7 @@
     },
     "/usr/lib/systemd/system/coherence-recover.service": {
       "src": "scripts/substrate/units/coherence-recover.service",
-      "src_blob": "32ec1056fae3607d2aa96919f5da79f460fb95e8",
+      "src_blob": "6e7619047bbc442e340f0b8a3db58e9f9335215d",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -277,7 +277,7 @@
       "evidence": {
         "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
         "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "d7db908218b7da0c9ec655b644f69825f8477d8b"
+        "mutated_blob": "42063ee55bd333872e157d65d37a357075a91d19"
       }
     },
     "/usr/lib/systemd/system/coherence-recover.service.d/run-dir.conf": {
@@ -310,7 +310,7 @@
     },
     "/usr/lib/systemd/system/compose-drift.service": {
       "src": "scripts/substrate/units/compose-drift.service",
-      "src_blob": "a7a716cbf02dc6c7ed13060177c080cd3f3729a2",
+      "src_blob": "5f07584df9fcaa98a6c5db120915887715509fe6",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -319,7 +319,7 @@
       "evidence": {
         "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
         "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "10951465992fcdc908dda1753c26086638f22fb4"
+        "mutated_blob": "4120c7847dbe36e53e2ee5d44b43782fe73bbb62"
       }
     },
     "/usr/lib/systemd/system/compose-drift.timer": {
@@ -338,7 +338,7 @@
     },
     "/usr/lib/systemd/system/compose-teacher.service": {
       "src": "scripts/substrate/units/compose-teacher.service",
-      "src_blob": "82d38caae206b76793934612050855f5deabd770",
+      "src_blob": "c017563f86765accc0a2aee7ebbdb94473e0049f",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -347,7 +347,7 @@
       "evidence": {
         "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
         "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "515b617b96915405074e76c41eaaa7f1530887c9"
+        "mutated_blob": "afaf8e7c596c29beea3c83be74419a3e1927159a"
       }
     },
     "/usr/lib/systemd/system/compose-teacher.service.d/run-dir.conf": {
@@ -394,7 +394,7 @@
     },
     "/usr/lib/systemd/system/composition-edge-reconcile.service": {
       "src": "scripts/substrate/units/composition-edge-reconcile.service",
-      "src_blob": "c9efa34a235c22747c23ba4233b60e6fd20a0310",
+      "src_blob": "fb5808ef40a6c3449edf42ed114dfed031bc4bb9",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -403,7 +403,7 @@
       "evidence": {
         "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
         "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "a8e30b2d108b91b177e0c1219879b4b68b7b7f3f"
+        "mutated_blob": "bb075f7a391d5523e02bba2aa4b447e127ded8a3"
       }
     },
     "/usr/lib/systemd/system/composition-edge-reconcile.service.d/run-dir.conf": {
@@ -464,7 +464,7 @@
     },
     "/usr/lib/systemd/system/concept-db.service": {
       "src": "scripts/substrate/units/concept-db.service",
-      "src_blob": "30304aa2dd0bca3e882881ccaab23fe5db2ee61b",
+      "src_blob": "6c282c447ff2ae2014b704d8b5ccb13a38076bcc",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -473,7 +473,7 @@
       "evidence": {
         "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
         "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "6ac43b1c41524ff750031c0d00bd23d8c1b1dd76"
+        "mutated_blob": "8dcd01a9b397daa6c5532a095891cd38c87cf2ba"
       }
     },
     "/usr/lib/systemd/system/concept-db.service.d/10-secrets-out-of-reach.conf": {
@@ -492,7 +492,7 @@
     },
     "/usr/lib/systemd/system/db-contention-check.service": {
       "src": "scripts/substrate/units/db-contention-check.service",
-      "src_blob": "1fce5659e45a0fc13dd4d7d01a4593013909968f",
+      "src_blob": "ee49dca09088edd70e6cab34d110f68a0c3193dd",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -501,7 +501,7 @@
       "evidence": {
         "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
         "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "045acdefb60bb3bc6bbde6a3600a10d953789e4b"
+        "mutated_blob": "6a6ef238b96182e3ac6f8e5ab1b1215bd56b5c89"
       }
     },
     "/usr/lib/systemd/system/db-contention-check.service.d/run-dir.conf": {
@@ -604,7 +604,7 @@
     },
     "/usr/lib/systemd/system/efficiency-failure-tick.service": {
       "src": "scripts/substrate/units/efficiency-failure-tick.service",
-      "src_blob": "92d0f1f5d29a5979f5751fef5c0c075c6fecf336",
+      "src_blob": "b4f228945786df6ec2b066e9d246803e78c22abe",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -613,7 +613,7 @@
       "evidence": {
         "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
         "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "b41ad358ca78d145ac1fae1c5c613d7f88193c14"
+        "mutated_blob": "382c395e716951ef25c872887e7956027aa88354"
       }
     },
     "/usr/lib/systemd/system/efficiency-failure-tick.service.d/run-dir.conf": {
@@ -702,7 +702,7 @@
     },
     "/usr/lib/systemd/system/funnel-drain.service": {
       "src": "scripts/substrate/units/funnel-drain.service",
-      "src_blob": "ddcef45c9d853564618a80e04ad60264a2fe51d4",
+      "src_blob": "247ae46aa95de3df880ac80e340cab20d3955d3a",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -711,7 +711,7 @@
       "evidence": {
         "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
         "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "9c96a9ff5f082937323f839ce5fd317244ef9471"
+        "mutated_blob": "fd4d288d04f93eeb9add2672b8596949f5ebf0ee"
       }
     },
     "/usr/lib/systemd/system/funnel-drain.service.d/run-dir.conf": {
@@ -772,7 +772,7 @@
     },
     "/usr/lib/systemd/system/gap-compose.service": {
       "src": "scripts/substrate/units/gap-compose.service",
-      "src_blob": "3b65f0f3e0ad133d9e14f69856dbf65b6f64b163",
+      "src_blob": "dea452a7601e9543fa2cc8e056a90ff259f26784",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -781,7 +781,7 @@
       "evidence": {
         "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
         "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "c26ada30d32f439243047363f0a4aada8281dae6"
+        "mutated_blob": "d72b3156e0255112f041ffdbcaef586517f2784f"
       }
     },
     "/usr/lib/systemd/system/gap-compose.service.d/run-dir.conf": {
@@ -828,7 +828,7 @@
     },
     "/usr/lib/systemd/system/gap-store-census.service": {
       "src": "scripts/substrate/units/gap-store-census.service",
-      "src_blob": "d791787a0eb1da747819bdf8a80cbeeca3f7d649",
+      "src_blob": "038d06d01877c927eb30685100b94a8d4f725ee3",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -837,7 +837,7 @@
       "evidence": {
         "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
         "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "9ea31ba4498a7d14774f7439d3d335bec6c933d8"
+        "mutated_blob": "0b5fc3ee0a7825560e05e374512f4e49899f34a6"
       }
     },
     "/usr/lib/systemd/system/gap-store-census.timer": {
@@ -856,7 +856,7 @@
     },
     "/usr/lib/systemd/system/git-push-setup.service": {
       "src": "scripts/substrate/units/git-push-setup.service",
-      "src_blob": "fcd93d93ea1cb4733737ee72db4d330caf6f6955",
+      "src_blob": "b05baa75d73eb80a7ce3782f25ea8013ea2d6b06",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -865,7 +865,7 @@
       "evidence": {
         "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
         "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "4b41b8ce0d8fceb7d07d44a2e9d9d953f5cee83f"
+        "mutated_blob": "45fb5858160074c3aa9200c7bd26a368ff1cc311"
       }
     },
     "/usr/lib/systemd/system/git-push-setup.service.d/05-secret-dir-out-of-reach.conf": {
@@ -884,7 +884,7 @@
     },
     "/usr/lib/systemd/system/goal-host-behavior.service": {
       "src": "scripts/substrate/units/goal-host-behavior.service",
-      "src_blob": "ed6535dff03b426cad269b2dc069ea89a024d392",
+      "src_blob": "f82869ffc819e4acae9b88f565b6513be3dc51c4",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -893,7 +893,7 @@
       "evidence": {
         "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
         "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "c0f85d88f4900b836c540613a6b11242d7b89d37"
+        "mutated_blob": "b624ad90f9b399517348005ee3b7f711aa8402ac"
       }
     },
     "/usr/lib/systemd/system/goal-host-behavior.timer": {
@@ -912,7 +912,7 @@
     },
     "/usr/lib/systemd/system/goal-host-vessel.service": {
       "src": "scripts/substrate/units/goal-host-vessel.service",
-      "src_blob": "1bd59f96c29c954687858ed7c1a38fa89990184a",
+      "src_blob": "527e84c858bfd6d907aa7f7ccb6c14500065d972",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -921,7 +921,7 @@
       "evidence": {
         "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
         "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "3bdd47523bfa9229d58645633357cca89d60b1ac"
+        "mutated_blob": "32bd581dab0a311b9c258a3e0f0a2bb4b88cb0b5"
       }
     },
     "/usr/lib/systemd/system/goal-host-vessel.service.d/10-secrets-out-of-reach.conf": {
@@ -996,7 +996,7 @@
     },
     "/usr/lib/systemd/system/identity-seeder.service": {
       "src": "scripts/substrate/units/identity-seeder.service",
-      "src_blob": "ba905af50672adb956714ee6a67b0d0fa8c12c8c",
+      "src_blob": "c35d6e7205109fbfb68f435b556c773679065087",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -1005,7 +1005,7 @@
       "evidence": {
         "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
         "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "ff2f66d7a2249e73a95ac06e8533b310043374de"
+        "mutated_blob": "cb9b2d5ee3b539dc7da1d19ecf8815a8b53cc67b"
       }
     },
     "/usr/lib/systemd/system/identity-seeder.service.d/05-secret-dir-out-of-reach.conf": {
@@ -1108,7 +1108,7 @@
     },
     "/usr/lib/systemd/system/joint-liveness.service": {
       "src": "scripts/substrate/units/joint-liveness.service",
-      "src_blob": "4cdb406be234bde2baefc31fa4123fc8c89863a7",
+      "src_blob": "38863b537c29e3b45db8ccc4cc9ab4ac3c3e4159",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -1117,7 +1117,7 @@
       "evidence": {
         "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
         "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "8cc88b11f6dab8dabe1e7c3de985029c2de3b5b6"
+        "mutated_blob": "f78b7d60271dd58ddf90d23e99929188aa4d077a"
       }
     },
     "/usr/lib/systemd/system/joint-liveness.timer": {
@@ -1178,7 +1178,7 @@
     },
     "/usr/lib/systemd/system/learning-loop-selftest.service": {
       "src": "scripts/substrate/units/learning-loop-selftest.service",
-      "src_blob": "af11e4988f95c349e98c914a01d338e68ec49968",
+      "src_blob": "ce43fc1ca9da674d066a91ae427bd720c94fd980",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -1187,7 +1187,7 @@
       "evidence": {
         "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
         "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "ee2386313db8c3506250d581a182e702bce20766"
+        "mutated_blob": "de5a6cd9fc16f737ea27fd0248578835b026c3f9"
       }
     },
     "/usr/lib/systemd/system/learning-loop-selftest.timer": {
@@ -1248,7 +1248,7 @@
     },
     "/usr/lib/systemd/system/light-dispatch-vessel.service": {
       "src": "scripts/substrate/units/light-dispatch-vessel.service",
-      "src_blob": "a3ba955be1c64e4766c3696dc91d764456677c21",
+      "src_blob": "50465d5a8f6cf44f1cb1a4c01fab42d1c94cfc6b",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -1257,7 +1257,7 @@
       "evidence": {
         "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
         "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "0fdb29ad8ab4e0e15bb2581e25ca3501668fe9cd"
+        "mutated_blob": "25652bf7633fff6853829f5896c78809ceb8ecee"
       }
     },
     "/usr/lib/systemd/system/light-dispatch-vessel.service.d/10-secrets-out-of-reach.conf": {
@@ -1276,7 +1276,7 @@
     },
     "/usr/lib/systemd/system/llm-resolver-vessel.service": {
       "src": "scripts/substrate/units/llm-resolver-vessel.service",
-      "src_blob": "3c79ef671c3e5b22b7f92e798e9499449563173e",
+      "src_blob": "a2a8fd05f25b6486b5ec7a02ea5974e8e496294d",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -1285,7 +1285,7 @@
       "evidence": {
         "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
         "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "280142f8c24edda3105bc7911aab7d86b0544849"
+        "mutated_blob": "d3e8e99b2d9999f49d8385d6f813279258719cc1"
       }
     },
     "/usr/lib/systemd/system/llm-resolver-vessel.service.d/10-secrets-out-of-reach.conf": {
@@ -1318,7 +1318,7 @@
     },
     "/usr/lib/systemd/system/local-tools-vessel.service": {
       "src": "scripts/substrate/units/local-tools-vessel.service",
-      "src_blob": "ed2b3341032bf229535cdb968a41826c75b8308e",
+      "src_blob": "18d2b082005f9ccf1b8550532522e13bd771dafc",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -1327,7 +1327,7 @@
       "evidence": {
         "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
         "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "82f3f6d852fc8e5aee564d89d165401cfc603da7"
+        "mutated_blob": "29bb76343ea9dc7fdbb164e39b85f55e0d336448"
       }
     },
     "/usr/lib/systemd/system/local-tools-vessel.service.d/10-secrets-out-of-reach.conf": {
@@ -1374,7 +1374,7 @@
     },
     "/usr/lib/systemd/system/metric-collector-vessel.service": {
       "src": "scripts/substrate/units/metric-collector-vessel.service",
-      "src_blob": "369537ce69aabedae08163811b2abccd1a14deb8",
+      "src_blob": "bc1ef755d5633baee2b31cc99bf64e4a2f0bc607",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -1383,7 +1383,7 @@
       "evidence": {
         "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
         "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "510463eec4a55038b632ec1ae46445ff6298c2d8"
+        "mutated_blob": "820b3cf0fa4bed14c5130c562365585334214c7d"
       }
     },
     "/usr/lib/systemd/system/metric-collector-vessel.service.d/10-secrets-out-of-reach.conf": {
@@ -1402,7 +1402,7 @@
     },
     "/usr/lib/systemd/system/model-reality-audit.service": {
       "src": "scripts/substrate/units/model-reality-audit.service",
-      "src_blob": "f6e6ec551d361bb85942e3263b470f1c0f4a2019",
+      "src_blob": "0cc59f2b970e521331727c0e26e31bbc30f2316e",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -1411,7 +1411,7 @@
       "evidence": {
         "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
         "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "564f286cccf2d679b07fb3c3719ad3e51fbcad7e"
+        "mutated_blob": "d41ce7b6f7a4cd84adaaecd636e0315ba3bd4851"
       }
     },
     "/usr/lib/systemd/system/model-reality-audit.service.d/run-dir.conf": {
@@ -1472,7 +1472,7 @@
     },
     "/usr/lib/systemd/system/observe-orthogonal-refresh.service": {
       "src": "scripts/substrate/units/observe-orthogonal-refresh.service",
-      "src_blob": "0152759043f8b0037f70d37ecf2158761ad7779f",
+      "src_blob": "4cd6e27c96f3dc271003a5725de3e08043278ebe",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -1481,7 +1481,7 @@
       "evidence": {
         "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
         "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "4cefd0f97a692153b87ec2dc9fe0f0e946fe2e1a"
+        "mutated_blob": "5d18a002e99ec13c11f3999259b219ae73610a3c"
       }
     },
     "/usr/lib/systemd/system/observe-orthogonal-refresh.service.d/run-dir.conf": {
@@ -1528,7 +1528,7 @@
     },
     "/usr/lib/systemd/system/obsidian-collaborate.service": {
       "src": "scripts/substrate/units/obsidian-collaborate.service",
-      "src_blob": "9537c61497af7c610f93e5a6e10210f9013ec577",
+      "src_blob": "4c31036a2b99cf1d19b521b56e586b0fe8cd56fa",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -1537,7 +1537,7 @@
       "evidence": {
         "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
         "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "0452265b878e6524d966be895d37fede5d05a494"
+        "mutated_blob": "48248bf27268567f97fac2fa64ce3f5f43936fc0"
       }
     },
     "/usr/lib/systemd/system/obsidian-collaborate.service.d/10-secrets-out-of-reach.conf": {
@@ -1570,7 +1570,7 @@
     },
     "/usr/lib/systemd/system/obsidian-desktop.service": {
       "src": "scripts/substrate/units/obsidian-desktop.service",
-      "src_blob": "5290b9d2e084f61d2ec993b951fb73895357dab0",
+      "src_blob": "ded9cae2bffb6c87c4e56cca0c968c610cdb9d27",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -1579,7 +1579,7 @@
       "evidence": {
         "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
         "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "5adb32d02294509638550b282a55ebc3630c201f"
+        "mutated_blob": "c402d82fe02610c0f579564f09adc73a8f0e2f7a"
       }
     },
     "/usr/lib/systemd/system/obsidian-desktop.service.d/10-secrets-out-of-reach.conf": {
@@ -1598,7 +1598,7 @@
     },
     "/usr/lib/systemd/system/obsidian-intake.service": {
       "src": "scripts/substrate/units/obsidian-intake.service",
-      "src_blob": "b02de2639d330a5a4bceeb6e4fa15c12036f81c8",
+      "src_blob": "5650156b0190135511fb198d420b480decea6426",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -1607,7 +1607,7 @@
       "evidence": {
         "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
         "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "5f7c9efe02836e213069a1525662772b4c05f85f"
+        "mutated_blob": "5b28d3f290f0f4d13112b117a92982baf1f45305"
       }
     },
     "/usr/lib/systemd/system/obsidian-intake.service.d/10-secrets-out-of-reach.conf": {
@@ -1640,7 +1640,7 @@
     },
     "/usr/lib/systemd/system/obsidian-learn.service": {
       "src": "scripts/substrate/units/obsidian-learn.service",
-      "src_blob": "0fd5f304b3c7228ac01266b5a72b4ce2ae7645f0",
+      "src_blob": "ed996ee9a993fbb9d803c7a9470baa9f8753644e",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -1649,7 +1649,7 @@
       "evidence": {
         "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
         "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "dcd33a4290319c41ef41a4bd85c6f06dc9bb0516"
+        "mutated_blob": "b35dad026e248186ab8c51a0af7e7ce4d4666a05"
       }
     },
     "/usr/lib/systemd/system/obsidian-learn.service.d/10-secrets-out-of-reach.conf": {
@@ -1710,7 +1710,7 @@
     },
     "/usr/lib/systemd/system/operator-goal-generator.service": {
       "src": "scripts/substrate/units/operator-goal-generator.service",
-      "src_blob": "a27d7363288c510a9a8e51d19d28f68d7de9ce68",
+      "src_blob": "da9da1a8d3d52437476b0459e1345b077a0369db",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -1719,7 +1719,7 @@
       "evidence": {
         "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
         "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "978cc6ded3a9a8a47118f21ae9c64fa56d28a7c4"
+        "mutated_blob": "7bb9aadb765b8f0420f2e5f4c428d345408789da"
       }
     },
     "/usr/lib/systemd/system/operator-goal-generator.service.d/run-dir.conf": {
@@ -1808,7 +1808,7 @@
     },
     "/usr/lib/systemd/system/ribosome-vessel.service": {
       "src": "scripts/substrate/units/ribosome-vessel.service",
-      "src_blob": "b19cfaa16940f4a87892413811175c14fb40646e",
+      "src_blob": "cf78f7652645cd8d4e344611ea23f62b73354be2",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -1817,7 +1817,7 @@
       "evidence": {
         "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
         "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "1fcee2719534231e4230a2e6dd8f0c10104b0b7c"
+        "mutated_blob": "53edaba4148d2a1731b267b0a4eb7303d5798fd2"
       }
     },
     "/usr/lib/systemd/system/ribosome-vessel.service.d/10-secrets-out-of-reach.conf": {
@@ -1836,7 +1836,7 @@
     },
     "/usr/lib/systemd/system/runtime-drift.service": {
       "src": "scripts/substrate/units/runtime-drift.service",
-      "src_blob": "0005ce1b3fc3f4fd3598b882fafa4bfceff9a8e9",
+      "src_blob": "4810ae745a45c14d4c3f851939e99b2c21fb9a00",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -1845,7 +1845,7 @@
       "evidence": {
         "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
         "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "c560fbe26141b0d3ff5e4e9d6b0ee31e41d47616"
+        "mutated_blob": "dd525762725e79aee808fc27d89e4317c74f5471"
       }
     },
     "/usr/lib/systemd/system/runtime-drift.timer": {
@@ -1892,7 +1892,7 @@
     },
     "/usr/lib/systemd/system/self-operational-health.service": {
       "src": "scripts/substrate/units/self-operational-health.service",
-      "src_blob": "e166670d3456a2dd23b33d3d51a2c19009a3e34c",
+      "src_blob": "2c90e6031c75916c9746e4198cc8cadafc377b98",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -1901,7 +1901,7 @@
       "evidence": {
         "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
         "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "63a57f5748026faeb0442f52516dcdc4b0f4366a"
+        "mutated_blob": "eeb834f553a6bbd9b21b89c1f34587ddd9ab7b17"
       }
     },
     "/usr/lib/systemd/system/self-operational-health.service.d/run-dir.conf": {
@@ -1990,7 +1990,7 @@
     },
     "/usr/lib/systemd/system/self-repair-operational.service": {
       "src": "scripts/substrate/units/self-repair-operational.service",
-      "src_blob": "c2ae92edbe5763feb49dd18b98b52cd86d9d3b96",
+      "src_blob": "a8e629aa5de32b2b8f5aae35a9a6d714f6563e74",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -1999,7 +1999,7 @@
       "evidence": {
         "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
         "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "0b428cfd63f24597850a7bcabf6d7105e8d5591a"
+        "mutated_blob": "04c2e340680bc3f13b84d91239704d373215146b"
       }
     },
     "/usr/lib/systemd/system/self-repair-operational.service.d/run-dir.conf": {
@@ -2116,7 +2116,7 @@
     },
     "/usr/lib/systemd/system/spectral-gap.service": {
       "src": "scripts/substrate/units/spectral-gap.service",
-      "src_blob": "0b8f83aae9c9e086f8c08bef981924de73f57349",
+      "src_blob": "1dbcef21b596589b379bd9606be0fa24c842b7cd",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -2125,7 +2125,7 @@
       "evidence": {
         "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
         "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "6fe3faf529e381dde9b467d26df41b672e64cf3d"
+        "mutated_blob": "b0084639ff213449c93baf8a84e65859a0fb1471"
       }
     },
     "/usr/lib/systemd/system/spectral-gap.service.d/run-dir.conf": {
@@ -2172,7 +2172,7 @@
     },
     "/usr/lib/systemd/system/stateful-ui-vessel.service": {
       "src": "scripts/substrate/units/stateful-ui-vessel.service",
-      "src_blob": "ea9d27815e6a2b0e9bcba0b23a4a47403966555f",
+      "src_blob": "25a882e40d1a2dd40cb37905a06529b37ff4365b",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -2181,7 +2181,7 @@
       "evidence": {
         "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
         "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "61a0fc587d5c0f64e39b26b779f606c9aa27a9c6"
+        "mutated_blob": "447604ae6dd33b334d8965fc2c9313f028d50cd2"
       }
     },
     "/usr/lib/systemd/system/stateful-ui-vessel.service.d/10-secrets-out-of-reach.conf": {
@@ -2312,7 +2312,7 @@
     },
     "/usr/lib/systemd/system/substrate-ready.service": {
       "src": "scripts/substrate/units/substrate-ready.service",
-      "src_blob": "bd0a669420020f4e9aa573c018ee1afa8c1352f7",
+      "src_blob": "f9399818ac3c322e0a4486315fde33cf08a29981",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -2321,12 +2321,12 @@
       "evidence": {
         "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
         "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "e25a5def0ac17dfb94e38de6d3e44d925968679c"
+        "mutated_blob": "e4fb9cfc3ec6e5eade5be4cf5713c57a6cd5d833"
       }
     },
     "/usr/lib/systemd/system/surgical-gap-scan.service": {
       "src": "scripts/substrate/units/surgical-gap-scan.service",
-      "src_blob": "2e3b1450e3c15981d94f70029096c4f82d21e9fd",
+      "src_blob": "cda0b626cbc02c9af05c7f9e8ba553c38d20b03a",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -2335,7 +2335,7 @@
       "evidence": {
         "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
         "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "ce3c543af1afbca4a7591f533fdf0a81ed69afb6"
+        "mutated_blob": "4e1eb32e8aad288ab78c4f53478eb0dfee98ad89"
       }
     },
     "/usr/lib/systemd/system/surgical-gap-scan.service.d/run-dir.conf": {
@@ -2397,7 +2397,7 @@
     },
     "/usr/lib/systemd/system/trace-store-health-check.service": {
       "src": "scripts/substrate/units/trace-store-health-check.service",
-      "src_blob": "20d9fb02e355d342aa76bfbac24b5949cb0286e0",
+      "src_blob": "5e1605730db25e9ddeb745d9ef4caa7ddd84f918",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -2406,7 +2406,7 @@
       "evidence": {
         "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
         "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "9ae1de2cc8aa6be3f04bbe8f936a46ab7f0f0288"
+        "mutated_blob": "e3f135144c6919d22919cde507e93c3fb70044ba"
       }
     },
     "/usr/lib/systemd/system/trace-store-health-check.timer": {
@@ -2425,7 +2425,7 @@
     },
     "/usr/lib/systemd/system/typecheck-scenario-gen.service": {
       "src": "scripts/substrate/units/typecheck-scenario-gen.service",
-      "src_blob": "1de8f25fd3360b76a4c6a4e78d77b47301bfce9b",
+      "src_blob": "6588c2cd8cc225a9d0e0ff91e891c354f5e9806e",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -2434,7 +2434,7 @@
       "evidence": {
         "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
         "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "e4168d8779982fdbb5860608cff346bacf8eb819"
+        "mutated_blob": "f87594185e1ca12694a06e913fdf8f1a5dc76dfa"
       }
     },
     "/usr/lib/systemd/system/typecheck-scenario-gen.service.d/run-dir.conf": {
@@ -2467,7 +2467,7 @@
     },
     "/usr/lib/systemd/system/validator-liveness.service": {
       "src": "scripts/substrate/units/validator-liveness.service",
-      "src_blob": "b048b5a8e48704a0f1be523496e099833025201a",
+      "src_blob": "b9d8b59fa084c739da6618b6d7ff0f5a2d4fb516",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -2476,7 +2476,7 @@
       "evidence": {
         "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
         "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "51081cca9657b65dcd383b95dbf1e6e0daf0667f"
+        "mutated_blob": "fc36c9d610964c69c681fa924d47ad56a5718603"
       }
     },
     "/usr/lib/systemd/system/validator-liveness.timer": {

@@ -1,6 +1,5 @@
 [Unit]
 Description=Surgical-gap-scan — emit localized single-edit substrateGaps to supply the autonomous gap-compose loop
-After=development-vessel.service
 # READ-ONLY scan of vessel src -> a few high-precision `systematic_failure` gaps
 # (hardcoded fetch-endpoint literals) with concrete edit-sites, so gap-compose has
 # a supply of LANDABLE surgical work. Idempotent (deterministic gap ids, upsert).

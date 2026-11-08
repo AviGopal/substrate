@@ -3,9 +3,9 @@ Description=obsidian-desktop — in-container Obsidian GUI (substrate-obsidian f
 # Needs the display up, plus the fleet so the plugin can register + resolve over
 # localhost. Restarting THIS unit reloads the obsidian-vessel plugin without
 # touching the persistent display (obsidian-xorg) or the noVNC session.
-After=obsidian-xorg.service development-vessel.service concept-db.service activity-api.service discovery-vessel.service
+After=obsidian-xorg.service concept-db.service discovery-vessel.service
 Requires=obsidian-xorg.service
-Wants=development-vessel.service concept-db.service
+Wants=concept-db.service
 
 [Service]
 Type=simple

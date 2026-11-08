@@ -2,7 +2,6 @@
 Description=Substrate git-push setup (system git identity + credential helper + writable vessel clones)
 After=network-online.target
 Wants=network-online.target
-Before=development-vessel.service
 
 [Service]
 Type=oneshot

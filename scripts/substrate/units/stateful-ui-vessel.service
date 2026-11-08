@@ -1,6 +1,6 @@
 [Unit]
 Description=stateful-ui-vessel
-After=discovery-vessel.service development-vessel.service
+After=discovery-vessel.service
 Wants=discovery-vessel.service
 
 [Service]

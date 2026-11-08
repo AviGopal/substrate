@@ -15,7 +15,7 @@ Description=substrate fleet readiness gate (boot-readiness as a systemd fact)
 # `served`, not `usable`: a keyless spoke cannot pass `usable` by design, and the
 # boot gate must not fail on every correctly built spoke. `usable` dispatches a goal,
 # which is the operator's or the acceptance run's call to make, not boot's.
-After=identity-seeder.service goal-host-vessel.service development-vessel.service
+After=identity-seeder.service goal-host-vessel.service
 Wants=identity-seeder.service
 
 [Service]

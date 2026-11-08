@@ -4,7 +4,7 @@ Description=identity seeder — mint org+keys on first boot, reseed env, restart
 # restarts. Idempotent: seed-identity.ts 409-skips when the substrate org
 # exists, and reseed-restart.sh only restarts vessels when the key actually
 # changed (never on a warm boot).
-After=identity-vessel.service activity-api.service
+After=identity-vessel.service
 Wants=identity-vessel.service
 
 [Service]

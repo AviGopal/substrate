@@ -7,8 +7,7 @@ Description=Self-operational-health detector — substrate↔environment boundar
 # and emits substrateGaps (EMIT_GAPS=1) so these faults enter the SAME gap
 # ontology the self-alteration loop already tracks — lifting operational
 # self-repair from an operator-only concern (S1) into something visible in S.
-After=activity-api.service development-vessel.service surrealdb.service
-Wants=development-vessel.service
+After=surrealdb.service
 
 # Smoke test:
 #   docker exec substrate-live systemctl start self-operational-health.service

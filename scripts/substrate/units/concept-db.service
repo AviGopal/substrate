@@ -1,7 +1,6 @@
 [Unit]
 Description=concept-db
-After=activity-api.service discovery-vessel.service identity-vessel.service
-Wants=activity-api.service
+After=discovery-vessel.service identity-vessel.service
 
 [Service]
 Type=simple

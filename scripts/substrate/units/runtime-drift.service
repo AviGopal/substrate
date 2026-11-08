@@ -9,7 +9,6 @@ Description=Runtime-drift watchdog — restores /vessels/<v>/src when it diverge
 # Detects that, repairs via mirror-to-live when the evidence is unambiguous (no compose
 # slot held AND the clone is git-clean), and emits a substrateGap either way.
 # Read-only except gap emission and that repair. Silent when nothing has drifted.
-After=development-vessel.service
 
 # Runs the gate-ACCEPTED copy: ${SUBSTRATE_RUN_DIR} is filled from the accepted gate (pull-sync, and
 # substrate-active-scripts-seed at boot), never from the super-repo clone, whose HEAD is an unjudged candidate.

@@ -1,6 +1,5 @@
 [Unit]
 Description=obsidian-collaborate — proactive collaboration toward the operator's OWN goals (earns continued engagement; not Obsidian-usage tips)
-After=development-vessel.service
 # Objective: the substrate sustains its momentum-from-reality by keeping
 # the human (a general-purpose resolver) wanting to collaborate — achieved by genuinely helping
 # them reach their goals. This pass infers the operator's top goal and contributes one useful

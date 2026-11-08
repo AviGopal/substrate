@@ -1,7 +1,5 @@
 [Unit]
 Description=Autonomous detection cadence — efficiency_scan + trace_failure_pattern_report (emit gaps)
-After=development-vessel.service activity-api.service
-Wants=development-vessel.service
 
 [Service]
 Type=oneshot
