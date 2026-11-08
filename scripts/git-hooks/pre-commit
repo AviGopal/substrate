@@ -643,6 +643,11 @@ EOF
   fi
   VT_TOP="$(pwd -P)"
   for vt_v in "${VT_JUDGE[@]}"; do
+    # A vessel removed from the super-repo carries no copy left to drift.
+    if [[ -z "$(git ls-files -s "repos/$vt_v")" ]] && ! git config --blob :.gitmodules --get "submodule.repos/$vt_v.path" >/dev/null; then
+      printf '%s\n' "verdict-token: repos/$vt_v is removed; no copy to verify."
+      continue
+    fi
     vt_want="$(git ls-files -s "repos/$vt_v" | awk '$1=="160000"{print $2}')"
     [[ -n "$vt_want" ]] || vt_fail "repos/$vt_v is not a staged gitlink"
     # The submodule's git dir. `git -C repos/<v>` on an uninitialised (empty) checkout
