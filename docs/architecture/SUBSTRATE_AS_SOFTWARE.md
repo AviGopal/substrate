@@ -122,14 +122,14 @@ not this chart).
 |---|---|---|---|
 | **discovery-vessel** | owns the registry; every vessel wants "who resolves shape X" | the fixed point all routing passes through | authored-durable (contracts) + ephemeral (TTL registry) |
 | **goal-host-vessel** | wants a goal; owns `goal_execution`/`activity_execution`; runs the **shape-graph walk** (backward-chain, bridge-author, data-flow bind) | steps 0–6: dispatch, selection, binding, stepping, reach gate | reads Informational, runs Transient, writes Recorded |
-| **activity-api** | owns traces, templates, posteriors, composition edges, goal-paths; wants nothing — it is the trace store + learner | step 1 selection inputs; step 7 trace write; step 8 learning | learned-durable + recorded (the database snapshot *is* the learning state) |
+| **trace store + learner** (the vessel advertising these shapes in discovery) | owns traces, templates, posteriors, composition edges, goal-paths; wants nothing | step 1 selection inputs; step 7 trace write; step 8 learning | learned-durable + recorded (the database snapshot *is* the learning state) |
 | **llm-resolver-vessel** | owns `llm_completion`; wanted by any task whose resolver tier is `llm` | step 2/4: the high-directional-uncertainty resolver (§4) | authored-durable (impl) / ephemeral (a call) |
 | **local-tools-vessel** | owns filesystem/process resolvers + `code_verify_typecheck` | step 2/4: deterministic resolvers + verification | authored-durable / ephemeral |
 | **concept-db** | owns concept-graph shapes + dense semantic search | step 1 recall priors; step 8 concept promotion | learned-durable (concepts) |
-| **ribosome-vessel** | wants successful traces (activity-api WS); owns template extraction | step 8c: mint a template from a reached trace | writes structural learned-durable |
+| **ribosome-vessel** | wants successful traces (from the trace store); owns template extraction | step 8c: mint a template from a reached trace | writes structural learned-durable |
 | **boredom-vessel** | wants idle time; owns the autonomous goal drive | step 0 generator — the substrate's heartbeat | drives Recall |
-| **development-vessel** | owns `memoryNote` (authoritative memory) + dev meta-activities (gap→feature, feature-compose, cutover) | the self-* machinery (§5); memory across sessions | authored-durable (it authors code) + learned-durable (memory) |
-| **relevance-sink-vessel** | owns impulse-relevance **penalty writes** — decoupled from the activity-api trace store to avoid write-contention | step 8a: the β-penalty path | writes learned-durable (decoupled) |
+| **memory store** (the vessel advertising `memoryNote` in discovery) | owns `memoryNote` (authoritative memory) | memory across sessions | learned-durable (memory) |
+| **relevance-sink-vessel** | owns impulse-relevance **penalty writes** — decoupled from the trace store to avoid write-contention | step 8a: the β-penalty path | writes learned-durable (decoupled) |
 | **stateful-ui-vessel** | owns `uiPanel`/`uiQuestion`/`interactor*` — the substrate's "face" | human-in-the-loop crossing (NETWORK) | recorded (interactor observations) |
 | **light-dispatch-vessel** | owns `light_dispatch_execution` — stateless oneshot dispatcher bypassing goal-host's full machinery for deterministic explicit-template chains | an alternate, low-machinery dispatch path | ephemeral (persists intermediates to disk) |
 | **identity-vessel** | owns auth (HMAC keys + JWT) — single source of truth | every cross-vessel step's attestation | authored-durable |
@@ -423,8 +423,8 @@ observe-and-drain half firing) is an operational fact, not an architectural one.
   *defined* as the substrate beginning to write **authored-durable** state (MDP §5/§11
   reads it as active model expansion; FLEET §4/§6 as the cross-container form behind
   quorum ratification). *Units:* `gap-compose` (route an open `substrateGap`
-  through the feature composer: detect→spec→author→verify→stage), `feature_compose` +
-  `apply_proposal_as_patch` (development-vessel), the **mitosis cutover**
+  toward a code change: detect→spec→author→verify→stage), the authoring and
+  patch-apply steps, the **mitosis cutover**
   (commit→push origin/dev→restart with typecheck-evidence), `funnel-drain` (fires the
   funnel entry on a steady cadence so the boredom selector doesn't starve it).
   Before a gap is drafted, an own-check baseline activity runs the gap's own check at
@@ -436,7 +436,7 @@ observe-and-drain half firing) is an operational fact, not an architectural one.
   disagrees with the label, once per baseline, so the classifier is graded by its
   consumer. The
   boundary: the substrate can author *surgical* edits and whole
-  net-new vessels via feature-compose, but feature-authoring breadth is the
+  net-new vessels through that authoring path, but feature-authoring breadth is the
   S1→S2 frontier.
 - **Self-assembly / composition / topology growth.** *Owner:* DEC §0.2–§0.3 — a
   vessel is a subcomplex; growth is subcomplex gluing (pushout/colimit), the only
@@ -451,7 +451,7 @@ observe-and-drain half firing) is an operational fact, not an architectural one.
   are activities"), four reversibility tiers, `resolutionRefused` = push-away applied
   to self. *Units:* `self-recovery` (per-vessel health-check → restart → revert
   `/vessels` to last-good host source → escalate as a gap), `light-dispatch-healthcheck`
-  (restart-if-hung), and the author-time typecheck **rollback** inside feature-compose.
+  (restart-if-hung), and the author-time typecheck **rollback** in the authoring step.
   In-flight goal recovery (§3.2) is the per-goal form.
 
   **Two tiers, and the distinction is load-bearing.** This section states that detection and resolution *are activities* and that a
@@ -481,8 +481,7 @@ observe-and-drain half firing) is an operational fact, not an architectural one.
 - **Improvement (convergence).** *Owner:* MDP §2 (per-cell Beta-Bernoulli; conjugate
   update = natural gradient, §2.1; regret `O(√(T log T))`), DEC §4.1 (the master rate
   `R_conv ∼ λ₁(L)·ρ_sample·κ(⋆)⁻¹`), DYNAMICS §3.1 (inertial acceleration capped by
-  `λ₁`). *Units:* `m1-trainer` (retrains the embedding prior for the recommender),
-  `autonomy-metrics` + `model-reality-audit` (track whether the rate factors are
+  `λ₁`). *Units:* `autonomy-metrics` + `model-reality-audit` (track whether the rate factors are
   rising). The MRR / lift-gate instrumentation lives here.
 - **Topology exploration.** *Owner:* DYNAMICS §3–§4 (the master inequality
   `λ₁(L(t)) ≳ ρ_grow` as a stay-sub-critical / normal-hyperbolicity threshold; growth
