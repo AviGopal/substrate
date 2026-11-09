@@ -5,7 +5,8 @@
 // Usage: bun run /vessels/seed-identity.ts
 //   Requires METABOB_API_KEY, JWT_SECRET env vars (set via EnvironmentFile).
 
-import { writeFileSync, readFileSync, existsSync, renameSync } from "node:fs";
+import { writeFileSync, readFileSync, existsSync, renameSync, mkdirSync } from "node:fs";
+import { dirname } from "node:path";
 import { createHash } from "node:crypto";
 
 const IDENTITY_URL = process.env.IDENTITY_VESSEL_URL ?? "http://127.0.0.1:8101";
@@ -197,6 +198,62 @@ async function ensureCorpusRunnerKey(fleetKey: string): Promise<void> {
     console.log(`[seed-identity] issued ${CORPUS_RUNNER_KEY_NAME} key_id=${j?.data?.key_id ?? "?"} (scoped files + store); goal-host-vessel must restart to load it`);
   } catch (e) {
     console.warn(`[seed-identity] corpus runner key error: ${(e as Error).message}`);
+  }
+}
+
+// ensureWalkVesselKeys: the walk vessels' keys come from the installation, like every other vessel's (user ruling
+// 2026-11-09: the walk "shouldn't need anything not available from the standard installation"). One key each for
+// records, described-shape and the walk, and one owner key, the only key records accepts owner rows from
+// (RECORDS_OWNER_KEY_ID; it names a key, and identity binds it to the fleet key's user). Each key lives in its own
+// file in the masked store, the source of that unit's 30-own-key bind, so no other unit can read it. Runs on every
+// boot: a stored key that identity validates is kept; a missing or rejected one is issued through the admin path
+// (as ensureCorpusRunnerKey). The key ids, not secrets, go to WALK_KEY_IDS_FILE for walk-owner-seed and to
+// RECORDS_OWNER_KEY_ID in /etc/substrate/env (every unit loads it; records-vessel orders after identity-seeder, and
+// this runs on every boot, after gen-env renders that file). Fails OPEN: the walk vessels then fail at their key bind.
+export const WALK_KEY_DIR = "/workspace/.substrate-private/walk-vessels";
+export const WALK_KEY_NAMES = ["records-vessel", "described-shape-vessel", "walk-vessel", "walk-owner"];
+export const WALK_KEY_IDS_FILE = "/workspace/substrate/walk-vessels/key-ids.json";
+function writeAtomic(path: string, content: string, mode: number): void {
+  mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
+  const tmp = `${path}.tmp.${process.pid}`;
+  writeFileSync(tmp, content, { mode });
+  renameSync(tmp, path);
+}
+async function ensureWalkVesselKeys(fleetKey: string): Promise<void> {
+  const tag = "[seed-identity] walk vessel keys:";
+  try {
+    const ids: Record<string, string> = {};
+    for (const name of WALK_KEY_NAMES) {
+      const path = `${WALK_KEY_DIR}/${name}.key`;
+      const stored = existsSync(path) ? readFileSync(path, "utf-8").trim() : "";
+      if (stored) {
+        const v = await val(stored);
+        if (v.valid === true && v.key_id) { ids[name] = v.key_id; continue; }
+        console.log(`${tag} ${name} key does not authenticate — issuing a new one`);
+      }
+      const admin = (process.env.SUBSTRATE_ADMIN_KEY ?? "").trim();
+      if (!admin) { console.warn(`${tag} ${name} not provisioned: SUBSTRATE_ADMIN_KEY empty this boot (retried next boot)`); return; }
+      const owner = await val(fleetKey);
+      if (!owner.org_id || !owner.user_id) { console.warn(`${tag} ${name} not provisioned: the fleet key resolves to no org/user`); return; }
+      const r = await fetch(`${IDENTITY_URL}/v1/keys/issue`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `ApiKey ${admin}` },
+        body: JSON.stringify({ user_id: owner.user_id, org_id: owner.org_id, scopes: ["read", "write"], name }),
+        signal: AbortSignal.timeout(15_000),
+      });
+      const j = (await r.json()) as any;
+      const key: string | undefined = j?.data?.key;
+      const keyId: string | undefined = j?.data?.key_id;
+      if (!r.ok || !key || !keyId) { console.warn(`${tag} ${name} issue failed ${r.status}: ${JSON.stringify(j?.error ?? {}).slice(0, 200)}`); return; }
+      writeAtomic(path, `${key}\n`, 0o600);
+      ids[name] = keyId;
+      console.log(`${tag} issued ${name} key_id=${keyId} fingerprint=${keyFingerprint(key)} (${path})`);
+    }
+    writeAtomic(WALK_KEY_IDS_FILE, `${JSON.stringify(ids, null, 2)}\n`, 0o644);
+    upsertEnvVar("/etc/substrate/env", "RECORDS_OWNER_KEY_ID", ids["walk-owner"]);
+    console.log(`${tag} ${WALK_KEY_NAMES.length} keys authenticate; key ids in ${WALK_KEY_IDS_FILE}`);
+  } catch (e) {
+    console.warn(`${tag} error: ${(e as Error).message}`);
   }
 }
 
@@ -482,6 +539,7 @@ async function main() {
       await ensureCorpusRunnerKey(existing);
       await ensureGoalHostToolsExec(existing);
       await ensureFleetKeyAdminScopes(existing);
+      await ensureWalkVesselKeys(existing);
       return;
     }
     console.log(
@@ -505,6 +563,7 @@ async function main() {
     await ensureCorpusRunnerKey(reissued.key);
     await ensureGoalHostToolsExec(reissued.key);
     await ensureFleetKeyAdminScopes(reissued.key);
+    await ensureWalkVesselKeys(reissued.key);
     return;
   }
 
@@ -584,6 +643,12 @@ async function main() {
   upsertEnvVar("/etc/substrate/env", "CONCEPT_DB_API_KEY", conceptDbKey.key);
   upsertEnvVar(SECRETS_FILE, "CONCEPT_DB_API_KEY", conceptDbKey.key);
   console.log(`${describeIssuedKey("concept-db", conceptDbKey)} — wrote CONCEPT_DB_API_KEY`);
+
+
+  // The walk vessels' keys, minted here on a fresh install as on every warm boot. The admin key minted above is
+  // not in this process's env yet, and ensureWalkVesselKeys issues through it.
+  process.env.SUBSTRATE_ADMIN_KEY = adminKey.key;
+  await ensureWalkVesselKeys(defaultKey);
 }
 
 // Imported (by its test) it only defines; run as the seeder it seeds.

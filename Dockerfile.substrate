@@ -344,6 +344,7 @@ RUN chmod +x /usr/local/bin/spoke-federate
 
 COPY scripts/substrate/seed-identity.ts /vessels/seed-identity.ts
 COPY scripts/substrate/seed-concepts.ts /vessels/seed-concepts.ts
+COPY scripts/substrate/walk-owner-seed.ts /vessels/walk-owner-seed.ts
 COPY scripts/bootstrap-seeder.ts /scripts/bootstrap-seeder.ts
 
 # The launch manifest, baked. The repository's root docker-compose.yml is the single

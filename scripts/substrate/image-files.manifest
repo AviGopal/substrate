@@ -45,6 +45,7 @@ scripts/substrate/units/db-maintenance.service	/usr/lib/systemd/system/db-mainte
 scripts/substrate/units/db-maintenance.timer	/usr/lib/systemd/system/db-maintenance.timer	0644	A
 scripts/substrate/units/described-shape-vessel.service.d/10-secrets-out-of-reach.conf	/usr/lib/systemd/system/described-shape-vessel.service.d/10-secrets-out-of-reach.conf	0644	A
 scripts/substrate/units/described-shape-vessel.service.d/30-own-key.conf	/usr/lib/systemd/system/described-shape-vessel.service.d/30-own-key.conf	0644	A
+scripts/substrate/units/described-shape-vessel.service.d/40-after-owner-seed.conf	/usr/lib/systemd/system/described-shape-vessel.service.d/40-after-owner-seed.conf	0644	A
 scripts/substrate/units/discovery-vessel.service	/usr/lib/systemd/system/discovery-vessel.service	0644	A
 scripts/substrate/units/discovery-vessel.service.d/10-secrets-out-of-reach.conf	/usr/lib/systemd/system/discovery-vessel.service.d/10-secrets-out-of-reach.conf	0644	A
 scripts/substrate/units/discovery-vessel.service.d/federation-peering.conf	/usr/lib/systemd/system/discovery-vessel.service.d/federation-peering.conf	0644	A
@@ -134,6 +135,7 @@ scripts/substrate/units/operator-goal-generator.timer	/usr/lib/systemd/system/op
 scripts/substrate/units/operator-goal-generator.timer.d/ready-gate.conf	/usr/lib/systemd/system/operator-goal-generator.timer.d/ready-gate.conf	0644	A
 scripts/substrate/units/records-vessel.service.d/10-secrets-out-of-reach.conf	/usr/lib/systemd/system/records-vessel.service.d/10-secrets-out-of-reach.conf	0644	A
 scripts/substrate/units/records-vessel.service.d/30-own-key.conf	/usr/lib/systemd/system/records-vessel.service.d/30-own-key.conf	0644	A
+scripts/substrate/units/records-vessel.service.d/40-walk-owner.conf	/usr/lib/systemd/system/records-vessel.service.d/40-walk-owner.conf	0644	A
 scripts/substrate/units/relevance-sink-vessel.service	/usr/lib/systemd/system/relevance-sink-vessel.service	0644	A
 scripts/substrate/units/relevance-sink-vessel.service.d/10-secrets-out-of-reach.conf	/usr/lib/systemd/system/relevance-sink-vessel.service.d/10-secrets-out-of-reach.conf	0644	A
 scripts/substrate/units/ribosome-vessel.service	/usr/lib/systemd/system/ribosome-vessel.service	0644	A
@@ -189,8 +191,11 @@ scripts/substrate/units/validator-liveness.timer	/usr/lib/systemd/system/validat
 scripts/substrate/units/valkey.service	/usr/lib/systemd/system/valkey.service	0644	A
 scripts/substrate/units/vessel.d/10-secrets-out-of-reach.conf	/usr/lib/systemd/system/vessel.d/10-secrets-out-of-reach.conf	0644	A
 scripts/substrate/units/vessel.d/EXCEPTIONS	/usr/lib/systemd/system/vessel.d/EXCEPTIONS	0644	A
+scripts/substrate/units/walk-owner-seed.service	/usr/lib/systemd/system/walk-owner-seed.service	0644	A
+scripts/substrate/units/walk-owner-seed.service.d/10-secrets-out-of-reach.conf	/usr/lib/systemd/system/walk-owner-seed.service.d/10-secrets-out-of-reach.conf	0644	A
 scripts/substrate/units/walk-vessel.service.d/10-secrets-out-of-reach.conf	/usr/lib/systemd/system/walk-vessel.service.d/10-secrets-out-of-reach.conf	0644	A
 scripts/substrate/units/walk-vessel.service.d/30-own-key.conf	/usr/lib/systemd/system/walk-vessel.service.d/30-own-key.conf	0644	A
+scripts/substrate/units/walk-vessel.service.d/40-after-owner-seed.conf	/usr/lib/systemd/system/walk-vessel.service.d/40-after-owner-seed.conf	0644	A
 scripts/substrate/apply-inventory.sh	/usr/local/bin/apply-inventory	0755	A
 scripts/substrate/apply-llm-arms.sh	/usr/local/bin/apply-llm-arms	0644	A
 scripts/substrate/discovery-deregister.sh	/usr/local/bin/discovery-deregister	0755	A
@@ -266,6 +271,7 @@ scripts/substrate/typecheck-scenario-gen.ts	/usr/local/share/substrate/active-sc
 scripts/substrate/validate-build.ts	/usr/local/share/substrate/active-scripts/validate-build.ts	0644	A
 scripts/substrate/validator-liveness-tick.ts	/usr/local/share/substrate/active-scripts/validator-liveness-tick.ts	0644	A
 scripts/substrate/vessels.inventory.json	/usr/local/share/substrate/active-scripts/vessels.inventory.json	0644	A
+scripts/substrate/walk-owner-seed.ts	/usr/local/share/substrate/active-scripts/walk-owner-seed.ts	0644	A
 scripts/substrate/watchdog-tick.ts	/usr/local/share/substrate/active-scripts/watchdog-tick.ts	0644	A
 scripts/substrate/connect-merge.sh	/usr/local/share/substrate/connect-merge.sh	0755	A
 docker-compose.yml	/usr/local/share/substrate/docker-compose.yml	0644	A
@@ -574,6 +580,7 @@ scripts/substrate/units/db-maintenance.service	/usr/local/share/substrate/super-
 scripts/substrate/units/db-maintenance.timer	/usr/local/share/substrate/super-repo/scripts/substrate/units/db-maintenance.timer	0644	B
 scripts/substrate/units/described-shape-vessel.service.d/10-secrets-out-of-reach.conf	/usr/local/share/substrate/super-repo/scripts/substrate/units/described-shape-vessel.service.d/10-secrets-out-of-reach.conf	0644	B
 scripts/substrate/units/described-shape-vessel.service.d/30-own-key.conf	/usr/local/share/substrate/super-repo/scripts/substrate/units/described-shape-vessel.service.d/30-own-key.conf	0644	B
+scripts/substrate/units/described-shape-vessel.service.d/40-after-owner-seed.conf	/usr/local/share/substrate/super-repo/scripts/substrate/units/described-shape-vessel.service.d/40-after-owner-seed.conf	0644	B
 scripts/substrate/units/discovery-vessel.service	/usr/local/share/substrate/super-repo/scripts/substrate/units/discovery-vessel.service	0644	B
 scripts/substrate/units/discovery-vessel.service.d/10-secrets-out-of-reach.conf	/usr/local/share/substrate/super-repo/scripts/substrate/units/discovery-vessel.service.d/10-secrets-out-of-reach.conf	0644	B
 scripts/substrate/units/discovery-vessel.service.d/federation-peering.conf	/usr/local/share/substrate/super-repo/scripts/substrate/units/discovery-vessel.service.d/federation-peering.conf	0644	B
@@ -663,6 +670,7 @@ scripts/substrate/units/operator-goal-generator.timer	/usr/local/share/substrate
 scripts/substrate/units/operator-goal-generator.timer.d/ready-gate.conf	/usr/local/share/substrate/super-repo/scripts/substrate/units/operator-goal-generator.timer.d/ready-gate.conf	0644	B
 scripts/substrate/units/records-vessel.service.d/10-secrets-out-of-reach.conf	/usr/local/share/substrate/super-repo/scripts/substrate/units/records-vessel.service.d/10-secrets-out-of-reach.conf	0644	B
 scripts/substrate/units/records-vessel.service.d/30-own-key.conf	/usr/local/share/substrate/super-repo/scripts/substrate/units/records-vessel.service.d/30-own-key.conf	0644	B
+scripts/substrate/units/records-vessel.service.d/40-walk-owner.conf	/usr/local/share/substrate/super-repo/scripts/substrate/units/records-vessel.service.d/40-walk-owner.conf	0644	B
 scripts/substrate/units/relevance-sink-vessel.service	/usr/local/share/substrate/super-repo/scripts/substrate/units/relevance-sink-vessel.service	0644	B
 scripts/substrate/units/relevance-sink-vessel.service.d/10-secrets-out-of-reach.conf	/usr/local/share/substrate/super-repo/scripts/substrate/units/relevance-sink-vessel.service.d/10-secrets-out-of-reach.conf	0644	B
 scripts/substrate/units/ribosome-vessel.service	/usr/local/share/substrate/super-repo/scripts/substrate/units/ribosome-vessel.service	0644	B
@@ -718,8 +726,11 @@ scripts/substrate/units/validator-liveness.timer	/usr/local/share/substrate/supe
 scripts/substrate/units/valkey.service	/usr/local/share/substrate/super-repo/scripts/substrate/units/valkey.service	0644	B
 scripts/substrate/units/vessel.d/10-secrets-out-of-reach.conf	/usr/local/share/substrate/super-repo/scripts/substrate/units/vessel.d/10-secrets-out-of-reach.conf	0644	B
 scripts/substrate/units/vessel.d/EXCEPTIONS	/usr/local/share/substrate/super-repo/scripts/substrate/units/vessel.d/EXCEPTIONS	0644	B
+scripts/substrate/units/walk-owner-seed.service	/usr/local/share/substrate/super-repo/scripts/substrate/units/walk-owner-seed.service	0644	B
+scripts/substrate/units/walk-owner-seed.service.d/10-secrets-out-of-reach.conf	/usr/local/share/substrate/super-repo/scripts/substrate/units/walk-owner-seed.service.d/10-secrets-out-of-reach.conf	0644	B
 scripts/substrate/units/walk-vessel.service.d/10-secrets-out-of-reach.conf	/usr/local/share/substrate/super-repo/scripts/substrate/units/walk-vessel.service.d/10-secrets-out-of-reach.conf	0644	B
 scripts/substrate/units/walk-vessel.service.d/30-own-key.conf	/usr/local/share/substrate/super-repo/scripts/substrate/units/walk-vessel.service.d/30-own-key.conf	0644	B
+scripts/substrate/units/walk-vessel.service.d/40-after-owner-seed.conf	/usr/local/share/substrate/super-repo/scripts/substrate/units/walk-vessel.service.d/40-after-owner-seed.conf	0644	B
 scripts/substrate/validate-build.d.ts.map	/usr/local/share/substrate/super-repo/scripts/substrate/validate-build.d.ts.map	0644	B
 scripts/substrate/validate-build.js	/usr/local/share/substrate/super-repo/scripts/substrate/validate-build.js	0644	B
 scripts/substrate/validate-build.js.map	/usr/local/share/substrate/super-repo/scripts/substrate/validate-build.js.map	0644	B
@@ -732,6 +743,7 @@ scripts/substrate/vessel-ctl.sh	/usr/local/share/substrate/super-repo/scripts/su
 scripts/substrate/vessels.inventory.json	/usr/local/share/substrate/super-repo/scripts/substrate/vessels.inventory.json	0644	B
 scripts/substrate/vessels.manifest.json	/usr/local/share/substrate/super-repo/scripts/substrate/vessels.manifest.json	0644	B
 scripts/substrate/vessel-tree-hash.sh	/usr/local/share/substrate/super-repo/scripts/substrate/vessel-tree-hash.sh	0755	B
+scripts/substrate/walk-owner-seed.ts	/usr/local/share/substrate/super-repo/scripts/substrate/walk-owner-seed.ts	0644	B
 scripts/substrate/warn-baseline-drift.sh	/usr/local/share/substrate/super-repo/scripts/substrate/warn-baseline-drift.sh	0755	B
 scripts/substrate/watchdog-tick.d.ts.map	/usr/local/share/substrate/super-repo/scripts/substrate/watchdog-tick.d.ts.map	0644	B
 scripts/substrate/watchdog-tick.js	/usr/local/share/substrate/super-repo/scripts/substrate/watchdog-tick.js	0644	B
@@ -742,3 +754,4 @@ scripts/substrate/vessels.inventory.json	/usr/local/share/substrate/vessels.inve
 scripts/substrate/vessels.manifest.json	/usr/local/share/substrate/vessels.manifest.json	0644	A
 scripts/substrate/seed-concepts.ts	/vessels/seed-concepts.ts	0644	A
 scripts/substrate/seed-identity.ts	/vessels/seed-identity.ts	0644	A
+scripts/substrate/walk-owner-seed.ts	/vessels/walk-owner-seed.ts	0644	A
