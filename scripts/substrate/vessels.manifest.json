@@ -82,6 +82,60 @@
       "depends_on": [
         "federation-relay"
       ]
+    },
+    {
+      "name": "records-vessel",
+      "description": "walk-vessel SPEC-V3 records: authenticated append-only rows, episodes, waits, posterior fold.",
+      "repo": "records-vessel",
+      "workdir": "$RUNTIME",
+      "exec": "src/index.ts",
+      "restart": "no",
+      "health_port": 8510,
+      "secrets": [],
+      "env": {
+        "RECORDS_VESSEL_ID": "records-vessel",
+        "RECORDS_PORT": "8510",
+        "DISCOVERY_URL": "http://127.0.0.1:8100",
+        "RECORDS_KEY_PATH": "/run/records-vessel.key",
+        "RECORDS_ENDPOINT": "http://127.0.0.1:8510",
+        "RECORDS_DATA_DIR": "/workspace/substrate/records-vessel",
+        "IDENTITY_URL": "http://127.0.0.1:8101"
+      }
+    },
+    {
+      "name": "described-shape-vessel",
+      "description": "walk-vessel SPEC-V3 described-shape: produces any shape with a shape_schema row through the channel the walk chose.",
+      "repo": "described-shape-vessel",
+      "workdir": "$RUNTIME",
+      "exec": "src/index.ts",
+      "restart": "no",
+      "health_port": 8520,
+      "secrets": [],
+      "env": {
+        "DESCRIBED_VESSEL_ID": "described-shape-vessel",
+        "DESCRIBED_PORT": "8520",
+        "DISCOVERY_URL": "http://127.0.0.1:8100",
+        "DESCRIBED_KEY_PATH": "/run/described-shape-vessel.key",
+        "DESCRIBED_ENDPOINT": "http://127.0.0.1:8520",
+        "IDENTITY_URL": "http://127.0.0.1:8101"
+      }
+    },
+    {
+      "name": "walk-vessel",
+      "description": "walk-vessel SPEC-V3 walk (treated arm): one chosen call in flight, Thompson draw, recorded selections.",
+      "repo": "walk-vessel",
+      "workdir": "$RUNTIME",
+      "exec": "src/index.ts",
+      "restart": "no",
+      "health_port": 8530,
+      "secrets": [],
+      "env": {
+        "WALK_VESSEL_ID": "walk-vessel",
+        "WALK_PORT": "8530",
+        "DISCOVERY_URL": "http://127.0.0.1:8100",
+        "WALK_KEY_PATH": "/run/walk-vessel.key",
+        "WALK_ENDPOINT": "http://127.0.0.1:8530"
+      }
     }
   ]
 }

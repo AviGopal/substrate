@@ -560,6 +560,34 @@
         "mutated_blob": "58a9c062b5ba8661e84fe298f664bd660cdf564a"
       }
     },
+    "/usr/lib/systemd/system/described-shape-vessel.service.d/10-secrets-out-of-reach.conf": {
+      "src": "scripts/substrate/units/described-shape-vessel.service.d/10-secrets-out-of-reach.conf",
+      "src_blob": "07fe2c6e2e78a3a3d33c820403a00dedd1141442",
+      "level": "behaviour",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-semantics.sh"
+      ],
+      "evidence": {
+        "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
+        "mutation": "delete every InaccessiblePaths= line",
+        "mutated_blob": "2ac08df50293572bf245b241cb1b7551472c330e"
+      }
+    },
+    "/usr/lib/systemd/system/described-shape-vessel.service.d/30-own-key.conf": {
+      "src": "scripts/substrate/units/described-shape-vessel.service.d/30-own-key.conf",
+      "src_blob": "f23ab69f31250b5093adfe2c9a8ef8b734866a20",
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "claimed by hand with the vessel drop-ins; earned by image-coverage-map.check.sh",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "bdb285ae04a2f9d9240b21b8e8ae80c15f61b082"
+      }
+    },
     "/usr/lib/systemd/system/discovery-vessel.service": {
       "src": "scripts/substrate/units/discovery-vessel.service",
       "src_blob": "66116c625837ffc4e2595579c47fba7de6544666",
@@ -1776,6 +1804,34 @@
         "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
         "mutation": "insert `exit 99` after line 1",
         "mutated_blob": "98dc39373afb7ac4ead0e2550fbb66343fe893df"
+      }
+    },
+    "/usr/lib/systemd/system/records-vessel.service.d/10-secrets-out-of-reach.conf": {
+      "src": "scripts/substrate/units/records-vessel.service.d/10-secrets-out-of-reach.conf",
+      "src_blob": "07fe2c6e2e78a3a3d33c820403a00dedd1141442",
+      "level": "behaviour",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-semantics.sh"
+      ],
+      "evidence": {
+        "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
+        "mutation": "delete every InaccessiblePaths= line",
+        "mutated_blob": "2ac08df50293572bf245b241cb1b7551472c330e"
+      }
+    },
+    "/usr/lib/systemd/system/records-vessel.service.d/30-own-key.conf": {
+      "src": "scripts/substrate/units/records-vessel.service.d/30-own-key.conf",
+      "src_blob": "8b86c13c9f7157d2da2f5592ee6fb31971f207a2",
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "claimed by hand with the vessel drop-ins; earned by image-coverage-map.check.sh",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "a55a66ddb600d090d86495bd8f02e5a4956e2a2f"
       }
     },
     "/usr/lib/systemd/system/relevance-sink-vessel.service": {
@@ -3227,6 +3283,34 @@
         "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
         "mutation": "insert `exit 99` after line 1",
         "mutated_blob": "62ddcf4b561f40858e095c17bd0f87db866459ac"
+      }
+    },
+    "/usr/lib/systemd/system/walk-vessel.service.d/10-secrets-out-of-reach.conf": {
+      "src": "scripts/substrate/units/walk-vessel.service.d/10-secrets-out-of-reach.conf",
+      "src_blob": "07fe2c6e2e78a3a3d33c820403a00dedd1141442",
+      "level": "behaviour",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-semantics.sh"
+      ],
+      "evidence": {
+        "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
+        "mutation": "delete every InaccessiblePaths= line",
+        "mutated_blob": "2ac08df50293572bf245b241cb1b7551472c330e"
+      }
+    },
+    "/usr/lib/systemd/system/walk-vessel.service.d/30-own-key.conf": {
+      "src": "scripts/substrate/units/walk-vessel.service.d/30-own-key.conf",
+      "src_blob": "494f9d1eca4e017eeafb2c6d01e3c7a848d631ad",
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "claimed by hand with the vessel drop-ins; earned by image-coverage-map.check.sh",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "ead850be69f377f5cf23fe067e5a16fcb8c61fe6"
       }
     }
   }
