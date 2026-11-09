@@ -409,8 +409,8 @@
     { "unit": "spectral-gap.service", "role": "store" },
     { "unit": "substrate-pull-sync.service", "role": "infra" },
     { "unit": "surgical-gap-scan.service", "role": "autonomy" },
-    { "unit": "records-vessel.service", "role": "compute", "repo": "records-vessel", "manifest": true },
-    { "unit": "described-shape-vessel.service", "role": "compute", "repo": "described-shape-vessel", "manifest": true },
-    { "unit": "walk-vessel.service", "role": "compute", "repo": "walk-vessel", "manifest": true }
+    { "unit": "records-vessel.service", "role": "compute", "repo": "records-vessel", "health_port": 8510, "manifest": true },
+    { "unit": "described-shape-vessel.service", "role": "compute", "repo": "described-shape-vessel", "health_port": 8520, "manifest": true },
+    { "unit": "walk-vessel.service", "role": "compute", "repo": "walk-vessel", "health_port": 8530, "manifest": true }
   ]
 }
