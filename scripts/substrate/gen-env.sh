@@ -1149,6 +1149,49 @@ if [ -n "${PEER_MULTIADDR:-}" ] && [ -z "${IDENTITY_VESSEL_URL:-}" ] && [ -z "${
 fi
 IDENTITY_VESSEL_URL="${IDENTITY_VESSEL_URL:-http://127.0.0.1:8101}"
 IDENTITY_ENDPOINT="${IDENTITY_ENDPOINT:-$IDENTITY_VESSEL_URL}"
+
+# Walk vessel keys on a node whose identity is remote (a spoke). The walk vessels hold one key each, plus an owner
+# key, and records tells them apart by key_id, so they cannot share the node key. On a standalone node or a hub,
+# identity-seeder issues them through the admin path (seed-identity.ts ensureWalkVesselKeys). A spoke holds no admin
+# key and its identity-seeder is skipped, so the hub issues them at join: `substrate-key join` puts them in the token
+# (sj2), the installer carries them as SUBSTRATE_WALK_KEYS ("records-vessel=<key> described-shape-vessel=<key> …"),
+# and this block puts each in its own file in the masked store, the source of that unit's 30-own-key bind. Each
+# stored key is then validated against IDENTITY_VESSEL_URL to name its key_id, so key-ids.json and
+# RECORDS_OWNER_KEY_ID are written before any walk unit starts. A key identity rejects is left out, never guessed;
+# a local identity is not up yet at this point, so on a standalone node nothing validates and identity-seeder,
+# which runs on every boot, writes both instead. Key values are never printed: key_id only.
+WALK_KEY_DIR="/workspace/.substrate-private/walk-vessels"
+WALK_KEY_IDS_FILE="/workspace/substrate/walk-vessels/key-ids.json"
+WALK_KEY_NAMES="records-vessel described-shape-vessel walk-vessel walk-owner"
+if [ -n "${SUBSTRATE_WALK_KEYS:-}" ]; then
+  mkdir -p -m 0700 "$WALK_KEY_DIR"
+  for _wk in $SUBSTRATE_WALK_KEYS; do
+    _wk_name="${_wk%%=*}"; _wk_val="${_wk#*=}"
+    case " $WALK_KEY_NAMES " in *" $_wk_name "*) ;; *) echo "[gen-env] walk keys: ignoring unknown name '${_wk_name}'" >&2; continue ;; esac
+    [ -n "$_wk_val" ] && [ "$_wk_val" != "$_wk" ] || { echo "[gen-env] walk keys: ${_wk_name} carries no key" >&2; continue; }
+    if [ "$(cat "$WALK_KEY_DIR/${_wk_name}.key" 2>/dev/null)" != "$_wk_val" ]; then
+      ( umask 077; printf '%s\n' "$_wk_val" > "$WALK_KEY_DIR/${_wk_name}.key.tmp" ) && mv -f "$WALK_KEY_DIR/${_wk_name}.key.tmp" "$WALK_KEY_DIR/${_wk_name}.key"
+      echo "[gen-env] walk keys: stored the ${_wk_name} key the join token carried" >&2
+    fi
+  done
+fi
+_wk_ids=""; _wk_n=0
+for _wk_name in $WALK_KEY_NAMES; do
+  [ -s "$WALK_KEY_DIR/${_wk_name}.key" ] || continue
+  _wk_id="$(jq -n --rawfile k "$WALK_KEY_DIR/${_wk_name}.key" '{api_key: ($k | rtrimstr("\n"))}' \
+    | curl -s --max-time 5 "${IDENTITY_VESSEL_URL%/}/v1/keys/validate" -H 'Content-Type: application/json' --data-binary @- 2>/dev/null \
+    | jq -r 'if .data.valid == true then (.data.key_id // empty) else empty end' 2>/dev/null)" || _wk_id=""
+  [ -n "$_wk_id" ] || continue
+  _wk_ids="${_wk_ids}$(jq -nc --arg n "$_wk_name" --arg i "$_wk_id" '{($n): $i}')"; _wk_n=$((_wk_n + 1))
+done
+if [ "$_wk_n" = 4 ]; then
+  mkdir -p "$(dirname "$WALK_KEY_IDS_FILE")"
+  printf '%s' "$_wk_ids" | jq -s 'add' > "$WALK_KEY_IDS_FILE.tmp" && mv -f "$WALK_KEY_IDS_FILE.tmp" "$WALK_KEY_IDS_FILE"
+  echo "[gen-env] walk keys: 4 authenticate at ${IDENTITY_VESSEL_URL}; key ids in ${WALK_KEY_IDS_FILE}" >&2
+elif [ "$_wk_n" -gt 0 ]; then
+  echo "[gen-env] walk keys: only ${_wk_n} of 4 authenticate at ${IDENTITY_VESSEL_URL}; key ids left as they were" >&2
+fi
+RECORDS_OWNER_KEY_ID="$(jq -r '."walk-owner" // empty' "$WALK_KEY_IDS_FILE" 2>/dev/null || true)"
 # Federated-spoke identity (docs/FEDERATION.md): the hub discovery this
 # substrate mirrors its capability surface into, and the relay + unique
 # substrate id the federation-transport-vessel uses. Empty on a plain local
@@ -1580,6 +1623,10 @@ METABOB_ENDPOINT="${METABOB_ENDPOINT}"
 SUBSTRATE_ENDPOINT="${SUBSTRATE_ENDPOINT}"
 IDENTITY_VESSEL_URL="${IDENTITY_VESSEL_URL}"
 IDENTITY_ENDPOINT="${IDENTITY_ENDPOINT}"
+# The walk vessels read IDENTITY_URL. This file overrides their unit's loopback value, so on a spoke they validate
+# keys at the hub's identity like every other vessel. RECORDS_OWNER_KEY_ID: the walk-vessel key-ids block above.
+IDENTITY_URL="${IDENTITY_VESSEL_URL}"
+RECORDS_OWNER_KEY_ID="${RECORDS_OWNER_KEY_ID}"
 
 # Federation (empty unless this substrate is a spoke of a hub)
 HUB_DISCOVERY_URL="${HUB_DISCOVERY_URL}"

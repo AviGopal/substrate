@@ -2615,7 +2615,7 @@
     },
     "/usr/local/bin/gen-env": {
       "src": "scripts/substrate/gen-env.sh",
-      "src_blob": "8bb8b796e1bfc608e9e461bbb673cff02293b5e0",
+      "src_blob": "aba773ff51980e905a8e68776de6207ade9b4f74",
       "level": "none",
       "reason": "unreached",
       "fixtures": []
@@ -2755,14 +2755,14 @@
     },
     "/usr/local/bin/substrate-install": {
       "src": "scripts/substrate/substrate-install.sh",
-      "src_blob": "50dc51297b14aaeabdb91c4cac91f99d7eef2156",
+      "src_blob": "adc08b31cc1ea6765c549ece1ce77b38df0da2fc",
       "level": "none",
       "reason": "unreached",
       "fixtures": []
     },
     "/usr/local/bin/substrate-key": {
       "src": "scripts/substrate/substrate-key.sh",
-      "src_blob": "fb9169c7ee4d509bc1f3280371ed405134f763af",
+      "src_blob": "b34fafd0da7fccb9d297de37b14a5cc8a2d67d83",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -2771,7 +2771,7 @@
       "evidence": {
         "accepted": "0dc22435f44c0149ec4f6fc2cdd94650a3f2208f",
         "mutation": "insert `exit 99` after line 1",
-        "mutated_blob": "a02beb43a545db91fd9eec7797845ddd8923ce4f"
+        "mutated_blob": "4f7be3987d1e615f9c8782693f654b97e620559d"
       }
     },
     "/usr/local/bin/substrate-manifest": {
@@ -3161,7 +3161,7 @@
     },
     "/usr/local/share/substrate/docker-compose.yml": {
       "src": "docker-compose.yml",
-      "src_blob": "65276d662c482494940f32821265cd80f9567878",
+      "src_blob": "259426e4cd306e2ebceab569eead5c4532ed9c76",
       "level": "none",
       "reason": "outside-gate-paths",
       "fixtures": []

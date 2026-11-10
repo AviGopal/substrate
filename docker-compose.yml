@@ -132,6 +132,8 @@ services:
       DISCOVERY_ENDPOINT: ${DISCOVERY_ENDPOINT:-}
       METABOB_API_KEY: ${METABOB_API_KEY:-}
       SUBSTRATE_API_KEY: ${SUBSTRATE_API_KEY:-}
+      # The walk vessels' keys the hub issued at join (sj2 token); gen-env stores each in its masked file.
+      SUBSTRATE_WALK_KEYS: ${SUBSTRATE_WALK_KEYS:-}
       HUB_DISCOVERY_URL: ${HUB_DISCOVERY_URL:-}
       ACTIVITY_API_ENDPOINT: ${ACTIVITY_API_ENDPOINT:-}
       METABOB_ENDPOINT: ${METABOB_ENDPOINT:-}
