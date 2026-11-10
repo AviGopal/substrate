@@ -17,8 +17,7 @@
 #   issue <name> [scopes] [days]      mint a new API key (external peer / spoke / vessel)
 #   join <name> [scopes] [days]       mint a key for a joining node and print ONE join
 #                                     token (this fleet's advertised discovery endpoint +
-#                                     the key + the node's walk vessel keys) and the
-#                                     command the joiner runs
+#                                     the key) and the command the joiner runs
 #   jwt [role] [expires_seconds]      mint a Bearer JWT (dashboard / admin flows)
 #   list                              list issued keys for the substrate org
 #   revoke <key_id>                   revoke a key
@@ -185,11 +184,7 @@ case "$cmd" in
     # /bootstrap: DISCOVERY_PUBLIC_URL, or PUBLIC_IP and the published port prefix), so
     # no port is typed by a human or written into any launcher. Token format, versioned
     # so a joiner can refuse one it does not understand:
-    #   sj2.<base64url of "<discovery endpoint>\n<api key>\n<walk keys>">
-    # <walk keys> is "records-vessel=<key> described-shape-vessel=<key> walk-vessel=<key> walk-owner=<key>":
-    # the walk vessels hold one key each and records tells them apart by key_id, and a joiner
-    # cannot issue keys (issuing is admin-only), so the hub issues them here, peer keys of the
-    # node named <name>-<vessel>. The joiner's gen-env stores each in its own masked file.
+    #   sj1.<base64url of "<discovery endpoint>\n<api key>">
     name="${1:-}"; [[ -n "$name" ]] || die "usage: substrate-key join <name> [scopes] [expires_days]"
     disc="$(curl -s -m 10 "${DISCOVERY_LOCAL_URL:-http://127.0.0.1:8100}/bootstrap" | jq -r '.discovery_endpoint // empty')"
     [[ -n "$disc" ]] || die "this fleet advertises no public discovery endpoint (/bootstrap discovery_endpoint is empty): a hub needs PUBLIC_IP (install with --profile hub --public-ip <address>)"
@@ -197,12 +192,7 @@ case "$cmd" in
     # The joiner's key is a peer key, owned by the joining node: identity accepts owner_kind
     # "peer" only together with an owner_node, so the node's name rides along.
     key="$("$0" issue --peer-node "$name" "$name" "${2:-read,write}" ${3:+"$3"})" || die "key issuance failed"
-    walk=""
-    for w in records-vessel described-shape-vessel walk-vessel walk-owner; do
-      wkey="$("$0" issue --peer-node "$name" "$name-$w" read,write ${3:+"$3"})" || die "walk key issuance failed ($w)"
-      walk="${walk:+$walk }$w=$wkey"
-    done
-    token="sj2.$(printf '%s\n%s\n%s' "$disc" "$key" "$walk" | base64 -w0 | tr '+/' '-_' | tr -d '=')"
+    token="sj1.$(printf '%s\n%s' "$disc" "$key" | base64 -w0 | tr '+/' '-_' | tr -d '=')"
     echo "Join token for '$name' (endpoint $disc). It carries the key: give it only to that node's operator." >&2
     echo "The joiner runs:" >&2
     echo "  docker run --rm --pull always ghcr.io/avigopal/substrate:dev install | SUBSTRATE_JOIN='$token' sh" >&2

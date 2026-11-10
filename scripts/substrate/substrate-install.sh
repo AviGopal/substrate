@@ -43,7 +43,7 @@ INPUT_NAMES="$(names_in < "$MANIFEST")"
 # a notice) when it is only ambient in the shell, so .env is the one declaration.
 PROVIDER_NAMES="$(awk '/# ── Provider keys/{f=1;next} f&&/# ──/{exit} f' "$MANIFEST" | names_in)"
 [ -n "$PROVIDER_NAMES" ] || { echo "[install] found no provider-key section in the manifest" >&2; exit 1; }
-CARRY_NAMES="SUBSTRATE_IMAGE SUBSTRATE_NAME SUBSTRATE_PORT_PREFIX PROFILE SUBSTRATE_UPDATE_CHANNEL SUBSTRATE_ACCEPTANCE DISCOVERY_ENDPOINT METABOB_API_KEY SUBSTRATE_API_KEY SUBSTRATE_WALK_KEYS PUBLIC_IP SUBSTRATE_GIT_PAT SUBSTRATE_REPO_OWNER ${PROVIDER_NAMES}"
+CARRY_NAMES="SUBSTRATE_IMAGE SUBSTRATE_NAME SUBSTRATE_PORT_PREFIX PROFILE SUBSTRATE_UPDATE_CHANNEL SUBSTRATE_ACCEPTANCE DISCOVERY_ENDPOINT METABOB_API_KEY SUBSTRATE_API_KEY PUBLIC_IP SUBSTRATE_GIT_PAT SUBSTRATE_REPO_OWNER ${PROVIDER_NAMES}"
 for n in $CARRY_NAMES; do
   case " $INPUT_NAMES " in *" $n "*) ;; *) echo "[install] install input $n is not read by the manifest" >&2; exit 1 ;; esac
 done
@@ -134,22 +134,15 @@ case "$wait_level" in live|seeded|served|usable|none) ;; *) die "--wait must be 
 # A join token (`substrate-key join` on the hub) carries both join inputs: the endpoint the
 # hub advertises and a key it issued, so a joiner types one value and no port.
 #   sj1.<base64url of "<discovery endpoint>\n<api key>">
-#   sj2.<base64url of "<discovery endpoint>\n<api key>\n<walk keys>">: sj1 plus the node's walk
-#       vessel keys ("records-vessel=<key> …"), carried as SUBSTRATE_WALK_KEYS for gen-env to store.
 [ -n "$set_join" ] || set_join="${SUBSTRATE_JOIN:-}"
 case "$set_join" in
-  sj1.*|sj2.*)
-    b="$(printf '%s' "${set_join#sj[12].}" | tr '_-' '/+')"
+  sj1.*)
+    b="$(printf '%s' "${set_join#sj1.}" | tr '_-' '/+')"
     case $(( ${#b} % 4 )) in 2) b="$b==" ;; 3) b="$b=" ;; esac
     decoded="$(printf '%s' "$b" | base64 -d 2>/dev/null)" || die "the join token does not decode; copy it again from the hub"
     tok_ep="$(printf '%s\n' "$decoded" | sed -n 1p)"; tok_key="$(printf '%s\n' "$decoded" | sed -n 2p)"
     case "$tok_ep" in http://*|https://*) ;; *) die "the join token carries no discovery endpoint; ask the hub for a new one" ;; esac
     [ -n "$tok_key" ] || die "the join token carries no key; ask the hub for a new one"
-    case "$set_join" in sj2.*)
-      tok_walk="$(printf '%s\n' "$decoded" | sed -n 3p)"
-      [ -n "$tok_walk" ] || die "the join token carries no walk vessel keys; ask the hub for a new one"
-      SUBSTRATE_WALK_KEYS="$tok_walk"; export SUBSTRATE_WALK_KEYS ;;
-    esac
     set_join="$tok_ep"; [ -n "$set_key" ] || set_key="$tok_key"
     ;;
   sj[0-9]*.*) die "this installer does not understand join token version '${set_join%%.*}'; pull a newer image" ;;

@@ -574,20 +574,6 @@
         "mutated_blob": "2ac08df50293572bf245b241cb1b7551472c330e"
       }
     },
-    "/usr/lib/systemd/system/described-shape-vessel.service.d/30-own-key.conf": {
-      "src": "scripts/substrate/units/described-shape-vessel.service.d/30-own-key.conf",
-      "src_blob": "b33797950426dbd315ed7597ec5f70cdfc3514cf",
-      "level": "parse",
-      "reason": "mutation-proven",
-      "fixtures": [
-        "unit-verify.sh"
-      ],
-      "evidence": {
-        "accepted": "claimed by hand with the vessel drop-ins; earned by image-coverage-map.check.sh",
-        "mutation": "insert `exit 99` after line 1",
-        "mutated_blob": "dacf39c078b06a35f101e0a6abfce9a14b7d2f44"
-      }
-    },
     "/usr/lib/systemd/system/discovery-vessel.service": {
       "src": "scripts/substrate/units/discovery-vessel.service",
       "src_blob": "66116c625837ffc4e2595579c47fba7de6544666",
@@ -1820,20 +1806,6 @@
         "mutated_blob": "2ac08df50293572bf245b241cb1b7551472c330e"
       }
     },
-    "/usr/lib/systemd/system/records-vessel.service.d/30-own-key.conf": {
-      "src": "scripts/substrate/units/records-vessel.service.d/30-own-key.conf",
-      "src_blob": "cff146389ca13b9862c5de69cbab0936ebe84cbb",
-      "level": "parse",
-      "reason": "mutation-proven",
-      "fixtures": [
-        "unit-verify.sh"
-      ],
-      "evidence": {
-        "accepted": "claimed by hand with the vessel drop-ins; earned by image-coverage-map.check.sh",
-        "mutation": "insert `exit 99` after line 1",
-        "mutated_blob": "57755047a7e3b7f584878fdee44eea1228a88347"
-      }
-    },
     "/usr/lib/systemd/system/relevance-sink-vessel.service": {
       "src": "scripts/substrate/units/relevance-sink-vessel.service",
       "src_blob": "53344c77123f88e082d67e7bf12e2700d5049081",
@@ -2762,7 +2734,7 @@
     },
     "/usr/local/bin/substrate-key": {
       "src": "scripts/substrate/substrate-key.sh",
-      "src_blob": "b34fafd0da7fccb9d297de37b14a5cc8a2d67d83",
+      "src_blob": "fb9169c7ee4d509bc1f3280371ed405134f763af",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -2771,7 +2743,7 @@
       "evidence": {
         "accepted": "0dc22435f44c0149ec4f6fc2cdd94650a3f2208f",
         "mutation": "insert `exit 99` after line 1",
-        "mutated_blob": "4f7be3987d1e615f9c8782693f654b97e620559d"
+        "mutated_blob": "a02beb43a545db91fd9eec7797845ddd8923ce4f"
       }
     },
     "/usr/local/bin/substrate-manifest": {
@@ -3063,7 +3035,7 @@
     },
     "/usr/local/share/substrate/active-scripts/seed-identity.ts": {
       "src": "scripts/substrate/seed-identity.ts",
-      "src_blob": "0b7221a9322a0d9e5e4ac5057088175cb2cdd80d",
+      "src_blob": "4bff23a841fff5acd7125524645e197f56f6ee39",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -3072,7 +3044,7 @@
       "evidence": {
         "accepted": "cb43dd286c31649019f1e067f541d282cad21a32",
         "mutation": "insert `exit 99` after line 1",
-        "mutated_blob": "0c11edd975da6a9b916623e462021e00015a9c8c"
+        "mutated_blob": "4af5043130a5b74a2a674b40b12472f76fb296ef"
       }
     },
     "/usr/local/share/substrate/active-scripts/self-development-trend.ts": {
@@ -3259,7 +3231,7 @@
     },
     "/vessels/seed-identity.ts": {
       "src": "scripts/substrate/seed-identity.ts",
-      "src_blob": "0b7221a9322a0d9e5e4ac5057088175cb2cdd80d",
+      "src_blob": "4bff23a841fff5acd7125524645e197f56f6ee39",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -3268,7 +3240,7 @@
       "evidence": {
         "accepted": "cb43dd286c31649019f1e067f541d282cad21a32",
         "mutation": "insert `exit 99` after line 1",
-        "mutated_blob": "0c11edd975da6a9b916623e462021e00015a9c8c"
+        "mutated_blob": "4af5043130a5b74a2a674b40b12472f76fb296ef"
       }
     },
     "/usr/lib/systemd/system/service.d/20-deregister-on-stop.conf": {
@@ -3299,20 +3271,6 @@
         "mutated_blob": "2ac08df50293572bf245b241cb1b7551472c330e"
       }
     },
-    "/usr/lib/systemd/system/walk-vessel.service.d/30-own-key.conf": {
-      "src": "scripts/substrate/units/walk-vessel.service.d/30-own-key.conf",
-      "src_blob": "7b60f24a734eee902f6f0f89185d85b40c0677cb",
-      "level": "parse",
-      "reason": "mutation-proven",
-      "fixtures": [
-        "unit-verify.sh"
-      ],
-      "evidence": {
-        "accepted": "claimed by hand with the vessel drop-ins; earned by image-coverage-map.check.sh",
-        "mutation": "insert `exit 99` after line 1",
-        "mutated_blob": "612f49f848e97e0a7d0d931428421b642737ace8"
-      }
-    },
     "/usr/lib/systemd/system/described-shape-vessel.service.d/40-after-owner-seed.conf": {
       "src": "scripts/substrate/units/described-shape-vessel.service.d/40-after-owner-seed.conf",
       "level": "parse",
@@ -3326,20 +3284,6 @@
         "mutated_blob": "1e328a910d647c695d340896b93a0046c42801cc"
       },
       "src_blob": "5812e0aa668bfdcc8e3d65c68365adf06cec3992"
-    },
-    "/usr/lib/systemd/system/records-vessel.service.d/40-walk-owner.conf": {
-      "src": "scripts/substrate/units/records-vessel.service.d/40-walk-owner.conf",
-      "level": "parse",
-      "reason": "mutation-proven",
-      "fixtures": [
-        "unit-verify.sh"
-      ],
-      "evidence": {
-        "accepted": "claimed by hand with the walk owner seed; earned by image-coverage-map.check.sh",
-        "mutation": "insert `exit 99` after line 1",
-        "mutated_blob": "671f8165862079a9c1195b77c9a8c15a3296f01c"
-      },
-      "src_blob": "23432b2b51a68bc25766d770d139b68fb24c6b00"
     },
     "/usr/lib/systemd/system/walk-owner-seed.service": {
       "src": "scripts/substrate/units/walk-owner-seed.service",

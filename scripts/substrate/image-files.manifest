@@ -44,7 +44,6 @@ scripts/substrate/units/db-contention-check.timer	/usr/lib/systemd/system/db-con
 scripts/substrate/units/db-maintenance.service	/usr/lib/systemd/system/db-maintenance.service	0644	A
 scripts/substrate/units/db-maintenance.timer	/usr/lib/systemd/system/db-maintenance.timer	0644	A
 scripts/substrate/units/described-shape-vessel.service.d/10-secrets-out-of-reach.conf	/usr/lib/systemd/system/described-shape-vessel.service.d/10-secrets-out-of-reach.conf	0644	A
-scripts/substrate/units/described-shape-vessel.service.d/30-own-key.conf	/usr/lib/systemd/system/described-shape-vessel.service.d/30-own-key.conf	0644	A
 scripts/substrate/units/described-shape-vessel.service.d/40-after-owner-seed.conf	/usr/lib/systemd/system/described-shape-vessel.service.d/40-after-owner-seed.conf	0644	A
 scripts/substrate/units/described-shape-vessel.service.d/50-restart-with-deps.conf	/usr/lib/systemd/system/described-shape-vessel.service.d/50-restart-with-deps.conf	0644	A
 scripts/substrate/units/discovery-vessel.service	/usr/lib/systemd/system/discovery-vessel.service	0644	A
@@ -135,8 +134,6 @@ scripts/substrate/units/operator-goal-generator.service.d/watchdog.conf	/usr/lib
 scripts/substrate/units/operator-goal-generator.timer	/usr/lib/systemd/system/operator-goal-generator.timer	0644	A
 scripts/substrate/units/operator-goal-generator.timer.d/ready-gate.conf	/usr/lib/systemd/system/operator-goal-generator.timer.d/ready-gate.conf	0644	A
 scripts/substrate/units/records-vessel.service.d/10-secrets-out-of-reach.conf	/usr/lib/systemd/system/records-vessel.service.d/10-secrets-out-of-reach.conf	0644	A
-scripts/substrate/units/records-vessel.service.d/30-own-key.conf	/usr/lib/systemd/system/records-vessel.service.d/30-own-key.conf	0644	A
-scripts/substrate/units/records-vessel.service.d/40-walk-owner.conf	/usr/lib/systemd/system/records-vessel.service.d/40-walk-owner.conf	0644	A
 scripts/substrate/units/records-vessel.service.d/50-restart-with-deps.conf	/usr/lib/systemd/system/records-vessel.service.d/50-restart-with-deps.conf	0644	A
 scripts/substrate/units/relevance-sink-vessel.service	/usr/lib/systemd/system/relevance-sink-vessel.service	0644	A
 scripts/substrate/units/relevance-sink-vessel.service.d/10-secrets-out-of-reach.conf	/usr/lib/systemd/system/relevance-sink-vessel.service.d/10-secrets-out-of-reach.conf	0644	A
@@ -196,7 +193,6 @@ scripts/substrate/units/vessel.d/EXCEPTIONS	/usr/lib/systemd/system/vessel.d/EXC
 scripts/substrate/units/walk-owner-seed.service	/usr/lib/systemd/system/walk-owner-seed.service	0644	A
 scripts/substrate/units/walk-owner-seed.service.d/10-secrets-out-of-reach.conf	/usr/lib/systemd/system/walk-owner-seed.service.d/10-secrets-out-of-reach.conf	0644	A
 scripts/substrate/units/walk-vessel.service.d/10-secrets-out-of-reach.conf	/usr/lib/systemd/system/walk-vessel.service.d/10-secrets-out-of-reach.conf	0644	A
-scripts/substrate/units/walk-vessel.service.d/30-own-key.conf	/usr/lib/systemd/system/walk-vessel.service.d/30-own-key.conf	0644	A
 scripts/substrate/units/walk-vessel.service.d/40-after-owner-seed.conf	/usr/lib/systemd/system/walk-vessel.service.d/40-after-owner-seed.conf	0644	A
 scripts/substrate/units/walk-vessel.service.d/50-restart-with-deps.conf	/usr/lib/systemd/system/walk-vessel.service.d/50-restart-with-deps.conf	0644	A
 scripts/substrate/apply-inventory.sh	/usr/local/bin/apply-inventory	0755	A
@@ -582,7 +578,6 @@ scripts/substrate/units/db-contention-check.timer	/usr/local/share/substrate/sup
 scripts/substrate/units/db-maintenance.service	/usr/local/share/substrate/super-repo/scripts/substrate/units/db-maintenance.service	0644	B
 scripts/substrate/units/db-maintenance.timer	/usr/local/share/substrate/super-repo/scripts/substrate/units/db-maintenance.timer	0644	B
 scripts/substrate/units/described-shape-vessel.service.d/10-secrets-out-of-reach.conf	/usr/local/share/substrate/super-repo/scripts/substrate/units/described-shape-vessel.service.d/10-secrets-out-of-reach.conf	0644	B
-scripts/substrate/units/described-shape-vessel.service.d/30-own-key.conf	/usr/local/share/substrate/super-repo/scripts/substrate/units/described-shape-vessel.service.d/30-own-key.conf	0644	B
 scripts/substrate/units/described-shape-vessel.service.d/40-after-owner-seed.conf	/usr/local/share/substrate/super-repo/scripts/substrate/units/described-shape-vessel.service.d/40-after-owner-seed.conf	0644	B
 scripts/substrate/units/described-shape-vessel.service.d/50-restart-with-deps.conf	/usr/local/share/substrate/super-repo/scripts/substrate/units/described-shape-vessel.service.d/50-restart-with-deps.conf	0644	B
 scripts/substrate/units/discovery-vessel.service	/usr/local/share/substrate/super-repo/scripts/substrate/units/discovery-vessel.service	0644	B
@@ -673,8 +668,6 @@ scripts/substrate/units/operator-goal-generator.service.d/watchdog.conf	/usr/loc
 scripts/substrate/units/operator-goal-generator.timer	/usr/local/share/substrate/super-repo/scripts/substrate/units/operator-goal-generator.timer	0644	B
 scripts/substrate/units/operator-goal-generator.timer.d/ready-gate.conf	/usr/local/share/substrate/super-repo/scripts/substrate/units/operator-goal-generator.timer.d/ready-gate.conf	0644	B
 scripts/substrate/units/records-vessel.service.d/10-secrets-out-of-reach.conf	/usr/local/share/substrate/super-repo/scripts/substrate/units/records-vessel.service.d/10-secrets-out-of-reach.conf	0644	B
-scripts/substrate/units/records-vessel.service.d/30-own-key.conf	/usr/local/share/substrate/super-repo/scripts/substrate/units/records-vessel.service.d/30-own-key.conf	0644	B
-scripts/substrate/units/records-vessel.service.d/40-walk-owner.conf	/usr/local/share/substrate/super-repo/scripts/substrate/units/records-vessel.service.d/40-walk-owner.conf	0644	B
 scripts/substrate/units/records-vessel.service.d/50-restart-with-deps.conf	/usr/local/share/substrate/super-repo/scripts/substrate/units/records-vessel.service.d/50-restart-with-deps.conf	0644	B
 scripts/substrate/units/relevance-sink-vessel.service	/usr/local/share/substrate/super-repo/scripts/substrate/units/relevance-sink-vessel.service	0644	B
 scripts/substrate/units/relevance-sink-vessel.service.d/10-secrets-out-of-reach.conf	/usr/local/share/substrate/super-repo/scripts/substrate/units/relevance-sink-vessel.service.d/10-secrets-out-of-reach.conf	0644	B
@@ -734,7 +727,6 @@ scripts/substrate/units/vessel.d/EXCEPTIONS	/usr/local/share/substrate/super-rep
 scripts/substrate/units/walk-owner-seed.service	/usr/local/share/substrate/super-repo/scripts/substrate/units/walk-owner-seed.service	0644	B
 scripts/substrate/units/walk-owner-seed.service.d/10-secrets-out-of-reach.conf	/usr/local/share/substrate/super-repo/scripts/substrate/units/walk-owner-seed.service.d/10-secrets-out-of-reach.conf	0644	B
 scripts/substrate/units/walk-vessel.service.d/10-secrets-out-of-reach.conf	/usr/local/share/substrate/super-repo/scripts/substrate/units/walk-vessel.service.d/10-secrets-out-of-reach.conf	0644	B
-scripts/substrate/units/walk-vessel.service.d/30-own-key.conf	/usr/local/share/substrate/super-repo/scripts/substrate/units/walk-vessel.service.d/30-own-key.conf	0644	B
 scripts/substrate/units/walk-vessel.service.d/40-after-owner-seed.conf	/usr/local/share/substrate/super-repo/scripts/substrate/units/walk-vessel.service.d/40-after-owner-seed.conf	0644	B
 scripts/substrate/units/walk-vessel.service.d/50-restart-with-deps.conf	/usr/local/share/substrate/super-repo/scripts/substrate/units/walk-vessel.service.d/50-restart-with-deps.conf	0644	B
 scripts/substrate/validate-build.d.ts.map	/usr/local/share/substrate/super-repo/scripts/substrate/validate-build.d.ts.map	0644	B

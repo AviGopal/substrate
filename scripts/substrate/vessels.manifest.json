@@ -96,10 +96,8 @@
         "RECORDS_VESSEL_ID": "records-vessel",
         "RECORDS_PORT": "8510",
         "DISCOVERY_URL": "http://127.0.0.1:8100",
-        "RECORDS_KEY_PATH": "/run/records-vessel.key",
         "RECORDS_ENDPOINT": "http://127.0.0.1:8510",
-        "RECORDS_DATA_DIR": "/workspace/substrate/records-vessel",
-        "IDENTITY_URL": "http://127.0.0.1:8101"
+        "RECORDS_DATA_DIR": "/workspace/substrate/records-vessel"
       }
     },
     {
@@ -115,9 +113,7 @@
         "DESCRIBED_VESSEL_ID": "described-shape-vessel",
         "DESCRIBED_PORT": "8520",
         "DISCOVERY_URL": "http://127.0.0.1:8100",
-        "DESCRIBED_KEY_PATH": "/run/described-shape-vessel.key",
-        "DESCRIBED_ENDPOINT": "http://127.0.0.1:8520",
-        "IDENTITY_URL": "http://127.0.0.1:8101"
+        "DESCRIBED_ENDPOINT": "http://127.0.0.1:8520"
       }
     },
     {
@@ -133,7 +129,6 @@
         "WALK_VESSEL_ID": "walk-vessel",
         "WALK_PORT": "8530",
         "DISCOVERY_URL": "http://127.0.0.1:8100",
-        "WALK_KEY_PATH": "/run/walk-vessel.key",
         "WALK_ENDPOINT": "http://127.0.0.1:8530"
       }
     }
