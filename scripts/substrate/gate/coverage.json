@@ -3287,17 +3287,18 @@
     },
     "/usr/lib/systemd/system/walk-owner-seed.service": {
       "src": "scripts/substrate/units/walk-owner-seed.service",
-      "level": "parse",
+      "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
-        "unit-verify.sh"
+        "unit-semantics.sh"
       ],
       "evidence": {
-        "accepted": "claimed by hand with the walk owner seed; earned by image-coverage-map.check.sh",
-        "mutation": "insert `exit 99` after line 1",
-        "mutated_blob": "ef2e7a04fa46c0263d3078c33bc5688cd0c40294"
+        "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
+        "mutation": "rewrite ExecStart= to /bin/true",
+        "mutated_blob": "a39b1f610515356a994822e8d5821d5e3dd19c54",
+        "scope": "E1 proves ExecStart= only; Restart= and RestartSec= are not proven"
       },
-      "src_blob": "41aa6776307f1b2b2a3704367ec92eb1b66c8386"
+      "src_blob": "6e2e68212d2a35f9d0c12814067999e5495aeb0f"
     },
     "/usr/lib/systemd/system/walk-owner-seed.service.d/10-secrets-out-of-reach.conf": {
       "src": "scripts/substrate/units/walk-owner-seed.service.d/10-secrets-out-of-reach.conf",
@@ -3329,17 +3330,31 @@
     },
     "/usr/local/share/substrate/active-scripts/walk-owner-seed.ts": {
       "src": "scripts/substrate/walk-owner-seed.ts",
-      "src_blob": "726078749d8403bb7ffbbdc5d61cab905d0e23d4",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
+      "src_blob": "8e3b071a495a156826347e3fb6b79383ef7c4615",
+      "level": "behaviour",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "walk-owner-seed-rows.sh"
+      ],
+      "evidence": {
+        "accepted": "ba2a622b413e1612436a28a328be9fa44b0b8784",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "d6ccf98caadb46a033474445da8e2ddcf2f08576"
+      }
     },
     "/vessels/walk-owner-seed.ts": {
       "src": "scripts/substrate/walk-owner-seed.ts",
-      "src_blob": "726078749d8403bb7ffbbdc5d61cab905d0e23d4",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
+      "src_blob": "8e3b071a495a156826347e3fb6b79383ef7c4615",
+      "level": "behaviour",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "walk-owner-seed-rows.sh"
+      ],
+      "evidence": {
+        "accepted": "ba2a622b413e1612436a28a328be9fa44b0b8784",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "d6ccf98caadb46a033474445da8e2ddcf2f08576"
+      }
     },
     "/usr/lib/systemd/system/records-vessel.service.d/50-restart-with-deps.conf": {
       "src": "scripts/substrate/units/records-vessel.service.d/50-restart-with-deps.conf",
