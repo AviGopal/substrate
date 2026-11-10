@@ -194,6 +194,24 @@ COPY repos/relevance-sink-vessel/package.json ./relevance-sink-vessel/
 COPY repos/relevance-sink-vessel/src ./relevance-sink-vessel/src
 COPY repos/relevance-sink-vessel/tsconfig.json ./relevance-sink-vessel/
 
+# records-vessel (the walk's append-only rows, episodes, waits and posterior fold — :8510)
+COPY repos/records-vessel/package.json repos/records-vessel/bun.lock* ./records-vessel/
+RUN cd records-vessel && bun install
+COPY repos/records-vessel/src ./records-vessel/src
+COPY repos/records-vessel/tsconfig.json ./records-vessel/
+
+# described-shape-vessel (produces any shape a shape_schema row describes, through the channel the walk chose — :8520)
+COPY repos/described-shape-vessel/package.json repos/described-shape-vessel/bun.lock* ./described-shape-vessel/
+RUN cd described-shape-vessel && bun install
+COPY repos/described-shape-vessel/src ./described-shape-vessel/src
+COPY repos/described-shape-vessel/tsconfig.json ./described-shape-vessel/
+
+# walk-vessel (the walk: one chosen call in flight, Thompson draw, recorded selections — :8530)
+COPY repos/walk-vessel/package.json repos/walk-vessel/bun.lock* ./walk-vessel/
+RUN cd walk-vessel && bun install
+COPY repos/walk-vessel/src ./walk-vessel/src
+COPY repos/walk-vessel/tsconfig.json ./walk-vessel/
+
 # --- Substrate runtime config ---
 RUN mkdir -p /etc/substrate /workspace /var/lib/surrealdb /scripts \
  && mkdir -p -m 0700 /etc/substrate/private

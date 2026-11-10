@@ -605,6 +605,7 @@ Each `repos/<vessel>` is a submodule pinned to a commit on that vessel's `dev` b
 - **identity-vessel** (`repos/identity-vessel`) — single source of truth for authentication (HMAC API keys + JWT issuance).
 - **stateful-ui-vessel** (`repos/stateful-ui-vessel`) — the substrate's own UI: a pool of panels and interactor impulses served as a three-region view (pool / execution / decisions).
 - **human-surface-vessel** (`repos/human-surface-vessel`) — the human interface the substrate serves: the workbench at `<prefix>310`, where a person sends goals, answers the substrate's questions, and grades what it produced. A human is a resolver; their answers and verdicts return as shaped impulses.
+- **walk-vessel** / **records-vessel** / **described-shape-vessel** (`repos/walk-vessel`, `repos/records-vessel`, `repos/described-shape-vessel`) — the walk: it chooses the next step by Thompson draw over what its records hold, records keeps the append-only rows it chooses from and folds outcomes into posteriors, and described-shape produces any shape a `shape_schema` row describes through the channel the walk chose.
 - **obsidian-vessel** (`repos/obsidian-vessel`) — an optional, additional human surface: each connected vault is a window for a different human resolver, reached through the vessel's sidecar conduit. A substrate runs without it.
 
 ## Learning loop

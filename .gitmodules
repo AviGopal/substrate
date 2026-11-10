@@ -69,3 +69,15 @@
 	path = repos/human-surface-vessel
 	url = ../human-surface-vessel.git
 	branch = dev
+[submodule "repos/records-vessel"]
+	path = repos/records-vessel
+	url = ../records-vessel.git
+	branch = dev
+[submodule "repos/described-shape-vessel"]
+	path = repos/described-shape-vessel
+	url = ../described-shape-vessel.git
+	branch = dev
+[submodule "repos/walk-vessel"]
+	path = repos/walk-vessel
+	url = ../walk-vessel.git
+	branch = dev
