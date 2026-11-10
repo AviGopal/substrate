@@ -58,6 +58,7 @@ const SCHEMAS: Row[] = [
     description: `The answer to what the world_changed row's \`what\` field asks for. ${JSON_ONLY}`,
     schema: { type: "object", required: ["text"], properties: { text: { type: "string", minLength: 1 } } },
     inputs: ["world_changed"],
+    context: ["hop"],
   },
   {
     target: "outcome",
@@ -89,6 +90,7 @@ const SCHEMAS: Row[] = [
       properties: { pointer: { type: "object", required: ["type"], properties: { type: { type: "string", minLength: 1 } } } },
     },
     inputs: ["world_changed"],
+    context: ["hop"],
   },
   {
     target: "due",
@@ -117,6 +119,7 @@ const SCHEMAS: Row[] = [
       },
     },
     inputs: ["outcome"],
+    context: ["hop"],
   },
 ];
 
