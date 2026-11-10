@@ -72,9 +72,12 @@ const SCHEMAS: Row[] = [
   },
   {
     target: "outcome",
+    // cell is what records folds the outcome into (fold.ts: outcome.cell === selection.cell), so it must be the
+    // chosen selection's own cell string, copied, never the selection's id.
     description: "Whether the answer row does what the world_changed row's `what` asks, correctly and completely: " +
       "r is 1 if it does and 0 if not. event_ref is the world_changed row's id, evidence_refs holds the answer row's " +
-      `id, and cell is the answer row's selection_ref. ${JSON_ONLY}`,
+      "id, and cell is copied exactly, character for character, from the `cell` field of the selection row whose id " +
+      `equals the answer row's selection_ref (not that id itself). ${JSON_ONLY}`,
     schema: {
       type: "object",
       required: ["cell", "event_ref", "r", "evidence_refs"],

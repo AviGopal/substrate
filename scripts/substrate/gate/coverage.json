@@ -3385,14 +3385,14 @@
     },
     "/usr/local/share/substrate/active-scripts/walk-owner-seed.ts": {
       "src": "scripts/substrate/walk-owner-seed.ts",
-      "src_blob": "db444ee24747a5d7b88e39645551887b8e8f968c",
+      "src_blob": "726078749d8403bb7ffbbdc5d61cab905d0e23d4",
       "level": "none",
       "reason": "unreached",
       "fixtures": []
     },
     "/vessels/walk-owner-seed.ts": {
       "src": "scripts/substrate/walk-owner-seed.ts",
-      "src_blob": "db444ee24747a5d7b88e39645551887b8e8f968c",
+      "src_blob": "726078749d8403bb7ffbbdc5d61cab905d0e23d4",
       "level": "none",
       "reason": "unreached",
       "fixtures": []
