@@ -1,22 +1,19 @@
 [Unit]
 StartLimitIntervalSec=600
 StartLimitBurst=10
-Description=walk vessels' owner rows (SPEC-V3 §9 step 3.2): vessel keys, channels, shape schemas, the walk's arm
-# identity-seeder mints the owner key and the three vessel keys (seed-identity.ts
-# ensureWalkVesselKeys); records-vessel stores the rows. described-shape-vessel
+Description=walk vessels' owner rows: channels, shape schemas, the walk's arm
+# Written under the node key (METABOB_API_KEY, from /etc/substrate/env), which
+# records takes as node-self; records-vessel stores the rows. described-shape-vessel
 # and walk-vessel order After= this unit (their 40-after-owner-seed.conf): the
 # first reads its shape_schema targets once at start, the second waits on its arm.
-After=identity-seeder.service records-vessel.service llm-resolver-vessel.service
-Wants=identity-seeder.service records-vessel.service
+After=records-vessel.service llm-resolver-vessel.service
+Wants=records-vessel.service
 
 [Service]
 Type=oneshot
 RemainAfterExit=yes
 EnvironmentFile=/etc/substrate/env
 Environment=DISCOVERY_URL=http://127.0.0.1:8100
-# The owner key, visible to this unit alone (the 30-own-key.conf pattern of the
-# three vessels). Absent key: the unit fails to start, and nothing is written.
-BindReadOnlyPaths=/workspace/.substrate-private/walk-vessels/walk-owner.key:/run/walk-owner.key
 # records-vessel is masked where the walk vessels are not installed: skip.
 ExecCondition=/bin/sh -c '[ "$(systemctl is-enabled records-vessel.service 2>/dev/null)" != "masked" ]'
 # records-vessel serves no /health (SPEC-V3): any HTTP answer means it listens.
