@@ -97,10 +97,17 @@ const SCHEMAS: Row[] = [
   },
   {
     target: "due",
-    // at, not t: records stamps every row's t with its write time, and the walk's wait-until reads due.at.
-    description: "When the world_changed row's `what` should be settled by: at is a Unix time in milliseconds, no " +
-      `later than 30 minutes after the world_changed row's t. ${JSON_ONLY}`,
-    schema: { type: "object", required: ["at"], properties: { at: { type: "number" } } },
+    // within_ms is the deadline: a producer has no clock, so records sets at = its own t + within_ms, replacing any at
+    // given. `at` stays required because the accepted gate fixture asks for it; a due without within_ms is never a
+    // deadline to records (the walk's wait-until still reads its `at`).
+    description: "How long the world_changed row's `what` may take to settle: within_ms is a duration in " +
+      "milliseconds, from 60000 (one minute) to 1800000 (30 minutes), and records sets the deadline from its own " +
+      `clock. at may be 0: records replaces it. ${JSON_ONLY}`,
+    schema: {
+      type: "object",
+      required: ["at"],
+      properties: { at: { type: "number" }, within_ms: { type: "number", minimum: 60000, maximum: 1800000 } },
+    },
     inputs: ["world_changed"],
   },
   {
