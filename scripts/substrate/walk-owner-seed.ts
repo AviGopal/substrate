@@ -62,23 +62,24 @@ const SCHEMAS: Row[] = [
   },
   {
     target: "outcome",
-    // cell is what records folds the outcome into (fold.ts: outcome.cell === selection.cell), so it must be the
-    // chosen selection's own cell string, copied, never the selection's id.
-    description: "Whether the answer row does what the world_changed row's `what` asks, correctly and completely: " +
-      "r is 1 if it does and 0 if not. event_ref is the world_changed row's id, evidence_refs holds the answer row's " +
-      "id, and cell is copied exactly, character for character, from the `cell` field of the selection row whose id " +
-      `equals the answer row's selection_ref (not that id itself). ${JSON_ONLY}`,
+    // records derives the graded cells from the row evidence_refs names, so nothing is copied from a selection.
+    // A request that lapsed (reads lists its due row: past its time, unanswered, ungraded) is graded too, as r 0.
+    description: "How the world_changed row's request went. If there is an answer row, r is 1 when it does what " +
+      "`what` asks, correctly and completely, and 0 when not, and evidence_refs holds the answer row's id. If there is " +
+      "no answer row and reads lists a due row of this request, the request lapsed: r is 0 and evidence_refs holds " +
+      `that due row's id. event_ref is the world_changed row's id. ${JSON_ONLY}`,
     schema: {
       type: "object",
-      required: ["cell", "event_ref", "r", "evidence_refs"],
+      required: ["event_ref", "r", "evidence_refs"],
       properties: {
-        cell: { type: "string", minLength: 1 },
         event_ref: { type: "string", minLength: 1 },
         r: { enum: [0, 1] },
         evidence_refs: { type: "array", minItems: 1, items: { type: "string" } },
       },
     },
-    inputs: ["world_changed", "answer"],
+    inputs: ["world_changed"],
+    context: ["answer", "due"],
+    reads: [{ type: "record_lapsed", deadline_shape: "due", answer_shape: "answer" }],
   },
   {
     target: "request",
@@ -97,7 +98,8 @@ const SCHEMAS: Row[] = [
   {
     target: "due",
     // at, not t: records stamps every row's t with its write time, and the walk's wait-until reads due.at.
-    description: `When the world_changed row's \`what\` should be settled by: at is a Unix time in milliseconds. ${JSON_ONLY}`,
+    description: "When the world_changed row's `what` should be settled by: at is a Unix time in milliseconds, no " +
+      `later than 30 minutes after the world_changed row's t. ${JSON_ONLY}`,
     schema: { type: "object", required: ["at"], properties: { at: { type: "number" } } },
     inputs: ["world_changed"],
   },
