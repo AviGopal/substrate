@@ -3245,7 +3245,7 @@
     },
     "/usr/local/share/substrate/vessels.manifest.json": {
       "src": "scripts/substrate/vessels.manifest.json",
-      "src_blob": "ade86930f5b163db25040ac4d3cf50ba7f9158f2",
+      "src_blob": "77826ccef7bd0634e093f792575e29c759c88bb1",
       "level": "none",
       "reason": "unreached",
       "fixtures": []
@@ -3396,6 +3396,48 @@
       "level": "none",
       "reason": "unreached",
       "fixtures": []
+    },
+    "/usr/lib/systemd/system/records-vessel.service.d/50-restart-with-deps.conf": {
+      "src": "scripts/substrate/units/records-vessel.service.d/50-restart-with-deps.conf",
+      "src_blob": "75e779913dfa7ed0dff2733c5aad6bde9b1e8380",
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "claimed by hand with the walk restart drop-ins; earned by image-coverage-map.check.sh",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "13f06ac57d519b95d7ec69a1de6da75b874b5feb"
+      }
+    },
+    "/usr/lib/systemd/system/described-shape-vessel.service.d/50-restart-with-deps.conf": {
+      "src": "scripts/substrate/units/described-shape-vessel.service.d/50-restart-with-deps.conf",
+      "src_blob": "339b4db424917c03868bb823a532745f1f68f137",
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "claimed by hand with the walk restart drop-ins; earned by image-coverage-map.check.sh",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "0f7ea9207f6ee73ba42bb3412442dea25510439a"
+      }
+    },
+    "/usr/lib/systemd/system/walk-vessel.service.d/50-restart-with-deps.conf": {
+      "src": "scripts/substrate/units/walk-vessel.service.d/50-restart-with-deps.conf",
+      "src_blob": "003b82cec1e92f2331c8b97b98ed38c7e49b1eed",
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "claimed by hand with the walk restart drop-ins; earned by image-coverage-map.check.sh",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "b4977226dc4a479643fac3f8520372fbd01f4858"
+      }
     }
   }
 }
