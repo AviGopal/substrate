@@ -14,9 +14,8 @@
 #   - every record_write declares writer and role "owner" (records takes them from node-self);
 #   - two channel rows, each a call whose pointer.type is llm_completion, and no written row holds an address
 #     (no endpoint / resolve_endpoint field, no http URL);
-#   - shape_schema rows for answer, outcome, request, due and activity_template, and due asks for `at` or `within_ms`
-#     (records stamps `t` on every row, turns within_ms into `at` from its own clock, and the walk's wait-until reads
-#     due.at);
+#   - shape_schema rows for answer, outcome, request, due and activity_template, and due requires `at` (records
+#     stamps `t` on every row, and the walk's wait-until reads due.at);
 #   - the walk's arm row: walk-vessel, treated;
 #   - no vessel_key row (records no longer reads one);
 #   - the second run writes nothing (each row only when records lacks it);
@@ -84,10 +83,7 @@ leg(!/endpoint/.test(text) && !/https?:\/\//.test(text), "no written row holds a
 const targets = new Set(of("shape_schema").map((r) => r.target));
 leg(["answer", "outcome", "request", "due", "activity_template"].every((t) => targets.has(t)), `shape_schema targets (got ${[...targets].join(",")})`);
 const due = of("shape_schema").find((r) => r.target === "due");
-// The due schema asks for a deadline: `at`, or (moving to) `within_ms`, a duration records turns into `at` from its own
-// clock. Both are accepted while the seed moves from one to the other; never `t`, which records stamps on every row.
-const dueAsks = JSON.stringify(due?.schema?.required);
-leg(dueAsks === JSON.stringify(["at"]) || dueAsks === JSON.stringify(["within_ms"]), "the due schema asks for at or within_ms");
+leg(JSON.stringify(due?.schema?.required) === JSON.stringify(["at"]), "the due schema requires at");
 leg(of("arm").some((r) => r.vessel_id === "walk-vessel" && r.arm === "treated"), "the walk's arm row: walk-vessel, treated");
 leg(of("vessel_key").length === 0, "no vessel_key row");
 const before = rows.length;
