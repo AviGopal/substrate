@@ -6,7 +6,7 @@ Description=walk vessels' owner rows: channels, shape schemas, the walk's arm
 # records takes as node-self; records-vessel stores the rows. described-shape-vessel
 # and walk-vessel order After= this unit (their 40-after-owner-seed.conf): the
 # first reads its shape_schema targets once at start, the second waits on its arm.
-After=records-vessel.service llm-resolver-vessel.service
+After=records-vessel.service
 Wants=records-vessel.service
 
 [Service]
@@ -16,11 +16,13 @@ EnvironmentFile=/etc/substrate/env
 Environment=DISCOVERY_URL=http://127.0.0.1:8100
 # records-vessel is masked where the walk vessels are not installed: skip.
 ExecCondition=/bin/sh -c '[ "$(systemctl is-enabled records-vessel.service 2>/dev/null)" != "masked" ]'
-# records-vessel serves no /health (SPEC-V3): any HTTP answer means it listens.
-ExecStartPre=/bin/sh -c 'i=0; until curl -s -o /dev/null http://127.0.0.1:8510/; do i=$((i+1)); [ "$i" -ge 60 ] && { echo "records-vessel not answering after 120s — aborting seed"; exit 1; }; sleep 2; done'
 ExecStart=/root/.bun/bin/bun /vessels/walk-owner-seed.ts
+# Records is reached through discovery, not at a port: until discovery can place a
+# record_read, the seed fails on its first call and the unit retries here. 60 s apart,
+# ten starts span 540 s, inside StartLimitIntervalSec=600 with StartLimitBurst=10, so
+# waiting on records never trips the start limit.
 Restart=on-failure
-RestartSec=20
+RestartSec=60
 StandardOutput=journal
 StandardError=journal
 
