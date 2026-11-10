@@ -6,8 +6,10 @@ Description=walk vessels' owner rows: channels, shape schemas, the walk's arm
 # records takes as node-self; records-vessel stores the rows. described-shape-vessel
 # and walk-vessel order After= this unit (their 40-after-owner-seed.conf): the
 # first reads its shape_schema targets once at start, the second waits on its arm.
-After=records-vessel.service
-Wants=records-vessel.service
+# ExecStart runs from ${SUBSTRATE_RUN_DIR}, which substrate-active-scripts-seed fills from the accepted gate tree
+# at boot: order after it, as every run-dir unit does, so the seed never starts against an empty run dir.
+After=records-vessel.service substrate-active-scripts-seed.service
+Wants=records-vessel.service substrate-active-scripts-seed.service
 
 [Service]
 Type=oneshot
@@ -16,7 +18,9 @@ EnvironmentFile=/etc/substrate/env
 Environment=DISCOVERY_URL=http://127.0.0.1:8100
 # records-vessel is masked where the walk vessels are not installed: skip.
 ExecCondition=/bin/sh -c '[ "$(systemctl is-enabled records-vessel.service 2>/dev/null)" != "masked" ]'
-ExecStart=/root/.bun/bin/bun /vessels/walk-owner-seed.ts
+# The gate-ACCEPTED copy, as every other tick unit runs its script: pull-sync converges
+# ${SUBSTRATE_RUN_DIR}, while /vessels/walk-owner-seed.ts is the image's copy and only a re-bake changes it.
+ExecStart=/root/.bun/bin/bun ${SUBSTRATE_RUN_DIR}/walk-owner-seed.ts
 # Records is reached through discovery, not at a port: until discovery can place a
 # record_read, the seed fails on its first call and the unit retries here. 60 s apart,
 # ten starts span 540 s, inside StartLimitIntervalSec=600 with StartLimitBurst=10, so

@@ -3295,10 +3295,10 @@
       "evidence": {
         "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
         "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "a39b1f610515356a994822e8d5821d5e3dd19c54",
-        "scope": "E1 proves ExecStart= only; Restart= and RestartSec= are not proven"
+        "mutated_blob": "32454a90acf88bd4e6a05e293540fd7f72d0c9e5",
+        "scope": "E1/E2 prove ExecStart= only; Restart= and RestartSec= are not proven"
       },
-      "src_blob": "6e2e68212d2a35f9d0c12814067999e5495aeb0f"
+      "src_blob": "965c8490218bda71fb53a01079ade025e44e4c12"
     },
     "/usr/lib/systemd/system/walk-owner-seed.service.d/10-secrets-out-of-reach.conf": {
       "src": "scripts/substrate/units/walk-owner-seed.service.d/10-secrets-out-of-reach.conf",
