@@ -9,7 +9,8 @@
 #   (e) the answer producer is told a change is done only when a git_land call ended, and never to claim it before;
 #   (f) the outcome grader is told an answer claiming a change with no ended git_land hop is r 0;
 #   (g) and it is given what tool calls returned (ended call and run hops, the shape called joined from the started hop by
-#       call_id), not the walk's own produce, wait or started hops; and each evidence ref must name a row it was shown;
+#       call_id), not the walk's own produce, wait or started hops; each evidence ref must name a row it was shown; and
+#       its lapsed read is bound to its own request (asks {x-inputs});
 #   (h) the request producer reads every gap row (open and closing alike), and is told a request names one next call
 #       toward closing one, first a clone; that a gap's test file is not where to edit; and that a held gap is left;
 #   (j) the request producer is told later calls on a change work in the cwd the clone's hop returned;
@@ -95,8 +96,9 @@ leg(!!outcome && String(outcome.description).includes("claims a change with no h
   "(f) the outcome grader grades a claimed but unlanded change r 0");
 const hops = (outcome?.context ?? []).filter((e: unknown) => e === "hop" || (e as Row)?.shape === "hop");
 leg(hops.length === 1 && JSON.stringify(hops[0]) === JSON.stringify({ shape: "hop", where: { phase: "ended", kind: ["call", "run"] }, join: { on: "call_id", take: ["pointer_type"] } })
-  && outcome?.schema?.properties?.evidence_refs?.items?.["x-shown"] === true,
-  "(g) the outcome grader is given only tool calls' ended hops, and cites only rows it was shown");
+  && outcome?.schema?.properties?.evidence_refs?.items?.["x-shown"] === true
+  && (outcome?.reads ?? []).some((r: Row) => r.type === "record_lapsed" && r.asks?.["x-inputs"] === true),
+  "(g) the outcome grader is given only tool calls' ended hops, its own request's lapses, and cites only rows it was shown");
 leg(!!req && (req.reads ?? []).some((r: Row) => r.type === "record_read" && r.shape === "gap" && r.where === undefined)
   && String(req.description).includes("whose status is closed is already closed") && String(req.description).includes("first a clone of the repo the gap names")
   && String(req.description).includes("not the place to edit: the fix is in the source it checks")

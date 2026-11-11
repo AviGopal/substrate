@@ -91,7 +91,9 @@ const SCHEMAS: Row[] = [
     // claim of one. The walk's own steps (produce and wait hops, started hops) are not given: records reads this same
     // entry to count a grade that saw only these as clean.
     context: ["answer", "due", { shape: "hop", where: { phase: "ended", kind: ["call", "run"] }, join: { on: "call_id", take: ["pointer_type"] } }],
-    reads: [{ type: "record_lapsed", deadline_shape: "due", answer_shape: "answer" }],
+    // asks {x-inputs}: described-shape binds it to the world_changed row it was given, so the read names only this
+    // request's lapsed deadline, never another request's.
+    reads: [{ type: "record_lapsed", deadline_shape: "due", answer_shape: "answer", asks: { "x-inputs": true } }],
   },
   {
     target: "request",
