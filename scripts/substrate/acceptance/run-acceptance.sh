@@ -76,7 +76,7 @@
 #     Values travel to the rewrite through the environment, never argv, and every
 #     secret is redacted from the failing command and the log this run records.
 # An installer block (`… install | … sh …`) that exits 20 ran every step and stopped at
-# its wait: it is judged as a wait for its `--wait` level (default usable), exactly like
+# its wait: it is judged as a wait for its `--wait` level (default served), exactly like
 # a failed `substrate-status --wait`.
 #
 # ENVIRONMENT
@@ -833,7 +833,7 @@ wait_re='substrate-status([[:space:]].*)?[[:space:]]--(wait|level)(=|[[:space:]]
 if [ -z "$wait_level" ] && [ "$fence_rc" -eq 20 ] && [ -n "${f_path:-}" ] \
    && grep -qE '[[:space:]]install([[:space:]][^|]*)?\|' "$f_path"; then
   inst_re='--wait[[:space:]]+([a-z]+)'
-  if [[ "$fence_failed_cmd" =~ $inst_re ]]; then wait_level="${BASH_REMATCH[1]}"; else wait_level=usable; fi
+  if [[ "$fence_failed_cmd" =~ $inst_re ]]; then wait_level="${BASH_REMATCH[1]}"; else wait_level=served; fi
 fi
 level_block_json='null'
 if [ "$fence_rc" -ne 0 ]; then
