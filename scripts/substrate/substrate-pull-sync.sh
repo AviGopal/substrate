@@ -268,7 +268,8 @@ shape_route() { # <shape> -> sets SR_ROUTE to served|absent, kept for the tick
 # translated at this one point into rows of shape gap in records (record_write and record_read by shape, through
 # discovery, under this node's key), with role detector. A gap's state is its latest row by gap_id: a repeat with the
 # same status, summary and metadata writes nothing, and closing is a new row. Sizes are bounded: summary 2 KiB,
-# metadata 4 KiB (past that, cut and marked). Only rows with role detector are read back.
+# metadata 4 KiB (past that, cut and marked). Only rows with role detector are read back, and a write counts only when
+# records answers the row stamped detector (under any other key it would be a person's row, which records refuses).
 # NOT read by lib/gap-tracked-red.sh: under the node key any vessel can declare role detector, so these rows must not
 # exempt a failing test from the gate until records can tell this writer apart.
 gap_resolve() { # <pointer json> [curl args...]: answers as the old store did ({body:{gaps:[...]}})
@@ -279,8 +280,10 @@ gap_resolve() { # <pointer json> [curl args...]: answers as the old store did ({
     { if [ -n "${METABOB_API_KEY:-}" ]; then printf 'header = "Authorization: ApiKey %s"\n' "$METABOB_API_KEY"; fi; } \
       | curl -K - -s --max-time 30 -X POST "$DISCOVERY/resolve" -H 'Content-Type: application/json' -d "$1"
   }
+  # Only a list of rows (bare, or under content) is an answer. An error, a refusal or nothing is a failed read, never an
+  # empty store: an empty store would let every tick write the gap again and tell readers nothing is open.
   _g_rows="$(_g_post '{"pointer":{"type":"record_read","shape":"gap"}}' | jq -c '
-    (if type == "array" then . else (.content // []) end)
+    (if type == "array" then . elif (.content | type) == "array" then .content else error("not a list of rows") end)
     | map(select(.role == "detector")) | group_by(.gap_id) | map(max_by(.seq))
     | map(del(.shape, .id, .seq, .t, .writer, .role, .input_refs) + {id: .gap_id, classification_metadata: (.meta // {})} | del(.gap_id, .meta))' 2>/dev/null)"
   [ -n "$_g_rows" ] || return 7
@@ -301,7 +304,7 @@ gap_resolve() { # <pointer json> [curl args...]: answers as the old store did ({
       _g_out='{"body":{"ok":true,"unchanged":true}}'
     else
       _g_out="$(_g_post "$(jq -cn --argjson r "$_g_row" '{pointer: {type: "record_write", row: $r, writer: "pull-sync", role: "detector"}}')" \
-        | jq -c 'if .id then {body: {ok: true, row: .id}} else {body: {ok: false}} end' 2>/dev/null)"
+        | jq -c 'if .id and .role == "detector" then {body: {ok: true, row: .id}} else {body: {ok: false, role: .role}} end' 2>/dev/null)"
       printf '%s' "$_g_out" | jq -e '.body.ok' >/dev/null 2>&1 || _g_code=502
     fi
   fi

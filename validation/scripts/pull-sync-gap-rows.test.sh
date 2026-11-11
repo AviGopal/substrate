@@ -7,7 +7,9 @@
 #   (c) a row with status closed written by the walk (role walk) closes nothing;
 #   (d) a 10k-line failing log yields a row under 8 KiB;
 #   (e) reads answer as the old store did: {body: {gaps: [...]}}; a write asked for its status code gets 200;
-#   (f) the gate exemption (tracked_fail_names) is untouched by a detector row naming a test.
+#   (f) the gate exemption (tracked_fail_names) is untouched by a detector row naming a test;
+#   (g) a read records answers with an error fails closed: rc 7, and nothing is written;
+#   (h) a write records answers with a row not stamped detector (another key's) is a failure, not "ok".
 # usage: validation/scripts/pull-sync-gap-rows.test.sh [path/to/substrate-pull-sync.sh]
 set -uo pipefail
 SCRIPT="${1:-$(cd "$(dirname "$0")/../.." && pwd)/scripts/substrate/substrate-pull-sync.sh}"
@@ -80,6 +82,23 @@ jq -c '. + [{shape: "gap", gap_id: "failing-test-x", status: "open", id: "t1", s
 tracked="$(tracked_fail_names x a.test.ts 2>/dev/null)"
 if [ -z "$tracked" ]; then ok "(f) the gate exemption is untouched by a detector row naming a test"
 else bad "(f) tracked=$tracked"; fi
+
+READ_MODE=""
+curl_real="$(declare -f curl)"
+eval "$(printf '%s' "$curl_real" | sed 's/^curl ()/curl_store ()/')"
+curl() {
+  case "$READ_MODE:$*" in
+    error:*record_read*) cat > /dev/null; printf '{"error":"x"}' ;;
+    person:*record_write*) cat > /dev/null; printf '{"id":"p1","role":"person"}' ;;
+    *) curl_store "$@" ;;
+  esac
+}
+before="$(wc -l < "$WRITES")"
+READ_MODE=error; dev_resolve "$(gap g5 open)" --max-time 5 > /dev/null; rc=$?
+if [ "$rc" = 7 ] && [ "$(wc -l < "$WRITES")" = "$before" ]; then ok "(g) an error answer to the read fails closed: rc 7, nothing written"
+else bad "(g) rc=$rc writes $before -> $(wc -l < "$WRITES")"; fi
+READ_MODE=person; code="$(dev_resolve "$(gap g6 open)" --max-time 5 -w '\n%{http_code}' | tail -1)"; READ_MODE=""
+if [ "$code" = 502 ]; then ok "(h) a row not stamped detector is a failed write (502)"; else bad "(h) code=$code"; fi
 
 echo; [ "$FAILS" = 0 ] && { echo "PASS - pull-sync files its gaps as detector rows in records, deduped, bounded, closed by a later row"; exit 0; }
 echo "$FAILS FAILED"; exit 1

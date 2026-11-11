@@ -53,6 +53,8 @@ echo "curl" >> "$CALLS"
 # A stand-in discovery: it names a producer for every shape, so pull-sync's by-shape calls (shape_route) are made and recorded.
 case "\$*" in *vesselCapability*) printf '{"content":{"vessels":[{"vesselId":"store"}]}}'; exit 0 ;; esac
 while [ \$# -gt 0 ]; do [ "\$1" = -d ] && { printf '%s\n' "\$2" >> "$POSTS"; shift; }; shift; done
+# A stand-in records: a gap read answers a list of rows (gap_resolve fails closed on anything else).
+tail -1 "$POSTS" | grep -q '"type":"record_read"' && { printf '[]'; exit 0; }
 printf '{}\n200'
 EOF
 chmod +x "$T/stub/"*
