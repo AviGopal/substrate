@@ -928,6 +928,39 @@ walk_trees_check() { # <threshold> <ticks>
   return 0
 }
 
+# THE WALK'S GRADES. records counts a grade the walk writes only when it can stand (fold.ts), and drops the rest without a
+# trace: for hours every grade of an answer was refused and the learning loop learned nothing, while nothing showed it.
+# records now answers, on its posterior read, a running tally of the walk's grades (written and counted, answers and
+# lapses apart). This compares the tally with the one it saw last tick: answer grades written since then and none counted
+# opens one detector gap (it is work: records makes an open detector gap a root); the first tick an answer grade counts
+# closes it. No threshold and no window: only what changed between two checks. A first check only keeps the tally; a
+# tally that cannot be read writes nothing and keeps the last one.
+grade_check() {
+  local id="pull-sync-walk-grades-uncounted" seen="${TEST_BASELINE_DIR:-/workspace/.test-baseline}/walk-grades.tally" now st wrote counted
+  command -v jq >/dev/null 2>&1 || return 0
+  now="$(dev_resolve '{"impulse":{"pointer":{"type":"posterior","cells":[],"as_of_seq":9007199254740991}}}' --max-time 30 2>/dev/null \
+    | jq -c '(.grades // .content.grades) | select(type == "object" and (.written.answer | type) == "number")' 2>/dev/null)"
+  [ -n "$now" ] || { log "grade check: records' tally could not be read; nothing written"; return 0; }
+  if ! jq -e '.written.answer | type == "number"' "$seen" >/dev/null 2>&1; then printf '%s\n' "$now" > "$seen"; return 0; fi
+  wrote="$(jq -n --argjson a "$now" --slurpfile b "$seen" '$a.written.answer - $b[0].written.answer')"
+  counted="$(jq -n --argjson a "$now" --slurpfile b "$seen" '$a.counted.answer - $b[0].counted.answer')"
+  st="$(dev_resolve "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap\",\"id\":\"$id\",\"limit\":1}}}" --max-time 30 2>/dev/null \
+    | jq -r 'if (.body.gaps | type) == "array" then (.body.gaps[0].status // "none") else "err" end' 2>/dev/null)"
+  case "$st" in ""|err) log "grade check: the gap store could not be read; nothing written"; return 0 ;; esac
+  if [ "$wrote" -gt 0 ] && [ "$counted" -eq 0 ]; then
+    emit_gap "$(jq -cn --arg id "$id" '{impulse:{pointer:{type:"substrateGap_write",gap:{id:$id,category:"systematic_failure",source:"substrate_detected",status:"open",
+      summary:"The walk writes grades of answers and records counts none of them, so selection learns nothing from them. records'\'' posterior read answers the tally of its grades with the reasons each was refused. Done when an answer grade counts.",
+      classification_metadata:{filed_by:"pull-sync grade check"}}}}}')"
+    log "grade check: $wrote answer grade(s) written since the last check, none counted: $id open"
+  elif [ "$counted" -gt 0 ] && [ "$st" = open ]; then
+    emit_gap "$(jq -cn --arg id "$id" '{impulse:{pointer:{type:"substrateGap_write",gap:{id:$id,category:"systematic_failure",source:"substrate_detected",status:"closed",closed_reason:"answer_grades_count",
+      summary:"An answer grade the walk wrote counts again.",classification_metadata:{filed_by:"pull-sync grade check"}}}}}')"
+    log "grade check: $counted answer grade(s) counted since the last check: closed $id"
+  fi
+  printf '%s\n' "$now" > "$seen"
+  return 0
+}
+
 # A gap that fails to file is worse than no detector: the condition is real, the
 # log line claims "(substrateGap)", and nothing is queryable afterwards. Observed
 # the hub super-repo clone sat DIVERGED for hours, refusing every
@@ -6005,6 +6038,8 @@ done <<< "$GEN_QUEUE"
 
 # The walk's change clones, every tick (see walk_trees_check).
 walk_trees_check 50 3 || true
+# The walk's grades, every tick (see grade_check).
+grade_check || true
 
 # THE SLOW LANE, after the generator: each converged candidate's slow files once, budget permitting (see slow_lane_run).
 while IFS='|' read -r sl_v sl_h sl_d sl_g; do
