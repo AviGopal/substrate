@@ -35,7 +35,7 @@
       "desktop"
     ]
   },
-  "_profiles_comment": "PROFILE=<name> selects one of these deployable compositions; apply-inventory is the only place a profile is expanded into units. PROFILE outranks ENABLED_VESSELS and ENABLED_ROLES; ENABLED_EXTRA_VESSELS adds to it and DISABLED_VESSELS subtracts from it afterwards. Two forms, one namespace. composed_profiles compose from role groups exactly as ENABLED_ROLES would, plus the units no role expression can select by itself: 'compute' names goal-host, development, light-dispatch, boredom, ribosome and local-tools together, so a profile that needs some of them names them. Composing from roles keeps a profile right as units are added, since a new unit joins every profile whose roles include its role. profiles holds explicit unit lists, for compositions that cut across roles. They are separate keys so a selector that predates composition finds no entry for a composed name and refuses loudly, instead of reading the object as a unit list and masking nearly everything. A profile is a named data locality, not a size: standalone holds everything; hub holds the network's learning state and dispatches and self-develops next to it (goal-host, the compute vessels it walks with, the autonomy role and boredom-vessel, the law-5 selector, and the learning-liveness and runtime-drift probes that detect a stalled learning loop or drifted running code where that state lives), because the walk reads posteriors every step and the self-development loop turns the gap store into commits; hub-minimal is the bare hub role for a control-plane or relay node; spoke runs the host's own data and tools and resolves identity, traces and models on its hub; surface and compute are the explicit rosters for a human's window and a worker. The default when PROFILE is unset is derived by gen-env from the anchor (standalone for a root, spoke for a remote anchor) and is expressed through the selection it already implies rather than by setting PROFILE. Manifest vessels (\"manifest\": true) are never selected or masked here: the federation relay and transport are enabled by the entrypoint for hub profiles and anchored spokes, and human-surface-vessel is a baked unit the image enables at build, so only DISABLED_VESSELS turns it off. CAVEAT: apply-inventory can only govern units this file names, so a shipped unit absent from `vessels` below runs regardless of the profile; apply-inventory warns about any at boot.",
+  "_profiles_comment": "PROFILE=<name> selects one of these deployable compositions; apply-inventory is the only place a profile is expanded into units. PROFILE outranks ENABLED_VESSELS and ENABLED_ROLES; ENABLED_EXTRA_VESSELS adds to it and DISABLED_VESSELS subtracts from it afterwards. Two forms, one namespace. composed_profiles compose from role groups exactly as ENABLED_ROLES would, plus the units no role expression can select by itself: 'compute' names goal-host, development, ribosome and local-tools together, so a profile that needs some of them names them. Composing from roles keeps a profile right as units are added, since a new unit joins every profile whose roles include its role. profiles holds explicit unit lists, for compositions that cut across roles. They are separate keys so a selector that predates composition finds no entry for a composed name and refuses loudly, instead of reading the object as a unit list and masking nearly everything. A profile is a named data locality, not a size: standalone holds everything; hub holds the network's learning state and dispatches and self-develops next to it (goal-host, the compute vessels it walks with, the autonomy role, and the learning-liveness and runtime-drift probes that detect a stalled learning loop or drifted running code where that state lives), because the walk reads posteriors every step and the self-development loop turns the gap store into commits; hub-minimal is the bare hub role for a control-plane or relay node; spoke runs the host's own data and tools and resolves identity, traces and models on its hub; surface and compute are the explicit rosters for a human's window and a worker. The default when PROFILE is unset is derived by gen-env from the anchor (standalone for a root, spoke for a remote anchor) and is expressed through the selection it already implies rather than by setting PROFILE. Manifest vessels (\"manifest\": true) are never selected or masked here: the federation relay and transport are enabled by the entrypoint for hub profiles and anchored spokes, and human-surface-vessel is a baked unit the image enables at build, so only DISABLED_VESSELS turns it off. CAVEAT: apply-inventory can only govern units this file names, so a shipped unit absent from `vessels` below runs regardless of the profile; apply-inventory warns about any at boot.",
   "composed_profiles": {
     "standalone": {
       "roles": ["full"]
@@ -45,9 +45,6 @@
       "vessels": [
         "local-tools-vessel.service",
         "ribosome-vessel.service",
-        "light-dispatch-vessel.service",
-        "boredom-vessel.service",
-        "boredom-vessel.timer",
         "runtime-drift.service",
         "runtime-drift.timer",
         "gap-store-census.service",
@@ -64,7 +61,6 @@
   "profiles": {
     "surface": [
       "discovery-vessel.service",
-      "light-dispatch-vessel.service",
       "federation-transport-vessel.service",
       "substrate-ready.service",
       "journald-stdout-forwarder.service",
@@ -73,9 +69,6 @@
     "compute": [
       "discovery-vessel.service",
       "local-tools-vessel.service",
-      "light-dispatch-vessel.service",
-      "boredom-vessel.service",
-      "boredom-vessel.timer",
       "gap-store-census.service",
       "gap-store-census.timer",
       "federation-transport-vessel.service",
@@ -90,9 +83,6 @@
     "compute_node": [
       "discovery-vessel.service",
       "local-tools-vessel.service",
-      "light-dispatch-vessel.service",
-      "boredom-vessel.service",
-      "boredom-vessel.timer",
       "gap-store-census.service",
       "gap-store-census.timer",
       "federation-transport-vessel.service",
@@ -102,7 +92,6 @@
     ],
     "surface_node": [
       "discovery-vessel.service",
-      "light-dispatch-vessel.service",
       "federation-transport-vessel.service",
       "substrate-ready.service",
       "journald-stdout-forwarder.service",
@@ -178,9 +167,10 @@
     },
     {
       "unit": "light-dispatch-vessel.service",
+      "_comment": "RETIRED: the walk supersedes it (it runs templates itself, and records keeps only the ones a reached run earned). Its only caller was boredom-vessel, held below; it pinned the removed activity-api and acted on that store. The entry stays so apply-inventory masks the unit, which still ships, under every PROFILE or ENABLED_* selection. No health_port, so nothing publishes or probes its port.",
       "role": "compute",
       "repo": "light-dispatch-vessel",
-      "health_port": 8280
+      "retired": true
     },
     {
       "unit": "relevance-sink-vessel.service",
@@ -191,14 +181,17 @@
     },
     {
       "unit": "boredom-vessel.timer",
+      "_comment": "HELD for rebuild, not retired: masked under every selection until the boredom overhaul (task agf_a813vq0tu2ye) rebuilds it as a writer of condition rows the walk reads, and that task lifts this mark. Its loop dispatched development-vessel templates through light-dispatch (retired above) and wrote snapshots to the removed development-vessel; none had a reader.",
       "role": "compute",
-      "repo": "boredom-vessel"
+      "repo": "boredom-vessel",
+      "retired": true
     },
     {
       "_comment": "The .service is the unit that actually runs the selection loop; the .timer above only pokes it. apply-inventory.sh masks by exact unit name, so listing only the .timer left boredom-vessel.service ungoverned by role selection — it ran on a hub whose role group excludes compute, where its only dispatch conduit (light-dispatch-vessel.service, compute, correctly masked) was absent. Every dispatch then failed to connect, and the connect-error path records a FAILURE OUTCOME per template, so infrastructure absence was written into the shared learning store as arm quality. Both units must carry the same role.",
       "unit": "boredom-vessel.service",
       "role": "compute",
-      "repo": "boredom-vessel"
+      "repo": "boredom-vessel",
+      "retired": true
     },
     {
       "unit": "stateful-ui-vessel.service",
@@ -265,7 +258,9 @@
     },
     {
       "unit": "light-dispatch-healthcheck.timer",
-      "role": "infra"
+      "_comment": "RETIRED with light-dispatch-vessel: it probed that vessel's liveness.",
+      "role": "infra",
+      "retired": true
     },
     {
       "unit": "self-recovery.timer",
@@ -363,7 +358,7 @@
     { "unit": "composition-edge-reconcile.service", "role": "autonomy" },
     { "unit": "funnel-drain.service", "role": "autonomy" },
     { "unit": "ingest-docs.service", "role": "autonomy" },
-    { "unit": "light-dispatch-healthcheck.service", "role": "infra" },
+    { "unit": "light-dispatch-healthcheck.service", "role": "infra", "retired": true },
     { "unit": "model-reality-audit.service", "role": "store" },
     { "unit": "observe-orthogonal-refresh.service", "role": "autonomy" },
     { "unit": "obsidian-collaborate.service", "role": "ui", "repo": "obsidian-vessel" },

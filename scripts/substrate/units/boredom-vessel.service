@@ -1,6 +1,7 @@
 [Unit]
-Description=boredom-vessel — concurrent dispatch pool daemon (2026-06-04)
-After=light-dispatch-vessel.service
+Description=boredom-vessel — concurrent dispatch pool daemon
+# Held (masked by the inventory) until its overhaul rebuilds it as a writer of condition rows. Its dispatch conduit,
+# light-dispatch-vessel, is retired, so nothing here orders after it or names its address.
 # goal-host is no longer in the image. boredom found it through discovery, so its
 # /run-goal dispatches now fail soft as "goal-host undiscovered" until its output
 # becomes a request row in records.
@@ -15,7 +16,6 @@ After=light-dispatch-vessel.service
 # back to oneshot behaviour for rollback without touching the unit file.
 Type=simple
 EnvironmentFile=/etc/substrate/env
-Environment=LIGHT_DISPATCH_ENDPOINT=http://127.0.0.1:8280
 Environment=DEV_VESSEL_ENDPOINT=http://127.0.0.1:8090
 Environment=BOREDOM_DAEMON_MODE=1
 Environment=BOREDOM_MAX_CONCURRENT=3

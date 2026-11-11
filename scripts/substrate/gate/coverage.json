@@ -156,7 +156,7 @@
     },
     "/usr/lib/systemd/system/boredom-vessel.service": {
       "src": "scripts/substrate/units/boredom-vessel.service",
-      "src_blob": "6976c44c742294304f1d06570984064191564e2c",
+      "src_blob": "337fd94f7de7f155f24f063da868ddc61adbc269",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -165,7 +165,7 @@
       "evidence": {
         "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
         "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "b2becd5bc8b093733b61474c5016b6d9ce317478"
+        "mutated_blob": "613bcc0330d7237978d1756f23b0657e63d4698f"
       }
     },
     "/usr/lib/systemd/system/boredom-vessel.service.d/10-secrets-out-of-reach.conf": {
