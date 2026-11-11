@@ -113,6 +113,26 @@ const SCHEMAS: Row[] = [
     inputs: ["world_changed"],
   },
   {
+    target: "land_verdict",
+    // git_land (local-tools) pushes a change only on a verdict for its exact tree. A grader's counts only when it was made
+    // from exactly the request and the walk's gitDiff of that tree, so this schema reads nothing else: no hop, no answer.
+    description: "Whether the change in the gitDiff row does what the world_changed row's `what` asks, correctly and " +
+      "completely, and nothing it should not: r is 1 when it does, 0 when it does not, and also 0 when the gitDiff's " +
+      "truncated is true, because then you were not shown the whole change. repo and tree are copied exactly from the " +
+      `gitDiff row. why says, in a sentence or two, what decided it. ${JSON_ONLY}`,
+    schema: {
+      type: "object",
+      required: ["repo", "tree", "r", "why"],
+      properties: {
+        repo: { type: "string", minLength: 1 },
+        tree: { type: "string", pattern: "^[0-9a-f]{40}$" },
+        r: { enum: [0, 1] },
+        why: { type: "string", minLength: 1 },
+      },
+    },
+    inputs: ["world_changed", "gitDiff"],
+  },
+  {
     target: "activity_template",
     description: "A reusable template of the calls that led to the outcome row: sig.in and sig.out are the shapes it " +
       "consumes and produces, and calls lists each call in order: its shape, and in pointer the arguments that call " +
