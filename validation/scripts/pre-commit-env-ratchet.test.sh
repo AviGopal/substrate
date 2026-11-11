@@ -28,8 +28,8 @@ reset_to_base() { G -C "$1" reset -q --hard base; G -C "$1" clean -qfd; }
 # Fixture: a unit with bootstrap + one grandfathered behaviour line, a drop-in dir, and the REAL lists.
 R="$T/r"; G init -q "$R"; mkdir -p "$R/$U/goal-host-vessel.service.d" "$R/$L"
 cp "$LISTS/bootstrap-allowlist.txt" "$LISTS/grandfathered-behaviour.txt" "$R/$L/"
-printf '[Service]\nEnvironmentFile=/etc/substrate/env\nEnvironment=PORT=8210\nEnvironment=HOST=127.0.0.1\nEnvironment=GOAL_HOST_WS_SUBSCRIBER=off\nExecStart=/bin/true\n' > "$R/$U/goal-host-vessel.service"
-printf '[Service]\nEnvironment=GOAL_HOST_DRAIN_MS=240000\n' > "$R/$U/goal-host-vessel.service.d/drain-timeout.conf"
+printf '[Service]\nEnvironmentFile=/etc/substrate/env\nEnvironment=PORT=8210\nEnvironment=HOST=127.0.0.1\nEnvironment=OBSIDIAN_LEARN_MODE=off\nExecStart=/bin/true\n' > "$R/$U/goal-host-vessel.service"
+printf '[Service]\nEnvironment=DB_MAINTENANCE=240000\n' > "$R/$U/goal-host-vessel.service.d/drain-timeout.conf"
 G -C "$R" add -A; G -C "$R" commit -qm base; G -C "$R" tag base
 
 allowed "$R" "nothing staged: the block is a no-op"
@@ -51,9 +51,9 @@ allowed "$R" "allows a new bootstrap name once the allowlist carries it with a r
 sed -i 's/^RELAY_URL .*/RELAY_URL/' "$R/$L/bootstrap-allowlist.txt"; G -C "$R" add -A
 refused "$R" "refuses an allowlist entry without a reason" "RELAY_URL has no reason"; reset_to_base "$R"
 
-sed -i '/^Environment=GOAL_HOST_WS_SUBSCRIBER=/d' "$R/$U/goal-host-vessel.service"; G -C "$R" rm -q "$U/goal-host-vessel.service.d/drain-timeout.conf"; G -C "$R" add -A
+sed -i '/^Environment=OBSIDIAN_LEARN_MODE=/d' "$R/$U/goal-host-vessel.service"; G -C "$R" rm -q "$U/goal-host-vessel.service.d/drain-timeout.conf"; G -C "$R" add -A
 allowed "$R" "allows removing grandfathered behaviour lines (and a whole drop-in)"
-sed -i '/^GOAL_HOST_WS_SUBSCRIBER /d' "$R/$L/grandfathered-behaviour.txt"; G -C "$R" add -A
+sed -i '/^OBSIDIAN_LEARN_MODE /d' "$R/$L/grandfathered-behaviour.txt"; G -C "$R" add -A
 allowed "$R" "allows removing a name from the grandfathered list (it shrinks)"; reset_to_base "$R"
 
 echo "SATISFIER_PROVEN_BAD_ARMED   switch" >> "$R/$L/grandfathered-behaviour.txt"; G -C "$R" add -A
@@ -64,10 +64,10 @@ refused "$R" "refuses a bootstrap name added to the grandfathered list while it 
 sed -i '/^WORKSPACE_ROOT /d' "$R/$L/bootstrap-allowlist.txt"; G -C "$R" add -A
 allowed "$R" "allows MOVING a bootstrap name to the grandfathered list (a tightening)"; reset_to_base "$R"
 
-sed -i 's/^Environment=GOAL_HOST_WS_SUBSCRIBER=off/Environment=GOAL_HOST_WS_SUBSCRIBER=on/' "$R/$U/goal-host-vessel.service"; G -C "$R" add -A
-refused "$R" "refuses changing the value of a grandfathered behaviour line (a change belongs in a shape)" "GOAL_HOST_WS_SUBSCRIBER"; reset_to_base "$R"
+sed -i 's/^Environment=OBSIDIAN_LEARN_MODE=off/Environment=OBSIDIAN_LEARN_MODE=on/' "$R/$U/goal-host-vessel.service"; G -C "$R" add -A
+refused "$R" "refuses changing the value of a grandfathered behaviour line (a change belongs in a shape)" "OBSIDIAN_LEARN_MODE"; reset_to_base "$R"
 
-echo "GOAL_HOST_WS_SUBSCRIBER    it is really an id" >> "$R/$L/bootstrap-allowlist.txt"; G -C "$R" add -A
+echo "OBSIDIAN_LEARN_MODE    it is really an id" >> "$R/$L/bootstrap-allowlist.txt"; G -C "$R" add -A
 refused "$R" "refuses reclassifying a grandfathered behaviour name as bootstrap" "cannot be reclassified"; reset_to_base "$R"
 
 sed -i 's/^ExecStart=.*/Environment="PORT=8211" SNEAKY_SWITCH=1\n&/' "$R/$U/goal-host-vessel.service"; G -C "$R" add -A

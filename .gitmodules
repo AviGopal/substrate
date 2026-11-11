@@ -29,10 +29,6 @@
 	path = repos/boredom-vessel
 	url = ../boredom-vessel.git
 	branch = dev
-[submodule "repos/goal-host-vessel"]
-	path = repos/goal-host-vessel
-	url = ../goal-host-vessel.git
-	branch = dev
 [submodule "repos/llm-resolver-vessel"]
 	path = repos/llm-resolver-vessel
 	url = ../llm-resolver-vessel.git

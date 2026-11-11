@@ -156,7 +156,7 @@
     },
     "/usr/lib/systemd/system/boredom-vessel.service": {
       "src": "scripts/substrate/units/boredom-vessel.service",
-      "src_blob": "0c47abf923f7f64643dee56224f78b986a21bea2",
+      "src_blob": "6976c44c742294304f1d06570984064191564e2c",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -165,7 +165,7 @@
       "evidence": {
         "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
         "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "29e2e0415e01966055b4d5211895ae2396d8cff8"
+        "mutated_blob": "b2becd5bc8b093733b61474c5016b6d9ce317478"
       }
     },
     "/usr/lib/systemd/system/boredom-vessel.service.d/10-secrets-out-of-reach.conf": {
@@ -334,62 +334,6 @@
         "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
         "mutation": "delete every On*= trigger line",
         "mutated_blob": "0a24e66062c4fcf4087b8156147b8f606b6eca2d"
-      }
-    },
-    "/usr/lib/systemd/system/compose-teacher.service": {
-      "src": "scripts/substrate/units/compose-teacher.service",
-      "src_blob": "c017563f86765accc0a2aee7ebbdb94473e0049f",
-      "level": "behaviour",
-      "reason": "mutation-proven",
-      "fixtures": [
-        "unit-semantics.sh"
-      ],
-      "evidence": {
-        "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
-        "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "afaf8e7c596c29beea3c83be74419a3e1927159a"
-      }
-    },
-    "/usr/lib/systemd/system/compose-teacher.service.d/run-dir.conf": {
-      "src": "scripts/substrate/units/compose-teacher.service.d/run-dir.conf",
-      "src_blob": "ebf98a7b532b38fc0cd4b253152d9cdc67ee2675",
-      "level": "behaviour",
-      "reason": "mutation-proven",
-      "fixtures": [
-        "unit-semantics.sh"
-      ],
-      "evidence": {
-        "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
-        "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "2f381a46834224d88a59335040f488f2ddff3c67"
-      }
-    },
-    "/usr/lib/systemd/system/compose-teacher.service.d/watchdog.conf": {
-      "src": "scripts/substrate/units/compose-teacher.service.d/watchdog.conf",
-      "src_blob": "9831df7b8f4b27d87e0431bcc51bd52142640793",
-      "level": "behaviour",
-      "reason": "mutation-proven",
-      "fixtures": [
-        "unit-semantics.sh"
-      ],
-      "evidence": {
-        "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
-        "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "c65c8b28dce68fbd26123b6d174e37ac1bc888c6"
-      }
-    },
-    "/usr/lib/systemd/system/compose-teacher.timer": {
-      "src": "scripts/substrate/units/compose-teacher.timer",
-      "src_blob": "c8ad1a288b7102fbd39d031c8ae16c1c0ed88c3a",
-      "level": "behaviour",
-      "reason": "mutation-proven",
-      "fixtures": [
-        "unit-verify.sh"
-      ],
-      "evidence": {
-        "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
-        "mutation": "delete every On*= trigger line",
-        "mutated_blob": "ae0e181b6b445b313f1e5b54df72c8685027e2a4"
       }
     },
     "/usr/lib/systemd/system/composition-edge-reconcile.service": {
@@ -896,90 +840,6 @@
         "mutated_blob": "86708566f9b5479c2d6c6d88bba250fe5131cec1"
       }
     },
-    "/usr/lib/systemd/system/goal-host-behavior.service": {
-      "src": "scripts/substrate/units/goal-host-behavior.service",
-      "src_blob": "f82869ffc819e4acae9b88f565b6513be3dc51c4",
-      "level": "behaviour",
-      "reason": "mutation-proven",
-      "fixtures": [
-        "unit-semantics.sh"
-      ],
-      "evidence": {
-        "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
-        "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "b624ad90f9b399517348005ee3b7f711aa8402ac"
-      }
-    },
-    "/usr/lib/systemd/system/goal-host-behavior.timer": {
-      "src": "scripts/substrate/units/goal-host-behavior.timer",
-      "src_blob": "4725cef92256c4319b1e286ad0a03cac296bbe4b",
-      "level": "behaviour",
-      "reason": "mutation-proven",
-      "fixtures": [
-        "unit-verify.sh"
-      ],
-      "evidence": {
-        "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
-        "mutation": "delete every On*= trigger line",
-        "mutated_blob": "f02d2ec298b6c79eaf4e3ccd09a0ce805345cbc1"
-      }
-    },
-    "/usr/lib/systemd/system/goal-host-vessel.service": {
-      "src": "scripts/substrate/units/goal-host-vessel.service",
-      "src_blob": "527e84c858bfd6d907aa7f7ccb6c14500065d972",
-      "level": "behaviour",
-      "reason": "mutation-proven",
-      "fixtures": [
-        "unit-semantics.sh"
-      ],
-      "evidence": {
-        "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
-        "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "32bd581dab0a311b9c258a3e0f0a2bb4b88cb0b5"
-      }
-    },
-    "/usr/lib/systemd/system/goal-host-vessel.service.d/10-secrets-out-of-reach.conf": {
-      "src": "scripts/substrate/units/goal-host-vessel.service.d/10-secrets-out-of-reach.conf",
-      "src_blob": "07fe2c6e2e78a3a3d33c820403a00dedd1141442",
-      "level": "behaviour",
-      "reason": "mutation-proven",
-      "fixtures": [
-        "unit-semantics.sh"
-      ],
-      "evidence": {
-        "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
-        "mutation": "delete every InaccessiblePaths= line",
-        "mutated_blob": "2ac08df50293572bf245b241cb1b7551472c330e"
-      }
-    },
-    "/usr/lib/systemd/system/goal-host-vessel.service.d/drain-timeout.conf": {
-      "src": "scripts/substrate/units/goal-host-vessel.service.d/drain-timeout.conf",
-      "src_blob": "ed801098155a978a3d6e1f35862501a2724b3420",
-      "level": "parse",
-      "reason": "mutation-proven",
-      "fixtures": [
-        "unit-verify.sh"
-      ],
-      "evidence": {
-        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
-        "mutation": "insert `exit 99` after line 1",
-        "mutated_blob": "42806d8f844660b4e43a0022925db91d9990dde6"
-      }
-    },
-    "/usr/lib/systemd/system/goal-host-vessel.service.d/federation-route-preference.conf": {
-      "src": "scripts/substrate/units/goal-host-vessel.service.d/federation-route-preference.conf",
-      "src_blob": "2602f33bce4bb22bf6bb60023e8b0b992ce59b47",
-      "level": "parse",
-      "reason": "mutation-proven",
-      "fixtures": [
-        "unit-verify.sh"
-      ],
-      "evidence": {
-        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
-        "mutation": "insert `exit 99` after line 1",
-        "mutated_blob": "886e818324184453190134b58504e006906fd985"
-      }
-    },
     "/usr/lib/systemd/system/human-surface-vessel.service": {
       "src": "scripts/substrate/units/human-surface-vessel.service",
       "src_blob": "1b9da9abd43d00c2fdc83380082ed9395cc1a334",
@@ -1160,34 +1020,6 @@
         "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
         "mutation": "insert `exit 99` after line 1",
         "mutated_blob": "51672c657036b3a6b0971bfbcde732894c8b310e"
-      }
-    },
-    "/usr/lib/systemd/system/learning-liveness-probe.service": {
-      "src": "scripts/substrate/units/learning-liveness-probe.service",
-      "src_blob": "6a3b644ade127af9f694592a3b8711049b760b52",
-      "level": "behaviour",
-      "reason": "mutation-proven",
-      "fixtures": [
-        "unit-semantics.sh"
-      ],
-      "evidence": {
-        "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
-        "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "948667c5f3116ee90db535c28f1a204f2972143a"
-      }
-    },
-    "/usr/lib/systemd/system/learning-liveness-probe.timer": {
-      "src": "scripts/substrate/units/learning-liveness-probe.timer",
-      "src_blob": "6e7b7a7300a4886633ffe7b35424885748dd8b4c",
-      "level": "behaviour",
-      "reason": "mutation-proven",
-      "fixtures": [
-        "unit-verify.sh"
-      ],
-      "evidence": {
-        "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
-        "mutation": "delete every On*= trigger line",
-        "mutated_blob": "75b8b86cb0a00fddc12ca799c8b2cf5aae2dd9e5"
       }
     },
     "/usr/lib/systemd/system/learning-loop-selftest.service": {
@@ -1720,76 +1552,6 @@
         "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
         "mutation": "delete every InaccessiblePaths= line",
         "mutated_blob": "2ac08df50293572bf245b241cb1b7551472c330e"
-      }
-    },
-    "/usr/lib/systemd/system/operator-goal-generator.service": {
-      "src": "scripts/substrate/units/operator-goal-generator.service",
-      "src_blob": "da9da1a8d3d52437476b0459e1345b077a0369db",
-      "level": "behaviour",
-      "reason": "mutation-proven",
-      "fixtures": [
-        "unit-semantics.sh"
-      ],
-      "evidence": {
-        "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
-        "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "7bb9aadb765b8f0420f2e5f4c428d345408789da"
-      }
-    },
-    "/usr/lib/systemd/system/operator-goal-generator.service.d/run-dir.conf": {
-      "src": "scripts/substrate/units/operator-goal-generator.service.d/run-dir.conf",
-      "src_blob": "5e6d1fbf0c6869a70e219314c03e8fbe7eb6514a",
-      "level": "behaviour",
-      "reason": "mutation-proven",
-      "fixtures": [
-        "unit-semantics.sh"
-      ],
-      "evidence": {
-        "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
-        "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "0f44d6279f5a27bd207bf747e63a4febbf0509f5"
-      }
-    },
-    "/usr/lib/systemd/system/operator-goal-generator.service.d/watchdog.conf": {
-      "src": "scripts/substrate/units/operator-goal-generator.service.d/watchdog.conf",
-      "src_blob": "294b19900f30a50a7b358293ebe0ae4e1788fec4",
-      "level": "behaviour",
-      "reason": "mutation-proven",
-      "fixtures": [
-        "unit-semantics.sh"
-      ],
-      "evidence": {
-        "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
-        "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "d4277b7d1684a81d59b578aa51ac85a3021139e0"
-      }
-    },
-    "/usr/lib/systemd/system/operator-goal-generator.timer": {
-      "src": "scripts/substrate/units/operator-goal-generator.timer",
-      "src_blob": "f31763488905e5567a639d1a4e2aedba2676fd06",
-      "level": "behaviour",
-      "reason": "mutation-proven",
-      "fixtures": [
-        "unit-verify.sh"
-      ],
-      "evidence": {
-        "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
-        "mutation": "delete every On*= trigger line",
-        "mutated_blob": "778d52c15ba8fbff030fdf2d1e4c89561043122a"
-      }
-    },
-    "/usr/lib/systemd/system/operator-goal-generator.timer.d/ready-gate.conf": {
-      "src": "scripts/substrate/units/operator-goal-generator.timer.d/ready-gate.conf",
-      "src_blob": "cf4fdb9c64f1fd103585893dce07ca6ace960524",
-      "level": "parse",
-      "reason": "mutation-proven",
-      "fixtures": [
-        "unit-verify.sh"
-      ],
-      "evidence": {
-        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
-        "mutation": "insert `exit 99` after line 1",
-        "mutated_blob": "98dc39373afb7ac4ead0e2550fbb66343fe893df"
       }
     },
     "/usr/lib/systemd/system/records-vessel.service.d/10-secrets-out-of-reach.conf": {
@@ -2592,13 +2354,6 @@
       "reason": "unreached",
       "fixtures": []
     },
-    "/usr/local/bin/goal-host-behavior-tick.sh": {
-      "src": "scripts/substrate/goal-host-behavior-tick.sh",
-      "src_blob": "2c7b7d19f20607eb867d99b3a5ca658ba5c47e9e",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
-    },
     "/usr/local/bin/light-dispatch-healthcheck": {
       "src": "scripts/substrate/light-dispatch-healthcheck.sh",
       "src_blob": "bdf4fb840b5b5c93464928b958d1f03b1973c1ee",
@@ -2858,13 +2613,6 @@
       "reason": "unreached",
       "fixtures": []
     },
-    "/usr/local/share/substrate/active-scripts/compose-teacher.ts": {
-      "src": "scripts/substrate/compose-teacher.ts",
-      "src_blob": "9b8a13f0cae644ca22bfe981011c6ed7c771e102",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
-    },
     "/usr/local/share/substrate/active-scripts/composition-edge-reconcile.ts": {
       "src": "scripts/substrate/composition-edge-reconcile.ts",
       "src_blob": "a188907015b8c2d1cba8fb4be5ffe0f4724ce4f9",
@@ -2949,13 +2697,6 @@
       "reason": "unreached",
       "fixtures": []
     },
-    "/usr/local/share/substrate/active-scripts/learning-liveness-probe.ts": {
-      "src": "scripts/substrate/learning-liveness-probe.ts",
-      "src_blob": "07026560b6df0119300f9b48342f7b0388952b2b",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
-    },
     "/usr/local/share/substrate/active-scripts/learning-loop-selftest-tick.ts": {
       "src": "scripts/substrate/learning-loop-selftest-tick.ts",
       "src_blob": "485f39d26f849d87df141ed87019c48e0625b90a",
@@ -2987,20 +2728,6 @@
     "/usr/local/share/substrate/active-scripts/observe-orthogonal-refresh.ts": {
       "src": "scripts/substrate/observe-orthogonal-refresh.ts",
       "src_blob": "0e06c928e14350af040f1306b804740736e408bf",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
-    },
-    "/usr/local/share/substrate/active-scripts/operator-goal-generator.ts": {
-      "src": "scripts/substrate/operator-goal-generator.ts",
-      "src_blob": "10ea842333824019308e4652506b28fe2576e9c8",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
-    },
-    "/usr/local/share/substrate/active-scripts/operator-goal-signal.ts": {
-      "src": "scripts/substrate/operator-goal-signal.ts",
-      "src_blob": "5be8f1ec41ec178fff1e680d4e6be73e0bd9d58c",
       "level": "none",
       "reason": "unreached",
       "fixtures": []

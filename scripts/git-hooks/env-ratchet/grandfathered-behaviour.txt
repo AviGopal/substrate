@@ -22,17 +22,11 @@ BOREDOM_POOL_LOOP_INTERVAL_MS      cadence
 BOREDOM_STATE_REFRESH_MS           cadence
 DB_MAINTENANCE                     on/off switch
 EMIT_GAPS                          on/off switch
-GOAL_HOST_BEHAVIOR_LIMIT           cap
-GOAL_HOST_BEHAVIOR_WINDOW_HOURS    window
-GOAL_HOST_DRAIN_MS                 drain timeout
-GOAL_HOST_WS_SUBSCRIBER            on/off switch
 MAX_PEER_DEPTH                     federation fan-out cap
 OBSIDIAN_LEARN_GRANT               grant level
 OBSIDIAN_LEARN_MAX                 cap
 OBSIDIAN_LEARN_MODE                mode switch
-OPERATOR_GOAL_GEN                  on/off switch
 PEER_FANOUT_MODE                   federation mode switch
-PREFER_LIBP2P_ROUTE                route preference
 RECOVER_CAP                        cap
 REPAIR                             on/off switch
 SELF_DEV_TREND                     on/off switch

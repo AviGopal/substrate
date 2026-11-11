@@ -7,7 +7,7 @@
 #       and into NO other rendered file (no other unit's env.d, not admin.env)
 #   (c) gen-env's shared /etc/substrate/env heredoc never names it
 #   (d) MUST-FAIL: gen-env restores it from the persisted store and has NO fleet fallback: absent -> empty (not provisioned)
-#   (e) goal-host-vessel.service loads its scoped file, without '-', after the shared env (the lint's rule, pinned here too)
+# goal-host-vessel is no longer in the image, so no unit loads the scoped file; the key stays scoped and unrendered elsewhere.
 # No value is printed.
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"; S="$HERE/../../scripts/substrate"; G="${1:-$S/gen-env.sh}"
@@ -34,8 +34,4 @@ if [ -s "$T/line.sh" ] && [ -s "$T/ps.sh" ]; then
   [ "$(r "$N=$V")" = stored ] && ok "(d) restored from the persisted store" || bad "(d) stored key rendered as $(r "$N=$V")"
   [ "$(r "")" = empty ] && ok "(d) absent: EMPTY (not provisioned), never the fleet key" || bad "(d) absent rendered as $(r "")"
 else bad "(d) gen-env has no '$N=' restore line"; fi
-# (e)
-u="$S/units/goal-host-vessel.service"; want="EnvironmentFile=/etc/substrate/private/env.d/goal-host-vessel.env"
-ls_="$(grep -nx "$want" "$u" | cut -d: -f1)"; sh_="$(grep -nE '^EnvironmentFile=-?/etc/substrate/env$' "$u" | cut -d: -f1 | head -1)"
-[ -n "$ls_" ] && [ -n "$sh_" ] && [ "$ls_" -gt "$sh_" ] && ok "(e) goal-host-vessel loads its scoped file, without '-', after the shared env" || bad "(e) unit lines: scoped='${ls_:-absent}' shared='${sh_:-absent}'"
 echo; [ "$FAILS" = 0 ] && { echo PASS; exit 0; } || { echo "$FAILS FAILED"; exit 1; }

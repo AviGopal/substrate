@@ -15,7 +15,7 @@
 # Reads only the committed unit files; no systemd, git or network needed.
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"; U="$ROOT/scripts/substrate/units"
-BACKOFF=(identity-vessel.service goal-host-vessel.service)
+BACKOFF=(identity-vessel.service)
 T="$(mktemp -d "${TMPDIR:-/tmp}/unitbackoff.XXXXXX")"; trap 'rm -rf "$T"' EXIT
 FAILS=0; ok() { echo "ok   - $*"; }; bad() { echo "FAIL - $*"; FAILS=$((FAILS+1)); }
 [ -d "$U" ] || { echo "FAIL - no scripts/substrate/units/"; exit 1; }

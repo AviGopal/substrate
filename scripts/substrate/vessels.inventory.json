@@ -43,14 +43,11 @@
     "hub": {
       "roles": ["hub", "autonomy"],
       "vessels": [
-        "goal-host-vessel.service",
         "local-tools-vessel.service",
         "ribosome-vessel.service",
         "light-dispatch-vessel.service",
         "boredom-vessel.service",
         "boredom-vessel.timer",
-        "learning-liveness-probe.service",
-        "learning-liveness-probe.timer",
         "runtime-drift.service",
         "runtime-drift.timer",
         "gap-store-census.service",
@@ -75,7 +72,6 @@
     ],
     "compute": [
       "discovery-vessel.service",
-      "goal-host-vessel.service",
       "local-tools-vessel.service",
       "light-dispatch-vessel.service",
       "boredom-vessel.service",
@@ -93,7 +89,6 @@
     ],
     "compute_node": [
       "discovery-vessel.service",
-      "goal-host-vessel.service",
       "local-tools-vessel.service",
       "light-dispatch-vessel.service",
       "boredom-vessel.service",
@@ -159,13 +154,6 @@
       "role": "models",
       "repo": "llm-resolver-vessel",
       "health_port": 8220,
-      "core": true
-    },
-    {
-      "unit": "goal-host-vessel.service",
-      "role": "compute",
-      "repo": "goal-host-vessel",
-      "health_port": 8210,
       "core": true
     },
     {
@@ -314,10 +302,6 @@
       "role": "store"
     },
     {
-      "unit": "learning-liveness-probe.timer",
-      "role": "compute"
-    },
-    {
       "unit": "runtime-drift.timer",
       "role": "compute"
     },
@@ -332,10 +316,6 @@
     {
       "unit": "self-repair-operational.timer",
       "role": "infra"
-    },
-    {
-      "unit": "operator-goal-generator.timer",
-      "role": "autonomy"
     },
     {
       "unit": "auto-describe-resolvers.timer",
@@ -357,14 +337,10 @@
     { "unit": "coherence-metric.service", "role": "store" },
     { "unit": "coherence-recover.timer", "role": "store" },
     { "unit": "coherence-recover.service", "role": "store" },
-    { "unit": "compose-teacher.timer", "role": "autonomy" },
-    { "unit": "compose-teacher.service", "role": "autonomy" },
     { "unit": "efficiency-failure-tick.timer", "role": "autonomy" },
     { "unit": "efficiency-failure-tick.service", "role": "autonomy" },
     { "unit": "gap-compose.timer", "role": "autonomy" },
     { "unit": "gap-compose.service", "role": "autonomy" },
-    { "unit": "goal-host-behavior.timer", "role": "autonomy" },
-    { "unit": "goal-host-behavior.service", "role": "autonomy" },
     { "unit": "self-development-trend.timer", "role": "infra" },
     { "unit": "self-development-trend.service", "role": "infra" },
     { "unit": "typecheck-scenario-gen.timer", "role": "autonomy" },
@@ -405,11 +381,9 @@
     { "unit": "obsidian-collaborate.service", "role": "ui", "repo": "obsidian-vessel" },
     { "unit": "obsidian-intake.service", "role": "ui", "repo": "obsidian-vessel" },
     { "unit": "obsidian-learn.service", "role": "ui", "repo": "obsidian-vessel" },
-    { "unit": "operator-goal-generator.service", "role": "autonomy" },
     { "unit": "self-operational-health.service", "role": "infra" },
     { "unit": "self-recovery.service", "role": "infra" },
     { "unit": "self-repair-operational.service", "role": "infra" },
-    { "unit": "learning-liveness-probe.service", "role": "compute" },
     { "unit": "runtime-drift.service", "role": "compute" },
     { "unit": "spectral-gap.service", "role": "store" },
     { "unit": "substrate-pull-sync.service", "role": "infra" },

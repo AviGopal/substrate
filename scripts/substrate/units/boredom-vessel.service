@@ -1,10 +1,9 @@
 [Unit]
 Description=boredom-vessel — concurrent dispatch pool daemon (2026-06-04)
-After=goal-host-vessel.service light-dispatch-vessel.service
-# Wants= (was Requires=): a goal-host cutover restart must not stop-propagate
-# to boredom — each bounce re-hydrates persisted momentum and resets selection
-# state. Boredom tolerates a briefly-absent goal-host (dispatches fail soft).
-Wants=goal-host-vessel.service
+After=light-dispatch-vessel.service
+# goal-host is no longer in the image. boredom found it through discovery, so its
+# /run-goal dispatches now fail soft as "goal-host undiscovered" until its output
+# becomes a request row in records.
 
 [Service]
 # Type=simple (was oneshot): boredom now runs as a long-lived daemon that
@@ -16,7 +15,6 @@ Wants=goal-host-vessel.service
 # back to oneshot behaviour for rollback without touching the unit file.
 Type=simple
 EnvironmentFile=/etc/substrate/env
-Environment=GOAL_HOST_VESSEL_ENDPOINT=http://127.0.0.1:8210
 Environment=LIGHT_DISPATCH_ENDPOINT=http://127.0.0.1:8280
 Environment=DEV_VESSEL_ENDPOINT=http://127.0.0.1:8090
 Environment=BOREDOM_DAEMON_MODE=1

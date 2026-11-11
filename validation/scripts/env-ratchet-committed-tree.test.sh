@@ -93,10 +93,10 @@ fails "an allowlist entry without a reason fails" "RELAY_URL has no reason"
 G -C "$R" rm -q scripts/git-hooks/env-ratchet/bootstrap-allowlist.txt; G -C "$R" commit -qm "no allowlist" --no-verify
 fails "a tree without the allowlist fails closed" "fail closed"
 
-sed -i '/^Environment=GOAL_HOST_WS_SUBSCRIBER=/d' "$R/scripts/substrate/units/goal-host-vessel.service"; commit_nv "remove a grandfathered line, keep the name"
-fails "removing the last line of a grandfathered switch without shrinking the list fails" "GOAL_HOST_WS_SUBSCRIBER is set by no unit"
-sed -i '/^Environment=GOAL_HOST_WS_SUBSCRIBER=/d' "$R/scripts/substrate/units/goal-host-vessel.service"
-sed -i '/^GOAL_HOST_WS_SUBSCRIBER /d' "$R/scripts/git-hooks/env-ratchet/grandfathered-behaviour.txt"; commit_nv "shrink"
+sed -i '/^Environment=OBSIDIAN_LEARN_MODE=/d' "$R/scripts/substrate/units/obsidian-learn.service"; commit_nv "remove a grandfathered line, keep the name"
+fails "removing the last line of a grandfathered switch without shrinking the list fails" "OBSIDIAN_LEARN_MODE is set by no unit"
+sed -i '/^Environment=OBSIDIAN_LEARN_MODE=/d' "$R/scripts/substrate/units/obsidian-learn.service"
+sed -i '/^OBSIDIAN_LEARN_MODE /d' "$R/scripts/git-hooks/env-ratchet/grandfathered-behaviour.txt"; commit_nv "shrink"
 judge && ok "removing a grandfathered line together with its list entry passes (the list shrinks)" || bad "a shrink failed: $(head -3 "$T/out" | tr '\n' ' ')"
 
 echo; [ "$FAILS" = 0 ] && { echo PASS; exit 0; } || { echo "$FAILS FAILED"; exit 1; }
