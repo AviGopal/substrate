@@ -137,6 +137,22 @@ const SCHEMAS: Row[] = [
 ];
 
 // A channel names a shape and its arguments; discovery places each call, so the row holds no address.
+// Wait until records answers through discovery before writing anything. At boot this runs before records has
+// registered, and discovery answers 404 for a shape no vessel serves yet. Failing then failed the walk and described
+// units that Require this one, and systemd never started them again when the next try succeeded. So a 404 or a
+// connection error is retried here for up to READY_WAIT_MS; anything else, or the wait running out, fails as before.
+const READY_WAIT_MS = 300_000;
+const READY_RETRY_MS = 2_000;
+for (const deadline = Date.now() + READY_WAIT_MS; ; ) {
+  try { await read("arm"); break; } catch (e) {
+    const msg = String((e as Error)?.message ?? e);
+    const notYet = / 404: /.test(msg) || /ECONNREFUSED|Unable to connect|ConnectionRefused|fetch failed/i.test(msg);
+    if (!notYet || Date.now() > deadline) throw e;
+    console.log(`[walk-owner-seed] records not reachable yet; retrying (${msg.split("\n")[0].slice(0, 120)})`);
+    await Bun.sleep(READY_RETRY_MS);
+  }
+}
+
 for (const model of CHANNEL_MODELS) {
   const calls = [{
     pointer: { type: "llm_completion", model },
