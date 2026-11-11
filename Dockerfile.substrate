@@ -59,6 +59,21 @@ RUN bun install -g typescript && ln -sf /usr/local/bin/bun /usr/local/bin/node
 ARG SURREAL_VERSION=2.3.10
 RUN curl -sSf https://install.surrealdb.com | sh -s -- --version v${SURREAL_VERSION}
 
+# --- gitleaks (the secrets scanner a landing requires) ---
+# local-tools' git_land refuses every landing on a node without it (fail closed: a leaked secret on a public origin
+# cannot be taken back). Pinned to the version git_land's flags are tested against (`detect --source --log-opts
+# --ignore-gitleaks-allow --redact --report-format json`), and checked against the release's published checksum before
+# anything is extracted.
+ARG GITLEAKS_VERSION=8.18.2
+ARG GITLEAKS_SHA256=6298c9235dfc9278c14b28afd9b7fa4e6f4a289cb1974bd27949fc1e9122bdee
+RUN curl -sSfL -o /tmp/gitleaks.tar.gz \
+      "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+ && echo "${GITLEAKS_SHA256}  /tmp/gitleaks.tar.gz" | sha256sum -c - \
+ && tar -xzf /tmp/gitleaks.tar.gz -C /usr/local/bin gitleaks \
+ && chmod 0755 /usr/local/bin/gitleaks \
+ && rm -f /tmp/gitleaks.tar.gz \
+ && gitleaks version
+
 # --- Valkey (provided by redis-server installed above) ---
 # redis-server is Redis-compatible; symlink as valkey-server for unit naming consistency
 RUN ln -s /usr/bin/redis-server /usr/local/bin/valkey-server
