@@ -86,10 +86,12 @@ const SCHEMAS: Row[] = [
   },
   {
     target: "request",
-    description: "A request for data the world_changed row's `what` needs from a vessel: pointer.type is the shape to " +
+    description: "The next call toward what the world_changed row's `what` asks, whether it reads something or changes " +
+      "something (a clone made for a change, an edit, a commit, a diff, a landing): pointer.type is the shape to " +
       "resolve, and pointer's other fields are its arguments. The shapes you can call are in reads: shape_descriptions " +
-      "says what each produces, and shape_inputs gives the JSON Schema of the fields its pointer takes; fill every " +
-      `required one. A hop row shows what an earlier call returned; a failure row says why one did not. ${JSON_ONLY}`,
+      "says what each does, and shape_inputs gives the JSON Schema of the fields its pointer takes; fill every required " +
+      "one. A hop row shows what an earlier call returned, so ask for the step after it, not the same call again; a " +
+      `failure row says why one did not. ${JSON_ONLY}`,
     schema: {
       type: "object",
       required: ["pointer"],
