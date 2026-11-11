@@ -887,6 +887,47 @@ close_failing_test_gaps() {
   return 0
 }
 
+# THE WALK'S CHANGE CLONES. git_worktree makes a whole clone for a change; walk_trees_reclaim (local-tools) removes the
+# ones nothing will use again. Nothing made the walk call it, and the clones filled a node's disk. This detector files
+# one gap while more than <threshold> clones sit under the clones directory (it is work: records makes an open detector
+# gap a request root), and closes it once the count is back under. Counted: directories directly under it that are
+# whole clones (their own .git directory), never a symlink. Reach is not assumed: if the gap stays open across <ticks>
+# checks while the count keeps rising, one notice goes to the person's surface (a uiQuestion of kind notice), once per
+# open spell. Nothing is removed here. A gap store that cannot be read writes nothing. The threshold and the ticks are
+# arguments at the call site.
+walk_trees_check() { # <threshold> <ticks>
+  local max="${1:-50}" k="${2:-3}" dir="${WALK_TREES_DIR:-/workspace/git/walk-trees}" n=0 d id="pull-sync-walk-trees-unreclaimed"
+  local counts="${TEST_BASELINE_DIR:-/workspace/.test-baseline}/walk-trees.counts" st
+  command -v jq >/dev/null 2>&1 || return 0
+  for d in "$dir"/*; do [ -d "$d" ] && [ ! -L "$d" ] && [ -d "$d/.git" ] && [ ! -L "$d/.git" ] && n=$((n + 1)); done
+  st="$(dev_resolve "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap\",\"id\":\"$id\",\"limit\":1}}}" --max-time 30 2>/dev/null \
+    | jq -r 'if (.body.gaps | type) == "array" then (.body.gaps[0].status // "none") else "err" end' 2>/dev/null)"
+  case "$st" in ""|err) log "walk-trees check: the gap store could not be read; nothing written"; return 0 ;; esac
+  if [ "$n" -le "$max" ]; then
+    if [ "$st" = open ]; then
+      emit_gap "$(jq -cn --arg id "$id" --argjson max "$max" '{impulse:{pointer:{type:"substrateGap_write",gap:{id:$id,category:"systematic_failure",source:"substrate_detected",status:"closed",closed_reason:"clones_under_threshold",
+        summary:("At most " + ($max | tostring) + " change clones remain under the walk'\''s clones directory."),classification_metadata:{filed_by:"pull-sync walk-trees check",threshold:$max}}}}}')"
+      log "walk-trees check: $n clones (at most $max): closed $id"
+    fi
+    rm -f "$counts" "$counts.notified" 2>/dev/null
+    return 0
+  fi
+  emit_gap "$(jq -cn --arg id "$id" --arg dir "$dir" --argjson max "$max" '{impulse:{pointer:{type:"substrateGap_write",gap:{id:$id,category:"systematic_failure",source:"substrate_detected",status:"open",
+    summary:("More than " + ($max | tostring) + " change clones sit under " + $dir + ". walk_trees_reclaim removes the ones nothing will use again (landed, or unchanged with no open request). Done when at most " + ($max | tostring) + " remain."),
+    classification_metadata:{filed_by:"pull-sync walk-trees check",threshold:$max}}}}}')"
+  printf '%s\n' "$n" >> "$counts" 2>/dev/null
+  log "walk-trees check: $n clones (more than $max): $id open"
+  # Rising across the last <ticks> checks, with the gap open throughout: tell the person, once.
+  if [ ! -e "$counts.notified" ] && [ "$(tail -n "$k" "$counts" 2>/dev/null | wc -l)" -ge "$k" ] \
+     && tail -n "$k" "$counts" | awk 'NR > 1 && $1 <= prev { up = 1 } { prev = $1 } END { exit up }'; then
+    dev_resolve "$(jq -cn --argjson n "$n" --argjson k "$k" --arg dir "$dir" '{impulse:{pointer:{type:"uiQuestion_write",id:"walk-trees-unreclaimed",kind:"notice",importance:"high",
+      title:"The walk'\''s change clones keep piling up",
+      body:("There are " + ($n | tostring) + " clones under " + $dir + ", more on each of the last " + ($k | tostring) + " checks, and the walk has not reclaimed them. They fill the disk if nothing removes them. Removing them by hand is yours to decide.")}}}')" --max-time 30 > /dev/null 2>&1 \
+      && touch "$counts.notified" && log "walk-trees check: notice sent ($n clones, rising over $k checks)"
+  fi
+  return 0
+}
+
 # A gap that fails to file is worse than no detector: the condition is real, the
 # log line claims "(substrateGap)", and nothing is queryable afterwards. Observed
 # the hub super-repo clone sat DIVERGED for hours, refusing every
@@ -5961,6 +6002,9 @@ while IFS='|' read -r gv gq gh gd; do
   FAILTEST_GEN_DEADLINE=$(( $(date +%s) + gleft )) gen_failing_test_gaps "$gv" "$(cat "$gq/out" 2>/dev/null)" "$gq/prev" "$gh" "$gd" || true
   rm -rf "$gq"
 done <<< "$GEN_QUEUE"
+
+# The walk's change clones, every tick (see walk_trees_check).
+walk_trees_check 50 3 || true
 
 # THE SLOW LANE, after the generator: each converged candidate's slow files once, budget permitting (see slow_lane_run).
 while IFS='|' read -r sl_v sl_h sl_d sl_g; do
