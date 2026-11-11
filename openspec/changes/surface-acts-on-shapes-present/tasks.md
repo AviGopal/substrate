@@ -54,6 +54,10 @@ makes it visible and files it.
     `outcome {r, input_refs: [<answer id>]}` under the signed-in person's own key, never the
     node's (2.1, 2.4, 4.3). Designed against the first real answer row the walk writes.
     Must-fail: the verdict action cannot send without a person credential.
+    Reopened: the verdict half holds, the reading half was never met. The live page draws
+    every field of every row (ids, hashes, keys, sequence numbers) at the weight of the
+    answer. It passed its tests and the law review because nothing checked the rendered
+    page. Carried by R.2.
 1.2 Every read with no answer shows its reason on the page (refused, absent, timed out, no
     producer). Must-fail: a stubbed refusal never renders as an empty block.
     Done with 1.1: every entry is drawn, and one with no answer says why.
@@ -69,6 +73,71 @@ makes it visible and files it.
     answered in the one box, with no second input on its page.
 1.4 Until a person's credential can reach records (0.2, or the person's own key), the ask box
     says plainly why it cannot send, instead of sending somewhere that no longer answers.
+
+## Phase R — the page as a person reads it (unblocked)
+The person's verdict on the live page was that it fails as an interface on every count. The
+standard it fails is already written: `interface-as-shapes` design §10 and its spec ("the
+interface does not explain itself", "the landing serves the person's jobs", "an ask the
+surface shows has a subject, evidence and a reader", "threads, not runs") and the rendering
+contract's C4 (form by form, never by shape name; a declaration comes from the producer or
+the render policy). Those stand; this phase applies them to the generic view. Every task's
+must-fail includes a rendered check: the live page at desktop and phone width, read as the
+person reads it, with what each screenshot must show written down before the build. A DOM
+assertion is necessary, not sufficient, and the person's verdict closes the phase. One task
+per commit.
+
+What the page draws against what the standard says:
+- Rows are field dumps → progressive disclosure (the answer, then why trusted, then
+  evidence, then process) and signal over ink (every id has to earn its place).
+- "View landing@n was not drawn: unknown field…" heads the page → mechanism text lives in
+  the documents or a hover, never as a headline.
+- Many asks of one kind ("a landed fix makes a gap's check pass — close it?"), drawn twice →
+  an ask with no confirmed reader is not offered as waiting, and repeated rows are one
+  object. These asks name no reader; the lanes that read their answers were removed.
+- One entry per records shape → a view per job: what needs the person (usually none to
+  three), then their own asks as threads, then one line of health.
+
+R.1 An ask whose reader cannot be confirmed is not waiting. An ask is offered as waiting only
+    when the reader it declares is listed by discovery; the rest are drawn folded, as one
+    line with their count, and not counted. The surface never infers a reader from an ask's
+    kind: that is classification (1.1 debt (a)). The question row declares no reader today,
+    so the writers' rows need a reader field (a gap, filed with the operator marker); until
+    then every ask is "reader unknown". Must-fail: with the live rows, "waiting on you" offers
+    none of them, and one folded line says how many asks have no reader.
+R.2 A row reads as words, its record folded. The rows form draws the fields declared as the
+    row's words and folds every other field behind one "details" control. The declaration is,
+    in order: the owner's `shape_description` row for that shape (owner configuration, never
+    a root; records accepts it once its pending change lands, and the owner writes the rows);
+    else the view entry, which may name the field that holds the row's words; else none, and
+    the row is drawn folded with its shape and time only. Not the `shape_schema`: one exists
+    only for shapes a producer makes from a model, writing one to declare display fields
+    would have a model serve that shape, and its required fields are mostly ids (an outcome
+    requires event_ref, r and evidence_refs). The surface names no field. Must-fail: an
+    answer row and an outcome row each show their words with no id or hash in view; opening
+    details shows the rest; a changed declaration moves what is shown with no rebuild.
+R.3 Mechanism text leaves the page. "Passed over" and "not drawn" notes become a mark with
+    a hover; refusals stay readable in `human_surface:ui_view`. Must-fail: no visible line
+    names a view id, a field or a shape when the content is not about the system.
+R.4 A person's asks are threads. A view entry may name, for each row it draws, one further
+    read bound to that row's id (`$row`), the same binding `$ask` is: declared by the view,
+    so an activity can write it and the loop can grade it. Checked as within the ruling
+    against surface grouping, on four conditions:
+    - the grouping is the producer's answer: prefer records' `episode` (what the walk did
+      with that root, through pool_refs and input_refs) over `refs_to`; the page never
+      filters, sorts or dedupes it;
+    - one level only, unless the view declares a depth;
+    - bounded by the view: it declares the row limit and the per-row limit, and the page
+      shows a cut as a count;
+    - the default nesting is a hand-written view in the surface's source, which enlarges
+      debt 1.1(b) until an activity writes one through `uiView_write`.
+    1.1a stands: a summary of what the walk did is an activity's output; R.4 draws the raw
+    thread. Must-fail: on the live page, a person's ask shows the rows of its episode under
+    it, and a newer system row never pushes it out of view.
+R.5 The default landing is per job. Needs-you first (R.1), then the person's threads (R.4),
+    then one line of health, which Phase 5 fills; until it does, the line says no composer
+    answers yet. The default stays a view written through `uiView_write`, replaceable by an
+    activity. Must-fail: the rendered landing at phone width shows needs-you and the
+    person's latest ask without scrolling.
 
 ## Phase 2 — work like every vessel (unblocked)
 2.1 Keys by writer: remove the per-vessel key fallback; the surface's own calls use the node's
