@@ -23,13 +23,19 @@ FAILS=0
 ok()  { echo "ok   - $*"; }
 bad() { echo "FAIL - $*"; FAILS=$((FAILS+1)); }
 {
+  sed -n '/^shape_route() {/,/^}/p' "$SCRIPT"
+  sed -n '/^dev_resolve() {/,/^}/p' "$SCRIPT"
   sed -n '/^probe_window_open() {/,/^}/p' "$SCRIPT"
   sed -n '/^restart_age_defer() {/,/^}/p' "$SCRIPT"
 } > "$T/fns.sh"
+# The probe-window read goes through dev_resolve's by-shape routing (shape_route), answered by the curl stub below.
+DISCOVERY=http://discovery.test; SHAPE_ROUTES=" "; SR_ROUTE=""
 grep -q 'probeWindow' "$T/fns.sh" || { echo "FAIL - could not extract probe_window_open"; exit 1; }
 LOG="$T/log.txt"; log() { echo "$*" >> "$LOG"; }
 RESP="$T/resp.json"; OVR="$T/ovr.json"
-curl() { cat > /dev/null; case "$*" in *probeWindowOverride*) cat "$OVR" 2>/dev/null || printf '{"body":{"impulses":[]}}' ;; *) cat "$RESP" ;; esac; }
+# curl as a stand-in discovery: it names a producer for poolImpulse (the probe-window read goes by shape through it),
+# and answers the reads with the canned records.
+curl() { cat > /dev/null; case "$*" in *vesselCapability*) printf '{"content":{"vessels":[{"vesselId":"store"}]}}' ;; *probeWindowOverride*) cat "$OVR" 2>/dev/null || printf '{"body":{"impulses":[]}}' ;; *) cat "$RESP" ;; esac; }
 hostname() { echo node-test; }
 tuning_param() { TP_VALUE="$2"; }
 MARKER_DIR="$T/marker"; mkdir -p "$MARKER_DIR"

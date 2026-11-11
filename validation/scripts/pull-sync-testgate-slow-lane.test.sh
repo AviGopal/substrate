@@ -32,7 +32,8 @@ FAILS=0; ok() { echo "ok   - $*"; }; bad() { echo "FAIL - $*"; FAILS=$((FAILS+1)
   awk '/^  # 3-pre\. TEST GATE/{on=1} on{print} on && /^  rm -f "\$MARKER_DIR\/\$v\.testgate-refusals"/{exit}' "$SCRIPT"
   echo '  echo "CONVERGED $v" >> "$CALLS"'; echo 'done'; echo '}'
 } > "$T/fns.sh"
-sed -n '/^tuning_param() {/,/^}/p' "$SCRIPT" | sed 's/^tuning_param() {/real_tuning_param() {/' > "$T/tp.sh"
+{ sed -n '/^shape_route() {/,/^}/p' "$SCRIPT"
+  sed -n '/^tuning_param() {/,/^}/p' "$SCRIPT" | sed 's/^tuning_param() {/real_tuning_param() {/'; } > "$T/tp.sh"
 grep -q 'testgate-refusals' "$T/fns.sh" || { echo "FAIL - could not extract the test-gate slice"; exit 1; }
 # shellcheck disable=SC1090
 source "$T/fns.sh"
@@ -157,8 +158,10 @@ scale; setup boredom-vessel 0; TP_ROW='activity-api=none;boredom-vessel=*.real*.
 printf '%s\n' "$GATE_ARGV" | grep -q '^ARGV ' && [ -z "$(printf '%s\n' "$GATE_ARGV" | grep -vx 'ARGV \./src/y\.scale\.test\.ts \./test/a\.test\.ts \./test/b\.test\.ts \./test/trace-list-bounded-newest-first\.test\.ts' || true)" ] \
   && printf '%s\n' "$SLOW_ARGV" | grep -qx 'ARGV \./src/x\.real\.test\.ts' && ok "(f) the row's boredom-vessel list splits it; the default's globs no longer apply" || bad "(f) argv: $(printf '%s' "$GATE_ARGV|$SLOW_ARGV" | tr '\n' '|')"
 # shellcheck disable=SC1090
-source "$T/tp.sh"; TP_FALLBACK_SEEN=" "; DEFERRAL_LOG="$T/deferrals.jsonl"; : > "$DEFERRAL_LOG"; ACTIVITY_API_ENDPOINT=http://127.0.0.1:9
-CURL_BODY=""; curl() { printf '%s\n200' "$CURL_BODY"; }
+source "$T/tp.sh"; TP_FALLBACK_SEEN=" "; DEFERRAL_LOG="$T/deferrals.jsonl"; : > "$DEFERRAL_LOG"
+# A tuning read goes by shape through discovery (shape_route); the stub names a producer and answers the read.
+DISCOVERY=http://discovery.test; SHAPE_ROUTES=" "; SR_ROUTE=""
+CURL_BODY=""; curl() { case "$*" in *vesselCapability*) printf '{"content":{"vessels":[{"vesselId":"store"}]}}' ;; *) printf '%s\n200' "$CURL_BODY" ;; esac; }
 CURL_BODY='{"name":"pull_sync.x","value":42}'; real_tuning_param pull_sync.x 7; n1="$TP_VALUE/$TP_WHY"
 CURL_BODY='{"name":"pull_sync.x","value":null}'; real_tuning_param pull_sync.y 7; n2="$TP_VALUE/$TP_WHY"
 CURL_BODY='{"name":"pull_sync.slow_test_globs","value":"a=*.real*.test.ts,b.test.ts"}'; real_tuning_param pull_sync.slow_test_globs 'd=x' string; s1="$TP_VALUE/$TP_WHY"

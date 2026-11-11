@@ -8,11 +8,14 @@
 # tracked_fail_names() and the two gate lines that partitioned CONF_SET with awk. Do not edit
 # it to make a lib change pass; a deliberate semantic change replaces this test's verdicts.
 #
-#   names      the reference vs pull-sync's current loader (sourced from this tree, same curl
-#              stub) over a synthetic store (repos/ prefixes, blank/non-string only_tests,
+#   names      the reference (reading the store over HTTP, curl stub) vs pull-sync's current loader,
+#              which reads the same store from a local file: since pull-sync addresses its shapes by shape
+#              through discovery it no longer reads an http store at all (substrate-pull-sync.sh
+#              tracked_fail_names), over a synthetic store (repos/ prefixes, blank/non-string only_tests,
 #              string classification_metadata, non-object rows, closed/reopened/"Open" rows, a
 #              shape mismatch, missing fields, a non-array only_tests) x vessels x file lists
-#   request    both send the byte-identical resolver request, except for two additions to the lib's:
+#   request    pull-sync's tracked_fail_names sends NO request to an http source; the lib's own gtr_load (called
+#              directly) and the reference send the byte-identical resolver request, except for two additions to the lib's:
 #              a leading `-K -` (the node key travels as a curl config on stdin: every resolve call
 #              sends a credential, resolve-writers-send-credentials P7) and `-w \n%{http_code}` right
 #              after `-s` (the status trailer that tells a refused key, 401, from an unreadable store;
@@ -98,7 +101,8 @@ curl() {
 }
 DEV_VESSEL=http://stub.invalid
 ref_names() { ( CURL_LOG="$T/curl-ref.log"; . "$T/ref.sh"; tracked_fail_names "$1" "$2" ); }
-new_names() { ( CURL_LOG="$T/curl-new.log"; PULLSYNC_SELF_DIR="$ROOT/scripts/substrate" PULLSYNC_SHARE_DIR="$T/no-share"
+# pull-sync's loader reads the store from a local file (NEW_SRC); an http source it does not read.
+new_names() { ( CURL_LOG="${NEW_LOG:-$T/curl-new.log}"; DEV_VESSEL="${NEW_SRC:-$T/store.json}"; PULLSYNC_SELF_DIR="$ROOT/scripts/substrate" PULLSYNC_SHARE_DIR="$T/no-share"
   . "$T/new.sh" >/dev/null 2>&1; [ -n "$GTR_LIB" ] || { echo "NO-LIB"; return; }; tracked_fail_names "$1" "$2" ); }
 file_names() { ( PULLSYNC_SELF_DIR="$ROOT/scripts/substrate" PULLSYNC_SHARE_DIR="$T/no-share"
   . "$T/new.sh" >/dev/null 2>&1; gtr_load "$T/store.json" "$T/loaded.json" && gtr_tracked_names "$T/loaded.json" "$1" "$2" ); }
@@ -121,8 +125,16 @@ done
 [ "$(ref_names demo test/a.test.ts | tr '\n' ',')" = "alpha,describe > beta,gamma,alpha,xi > leaf," ] && ok "names: the reference sees what it should (positive control)" || bad "names: reference control gave '$(ref_names demo test/a.test.ts | tr '\n' ',')'"
 
 # ── request ────────────────────────────────────────────────────────────────────
-# The only permitted differences are the credential carrier (a leading `-K -`) and the status trailer
-# (`-w \n%{http_code}` after `-s`).
+# pull-sync makes no request to an http source: given one, tracked_fail_names returns no names and calls nothing.
+: > "$T/curl-ps.log"
+ps_out="$(NEW_LOG="$T/curl-ps.log" NEW_SRC=http://stub.invalid new_names demo test/a.test.ts; echo "rc=$?")"
+[ "$ps_out" = "rc=0" ] && [ ! -s "$T/curl-ps.log" ] && ok "request: pull-sync sends no request to an http store (no fixed endpoint is read)" \
+  || bad "request: pull-sync read an http store: out=[$ps_out] calls=[$(cat "$T/curl-ps.log")]"
+# The lib's own read (gtr_load, called directly) against the reference: the only permitted differences are the
+# credential carrier (a leading `-K -`) and the status trailer (`-w \n%{http_code}` after `-s`).
+: > "$T/curl-new.log"
+( CURL_LOG="$T/curl-new.log"; PULLSYNC_SELF_DIR="$ROOT/scripts/substrate" PULLSYNC_SHARE_DIR="$T/no-share"
+  . "$T/new.sh" >/dev/null 2>&1; gtr_load http://stub.invalid "$T/lib-loaded.json" ) >/dev/null 2>&1
 [ -s "$T/curl-new.log" ] && ! grep -qv '^-K - ' "$T/curl-new.log" \
   && ok "request: the lib sends its credential as a curl config on stdin (-K -) on every request" \
   || bad "request: a lib request without the leading -K - credential carrier: [$(grep -v '^-K - ' "$T/curl-new.log" | sort -u)]"
@@ -134,7 +146,7 @@ done
 
 # ── unreachable ────────────────────────────────────────────────────────────────
 for RESP_MODE in fail garbage error html empty; do
-  a="$(ref_names demo test/a.test.ts; echo "rc=$?")"; b="$(new_names demo test/a.test.ts; echo "rc=$?")"
+  a="$(ref_names demo test/a.test.ts; echo "rc=$?")"; b="$(NEW_SRC=http://stub.invalid new_names demo test/a.test.ts; echo "rc=$?")"
   [ "$a" = "rc=0" ] && [ "$b" = "rc=0" ] && ok "unreachable ($RESP_MODE): both return no names, rc 0" || bad "unreachable ($RESP_MODE): ref=[$a] new=[$b]"
 done
 RESP_MODE=ok

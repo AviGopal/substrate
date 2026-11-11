@@ -70,6 +70,8 @@ EOF
 cat > "$T/stub/curl" <<EOF
 #!/usr/bin/env bash
 echo "curl \$*" >> "$CALLS"
+# A stand-in discovery: it names a producer for every shape, so pull-sync's by-shape calls (shape_route) are made and recorded.
+case "\$*" in *vesselCapability*) printf '{"content":{"vessels":[{"vesselId":"store"}]}}'; exit 0 ;; esac
 case "\$*" in
   */health*) [ ! -e "$T/dep-down" ] && grep -q 'x = 1' "$R/src/x.ts" 2>/dev/null && printf 200 || printf 503; exit 0 ;;
 esac

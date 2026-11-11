@@ -50,6 +50,8 @@ EOF
 cat > "$T/stub/curl" <<EOF
 #!/usr/bin/env bash
 echo "curl" >> "$CALLS"
+# A stand-in discovery: it names a producer for every shape, so pull-sync's by-shape calls (shape_route) are made and recorded.
+case "\$*" in *vesselCapability*) printf '{"content":{"vessels":[{"vesselId":"store"}]}}'; exit 0 ;; esac
 while [ \$# -gt 0 ]; do [ "\$1" = -d ] && { printf '%s\n' "\$2" >> "$POSTS"; shift; }; shift; done
 printf '{}\n200'
 EOF
@@ -104,7 +106,8 @@ snap() {
   git -C "$T/ws/git/vessels/$V" rev-parse HEAD origin/dev 2>/dev/null
   git -C "$T/ws/git/super-repo" rev-parse HEAD 2>/dev/null
 }
-gaps() { jq -c 'select(.impulse.pointer.type? == "substrateGap_write") | .impulse.pointer.gap | select(.id | startswith("pull-sync-gap-tracked-red-lib-missing-"))' "$POSTS" 2>/dev/null; }
+# A gap write goes by shape through discovery as {pointer}; the older dev-store form was {impulse: {pointer}}.
+gaps() { jq -c '(.pointer // .impulse.pointer) | select(.type? == "substrateGap_write") | .gap | select(.id | startswith("pull-sync-gap-tracked-red-lib-missing-"))' "$POSTS" 2>/dev/null; }
 
 # ── missing: two no-op ticks, one bumped gap ───────────────────────────────────
 setup 0 0

@@ -81,7 +81,6 @@ MARKER_DIR=/workspace/.pull-sync
 LAST_GOOD_DIR=/workspace/.last-good
 BRANCH="${BRANCH:-dev}"
 STAGGER_SECONDS="${STAGGER_SECONDS:-8}"
-DEV_VESSEL="${DEV_VESSEL_ENDPOINT:-http://127.0.0.1:8090}"
 MITOSIS_LOCK=/workspace/mitosis-pending.json
 MITOSIS_LOCK_TTL_MIN="${MITOSIS_LOCK_TTL_MIN:-30}"
 # Durable authoring-in-flight markers written by the working plane
@@ -163,11 +162,7 @@ probe_window_open() { # -> 0 iff an open, in-cap window names this node and no o
   if [ -z "$PW_STATE" ]; then
     _pw_me="${FED_SUBSTRATE_ID:-$(hostname 2>/dev/null)}"; _pw_h="$(hostname 2>/dev/null)"
     tuning_param pull_sync.probe_window_max_seconds 7200; _pw_max="$TP_VALUE"
-    _pw_read() {
-      if [ -n "${METABOB_API_KEY:-}" ]; then printf 'header = "Authorization: ApiKey %s"\n' "$METABOB_API_KEY"; fi \
-        | curl -K - -s --max-time 10 -X POST "${DEV_VESSEL_ENDPOINT:-http://127.0.0.1:8090}/v2/impulses/resolve" \
-            -H 'Content-Type: application/json' -d "{\"impulse\":{\"type\":\"poolImpulse\",\"shape\":\"$1\",\"status\":\"open\"}}" 2>/dev/null
-    }
+    _pw_read() { dev_resolve "{\"impulse\":{\"type\":\"poolImpulse\",\"shape\":\"$1\",\"status\":\"open\"}}" --max-time 10 2>/dev/null; }
     _pw_sel='def ts: if . == null then null else (sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601? // null) end;
       if (.body.impulses | type) != "array" then "UNREADABLE" else
       [.body.impulses[] | select(.shape == $shape) | select(.body.node == $me or .body.node == $h)
@@ -239,10 +234,43 @@ restart_age_defer() {
 # Every resolve request here goes through this one function, reads included, so none can be
 # added without the key. The key never touches argv: the header goes to curl on stdin as a
 # config (`-K -`), exactly as tuning_param below sends it. Extra args (--max-time, -w, -o) follow.
+#
+# BY SHAPE, THROUGH DISCOVERY. development-vessel and activity-api left the image, and the fixed ports this script
+# used for them answered nothing: every gap write, the probe-window read and every tuning read failed, and nothing
+# said so. shape_route asks discovery, once per shape per tick, whether anything serves the shape:
+#   served       → the call goes by shape through discovery's /resolve, which places it;
+#   not served   → the call does not happen; its caller's unreachable path applies, as before, and one line per tick
+#                  names the shape ("no producer serves …"), so the loss is visible;
+#   no answer    → discovery itself did not answer: treated as not served, and named. There is no fixed endpoint to
+#                  fall back to; discovery is the one fixed point.
+# Named, not yet a row: these lines are visible to an operator only; a row the system reads waits on where detector
+# observations go (agf_ip4v86cctbcf).
+DISCOVERY="${DISCOVERY_ENDPOINT:-http://127.0.0.1:8100}"
+SHAPE_ROUTES=" "
+# Not a subshell: callers read SR_ROUTE, so the per-tick verdict (SHAPE_ROUTES) survives and an absence is logged once.
+SR_ROUTE=""
+shape_route() { # <shape> -> sets SR_ROUTE to served|absent, kept for the tick
+  local _sr_hit _sr_n
+  _sr_hit="$(printf '%s' "$SHAPE_ROUTES" | tr ' ' '\n' | sed -n "s/^$1=//p" | head -1)"
+  [ -n "$_sr_hit" ] && { SR_ROUTE="$_sr_hit"; return 0; }
+  _sr_n="$({ if [ -n "${METABOB_API_KEY:-}" ]; then printf 'header = "Authorization: ApiKey %s"\n' "$METABOB_API_KEY"; fi; } \
+    | curl -K - -s --max-time 5 -X POST "$DISCOVERY/resolve" -H 'Content-Type: application/json' \
+        -d "{\"pointer\":{\"type\":\"vesselCapability\",\"shape\":\"$1\"}}" 2>/dev/null \
+    | jq -r 'if (.content.vessels | type) == "array" then (.content.vessels | length) else empty end' 2>/dev/null)"
+  if [ -z "$_sr_n" ]; then _sr_hit=absent; log "discovery did not answer for $1: what pull-sync reads or writes as $1 is skipped this tick"
+  elif [ "$_sr_n" -gt 0 ] 2>/dev/null; then _sr_hit=served
+  else _sr_hit=absent; log "no producer serves $1: what pull-sync reads or writes as $1 is skipped this tick"; fi
+  SHAPE_ROUTES="$SHAPE_ROUTES$1=$_sr_hit "
+  SR_ROUTE="$_sr_hit"
+}
 dev_resolve() {
-  local _dr_body="$1"; shift
+  local _dr_body="$1" _dr_ptr _dr_route _dr_url; shift
+  _dr_ptr="$(printf '%s' "$_dr_body" | jq -c '.impulse.pointer // .impulse' 2>/dev/null)"
+  shape_route "$(printf '%s' "$_dr_ptr" | jq -r '.type // empty' 2>/dev/null)"; _dr_route="$SR_ROUTE"
+  [ "$_dr_route" = served ] || return 7
+  _dr_url="$DISCOVERY/resolve"; _dr_body="{\"pointer\":$_dr_ptr}"
   { if [ -n "${METABOB_API_KEY:-}" ]; then printf 'header = "Authorization: ApiKey %s"\n' "$METABOB_API_KEY"; fi; } \
-    | curl -K - -s -X POST "$DEV_VESSEL/v2/impulses/resolve" -H 'Content-Type: application/json' -d "$_dr_body" "$@"
+    | curl -K - -s -X POST "$_dr_url" -H 'Content-Type: application/json' -d "$_dr_body" "$@"
 }
 # tuning_param <name> <default> — sets TP_VALUE to a SHAPED value read at use time: the
 # substrate_tuning_param row that activity-api serves at GET /v2/tuning-params/<name> (the same
@@ -267,9 +295,14 @@ TP_FALLBACK_SEEN=" "
 tuning_param() {
   local _tp_out _tp_code _tp_body _tp_why=""
   TP_VALUE=""
-  _tp_out="$(if [ -n "${METABOB_API_KEY:-}" ]; then printf 'header = "Authorization: ApiKey %s"\n' "$METABOB_API_KEY"; fi \
-    | curl -K - -s --max-time 5 -w '\n%{http_code}' \
-        "${ACTIVITY_API_ENDPOINT:-http://127.0.0.1:8080}/v2/tuning-params/$1" 2>/dev/null)"
+  # By shape (shape_route above): nothing serving tuning_param is a named fallback, not a silent unreachable store.
+  shape_route tuning_param
+  case "$SR_ROUTE" in
+    absent) _tp_out="no_producer" ;;
+    *) _tp_out="$(if [ -n "${METABOB_API_KEY:-}" ]; then printf 'header = "Authorization: ApiKey %s"\n' "$METABOB_API_KEY"; fi \
+      | curl -K - -s --max-time 5 -w '\n%{http_code}' -X POST "$DISCOVERY/resolve" -H 'Content-Type: application/json' \
+          -d "{\"pointer\":{\"type\":\"tuning_param\",\"name\":\"$1\"}}" 2>/dev/null)" ;;
+  esac
   _tp_code="${_tp_out##*$'\n'}"; _tp_body="${_tp_out%$'\n'*}"
   [ "$_tp_out" = "$_tp_code" ] && _tp_body=""
   case "$_tp_code" in
@@ -282,6 +315,7 @@ tuning_param() {
       if [ -z "$TP_VALUE" ]; then
         if printf '%s' "$_tp_body" | grep -q '"value"[[:space:]]*:[[:space:]]*null'; then _tp_why=null; elif [ "${3:-}" = string ]; then _tp_why=non_string; else _tp_why=non_numeric; fi
       fi ;;
+    no_producer) _tp_why=no_producer ;;
     ''|000|*[!0-9]*) _tp_why=unreachable ;;
     *) _tp_why="http_$_tp_code" ;;
   esac
@@ -553,9 +587,13 @@ gtr_try_load() { # -> 0 and GTR_LIB set when a candidate sources and defines the
 # Returns 2 when the store refused the node key (401; gtr_load printed the distinct line): the
 # tracked set is UNKNOWN, and the caller holds instead of judging. Any other unreadable store is
 # "nothing tracked" (0), as before: the stricter gate stands.
+# The store is read only from a local file named by DEV_VESSEL (a snapshot, or a fixture's stand-in). gap-tracked-red.sh
+# reads a URL by endpoint, not by shape, so an http source is not read: there is no default and no fixed endpoint, and
+# with none given (a live node today) nothing is tracked. Routing the library by shape is its own change.
 tracked_fail_names() {
   local st rc
   [ -n "$GTR_LIB" ] || return 0
+  case "${DEV_VESSEL:-}" in ''|http://*|https://*) return 0 ;; esac
   st="$(mktemp "${TMPDIR:-/tmp}/pullsync-gtr.XXXXXX" 2>/dev/null)" || return 0
   gtr_load "$DEV_VESSEL" "$st"; rc=$?
   [ "$rc" -eq 0 ] && gtr_tracked_names "$st" "$1" "$2"

@@ -4,7 +4,7 @@
 # soak_ticks is a shaped row, starting at 1.
 #
 # On the gate-test harness (gt_live: the REAL pull-sync, gate-runner, candidate.sh and shadow-eval), with the row
-# served through pull-sync's own tuning_param read (a curl stub answers /v2/tuning-params/gate.soak_ticks):
+# served through pull-sync's own tuning_param read (a curl stub, standing in for discovery, answers the gate.soak_ticks pointer):
 #   (a) CONTROL: no row (null), floor 1 -> a passing candidate promotes on its first pass, and the verdict names the
 #       floor it used
 #   (b) a row of 3 raises it: soaking 1/3, 2/3, then promote at 3/3, the verdict naming the row
@@ -29,7 +29,9 @@ setup() { # <floor> -> a live gate whose accepted policy floor is <floor>, boots
   ROW="$T/row"; : > "$ROW"
   cat > "$T/stub/curl" <<EOF
 #!/bin/sh
-for a in "\$@"; do case "\$a" in */v2/tuning-params/gate.soak_ticks)
+# A stand-in discovery: tuning_param is served, and the gate.soak_ticks read comes as its pointer.
+for a in "\$@"; do case "\$a" in *vesselCapability*) printf '{"content":{"vessels":[{"vesselId":"store"}]}}'; exit 0 ;; esac; done
+for a in "\$@"; do case "\$a" in *'"name":"gate.soak_ticks"'*)
   if [ "\$(cat "$ROW")" = UNREACHABLE ]; then exit 7; fi
   if [ -s "$ROW" ]; then printf '{"name":"gate.soak_ticks","value":%s}\n200' "\$(cat "$ROW")"; else printf '{"name":"gate.soak_ticks","value":null}\n200'; fi
   exit 0 ;; esac; done

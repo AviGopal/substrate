@@ -88,7 +88,10 @@ cat > "$T/stub/curl" <<EOF
 #!/usr/bin/env bash
 echo "curl \$*" >> "$CALLS"
 case "\$*" in
-  */v2/tuning-params/*) a="\$*"; n="\${a##*/v2/tuning-params/}"; n="\${n%% *}"
+  # A stand-in discovery: every shape is served, so pull-sync's by-shape calls are made.
+  *vesselCapability*) printf '{"content":{"vessels":[{"vesselId":"store"}]}}'; exit 0 ;;
+  # A tuning read goes by shape through discovery: {"pointer":{"type":"tuning_param","name":...}}.
+  *'"type":"tuning_param"'*) n="\$(printf '%s' "\$*" | sed -n 's/.*"name":"\([^"]*\)".*/\1/p')"
              case " \$* " in *" -K - "*) cat >> "$T/curlcfg" ;; esac
              case "\$(cat "$T/tuning-mode" 2>/dev/null)" in
                down) printf 000; exit 7 ;;
@@ -277,7 +280,7 @@ setup; push_change "$PKG"
 tuning pull_sync.bounce_defer_max_ticks 6
 health "$DV_PORT" 1 60000; health "$LT_PORT" 0 0
 run METABOB_API_KEY="$FIXTURE_KEY"
-grep -q 'v2/tuning-params/pull_sync.bounce_defer_max_ticks' "$CALLS" || bad "fixture: the tuning read never happened"
+grep -q '"type":"tuning_param","name":"pull_sync.bounce_defer_max_ticks"' "$CALLS" || bad "fixture: the tuning read never happened"
 grep -qF "$FIXTURE_KEY" "$ALLCALLS" && bad "(h) the API key value appears in a curl argument" \
   || ok "(h) the API key value appears in no curl argument"
 grep -qF "Authorization: ApiKey $FIXTURE_KEY" "$T/curlcfg" 2>/dev/null && ok "(h) the API key reaches curl through its stdin config" \

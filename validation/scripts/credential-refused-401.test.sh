@@ -15,8 +15,9 @@
 #   (b) runner  a red glue test under a 401 store is UNKNOWN, not FAIL and not TRACKED-RED; the
 #               run exits 3 (environment) with the distinct line; with the store readable the
 #               same test is TRACKED-RED and the run exits 0 (control)
-#   (c) pull-sync  tracked_fail_names (its loader block, verbatim from the script) returns 2 with
-#               the distinct line; the test gate given that answer HOLDS the vessel: no refusal
+#   (c) pull-sync  tracked_fail_names (its loader block, verbatim from the script) does not read an http
+#               store at all (pull-sync addresses its shapes by shape through discovery), so a 401 store
+#               is never asked: rc 0, no line; the test gate given a 401 answer (rc 2) HOLDS the vessel: no refusal
 #               counted, no regression gap, no convergence, baseline untouched, the distinct line
 #               logged; given "nothing tracked" (rc 0) it refuses as before (control)
 #
@@ -97,8 +98,8 @@ grep -q '^tracked_fail_names()' "$T/loader.sh" || bad "(c) could not extract pul
 echo 401 > "$T/status"
 ( PATH="$T/fx:$PATH"; PULLSYNC_SELF_DIR="$SRC/scripts/substrate"; PULLSYNC_SHARE_DIR="$T/no-share"; DEV_VESSEL="$STORE"
   . "$T/loader.sh" >/dev/null 2>&1; tracked_fail_names demo "test/x.test.ts" ) >"$T/out" 2>"$T/err"; RC=$?
-[ "$RC" = 2 ] && ok "(c) pull-sync: tracked_fail_names returns 2 on a 401 store" || bad "(c) pull-sync: tracked_fail_names returned $RC on a 401 store"
-grep -qF "$LINE" "$T/err" && ok "(c) pull-sync: tracked_fail_names passes the distinct line through" || bad "(c) pull-sync: no '$LINE' from tracked_fail_names"
+[ "$RC" = 0 ] && ok "(c) pull-sync: tracked_fail_names does not read an http store (rc 0)" || bad "(c) pull-sync: tracked_fail_names returned $RC on an http store"
+grep -qF "$LINE" "$T/err" && bad "(c) pull-sync: read the http store (the 401 line came back)" || ok "(c) pull-sync: no request reached the http store (no 401 line)"
 
 # The gate slice, as pull-sync-testgate-outstanding.test.sh extracts it.
 {

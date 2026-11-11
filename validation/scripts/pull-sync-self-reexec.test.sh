@@ -53,6 +53,8 @@ EOF
 cat > "$T/stub/curl" <<EOF
 #!/usr/bin/env bash
 echo "curl \$*" >> "$CALLS"
+# A stand-in discovery: it names a producer for every shape, so pull-sync's by-shape calls (shape_route) are made and recorded.
+case "\$*" in *vesselCapability*) printf '{"content":{"vessels":[{"vesselId":"store"}]}}'; exit 0 ;; esac
 exit 7
 EOF
 # The no-loop leg: an install that never lands a byte-identical pull-sync.
