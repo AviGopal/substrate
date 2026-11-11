@@ -245,7 +245,7 @@ if [ -z "$JOIN" ]; then
   cat <<STEPS
   docker network create --subnet $SUBNET $NETWORK   # once; both nodes attach to it
   cd $OUT/hub   && docker compose up -d
-  docker exec $HUB_C substrate-status --wait usable
+  docker exec $HUB_C substrate-status --wait served
   K=\$(docker exec $HUB_C substrate-key issue $SPOKE_NAME) && echo "METABOB_API_KEY=\$K" >> $OUT/spoke/.env
   cd $OUT/spoke && docker compose up -d
   docker exec $SPOKE_C substrate-status --wait served

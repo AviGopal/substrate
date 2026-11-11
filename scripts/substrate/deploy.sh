@@ -17,8 +17,10 @@
 #   --dir <dir>         Target directory, relative to the remote home unless
 #                       absolute. Default: substrate-deploy.
 #   --wait <level>      Verdict level to wait for: live | seeded | served |
-#                       usable | connected. Default: usable (served suits a
-#                       keyless spoke, which has no LLM arm of its own).
+#                       usable | connected. Default: served. usable and
+#                       connected dispatch a known-answer goal to goal-host,
+#                       which the image no longer ships, so they fail until the
+#                       walk answers a known-answer request.
 #   --ship-image        Stream the image the manifest names from THIS host
 #                       (docker save | ssh docker load) instead of pulling it on
 #                       the target. For an image that exists only locally.
@@ -68,7 +70,7 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MANIFEST="$HERE/../../docker-compose.yml"
 ENV_FILE=""
 DIR="substrate-deploy"
-WAIT_LEVEL="usable"
+WAIT_LEVEL="served"
 SHIP=0
 ADOPT=0
 ACCEPT_PORTS=0
