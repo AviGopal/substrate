@@ -263,9 +263,57 @@ shape_route() { # <shape> -> sets SR_ROUTE to served|absent, kept for the tick
   SHAPE_ROUTES="$SHAPE_ROUTES$1=$_sr_hit "
   SR_ROUTE="$_sr_hit"
 }
+# DETECTOR GAPS ARE RECORDS ROWS. Nothing serves substrateGap since development-vessel left the image, so a gap a
+# detector here filed went nowhere. The substrateGap / substrateGap_write protocol the callers speak is kept and
+# translated at this one point into rows of shape gap in records (record_write and record_read by shape, through
+# discovery, under this node's key), with role detector. A gap's state is its latest row by gap_id: a repeat with the
+# same status, summary and metadata writes nothing, and closing is a new row. Sizes are bounded: summary 2 KiB,
+# metadata 4 KiB (past that, cut and marked). Only rows with role detector are read back.
+# NOT read by lib/gap-tracked-red.sh: under the node key any vessel can declare role detector, so these rows must not
+# exempt a failing test from the gate until records can tell this writer apart.
+gap_resolve() { # <pointer json> [curl args...]: answers as the old store did ({body:{gaps:[...]}})
+  local _g_ptr="$1" _g_type _g_rows _g_code=200 _g_out _g_row; shift
+  _g_type="$(printf '%s' "$_g_ptr" | jq -r '.type')"
+  shape_route record_read; [ "$SR_ROUTE" = served ] || return 7
+  _g_post() {
+    { if [ -n "${METABOB_API_KEY:-}" ]; then printf 'header = "Authorization: ApiKey %s"\n' "$METABOB_API_KEY"; fi; } \
+      | curl -K - -s --max-time 30 -X POST "$DISCOVERY/resolve" -H 'Content-Type: application/json' -d "$1"
+  }
+  _g_rows="$(_g_post '{"pointer":{"type":"record_read","shape":"gap"}}' | jq -c '
+    (if type == "array" then . else (.content // []) end)
+    | map(select(.role == "detector")) | group_by(.gap_id) | map(max_by(.seq))
+    | map(del(.shape, .id, .seq, .t, .writer, .role, .input_refs) + {id: .gap_id, classification_metadata: (.meta // {})} | del(.gap_id, .meta))' 2>/dev/null)"
+  [ -n "$_g_rows" ] || return 7
+  if [ "$_g_type" = substrateGap ]; then
+    _g_out="$(printf '%s' "$_g_rows" | jq -c --argjson p "$_g_ptr" '
+      map(select(($p.status // null) == null or .status == $p.status) | select(($p.id // null) == null or .id == $p.id))
+      | .[: ($p.limit // 5000)] | {body: {gaps: .}}')"
+  else
+    _g_row="$(printf '%s' "$_g_ptr" | jq -c '.gap as $g
+      | ($g.classification_metadata // {}) as $m | ($m | tostring) as $ms
+      | ($g | del(.id, .summary, .classification_metadata, .shape, .seq, .t, .writer, .role, .input_refs)) as $rest
+      | {shape: "gap", gap_id: $g.id, status: ($g.status // "open"), summary: (($g.summary // "") | .[:2048]),
+         meta: (if ($ms | length) <= 4096 then $m else {cut: true, bytes: ($ms | length), start: $ms[:4096]} end)}
+      | if ($rest | tostring | length) <= 1024 then $rest + . else . end')"
+    if printf '%s' "$_g_rows" | jq -e --argjson r "$_g_row" '
+        map(select(.id == $r.gap_id)) | .[0] // null
+        | . != null and .status == $r.status and .summary == $r.summary and .classification_metadata == $r.meta' >/dev/null 2>&1; then
+      _g_out='{"body":{"ok":true,"unchanged":true}}'
+    else
+      _g_out="$(_g_post "$(jq -cn --argjson r "$_g_row" '{pointer: {type: "record_write", row: $r, writer: "pull-sync", role: "detector"}}')" \
+        | jq -c 'if .id then {body: {ok: true, row: .id}} else {body: {ok: false}} end' 2>/dev/null)"
+      printf '%s' "$_g_out" | jq -e '.body.ok' >/dev/null 2>&1 || _g_code=502
+    fi
+  fi
+  printf '%s' "$_g_out"
+  case " $* " in *'%{http_code}'*) printf '\n%s' "$_g_code" ;; esac
+}
 dev_resolve() {
   local _dr_body="$1" _dr_ptr _dr_route _dr_url; shift
   _dr_ptr="$(printf '%s' "$_dr_body" | jq -c '.impulse.pointer // .impulse' 2>/dev/null)"
+  case "$(printf '%s' "$_dr_ptr" | jq -r '.type // empty' 2>/dev/null)" in
+    substrateGap|substrateGap_write) gap_resolve "$_dr_ptr" "$@"; return ;;
+  esac
   shape_route "$(printf '%s' "$_dr_ptr" | jq -r '.type // empty' 2>/dev/null)"; _dr_route="$SR_ROUTE"
   [ "$_dr_route" = served ] || return 7
   _dr_url="$DISCOVERY/resolve"; _dr_body="{\"pointer\":$_dr_ptr}"

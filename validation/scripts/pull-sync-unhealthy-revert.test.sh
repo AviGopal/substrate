@@ -71,7 +71,11 @@ cat > "$T/stub/curl" <<EOF
 #!/usr/bin/env bash
 echo "curl \$*" >> "$CALLS"
 # A stand-in discovery: it names a producer for every shape, so pull-sync's by-shape calls (shape_route) are made and recorded.
-case "\$*" in *vesselCapability*) printf '{"content":{"vessels":[{"vesselId":"store"}]}}'; exit 0 ;; esac
+case "\$*" in *vesselCapability*) printf '{"content":{"vessels":[{"vesselId":"store"}]}}'; exit 0 ;;
+  # A stand-in records: gaps are rows (gap_resolve) read before they are written.
+  *record_read*) printf '[]'; exit 0 ;;
+  *record_write*) printf '{"id":"row-1"}'; exit 0 ;;
+esac
 case "\$*" in
   */health*) [ ! -e "$T/dep-down" ] && grep -q 'x = 1' "$R/src/x.ts" 2>/dev/null && printf 200 || printf 503; exit 0 ;;
 esac
@@ -169,7 +173,7 @@ grep -q "drift-quarantine" "$CALLS" && bad "(d) the revert tree was quarantined 
 
 # ── (e) forced mismatch: a mirror that ships HEAD anyway ───────────────────────
 setup "$T/lying-mirror"; run
-gap="$(grep -o "\"id\":\"pull-sync-revert-failed-$V\"" "$CALLS" | head -1)"
+gap="$(grep -o "\"gap_id\":\"pull-sync-revert-failed-$V\"" "$CALLS" | head -1)"
 [ -n "$gap" ] && ok "(e) the mismatch files gap pull-sync-revert-failed-$V" || { bad "(e) no revert-failed gap"; show; }
 grep -q "revert FAILED" "$OUT" && ok "(e) the log says revert FAILED" || bad "(e) the log does not say revert FAILED"
 grep -q "reverted to" "$OUT" && bad "(e) the log claims a revert that did not happen" || ok "(e) no 'reverted to' claim"

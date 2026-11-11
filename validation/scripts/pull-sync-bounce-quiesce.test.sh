@@ -90,6 +90,9 @@ echo "curl \$*" >> "$CALLS"
 case "\$*" in
   # A stand-in discovery: every shape is served, so pull-sync's by-shape calls are made.
   *vesselCapability*) printf '{"content":{"vessels":[{"vesselId":"store"}]}}'; exit 0 ;;
+  # A stand-in records: gaps are rows (gap_resolve) read before they are written.
+  *record_read*) printf '[]'; exit 0 ;;
+  *record_write*) printf '{"id":"row-1"}'; exit 0 ;;
   # A tuning read goes by shape through discovery: {"pointer":{"type":"tuning_param","name":...}}.
   *'"type":"tuning_param"'*) n="\$(printf '%s' "\$*" | sed -n 's/.*"name":"\([^"]*\)".*/\1/p')"
              case " \$* " in *" -K - "*) cat >> "$T/curlcfg" ;; esac

@@ -196,4 +196,14 @@ for (const model of CHANNEL_MODELS) {
 }
 for (const s of SCHEMAS) await ensure({ shape: "shape_schema", ...s }, { target: s.target }, `shape_schema ${s.target}`);
 await ensure({ shape: "arm", vessel_id: "walk-vessel", arm: "treated", as_of_seq: MAX_SEQ }, { vessel_id: "walk-vessel" }, "arm walk-vessel");
+// What a detector's gap row is. A description, not a shape_schema: described-shape serves every schema target from a
+// model, and a gap must only ever be an observation a detector made. records holds shape_description as owner
+// configuration, never a request.
+await ensure({
+  shape: "shape_description", of: "gap", written_by_role: "detector",
+  description: "A check a detector made failed (or, with status closed, has stopped failing). gap_id names the failure " +
+    "and stays the same while it lasts; status is open or closed; category and severity say what kind and how bad; " +
+    "summary says what failed, in at most 2 KiB; meta carries what the detector measured (cut past 4 KiB). The latest " +
+    "row for a gap_id, written by a detector, is its state: a gap closes by a later row, never by an edit.",
+}, { of: "gap" }, "shape_description gap");
 console.log("[walk-owner-seed] owner rows in place");

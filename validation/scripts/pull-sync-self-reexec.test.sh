@@ -54,7 +54,11 @@ cat > "$T/stub/curl" <<EOF
 #!/usr/bin/env bash
 echo "curl \$*" >> "$CALLS"
 # A stand-in discovery: it names a producer for every shape, so pull-sync's by-shape calls (shape_route) are made and recorded.
-case "\$*" in *vesselCapability*) printf '{"content":{"vessels":[{"vesselId":"store"}]}}'; exit 0 ;; esac
+case "\$*" in *vesselCapability*) printf '{"content":{"vessels":[{"vesselId":"store"}]}}'; exit 0 ;;
+  # A stand-in records: gaps are rows (gap_resolve) read before they are written.
+  *record_read*) printf '[]'; exit 0 ;;
+  *record_write*) printf '{"id":"row-1"}'; exit 0 ;;
+esac
 exit 7
 EOF
 # The no-loop leg: an install that never lands a byte-identical pull-sync.
@@ -129,7 +133,7 @@ grep -q 're-executing this tick' "$T/out.txt" && bad "no re-exec: it re-executed
 [ ! -e "$T/etc/env.d/new.env" ] && ok "no re-exec: the old code renders nothing" || bad "no re-exec: env.d/new.env exists (fixture does not replay the bug)"
 [ ! -e "$T/unit/new.service" ] && ok "no re-exec: new.service is NOT installed" || bad "no re-exec: new.service installed without its EnvironmentFile"
 grep -q "REFUSED new.service .*env.d/new.env" "$T/out.txt" && ok "no re-exec: the refusal is logged with the missing path" || { bad "no re-exec: no refusal logged"; show; }
-grep -q "\"id\":\"$GAP_ID\"" "$CALLS" && ok "no re-exec: gap $GAP_ID filed" || bad "no re-exec: no gap with the stable id"
+grep -q "\"gap_id\":\"$GAP_ID\"" "$CALLS" && ok "no re-exec: gap $GAP_ID filed" || bad "no re-exec: no gap with the stable id"
 cmp -s "$T/unit/optional.service" "$T/seed/super/scripts/substrate/units/optional.service" && ok "no re-exec: a '-' EnvironmentFile unit still installs" || bad "no re-exec: the optional unit was not installed"
 # The refusal is per tick, not a latch: once the file exists the unit installs.
 mkdir -p "$T/etc/env.d"; : > "$T/etc/env.d/new.env"; run "" PULLSYNC_REEXECED=1

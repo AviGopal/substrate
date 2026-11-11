@@ -17,6 +17,7 @@ ok()  { echo "ok   - $*"; }
 bad() { echo "FAIL - $*"; FAILS=$((FAILS+1)); }
 {
   sed -n '/^shape_route() {/,/^}/p' "$SCRIPT"
+  sed -n '/^gap_resolve() {/,/^}/p' "$SCRIPT"
   sed -n '/^dev_resolve() {/,/^}/p' "$SCRIPT"
   sed -n '/^tuning_param() {/,/^}/p' "$SCRIPT"
 } > "$T/fns.sh"
@@ -42,17 +43,17 @@ source "$T/fns.sh"
 fresh() { SHAPE_ROUTES=" "; TP_FALLBACK_SEEN=" "; : > "$LOG"; : > "$CALLS"; }
 
 fresh; CAP='{"content":{"vessels":[]}}'
-dev_resolve '{"impulse":{"pointer":{"type":"substrateGap","status":"open"}}}' --max-time 5 > "$T/out1"; rc1=$?
-dev_resolve '{"impulse":{"pointer":{"type":"substrateGap","id":"g1"}}}' --max-time 5 > "$T/out2"; rc2=$?
+dev_resolve '{"impulse":{"pointer":{"type":"poolImpulse","status":"open"}}}' --max-time 5 > "$T/out1"; rc1=$?
+dev_resolve '{"impulse":{"pointer":{"type":"poolImpulse","id":"g1"}}}' --max-time 5 > "$T/out2"; rc2=$?
 if [ "$rc1" = 7 ] && [ "$rc2" = 7 ] && [ ! -s "$T/out1" ] && [ "$(grep -vc vesselCapability "$CALLS")" = 0 ] \
   && [ "$(grep -c vesselCapability "$CALLS")" = 1 ] \
-  && [ "$(grep -c 'no producer serves substrateGap' "$LOG")" = 1 ]; then
+  && [ "$(grep -c 'no producer serves poolImpulse' "$LOG")" = 1 ]; then
   ok "(a) nothing serves the shape: no call made, failed as unreachable, named once per tick"
 else bad "(a) rc=$rc1/$rc2 calls=$(tr '\n' '|' < "$CALLS") log=$(tr '\n' '|' < "$LOG")"; fi
 
 fresh; CAP='{"content":{"vessels":[{"vesselId":"v"}]}}'
-dev_resolve '{"impulse":{"pointer":{"type":"substrateGap","status":"open"}}}' --max-time 5 > /dev/null
-if grep -q 'http://discovery.test/resolve' "$CALLS" && grep -q '{"pointer":{"type":"substrateGap","status":"open"}}' "$CALLS" \
+dev_resolve '{"impulse":{"pointer":{"type":"poolImpulse","status":"open"}}}' --max-time 5 > /dev/null
+if grep -q 'http://discovery.test/resolve' "$CALLS" && grep -q '{"pointer":{"type":"poolImpulse","status":"open"}}' "$CALLS" \
   && ! grep -q 'dev.test' "$CALLS"; then
   ok "(b) a served shape goes by shape through discovery's /resolve"
 else bad "(b) calls=$(tr '\n' '|' < "$CALLS")"; fi

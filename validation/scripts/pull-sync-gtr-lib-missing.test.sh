@@ -107,7 +107,10 @@ snap() {
   git -C "$T/ws/git/super-repo" rev-parse HEAD 2>/dev/null
 }
 # A gap write goes by shape through discovery as {pointer}; the older dev-store form was {impulse: {pointer}}.
-gaps() { jq -c '(.pointer // .impulse.pointer) | select(.type? == "substrateGap_write") | .gap | select(.id | startswith("pull-sync-gap-tracked-red-lib-missing-"))' "$POSTS" 2>/dev/null; }
+# Gaps are now records rows (gap_resolve): a record_write of shape gap, read back here in the gap's own form.
+gaps() { jq -c '(.pointer // .impulse.pointer) | if .type? == "substrateGap_write" then .gap
+  elif .type? == "record_write" and .row.shape == "gap" then (.row as $r | $r | del(.shape, .gap_id, .meta) + {id: $r.gap_id, classification_metadata: $r.meta}) else empty end
+  | select(.id | startswith("pull-sync-gap-tracked-red-lib-missing-"))' "$POSTS" 2>/dev/null; }
 
 # ── missing: two no-op ticks, one bumped gap ───────────────────────────────────
 setup 0 0

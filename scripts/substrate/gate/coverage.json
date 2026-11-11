@@ -2384,7 +2384,7 @@
     },
     "/usr/local/bin/substrate-pull-sync": {
       "src": "scripts/substrate/substrate-pull-sync.sh",
-      "src_blob": "6dc969ace1e436abc46add86faa7f075b6d421f2",
+      "src_blob": "06b8eb2944bca40b75805de0976706c8932447a2",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -2393,7 +2393,7 @@
       "evidence": {
         "accepted": "ac413feeaa16e68dde1a169a9d7748fd28d95ce8",
         "mutation": "insert `exit 99` after line 1",
-        "mutated_blob": "5dd33757e7da834a7898518e04f2569bf52fc304"
+        "mutated_blob": "1e76bd03e9fcd5fb032cd63e82039ded26363734"
       }
     },
     "/usr/local/bin/substrate-ready": {
@@ -2924,7 +2924,7 @@
     },
     "/usr/local/share/substrate/active-scripts/walk-owner-seed.ts": {
       "src": "scripts/substrate/walk-owner-seed.ts",
-      "src_blob": "a593ec6464b4c807c76981431ad36775e0ab6a01",
+      "src_blob": "15ad2c8b7f8a28f0d42152b81c827f235ada395f",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -2933,12 +2933,12 @@
       "evidence": {
         "accepted": "ba2a622b413e1612436a28a328be9fa44b0b8784",
         "mutation": "insert `exit 99` after line 1",
-        "mutated_blob": "062fa0090393588255e8d6c9c372c0a1f45e804f"
+        "mutated_blob": "48ec37f2b3ef67e7e5e3d903d0e1d4f34d34d5da"
       }
     },
     "/vessels/walk-owner-seed.ts": {
       "src": "scripts/substrate/walk-owner-seed.ts",
-      "src_blob": "a593ec6464b4c807c76981431ad36775e0ab6a01",
+      "src_blob": "15ad2c8b7f8a28f0d42152b81c827f235ada395f",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -2947,7 +2947,7 @@
       "evidence": {
         "accepted": "ba2a622b413e1612436a28a328be9fa44b0b8784",
         "mutation": "insert `exit 99` after line 1",
-        "mutated_blob": "062fa0090393588255e8d6c9c372c0a1f45e804f"
+        "mutated_blob": "48ec37f2b3ef67e7e5e3d903d0e1d4f34d34d5da"
       }
     },
     "/usr/lib/systemd/system/records-vessel.service.d/50-restart-with-deps.conf": {
