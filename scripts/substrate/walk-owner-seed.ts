@@ -4,8 +4,8 @@
 // The walk runs on what a standard installation provides, so the owner rows the spec has a person write come from
 // here, under the node key every vessel uses (METABOB_API_KEY). records treats the node's own key as node-self and
 // takes the writer and role it declares; this script declares owner. It runs after records-vessel and before
-// described-shape-vessel and walk-vessel (walk-owner-seed.service): described-shape reads the shape_schema targets
-// once at start, and the walk waits for its own arm row.
+// described-shape-vessel and walk-vessel (walk-owner-seed.service): described-shape registers the shape_schema targets
+// at start and reads each target's newest schema on every produce, and the walk waits for its own arm row.
 //
 // Idempotent: each row is written only when records holds no row that already says the same thing, so a reboot
 // writes nothing new. Every row goes through discovery's /resolve by shape, which places it, as the walk vessels'
@@ -116,8 +116,7 @@ const SCHEMAS: Row[] = [
     target: "activity_template",
     description: "A reusable template of the calls that led to the outcome row: sig.in and sig.out are the shapes it " +
       "consumes and produces, and calls lists each call in order: its shape, and in pointer the arguments that call " +
-      "takes. A hop row is the record of a call, not a shape to call: the shape a hop called is its pointer_type. " +
-      "Every call's shape must be one of the shapes in reads, and its pointer must fill that shape's shape_inputs. " +
+      "takes. Every call's shape must be one of the shapes in reads, and its pointer must fill that shape's shape_inputs. " +
       JSON_ONLY,
     schema: {
       type: "object",
