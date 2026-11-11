@@ -63,11 +63,14 @@ const SCHEMAS: Row[] = [
   {
     target: "outcome",
     // records derives the graded cells from the row evidence_refs names, so nothing is copied from a selection.
-    // A request that lapsed (reads lists its due row: past its time, unanswered, ungraded) is graded too, as r 0.
-    description: "How the world_changed row's request went. If there is an answer row, r is 1 when it does what " +
-      "`what` asks, correctly and completely, and 0 when not, and evidence_refs holds the answer row's id. If there is " +
-      "no answer row and reads lists a due row of this request, the request lapsed: r is 0 and evidence_refs holds " +
-      `that due row's id. event_ref is the world_changed row's id. ${JSON_ONLY}`,
+    // A lapse comes first: reads lists a request's FIRST due row once it has passed with no person's verdict, answered
+    // or not (records lapsed()). With answers present the answer branch used to win, so a passed deadline was never
+    // graded and the request never closed. A lapse r 0 is a fact about time, not a judgement of the answer.
+    description: "How the world_changed row's request went. First: if reads lists a due row of this request, its " +
+      "deadline passed with no person's verdict, so the request lapsed: r is 0 and evidence_refs holds that due row's " +
+      "id, whether or not an answer row exists. Otherwise, if there is an answer row, r is 1 when it does what `what` " +
+      "asks, correctly and completely, and 0 when not, and evidence_refs holds the answer row's id. event_ref is the " +
+      `world_changed row's id. ${JSON_ONLY}`,
     schema: {
       type: "object",
       required: ["event_ref", "r", "evidence_refs"],
