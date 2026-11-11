@@ -115,8 +115,10 @@ const SCHEMAS: Row[] = [
   {
     target: "activity_template",
     description: "A reusable template of the calls that led to the outcome row: sig.in and sig.out are the shapes it " +
-      `consumes and produces, and calls lists each call in order: its shape, and in pointer the arguments that call ` +
-      `takes. ${JSON_ONLY}`,
+      "consumes and produces, and calls lists each call in order: its shape, and in pointer the arguments that call " +
+      "takes. A hop row is the record of a call, not a shape to call: the shape a hop called is its pointer_type. " +
+      "Every call's shape must be one of the shapes in reads, and its pointer must fill that shape's shape_inputs. " +
+      JSON_ONLY,
     schema: {
       type: "object",
       required: ["sig", "calls"],
@@ -133,10 +135,11 @@ const SCHEMAS: Row[] = [
     },
     inputs: ["outcome"],
     context: ["hop"],
+    // The callable shapes and their inputs, as the request reads them (discovery resolvers.ts, declared: true).
+    reads: [{ type: "shapeDescriptions", declared: true }],
   },
 ];
 
-// A channel names a shape and its arguments; discovery places each call, so the row holds no address.
 // Wait until records answers through discovery before writing anything. At boot this runs before records has
 // registered, and discovery answers 404 for a shape no vessel serves yet. Failing then failed the walk and described
 // units that Require this one, and systemd never started them again when the next try succeeded. So a 404 or a
@@ -153,6 +156,7 @@ for (const deadline = Date.now() + READY_WAIT_MS; ; ) {
   }
 }
 
+// A channel names a shape and its arguments; discovery places each call, so the row holds no address.
 for (const model of CHANNEL_MODELS) {
   const calls = [{
     pointer: { type: "llm_completion", model },
