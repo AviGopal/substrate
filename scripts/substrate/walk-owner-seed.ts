@@ -91,14 +91,21 @@ const SCHEMAS: Row[] = [
       "resolve, and pointer's other fields are its arguments. The shapes you can call are in reads: shape_descriptions " +
       "says what each does, and shape_inputs gives the JSON Schema of the fields its pointer takes; fill every required " +
       "one. A hop row shows what an earlier call returned, so ask for the step after it, not the same call again; a " +
-      `failure row says why one did not. ${JSON_ONLY}`,
+      "failure row says why one did not. If the ask is already done, or needs no call, write {\"none\": \"<why>\"} " +
+      "instead of a pointer. An ask that changes something is done only when a hop row shows the change landed (a " +
+      "git_land call that ended); an answer graded r 1 without that does not do it, so ask for the next call. " + JSON_ONLY,
+    // A request either names the next call or declines (none); the walk reads a request without a pointer as a decline.
     schema: {
       type: "object",
-      required: ["pointer"],
-      properties: { pointer: { type: "object", required: ["type"], properties: { type: { type: "string", minLength: 1 } } } },
+      anyOf: [{ required: ["pointer"] }, { required: ["none"] }],
+      properties: {
+        pointer: { type: "object", required: ["type"], properties: { type: { type: "string", minLength: 1 } } },
+        none: { type: "string", minLength: 1 },
+      },
     },
     inputs: ["world_changed"],
-    context: ["hop", "failure"],
+    // The answer and its grade are here so the producer can see the ask is done; the hops show whether a change landed.
+    context: ["hop", "failure", "answer", "outcome"],
     // declared: only shapes whose producer declared their inputs, the ones a request can fill (discovery resolvers.ts).
     reads: [{ type: "shapeDescriptions", declared: true }],
   },
@@ -107,15 +114,19 @@ const SCHEMAS: Row[] = [
     // within_ms is the deadline: a producer has no clock, so records sets at = its own t + within_ms, replacing any at
     // given. `at` stays required because the accepted gate fixture asks for it; a due without within_ms is never a
     // deadline to records, and the walk bounds its waits by the `at` records sets.
-    description: "How long the world_changed row's `what` may take to settle: within_ms is a duration in " +
-      "milliseconds, from 60000 (one minute) to 1800000 (30 minutes), and records sets the deadline from its own " +
-      `clock. at may be 0: records replaces it. ${JSON_ONLY}`,
+    description: "How long the person who asked may take to see the result and grade it: the work still to do (a " +
+      "change takes several calls: a clone, edits, a commit, a diff, a verdict, a landing) plus their reading time. " +
+      "reads lists the grades people gave before, each with its time (t) and what it judged, which is how long they " +
+      "took. within_ms is a duration in milliseconds, from 60000 (one minute) to 86400000 (a day), and records sets " +
+      `the deadline from its own clock. at may be 0: records replaces it. ${JSON_ONLY}`,
     schema: {
       type: "object",
       required: ["at"],
-      properties: { at: { type: "number" }, within_ms: { type: "number", minimum: 60000, maximum: 1800000 } },
+      properties: { at: { type: "number" }, within_ms: { type: "number", minimum: 60000, maximum: 86400000 } },
     },
     inputs: ["world_changed"],
+    // What people took before: their grades, each with its time and what it judged (the evidence for a deadline).
+    reads: [{ type: "record_read", shape: "outcome", where: { role: "person" } }],
   },
   {
     target: "land_verdict",
