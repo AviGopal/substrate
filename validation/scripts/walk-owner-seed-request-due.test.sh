@@ -19,7 +19,8 @@
 #   (l) the seeder run again writes no schema or precondition row: each is its own row, kept by an exact match;
 #   (m) whether an ask wants a change is judged from the ask alone (change_wanted: inputs [world_changed], no context,
 #       wanted boolean), and every call that changes something requires a wanted change or an open gap;
-#   (n) walk_trees_reclaim, which removes clones, is called only for the open walk-trees gap's own root.
+#   (n) walk_trees_reclaim, which removes clones, is called only for the open walk-trees gap's own root;
+#   (m, n) a gap requirement reads each gap by its own latest row (latest_by gap_id).
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 SEED="$ROOT/scripts/substrate/walk-owner-seed.ts"
@@ -110,7 +111,8 @@ leg(!!fromGap && JSON.stringify(fromGap.inputs) === JSON.stringify(["gap"]) && s
 leg(again === 0 && schemaRowsAfter === schemaRows, `(l) the seeder run again writes no schema or precondition row (${schemaRows} then ${schemaRowsAfter})`);
 const cw = rows.find((r) => r.shape === "shape_schema" && r.target === "change_wanted");
 const tools = ["git_worktree", "fs_edit", "fs_write", "code_replace_lines", "code_insert_after_line", "code_add_import", "git_commit", "git_land"];
-const pre = (tool: string, needs: string, where: Row) => rows.some((r) => r.shape === "requires" && r.for === tool && r.needs === needs && JSON.stringify(r.where) === JSON.stringify(where));
+const pre = (tool: string, needs: string, where: Row) => rows.some((r) => r.shape === "requires" && r.for === tool && r.needs === needs && JSON.stringify(r.where) === JSON.stringify(where)
+  && (needs !== "gap" || r.latest_by === "gap_id"));
 leg(!!cw && JSON.stringify(cw.inputs) === JSON.stringify(["world_changed"]) && JSON.stringify(cw.context) === "[]"
   && cw.schema?.properties?.wanted?.type === "boolean" && (cw.schema?.required ?? []).includes("wanted")
   && tools.every((t) => pre(t, "change_wanted", { wanted: true }) && pre(t, "gap", { status: "open" })),

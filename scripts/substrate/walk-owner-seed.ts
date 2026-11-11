@@ -245,15 +245,16 @@ for (const s of SCHEMAS) {
 
 // The calls that change something are made only for a root that wants a change: an ask judged to want one, or a gap a
 // detector opened (its check failing is the change wanted). The walk reads these rows where it chooses (records shares
-// them with every root); the tools are named here, by the owner, not in the walk.
+// them with every root); the tools are named here, by the owner, not in the walk. Each gap speaks for itself, so a gap
+// requirement reads the latest row of each gap_id (latest_by), never another gap's.
 const CHANGE_TOOLS = ["git_worktree", "fs_edit", "fs_write", "code_replace_lines", "code_insert_after_line", "code_add_import", "git_commit", "git_land"];
 for (const tool of CHANGE_TOOLS) {
   await ensure({ shape: "requires", for: tool, needs: "change_wanted", where: { wanted: true } }, { for: tool, needs: "change_wanted" }, `requires ${tool} change_wanted`);
-  await ensure({ shape: "requires", for: tool, needs: "gap", where: { status: "open" } }, { for: tool, needs: "gap" }, `requires ${tool} gap`);
+  await ensure({ shape: "requires", for: tool, needs: "gap", where: { status: "open" }, latest_by: "gap_id" }, { for: tool, needs: "gap" }, `requires ${tool} gap`);
 }
 // walk_trees_reclaim removes clones: it is called only for the root of the gap whose work it is (pull-sync's walk-trees
 // check), while that gap is open.
-await ensure({ shape: "requires", for: "walk_trees_reclaim", needs: "gap", where: { gap_id: "pull-sync-walk-trees-unreclaimed", status: "open" } },
+await ensure({ shape: "requires", for: "walk_trees_reclaim", needs: "gap", where: { gap_id: "pull-sync-walk-trees-unreclaimed", status: "open" }, latest_by: "gap_id" },
   { for: "walk_trees_reclaim", needs: "gap" }, "requires walk_trees_reclaim gap");
 await ensure({ shape: "arm", vessel_id: "walk-vessel", arm: "treated", as_of_seq: MAX_SEQ }, { vessel_id: "walk-vessel" }, "arm walk-vessel");
 // What a detector's gap row is. A description, not a shape_schema: described-shape serves every schema target from a
