@@ -7,7 +7,7 @@
 # STDOUT CARRIES ONLY A POSIX sh SCRIPT. It runs README § Installation's sequence and
 # nothing else: write the launch manifest and a `.env` of install inputs into a fleet
 # directory, `compose up -d`, wait for `seeded`, write the client config from
-# substrate-connect, then wait for the requested level (default `usable`). It derives
+# substrate-connect, then wait for the requested level (default `served`). It derives
 # nothing the image derives (role, endpoints, key requirement, secrets); the image
 # still judges every input at boot.
 #
@@ -69,7 +69,8 @@ Prints an installer for this image. Pipe it to sh; options go after `sh -s --`.
   --prefix <nn>            host port prefix, ports <nn>xxx (SUBSTRATE_PORT_PREFIX)
   --dir <path>             fleet directory (default ./<name>)
   --engine docker|podman   container engine (default: the first whose compose answers)
-  --wait <level>           live | seeded | served | usable | none (default usable)
+  --wait <level>           live | seeded | served | usable | none (default served; usable
+                           needs the walk to answer a known-answer request)
   --no-connect             do not write the client configuration
   --adopt                  keep the existing volumes of this name: move a fleet launched
                            another way onto the manifest (remove its container first;
@@ -109,7 +110,7 @@ cat <<'EOF'
 say() { printf '[install] %s\n' "$*" >&2; }
 die() { say "$*"; exit 1; }
 
-engine=""; dir=""; wait_level=usable; connect=1; adopt=0; recreate_flag=0
+engine=""; dir=""; wait_level=served; connect=1; adopt=0; recreate_flag=0
 set_name=""; set_prefix=""; set_profile=""; set_public_ip=""; set_join=""; set_key=""
 while [ $# -gt 0 ]; do
   case "$1" in

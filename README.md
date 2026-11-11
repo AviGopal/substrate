@@ -297,10 +297,10 @@ Then run the `claude mcp add …` line it printed (the cockpit needs node/npx an
 a first cockpit call (for example `registry_query`), and read the full verdict:
 
 ```bash install:standalone
-# Waits for `usable`: a pull-sync convergence right after install reads as waiting, not as a
-# failure. The exit status reflects `usable`. `connected` passes once a cockpit call has
-# reached the fleet, and reads `unknown` before that.
-docker exec substrate-live substrate-status --wait usable
+# Waits for `served`: a pull-sync convergence right after install reads as waiting, not as a
+# failure. The exit status reflects `served`. `usable` and `connected` dispatch a known-answer
+# goal, and fail until the walk answers a known-answer request.
+docker exec substrate-live substrate-status --wait served
 ```
 
 The image prints the installer, and `sh` runs it on the host. It runs the manual sequence
@@ -342,7 +342,7 @@ mkdir -p ~/.substrate
 # merged on the host, never overwritten: the config's other keys are kept and none of it enters the container
 # the merge also keeps ~/.metabob/config.json as a link to this file, for the cockpit
 docker exec substrate-live substrate-connect --merge-script | bash -s -- ~/.substrate/config.json docker exec substrate-live substrate-connect --values
-docker exec substrate-live substrate-status --wait usable
+docker exec substrate-live substrate-status --wait served
 ```
 
 #### B. Hub
