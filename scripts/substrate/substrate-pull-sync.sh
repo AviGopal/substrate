@@ -827,6 +827,66 @@ gen_failing_test_gaps() {
   return 0
 }
 
+# THE GENERATOR'S CLOSER. A gap the generator opened stays open until a row says its check passed, and nothing else
+# wrote that row: the falsifier that re-ran evidence_resolve left with development-vessel. So a fixed test stayed an
+# open gap forever, and records works an open detector gap as a request: the walk would never stop working it.
+# For each of this vessel's open generator gaps, the gap's own check runs here as the generator ran it before filing
+# (the test file ALONE, under the same scrubbed env and bounds): when every name the gap checks prints "(pass)" and
+# none "(fail)", a closed row is filed under the same id. A run with no bun summary, or any name not passing, closes
+# nothing. Runs only for a vessel the gate just tested (the generator's queue), so a landed fix is seen on the next
+# tick; at most the cap it is given (its fourth argument, 3 when none) per vessel, within the generator's deadline. So that a gap behind ones that stay
+# red is ever run, each run is remembered with the vessel HEAD it ran at (in $v.closer beside the generator's
+# baseline): a gap already run at this HEAD is not run again until HEAD moves, and the rest go least recently run
+# first. A test file several gaps check runs once per call.
+close_failing_test_gaps() {
+  local v="$1" head="$2" dir="${3:-}" cap="${4:-3}" st gaps g id tf names ar ao n=0 seen runs="{}"
+  command -v jq >/dev/null 2>&1 || return 0
+  [ -n "$dir" ] && [ -n "${BUN_BIN:-}" ] || return 0
+  seen="${TEST_BASELINE_DIR:-/workspace/.test-baseline}/$v.closer"
+  jq -e 'type == "object"' "$seen" >/dev/null 2>&1 || printf '{}' > "$seen" 2>/dev/null || true
+  st="$(mktemp "${TMPDIR:-/tmp}/pullsync-close-XXXXXX")" || return 0
+  dev_resolve '{"impulse":{"pointer":{"type":"substrateGap","status":"open","limit":5000}}}' --max-time 30 > "$st" 2>/dev/null || true
+  gaps="$(jq -c --arg v "$v" --arg head "${head:0:10}" --slurpfile seen "$seen" '[(.body.gaps // empty)[]
+    | select((.classification_metadata.filed_by? // "") == "pull-sync failing-test generator")
+    | select(.classification_metadata.evidence_resolve.shape? == "test_suite")
+    | select(((.classification_metadata.evidence_resolve.input.vessel // "") | sub("^repos/"; "")) == $v)
+    | {id, tf: .classification_metadata.evidence_resolve.input.test_file, names: (.classification_metadata.evidence_resolve.input.only_tests // [])}
+    | select((.tf // "") != "" and (.names | length) > 0)
+    | . + {last: (($seen[0] // {})[.id] // {at: 0, head: ""})}
+    | select(.last.head != $head)]
+    | sort_by(.last.at) | .[] | del(.last)' "$st" 2>/dev/null | head -n "$cap")"
+  rm -f "$st"
+  [ -n "$gaps" ] || return 0
+  while IFS= read -r g; do
+    [ -n "$g" ] || continue
+    if [ -n "${FAILTEST_GEN_DEADLINE:-}" ] && [ $(( $(date +%s) + 170 )) -gt "$FAILTEST_GEN_DEADLINE" ]; then log "$v: failing-test closer: tick budget spent; the rest wait for a later tick"; break; fi
+    id="$(printf '%s' "$g" | jq -r .id)"; tf="$(printf '%s' "$g" | jq -r .tf)"
+    [ -f "$dir/$tf" ] || { log "$v: failing-test closer: $tf is not in the checkout; $id left open"; continue; }
+    ao="$(printf '%s' "$runs" | jq -r --arg tf "$tf" '.[$tf] // empty')"
+    if [ -z "$ao" ]; then
+      ar="$(mktemp -d "${TMPDIR:-/tmp}/pullsync-close-alone-XXXXXX")"
+      ao="$(cd "$dir" && scrubbed_env "$ar" timeout --kill-after=15 150 "$BUN_BIN" test "./$tf" --timeout 20000 > "$ar.out" 2>&1; cat "$ar.out"; rm -f "$ar.out")"
+      ao="$(printf '%s\n' "$ao" | sed 's/\x1b\[[0-9;]*m//g; s/ \[[0-9.]*m*s\]$//; s/[[:space:]]*$//')"
+      rm -rf "$ar" 2>/dev/null
+      runs="$(printf '%s' "$runs" | jq -c --arg tf "$tf" --arg ao "$ao" '. + {($tf): $ao}')"
+    fi
+    jq -c --arg id "$id" --arg head "${head:0:10}" --argjson at "$(date +%s%N)" '. + {($id): {head: $head, at: $at}}' "$seen" > "$seen.new" 2>/dev/null && mv "$seen.new" "$seen"
+    if ! printf '%s\n' "$ao" | command grep -qE '^ *[0-9]+ (pass|fail)$'; then log "$v: failing-test closer: alone run of $tf produced no result; $id left open"; continue; fi
+    names="$(printf '%s' "$g" | jq -r --arg ao "$ao" '($ao | split("\n")) as $L
+      | [.names[] | select(("(pass) " + .) as $x | $L | index($x)) | select(("(fail) " + .) as $x | $L | index($x) | not)] as $ok
+      | if ($ok | length) == (.names | length) then "all" else "\($ok | length)/\(.names | length)" end')"
+    if [ "$names" != "all" ]; then log "$v: failing-test closer: $id still red alone ($names named tests pass); left open"; continue; fi
+    emit_gap "$(jq -cn --arg id "$id" --arg v "$v" --arg tf "$tf" --arg head "${head:0:10}" \
+      '{impulse:{pointer:{type:"substrateGap_write",gap:{id:$id,category:"failing_test",source:"substrate_detected",status:"closed",closed_reason:"named_tests_pass",
+        summary:("Every test this gap checks in repos/" + $v + "/" + $tf + " passes when the file runs alone, at " + $head + "."),
+        classification_metadata:{filed_by:"pull-sync failing-test generator",closed_at_head:$head}}}}}')"
+    log "$v: failing-test closer: closed $id (named tests pass alone at ${head:0:10})"
+    n=$((n + 1))
+  done <<< "$gaps"
+  [ "$n" -gt 0 ] && log "$v: failing-test closer: $n gap(s) closed this tick"
+  return 0
+}
+
 # A gap that fails to file is worse than no detector: the condition is real, the
 # log line claims "(substrateGap)", and nothing is queryable afterwards. Observed
 # the hub super-repo clone sat DIVERGED for hours, refusing every
@@ -5896,6 +5956,8 @@ while IFS='|' read -r gv gq gh gd; do
   [ -n "$gv" ] || continue
   gleft=$(( ${UNIT_TIMEOUT_S:-3600} - ( $(date +%s) - PULLSYNC_T0 ) - ${FAILTEST_GEN_MARGIN_S:-240} ))
   if [ "$gleft" -lt 200 ]; then log "$gv: failing-test generator deferred to a later tick (${gleft}s of tick budget left)"; rm -rf "$gq"; continue; fi
+  FAILTEST_GEN_DEADLINE=$(( $(date +%s) + gleft )) close_failing_test_gaps "$gv" "$gh" "$gd" || true
+  gleft=$(( ${UNIT_TIMEOUT_S:-3600} - ( $(date +%s) - PULLSYNC_T0 ) - ${FAILTEST_GEN_MARGIN_S:-240} ))
   FAILTEST_GEN_DEADLINE=$(( $(date +%s) + gleft )) gen_failing_test_gaps "$gv" "$(cat "$gq/out" 2>/dev/null)" "$gq/prev" "$gh" "$gd" || true
   rm -rf "$gq"
 done <<< "$GEN_QUEUE"
