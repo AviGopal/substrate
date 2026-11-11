@@ -101,7 +101,9 @@ const SCHEMAS: Row[] = [
       "(reads) are failures detectors found, each naming its repo and the failing check (a test file, which is not the " +
       "place to edit: the fix is in the source it checks). A gap whose row says operator_hold is held: leave it. A gap " +
       "with a later row of the same gap_id whose status is closed is already closed. To close an open one, ask for the " +
-      "next call toward closing it: first a clone of the repo the gap names. " + JSON_ONLY,
+      "next call toward closing it: first a clone of the repo the gap names. Every later call on that change (an edit, " +
+      "a commit, a diff, a landing) works in the clone: its cwd (or a path under it) is the cwd the clone's hop " +
+      "returned, never a repos/ path. " + JSON_ONLY,
     // A request either names the next call or declines (none); the walk reads a request without a pointer as a decline.
     schema: {
       type: "object",
@@ -228,4 +230,12 @@ await ensure({
     "summary says what failed, in at most 2 KiB; meta carries what the detector measured (cut past 4 KiB). The latest " +
     "row for a gap_id, written by a detector, is its state: a gap closes by a later row, never by an edit.",
 }, { of: "gap" }, "shape_description gap");
+// What a person reads of the rows the surface shows: each description's words name the fields (1 to 4) that say what
+// a row is, so the surface draws them from these rows instead of a list of its own.
+const SHOWN: Array<{ of: string; words: string[]; description: string }> = [
+  { of: "world_changed", words: ["what"], description: "Something a person or the owner asked for, in their own words (what)." },
+  { of: "answer", words: ["text"], description: "The walk's answer to a request (text)." },
+  { of: "outcome", words: ["r"], description: "A grade of how a request went: r is 1 when it did what was asked, 0 when not." },
+];
+for (const d of SHOWN) await ensure({ shape: "shape_description", ...d }, { of: d.of }, `shape_description ${d.of}`);
 console.log("[walk-owner-seed] owner rows in place");

@@ -10,7 +10,10 @@
 #   (f) the outcome grader is told an answer claiming a change with no ended git_land hop is r 0;
 #   (g) and it can see the hops it is told to check;
 #   (h) the request producer reads every gap row (open and closing alike), and is told a request names one next call
-#       toward closing one, first a clone; that a gap's test file is not where to edit; and that a held gap is left.
+#       toward closing one, first a clone; that a gap's test file is not where to edit; and that a held gap is left;
+#   (j) the request producer is told later calls on a change work in the cwd the clone's hop returned;
+#   (i) the owner describes what a person reads of world_changed, answer and outcome rows: words what, text, r; an
+#       older description already present without words is superseded by a later row.
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 SEED="$ROOT/scripts/substrate/walk-owner-seed.ts"
@@ -21,7 +24,9 @@ trap 'rm -rf "$W"' EXIT
 cp "$SEED" "$W/walk-owner-seed.ts"
 cat > "$W/drive.ts" <<'TS'
 type Row = Record<string, any>;
-const rows: Row[] = [];
+// A stale owner description already present (an older answer description, without words): the seeder must supersede
+// it with a later row, since readers take the latest row per shape it describes.
+const rows: Row[] = [{ shape: "shape_description", of: "answer", description: "older wording", id: "row-0", input_refs: [] }];
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { "Content-Type": "application/json" } });
 const server = Bun.serve({ hostname: "127.0.0.1", port: 0, async fetch(req) {
   const pointer = (((await req.json().catch(() => ({}))) as Row).pointer ?? {}) as Row;
@@ -76,6 +81,11 @@ leg(!!req && (req.reads ?? []).some((r: Row) => r.type === "record_read" && r.sh
   && String(req.description).includes("not the place to edit: the fix is in the source it checks")
   && String(req.description).includes("operator_hold is held: leave it"),
   "(h) the request producer sees every gap row and is told to ask one next call toward closing one");
+const words = (of: string) => rows.filter((r) => r.shape === "shape_description" && r.of === of).at(-1)?.words;
+leg(JSON.stringify([words("world_changed"), words("answer"), words("outcome")]) === JSON.stringify([["what"], ["text"], ["r"]]),
+  "(i) the owner's descriptions name the words a person reads: what, text, r (a stale one superseded by a later row)");
+leg(!!req && String(req.description).includes("the cwd the clone's hop returned, never a repos/ path"),
+  "(j) later calls on a change work in the clone's cwd, not a repos/ path");
 process.exit(failed === 0 ? 0 : 1);
 TS
 out="$(cd "$W" && "$BUN" "$W/drive.ts" 2>&1)"; rc=$?
