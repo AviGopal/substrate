@@ -220,6 +220,20 @@ for (const model of CHANNEL_MODELS) {
 }
 // A schema row may name a variant: another way to make the same target, from other inputs. A request can come from a
 // detector's gap as well as from a person's ask, with the same words and checks: the gap row carries its specifics.
+// Whether an ask wants a change at all, judged from the ask alone: nothing the walk has done is in view, so the
+// judgment cannot be steered by a call already planned.
+SCHEMAS.push({
+  target: "change_wanted",
+  description: "Whether the world_changed row's `what` asks for something to be changed (wanted true) or only to be read, " +
+    `found or answered (wanted false), and what says the change in a few words. ${JSON_ONLY}`,
+  schema: {
+    type: "object",
+    required: ["wanted"],
+    properties: { wanted: { type: "boolean" }, what: { type: "string" } },
+  },
+  inputs: ["world_changed"],
+  context: [],
+});
 const asked = SCHEMAS.find((s) => s.target === "request") as Row;
 SCHEMAS.push({ ...asked, variant: "gap", inputs: ["gap"] });
 // Each target and variant is its own row; the plain one is the variant "" (records matches it exactly, so a row
@@ -227,6 +241,15 @@ SCHEMAS.push({ ...asked, variant: "gap", inputs: ["gap"] });
 for (const s of SCHEMAS) {
   const variant = String(s.variant ?? "");
   await ensure({ shape: "shape_schema", ...s, variant }, { target: s.target, variant }, `shape_schema ${s.target}${variant ? `/${variant}` : ""}`);
+}
+
+// The calls that change something are made only for a root that wants a change: an ask judged to want one, or a gap a
+// detector opened (its check failing is the change wanted). The walk reads these rows where it chooses (records shares
+// them with every root); the tools are named here, by the owner, not in the walk.
+const CHANGE_TOOLS = ["git_worktree", "fs_edit", "fs_write", "code_replace_lines", "code_insert_after_line", "code_add_import", "git_commit", "git_land"];
+for (const tool of CHANGE_TOOLS) {
+  await ensure({ shape: "requires", for: tool, needs: "change_wanted", where: { wanted: true } }, { for: tool, needs: "change_wanted" }, `requires ${tool} change_wanted`);
+  await ensure({ shape: "requires", for: tool, needs: "gap", where: { status: "open" } }, { for: tool, needs: "gap" }, `requires ${tool} gap`);
 }
 await ensure({ shape: "arm", vessel_id: "walk-vessel", arm: "treated", as_of_seq: MAX_SEQ }, { vessel_id: "walk-vessel" }, "arm walk-vessel");
 // What a detector's gap row is. A description, not a shape_schema: described-shape serves every schema target from a

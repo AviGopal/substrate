@@ -16,7 +16,9 @@
 #       older description already present without words is superseded by a later row;
 #   (k) a request can also be made from a detector's gap: a second request row, variant gap, inputs [gap], with every
 #       other field (the words and checks) the same as the plain one;
-#   (l) the seeder run again writes no schema row: each target and variant is its own row, kept by an exact match.
+#   (l) the seeder run again writes no schema or precondition row: each is its own row, kept by an exact match;
+#   (m) whether an ask wants a change is judged from the ask alone (change_wanted: inputs [world_changed], no context,
+#       wanted boolean), and every call that changes something requires a wanted change or an open gap.
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 SEED="$ROOT/scripts/substrate/walk-owner-seed.ts"
@@ -50,9 +52,10 @@ const seed = async (): Promise<number> => {
   return code;
 };
 const code = await seed();
-const schemaRows = rows.filter((r) => r.shape === "shape_schema").length;
+const counted = () => rows.filter((r) => r.shape === "shape_schema" || r.shape === "requires").length;
+const schemaRows = counted();
 const again = await seed();
-const schemaRowsAfter = rows.filter((r) => r.shape === "shape_schema").length;
+const schemaRowsAfter = counted();
 server.stop(true);
 let failed = 0;
 const leg = (ok: boolean, what: string) => { console.log(`${ok ? "ok  " : "FAIL"} - ${what}`); if (!ok) failed++; };
@@ -103,7 +106,14 @@ const sameExcept = (a: Row | undefined, b: Row | undefined): boolean => !!a && !
 leg(!!fromGap && JSON.stringify(fromGap.inputs) === JSON.stringify(["gap"]) && sameExcept(fromGap, req)
   && JSON.stringify(req?.inputs) === JSON.stringify(["world_changed"]),
   "(k) a request can be made from a detector's gap: variant gap, inputs [gap], the same words and checks as the plain one");
-leg(again === 0 && schemaRowsAfter === schemaRows, `(l) the seeder run again writes no schema row (${schemaRows} then ${schemaRowsAfter})`);
+leg(again === 0 && schemaRowsAfter === schemaRows, `(l) the seeder run again writes no schema or precondition row (${schemaRows} then ${schemaRowsAfter})`);
+const cw = rows.find((r) => r.shape === "shape_schema" && r.target === "change_wanted");
+const tools = ["git_worktree", "fs_edit", "fs_write", "code_replace_lines", "code_insert_after_line", "code_add_import", "git_commit", "git_land"];
+const pre = (tool: string, needs: string, where: Row) => rows.some((r) => r.shape === "requires" && r.for === tool && r.needs === needs && JSON.stringify(r.where) === JSON.stringify(where));
+leg(!!cw && JSON.stringify(cw.inputs) === JSON.stringify(["world_changed"]) && JSON.stringify(cw.context) === "[]"
+  && cw.schema?.properties?.wanted?.type === "boolean" && (cw.schema?.required ?? []).includes("wanted")
+  && tools.every((t) => pre(t, "change_wanted", { wanted: true }) && pre(t, "gap", { status: "open" })),
+  "(m) change_wanted is judged from the ask alone, and every change tool requires a wanted change or an open gap");
 process.exit(failed === 0 ? 0 : 1);
 TS
 out="$(cd "$W" && "$BUN" "$W/drive.ts" 2>&1)"; rc=$?
