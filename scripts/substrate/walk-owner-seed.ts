@@ -80,12 +80,17 @@ const SCHEMAS: Row[] = [
       properties: {
         event_ref: { type: "string", minLength: 1 },
         r: { enum: [0, 1] },
-        evidence_refs: { type: "array", minItems: 1, items: { type: "string" } },
+        // x-shown: a ref must name a row the grader was shown (an input, a context row, or a row a read returned), so
+        // the grade's evidence is among what it saw; one naming another row is refused by the producer.
+        evidence_refs: { type: "array", minItems: 1, items: { type: "string", "x-shown": true } },
       },
     },
     inputs: ["world_changed"],
-    // hop: so the grader can see whether a change landed (a git_land call that ended) before grading a claim of one.
-    context: ["answer", "due", "hop"],
+    // The hops given are what tool calls returned (ended call and run hops, each with the shape it called joined from
+    // its started hop), so the grader can see whether a change landed (a git_land call that ended) before grading a
+    // claim of one. The walk's own steps (produce and wait hops, started hops) are not given: records reads this same
+    // entry to count a grade that saw only these as clean.
+    context: ["answer", "due", { shape: "hop", where: { phase: "ended", kind: ["call", "run"] }, join: { on: "call_id", take: ["pointer_type"] } }],
     reads: [{ type: "record_lapsed", deadline_shape: "due", answer_shape: "answer" }],
   },
   {
