@@ -101,7 +101,7 @@ const SCHEMAS: Row[] = [
     target: "due",
     // within_ms is the deadline: a producer has no clock, so records sets at = its own t + within_ms, replacing any at
     // given. `at` stays required because the accepted gate fixture asks for it; a due without within_ms is never a
-    // deadline to records (the walk's wait-until still reads its `at`).
+    // deadline to records, and the walk bounds its waits by the `at` records sets.
     description: "How long the world_changed row's `what` may take to settle: within_ms is a duration in " +
       "milliseconds, from 60000 (one minute) to 1800000 (30 minutes), and records sets the deadline from its own " +
       `clock. at may be 0: records replaces it. ${JSON_ONLY}`,
@@ -128,7 +128,15 @@ const SCHEMAS: Row[] = [
         },
         calls: {
           type: "array", minItems: 1,
-          items: { type: "object", required: ["shape"], properties: { shape: { type: "string" }, pointer: { type: "object" } } },
+          items: {
+            type: "object", required: ["shape"],
+            properties: {
+              // Held to the read below by described-shape: only a served, callable shape passes, never the walk's
+              // move kinds or a written-only shape such as hop.
+              shape: { type: "string", "x-shape-in": { read: "shapeDescriptions", keys_of: "content.shape_descriptions" } },
+              pointer: { type: "object" },
+            },
+          },
         },
       },
     },
