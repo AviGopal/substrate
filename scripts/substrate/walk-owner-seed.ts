@@ -224,8 +224,8 @@ for (const model of CHANNEL_MODELS) {
 // judgment cannot be steered by a call already planned.
 SCHEMAS.push({
   target: "change_wanted",
-  description: "Whether the world_changed row's `what` asks for something to be changed (wanted true) or only to be read, " +
-    `found or answered (wanted false), and what says the change in a few words. ${JSON_ONLY}`,
+  description: "Whether the world_changed row's `what` asks for a change to files in a repository (wanted true) or for " +
+    `anything else (wanted false), and what says the change in a few words. ${JSON_ONLY}`,
   schema: {
     type: "object",
     required: ["wanted"],
