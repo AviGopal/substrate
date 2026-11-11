@@ -13,7 +13,10 @@
 #       toward closing one, first a clone; that a gap's test file is not where to edit; and that a held gap is left;
 #   (j) the request producer is told later calls on a change work in the cwd the clone's hop returned;
 #   (i) the owner describes what a person reads of world_changed, answer and outcome rows: words what, text, r; an
-#       older description already present without words is superseded by a later row.
+#       older description already present without words is superseded by a later row;
+#   (k) a request can also be made from a detector's gap: a second request row, variant gap, inputs [gap], with every
+#       other field (the words and checks) the same as the plain one;
+#   (l) the seeder run again writes no schema row: each target and variant is its own row, kept by an exact match.
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 SEED="$ROOT/scripts/substrate/walk-owner-seed.ts"
@@ -30,17 +33,26 @@ const rows: Row[] = [{ shape: "shape_description", of: "answer", description: "o
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { "Content-Type": "application/json" } });
 const server = Bun.serve({ hostname: "127.0.0.1", port: 0, async fetch(req) {
   const pointer = (((await req.json().catch(() => ({}))) as Row).pointer ?? {}) as Row;
-  if (pointer.type === "record_read") return json(rows.filter((r) => r.shape === pointer.shape));
+  // records' read: the rows of a shape, and of every where field equal as strings (a field a row lacks reads "undefined")
+  if (pointer.type === "record_read") return json(rows.filter((r) => r.shape === pointer.shape
+    && Object.entries((pointer.where ?? {}) as Row).every(([k, v]) => String(r[k]) === String(v))));
   if (pointer.type === "record_write") { const row = { ...pointer.row, id: `row-${rows.length + 1}` }; rows.push(row); return json(row); }
   return json({ error: "Not found" }, 404);
 } });
-const p = Bun.spawn([process.execPath, `${import.meta.dir}/walk-owner-seed.ts`], {
-  env: { PATH: process.env.PATH ?? "", DISCOVERY_URL: `http://127.0.0.1:${server.port}`, METABOB_API_KEY: "mb-test-" + "k".repeat(32) },
-  stdout: "pipe", stderr: "pipe",
-});
-const killer = setTimeout(() => p.kill(), 60_000);
-const code = await p.exited;
-clearTimeout(killer);
+const seed = async (): Promise<number> => {
+  const p = Bun.spawn([process.execPath, `${import.meta.dir}/walk-owner-seed.ts`], {
+    env: { PATH: process.env.PATH ?? "", DISCOVERY_URL: `http://127.0.0.1:${server.port}`, METABOB_API_KEY: "mb-test-" + "k".repeat(32) },
+    stdout: "pipe", stderr: "pipe",
+  });
+  const killer = setTimeout(() => p.kill(), 60_000);
+  const code = await p.exited;
+  clearTimeout(killer);
+  return code;
+};
+const code = await seed();
+const schemaRows = rows.filter((r) => r.shape === "shape_schema").length;
+const again = await seed();
+const schemaRowsAfter = rows.filter((r) => r.shape === "shape_schema").length;
 server.stop(true);
 let failed = 0;
 const leg = (ok: boolean, what: string) => { console.log(`${ok ? "ok  " : "FAIL"} - ${what}`); if (!ok) failed++; };
@@ -59,7 +71,7 @@ const fits = (s: Row, v: Row): boolean => {
   return true;
 };
 leg(code === 0, `the seeder wrote its rows (exit ${code})`);
-const req = schema("request");
+const req = rows.find((r) => r.shape === "shape_schema" && r.target === "request" && r.variant === "");
 const due = schema("due");
 leg(!!req && fits(req.schema, { pointer: { type: "git_worktree" } }) && fits(req.schema, { none: "already answered" }) && !fits(req.schema, {}),
   "(a) a request names a call or declines; an empty one is neither");
@@ -86,6 +98,12 @@ leg(JSON.stringify([words("world_changed"), words("answer"), words("outcome")]) 
   "(i) the owner's descriptions name the words a person reads: what, text, r (a stale one superseded by a later row)");
 leg(!!req && String(req.description).includes("the cwd the clone's hop returned, never a repos/ path"),
   "(j) later calls on a change work in the clone's cwd, not a repos/ path");
+const fromGap = rows.find((r) => r.shape === "shape_schema" && r.target === "request" && r.variant === "gap");
+const sameExcept = (a: Row | undefined, b: Row | undefined): boolean => !!a && !!b && ["description", "schema", "context", "reads"].every((k) => JSON.stringify(a[k]) === JSON.stringify(b[k]));
+leg(!!fromGap && JSON.stringify(fromGap.inputs) === JSON.stringify(["gap"]) && sameExcept(fromGap, req)
+  && JSON.stringify(req?.inputs) === JSON.stringify(["world_changed"]),
+  "(k) a request can be made from a detector's gap: variant gap, inputs [gap], the same words and checks as the plain one");
+leg(again === 0 && schemaRowsAfter === schemaRows, `(l) the seeder run again writes no schema row (${schemaRows} then ${schemaRowsAfter})`);
 process.exit(failed === 0 ? 0 : 1);
 TS
 out="$(cd "$W" && "$BUN" "$W/drive.ts" 2>&1)"; rc=$?

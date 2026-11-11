@@ -218,7 +218,16 @@ for (const model of CHANNEL_MODELS) {
   }];
   await ensure({ shape: "channel", calls }, undefined, `channel ${model}`);
 }
-for (const s of SCHEMAS) await ensure({ shape: "shape_schema", ...s }, { target: s.target }, `shape_schema ${s.target}`);
+// A schema row may name a variant: another way to make the same target, from other inputs. A request can come from a
+// detector's gap as well as from a person's ask, with the same words and checks: the gap row carries its specifics.
+const asked = SCHEMAS.find((s) => s.target === "request") as Row;
+SCHEMAS.push({ ...asked, variant: "gap", inputs: ["gap"] });
+// Each target and variant is its own row; the plain one is the variant "" (records matches it exactly, so a row
+// written before variants is rewritten once with it, and the two request rows never rewrite each other).
+for (const s of SCHEMAS) {
+  const variant = String(s.variant ?? "");
+  await ensure({ shape: "shape_schema", ...s, variant }, { target: s.target, variant }, `shape_schema ${s.target}${variant ? `/${variant}` : ""}`);
+}
 await ensure({ shape: "arm", vessel_id: "walk-vessel", arm: "treated", as_of_seq: MAX_SEQ }, { vessel_id: "walk-vessel" }, "arm walk-vessel");
 // What a detector's gap row is. A description, not a shape_schema: described-shape serves every schema target from a
 // model, and a gap must only ever be an observation a detector made. records holds shape_description as owner
