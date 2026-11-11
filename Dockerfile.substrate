@@ -299,11 +299,9 @@ RUN chmod +x /usr/local/bin/apply-inventory
 # these baked in, the units exit 127 (command not found) on every fire — which is
 # how obsidian-learn + goal-host-behavior (two LEARNING loops) sat silently dead
 # after a container recreate. (Now also surfaced by systemd_unit_health_observer.)
-COPY scripts/substrate/obsidian-learn-tick.sh /usr/local/bin/obsidian-learn-tick.sh
-COPY scripts/substrate/obsidian-intake-tick.sh /usr/local/bin/obsidian-intake-tick.sh
 COPY scripts/substrate/obsidian-collaborate-tick.sh /usr/local/bin/obsidian-collaborate-tick.sh
 COPY scripts/substrate/light-dispatch-healthcheck.sh /usr/local/bin/light-dispatch-healthcheck
-RUN chmod +x /usr/local/bin/obsidian-learn-tick.sh /usr/local/bin/obsidian-intake-tick.sh /usr/local/bin/obsidian-collaborate-tick.sh /usr/local/bin/light-dispatch-healthcheck
+RUN chmod +x /usr/local/bin/obsidian-collaborate-tick.sh /usr/local/bin/light-dispatch-healthcheck
 # Offline super-repo fallback: dynamic vessels run from the in-container
 # super-repo working tree (/workspace/git/super-repo — e.g. the federation
 # transport's workdir is <super-repo>/scripts/substrate/federation-relay), but
@@ -440,8 +438,6 @@ RUN chmod +x /usr/local/bin/substrate-entrypoint /usr/local/bin/gen-env /usr/loc
         auto-describe-resolvers.timer \
         surgical-gap-scan.timer \
         ingest-docs.timer \
-        obsidian-intake.timer \
-        obsidian-learn.timer \
         obsidian-collaborate.timer && \
     : "Valkey is the cache; redis-server is a vestigial apt transitive that the" \
       "package's postinst auto-enables. Mask it so it never starts or shows as a" \
@@ -588,12 +584,5 @@ COPY scripts/substrate/obsidian-xorg-launch.sh /usr/local/bin/obsidian-xorg-laun
 COPY scripts/substrate/obsidian-desktop-launch.sh /usr/local/bin/obsidian-desktop-launch
 RUN chmod +x /usr/local/bin/obsidian-xorg-launch /usr/local/bin/obsidian-desktop-launch \
     && systemctl enable obsidian-xorg.service obsidian-desktop.service novnc.service
-
-# In this flavour the vault is in-container on localhost, so the side-loop
-# learner targets 127.0.0.1:27183 instead of the host-peer default. Drop-in
-# override keeps the shared unit's host-Obsidian default intact for other images.
-RUN mkdir -p /etc/systemd/system/obsidian-learn.service.d \
-    && printf '[Service]\nEnvironment=OBSIDIAN_LEARN_ENDPOINT=http://127.0.0.1:27183\n' \
-        > /etc/systemd/system/obsidian-learn.service.d/override.conf
 
 ENTRYPOINT ["/usr/local/bin/substrate-entrypoint"]

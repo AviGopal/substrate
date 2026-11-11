@@ -215,16 +215,6 @@
       "nested_packages": ["ui"]
     },
     {
-      "unit": "obsidian-intake.timer",
-      "role": "ui",
-      "repo": "obsidian-vessel"
-    },
-    {
-      "unit": "obsidian-learn.timer",
-      "role": "ui",
-      "repo": "obsidian-vessel"
-    },
-    {
       "unit": "obsidian-collaborate.timer",
       "role": "ui",
       "repo": "obsidian-vessel"
@@ -359,8 +349,6 @@
     { "unit": "compose-drift.service", "role": "store" },
     { "unit": "validator-liveness.timer", "role": "store" },
     { "unit": "validator-liveness.service", "role": "store" },
-    { "unit": "learning-loop-selftest.timer", "role": "store" },
-    { "unit": "learning-loop-selftest.service", "role": "store" },
     { "unit": "trace-store-health-check.timer", "role": "api" },
     { "unit": "trace-store-health-check.service", "role": "api" },
     { "unit": "novnc.service", "role": "desktop" },
@@ -379,8 +367,6 @@
     { "unit": "model-reality-audit.service", "role": "store" },
     { "unit": "observe-orthogonal-refresh.service", "role": "autonomy" },
     { "unit": "obsidian-collaborate.service", "role": "ui", "repo": "obsidian-vessel" },
-    { "unit": "obsidian-intake.service", "role": "ui", "repo": "obsidian-vessel" },
-    { "unit": "obsidian-learn.service", "role": "ui", "repo": "obsidian-vessel" },
     { "unit": "self-operational-health.service", "role": "infra" },
     { "unit": "self-recovery.service", "role": "infra" },
     { "unit": "self-repair-operational.service", "role": "infra" },

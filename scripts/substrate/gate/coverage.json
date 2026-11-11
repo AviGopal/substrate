@@ -1022,34 +1022,6 @@
         "mutated_blob": "51672c657036b3a6b0971bfbcde732894c8b310e"
       }
     },
-    "/usr/lib/systemd/system/learning-loop-selftest.service": {
-      "src": "scripts/substrate/units/learning-loop-selftest.service",
-      "src_blob": "ce43fc1ca9da674d066a91ae427bd720c94fd980",
-      "level": "behaviour",
-      "reason": "mutation-proven",
-      "fixtures": [
-        "unit-semantics.sh"
-      ],
-      "evidence": {
-        "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
-        "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "de5a6cd9fc16f737ea27fd0248578835b026c3f9"
-      }
-    },
-    "/usr/lib/systemd/system/learning-loop-selftest.timer": {
-      "src": "scripts/substrate/units/learning-loop-selftest.timer",
-      "src_blob": "60406593423fba7d119c80f548eac77c9ddbcbaf",
-      "level": "behaviour",
-      "reason": "mutation-proven",
-      "fixtures": [
-        "unit-verify.sh"
-      ],
-      "evidence": {
-        "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
-        "mutation": "delete every On*= trigger line",
-        "mutated_blob": "ea3bcb5ddee46bd4843920dbf718cfe303287796"
-      }
-    },
     "/usr/lib/systemd/system/light-dispatch-healthcheck.service": {
       "src": "scripts/substrate/units/light-dispatch-healthcheck.service",
       "src_blob": "7be85bfa349033c2ee365932e4cc61f4113fc530",
@@ -1440,90 +1412,6 @@
         "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
         "mutation": "delete every InaccessiblePaths= line",
         "mutated_blob": "2ac08df50293572bf245b241cb1b7551472c330e"
-      }
-    },
-    "/usr/lib/systemd/system/obsidian-intake.service": {
-      "src": "scripts/substrate/units/obsidian-intake.service",
-      "src_blob": "5650156b0190135511fb198d420b480decea6426",
-      "level": "behaviour",
-      "reason": "mutation-proven",
-      "fixtures": [
-        "unit-semantics.sh"
-      ],
-      "evidence": {
-        "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
-        "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "5b28d3f290f0f4d13112b117a92982baf1f45305"
-      }
-    },
-    "/usr/lib/systemd/system/obsidian-intake.service.d/10-secrets-out-of-reach.conf": {
-      "src": "scripts/substrate/units/obsidian-intake.service.d/10-secrets-out-of-reach.conf",
-      "src_blob": "07fe2c6e2e78a3a3d33c820403a00dedd1141442",
-      "level": "behaviour",
-      "reason": "mutation-proven",
-      "fixtures": [
-        "unit-semantics.sh"
-      ],
-      "evidence": {
-        "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
-        "mutation": "delete every InaccessiblePaths= line",
-        "mutated_blob": "2ac08df50293572bf245b241cb1b7551472c330e"
-      }
-    },
-    "/usr/lib/systemd/system/obsidian-intake.timer": {
-      "src": "scripts/substrate/units/obsidian-intake.timer",
-      "src_blob": "1a668a7fc41ef9c4a32a9700378c1584e5a7c4c6",
-      "level": "behaviour",
-      "reason": "mutation-proven",
-      "fixtures": [
-        "unit-verify.sh"
-      ],
-      "evidence": {
-        "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
-        "mutation": "delete every On*= trigger line",
-        "mutated_blob": "5a5946912d05604d2ec80beddbbd8bf897136c4b"
-      }
-    },
-    "/usr/lib/systemd/system/obsidian-learn.service": {
-      "src": "scripts/substrate/units/obsidian-learn.service",
-      "src_blob": "ed996ee9a993fbb9d803c7a9470baa9f8753644e",
-      "level": "behaviour",
-      "reason": "mutation-proven",
-      "fixtures": [
-        "unit-semantics.sh"
-      ],
-      "evidence": {
-        "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
-        "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "b35dad026e248186ab8c51a0af7e7ce4d4666a05"
-      }
-    },
-    "/usr/lib/systemd/system/obsidian-learn.service.d/10-secrets-out-of-reach.conf": {
-      "src": "scripts/substrate/units/obsidian-learn.service.d/10-secrets-out-of-reach.conf",
-      "src_blob": "07fe2c6e2e78a3a3d33c820403a00dedd1141442",
-      "level": "behaviour",
-      "reason": "mutation-proven",
-      "fixtures": [
-        "unit-semantics.sh"
-      ],
-      "evidence": {
-        "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
-        "mutation": "delete every InaccessiblePaths= line",
-        "mutated_blob": "2ac08df50293572bf245b241cb1b7551472c330e"
-      }
-    },
-    "/usr/lib/systemd/system/obsidian-learn.timer": {
-      "src": "scripts/substrate/units/obsidian-learn.timer",
-      "src_blob": "b846b8fcf4bd7b4619b532717134dfa70dcae6f0",
-      "level": "behaviour",
-      "reason": "mutation-proven",
-      "fixtures": [
-        "unit-verify.sh"
-      ],
-      "evidence": {
-        "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
-        "mutation": "delete every On*= trigger line",
-        "mutated_blob": "66db1b127971c5831d3ba862c01093b4745622d1"
       }
     },
     "/usr/lib/systemd/system/obsidian-xorg.service": {
@@ -2382,20 +2270,6 @@
       "reason": "unreached",
       "fixtures": []
     },
-    "/usr/local/bin/obsidian-intake-tick.sh": {
-      "src": "scripts/substrate/obsidian-intake-tick.sh",
-      "src_blob": "a201259ffdb919c8ef0875c2e7916454398ca2e4",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
-    },
-    "/usr/local/bin/obsidian-learn-tick.sh": {
-      "src": "scripts/substrate/obsidian-learn-tick.sh",
-      "src_blob": "3f4b66d57be012b8260050a230d074d6d547aa4a",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
-    },
     "/usr/local/bin/obsidian-xorg-launch": {
       "src": "scripts/substrate/obsidian-xorg-launch.sh",
       "src_blob": "48e49d7b8f3f55ed98ff62a7505b98f5af5e1a37",
@@ -2693,13 +2567,6 @@
     "/usr/local/share/substrate/active-scripts/joint-liveness-tick.ts": {
       "src": "scripts/substrate/joint-liveness-tick.ts",
       "src_blob": "4f720856639adf674fe46f085c8c05f958785931",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
-    },
-    "/usr/local/share/substrate/active-scripts/learning-loop-selftest-tick.ts": {
-      "src": "scripts/substrate/learning-loop-selftest-tick.ts",
-      "src_blob": "485f39d26f849d87df141ed87019c48e0625b90a",
       "level": "none",
       "reason": "unreached",
       "fixtures": []

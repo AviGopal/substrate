@@ -78,8 +78,6 @@ scripts/substrate/units/ingest-docs.timer.d/ready-gate.conf	/usr/lib/systemd/sys
 scripts/substrate/units/joint-liveness.service	/usr/lib/systemd/system/joint-liveness.service	0644	A
 scripts/substrate/units/joint-liveness.timer	/usr/lib/systemd/system/joint-liveness.timer	0644	A
 scripts/substrate/units/journald-stdout-forwarder.service	/usr/lib/systemd/system/journald-stdout-forwarder.service	0644	A
-scripts/substrate/units/learning-loop-selftest.service	/usr/lib/systemd/system/learning-loop-selftest.service	0644	A
-scripts/substrate/units/learning-loop-selftest.timer	/usr/lib/systemd/system/learning-loop-selftest.timer	0644	A
 scripts/substrate/units/light-dispatch-healthcheck.service	/usr/lib/systemd/system/light-dispatch-healthcheck.service	0644	A
 scripts/substrate/units/light-dispatch-healthcheck.timer	/usr/lib/systemd/system/light-dispatch-healthcheck.timer	0644	A
 scripts/substrate/units/light-dispatch-healthcheck.timer.d/ready-gate.conf	/usr/lib/systemd/system/light-dispatch-healthcheck.timer.d/ready-gate.conf	0644	A
@@ -108,12 +106,6 @@ scripts/substrate/units/obsidian-collaborate.service.d/10-secrets-out-of-reach.c
 scripts/substrate/units/obsidian-collaborate.timer	/usr/lib/systemd/system/obsidian-collaborate.timer	0644	A
 scripts/substrate/units/obsidian-desktop.service	/usr/lib/systemd/system/obsidian-desktop.service	0644	A
 scripts/substrate/units/obsidian-desktop.service.d/10-secrets-out-of-reach.conf	/usr/lib/systemd/system/obsidian-desktop.service.d/10-secrets-out-of-reach.conf	0644	A
-scripts/substrate/units/obsidian-intake.service	/usr/lib/systemd/system/obsidian-intake.service	0644	A
-scripts/substrate/units/obsidian-intake.service.d/10-secrets-out-of-reach.conf	/usr/lib/systemd/system/obsidian-intake.service.d/10-secrets-out-of-reach.conf	0644	A
-scripts/substrate/units/obsidian-intake.timer	/usr/lib/systemd/system/obsidian-intake.timer	0644	A
-scripts/substrate/units/obsidian-learn.service	/usr/lib/systemd/system/obsidian-learn.service	0644	A
-scripts/substrate/units/obsidian-learn.service.d/10-secrets-out-of-reach.conf	/usr/lib/systemd/system/obsidian-learn.service.d/10-secrets-out-of-reach.conf	0644	A
-scripts/substrate/units/obsidian-learn.timer	/usr/lib/systemd/system/obsidian-learn.timer	0644	A
 scripts/substrate/units/obsidian-xorg.service	/usr/lib/systemd/system/obsidian-xorg.service	0644	A
 scripts/substrate/units/obsidian-xorg.service.d/10-secrets-out-of-reach.conf	/usr/lib/systemd/system/obsidian-xorg.service.d/10-secrets-out-of-reach.conf	0644	A
 scripts/substrate/units/records-vessel.service.d/10-secrets-out-of-reach.conf	/usr/lib/systemd/system/records-vessel.service.d/10-secrets-out-of-reach.conf	0644	A
@@ -186,8 +178,6 @@ scripts/substrate/light-dispatch-healthcheck.sh	/usr/local/bin/light-dispatch-he
 scripts/substrate/mirror-to-live.sh	/usr/local/bin/mirror-to-live	0755	A
 scripts/substrate/obsidian-collaborate-tick.sh	/usr/local/bin/obsidian-collaborate-tick.sh	0644	A
 scripts/substrate/obsidian-desktop-launch.sh	/usr/local/bin/obsidian-desktop-launch	0755	A
-scripts/substrate/obsidian-intake-tick.sh	/usr/local/bin/obsidian-intake-tick.sh	0644	A
-scripts/substrate/obsidian-learn-tick.sh	/usr/local/bin/obsidian-learn-tick.sh	0644	A
 scripts/substrate/obsidian-xorg-launch.sh	/usr/local/bin/obsidian-xorg-launch	0755	A
 scripts/substrate/render-secret-scope.sh	/usr/local/bin/render-secret-scope	0755	A
 scripts/substrate/render-unit.sh	/usr/local/bin/render-unit	0755	A
@@ -228,7 +218,6 @@ scripts/substrate/identical-failure-run-tick.ts	/usr/local/share/substrate/activ
 scripts/substrate/import-operator-memory.ts	/usr/local/share/substrate/active-scripts/import-operator-memory.ts	0644	A
 scripts/substrate/ingest-docs-as-concepts.ts	/usr/local/share/substrate/active-scripts/ingest-docs-as-concepts.ts	0644	A
 scripts/substrate/joint-liveness-tick.ts	/usr/local/share/substrate/active-scripts/joint-liveness-tick.ts	0644	A
-scripts/substrate/learning-loop-selftest-tick.ts	/usr/local/share/substrate/active-scripts/learning-loop-selftest-tick.ts	0644	A
 scripts/substrate/memory-budget-check.sh	/usr/local/share/substrate/active-scripts/memory-budget-check.sh	0755	A
 scripts/substrate/mirror-memory-note.ts	/usr/local/share/substrate/active-scripts/mirror-memory-note.ts	0644	A
 scripts/substrate/model-reality-audit.ts	/usr/local/share/substrate/active-scripts/model-reality-audit.ts	0644	A
@@ -403,10 +392,6 @@ scripts/substrate/joint-liveness-tick.d.ts.map	/usr/local/share/substrate/super-
 scripts/substrate/joint-liveness-tick.js	/usr/local/share/substrate/super-repo/scripts/substrate/joint-liveness-tick.js	0644	B
 scripts/substrate/joint-liveness-tick.js.map	/usr/local/share/substrate/super-repo/scripts/substrate/joint-liveness-tick.js.map	0644	B
 scripts/substrate/joint-liveness-tick.ts	/usr/local/share/substrate/super-repo/scripts/substrate/joint-liveness-tick.ts	0644	B
-scripts/substrate/learning-loop-selftest-tick.d.ts.map	/usr/local/share/substrate/super-repo/scripts/substrate/learning-loop-selftest-tick.d.ts.map	0644	B
-scripts/substrate/learning-loop-selftest-tick.js	/usr/local/share/substrate/super-repo/scripts/substrate/learning-loop-selftest-tick.js	0644	B
-scripts/substrate/learning-loop-selftest-tick.js.map	/usr/local/share/substrate/super-repo/scripts/substrate/learning-loop-selftest-tick.js.map	0644	B
-scripts/substrate/learning-loop-selftest-tick.ts	/usr/local/share/substrate/super-repo/scripts/substrate/learning-loop-selftest-tick.ts	0644	B
 scripts/substrate/lib/gap-tracked-red.sh	/usr/local/share/substrate/super-repo/scripts/substrate/lib/gap-tracked-red.sh	0644	B
 scripts/substrate/light-dispatch-healthcheck.sh	/usr/local/share/substrate/super-repo/scripts/substrate/light-dispatch-healthcheck.sh	0644	B
 scripts/substrate/llm-arms.json	/usr/local/share/substrate/super-repo/scripts/substrate/llm-arms.json	0644	B
@@ -427,8 +412,6 @@ scripts/substrate/observe-orthogonal-refresh.js.map	/usr/local/share/substrate/s
 scripts/substrate/observe-orthogonal-refresh.ts	/usr/local/share/substrate/super-repo/scripts/substrate/observe-orthogonal-refresh.ts	0644	B
 scripts/substrate/obsidian-collaborate-tick.sh	/usr/local/share/substrate/super-repo/scripts/substrate/obsidian-collaborate-tick.sh	0644	B
 scripts/substrate/obsidian-desktop-launch.sh	/usr/local/share/substrate/super-repo/scripts/substrate/obsidian-desktop-launch.sh	0755	B
-scripts/substrate/obsidian-intake-tick.sh	/usr/local/share/substrate/super-repo/scripts/substrate/obsidian-intake-tick.sh	0644	B
-scripts/substrate/obsidian-learn-tick.sh	/usr/local/share/substrate/super-repo/scripts/substrate/obsidian-learn-tick.sh	0644	B
 scripts/substrate/obsidian-plugin-reload.sh	/usr/local/share/substrate/super-repo/scripts/substrate/obsidian-plugin-reload.sh	0755	B
 scripts/substrate/obsidian-xorg-launch.sh	/usr/local/share/substrate/super-repo/scripts/substrate/obsidian-xorg-launch.sh	0755	B
 scripts/substrate/render-llm-arms.sh	/usr/local/share/substrate/super-repo/scripts/substrate/render-llm-arms.sh	0755	B
@@ -573,8 +556,6 @@ scripts/substrate/units/ingest-docs.timer.d/ready-gate.conf	/usr/local/share/sub
 scripts/substrate/units/joint-liveness.service	/usr/local/share/substrate/super-repo/scripts/substrate/units/joint-liveness.service	0644	B
 scripts/substrate/units/joint-liveness.timer	/usr/local/share/substrate/super-repo/scripts/substrate/units/joint-liveness.timer	0644	B
 scripts/substrate/units/journald-stdout-forwarder.service	/usr/local/share/substrate/super-repo/scripts/substrate/units/journald-stdout-forwarder.service	0644	B
-scripts/substrate/units/learning-loop-selftest.service	/usr/local/share/substrate/super-repo/scripts/substrate/units/learning-loop-selftest.service	0644	B
-scripts/substrate/units/learning-loop-selftest.timer	/usr/local/share/substrate/super-repo/scripts/substrate/units/learning-loop-selftest.timer	0644	B
 scripts/substrate/units/light-dispatch-healthcheck.service	/usr/local/share/substrate/super-repo/scripts/substrate/units/light-dispatch-healthcheck.service	0644	B
 scripts/substrate/units/light-dispatch-healthcheck.timer	/usr/local/share/substrate/super-repo/scripts/substrate/units/light-dispatch-healthcheck.timer	0644	B
 scripts/substrate/units/light-dispatch-healthcheck.timer.d/ready-gate.conf	/usr/local/share/substrate/super-repo/scripts/substrate/units/light-dispatch-healthcheck.timer.d/ready-gate.conf	0644	B
@@ -603,12 +584,6 @@ scripts/substrate/units/obsidian-collaborate.service.d/10-secrets-out-of-reach.c
 scripts/substrate/units/obsidian-collaborate.timer	/usr/local/share/substrate/super-repo/scripts/substrate/units/obsidian-collaborate.timer	0644	B
 scripts/substrate/units/obsidian-desktop.service	/usr/local/share/substrate/super-repo/scripts/substrate/units/obsidian-desktop.service	0644	B
 scripts/substrate/units/obsidian-desktop.service.d/10-secrets-out-of-reach.conf	/usr/local/share/substrate/super-repo/scripts/substrate/units/obsidian-desktop.service.d/10-secrets-out-of-reach.conf	0644	B
-scripts/substrate/units/obsidian-intake.service	/usr/local/share/substrate/super-repo/scripts/substrate/units/obsidian-intake.service	0644	B
-scripts/substrate/units/obsidian-intake.service.d/10-secrets-out-of-reach.conf	/usr/local/share/substrate/super-repo/scripts/substrate/units/obsidian-intake.service.d/10-secrets-out-of-reach.conf	0644	B
-scripts/substrate/units/obsidian-intake.timer	/usr/local/share/substrate/super-repo/scripts/substrate/units/obsidian-intake.timer	0644	B
-scripts/substrate/units/obsidian-learn.service	/usr/local/share/substrate/super-repo/scripts/substrate/units/obsidian-learn.service	0644	B
-scripts/substrate/units/obsidian-learn.service.d/10-secrets-out-of-reach.conf	/usr/local/share/substrate/super-repo/scripts/substrate/units/obsidian-learn.service.d/10-secrets-out-of-reach.conf	0644	B
-scripts/substrate/units/obsidian-learn.timer	/usr/local/share/substrate/super-repo/scripts/substrate/units/obsidian-learn.timer	0644	B
 scripts/substrate/units/obsidian-xorg.service	/usr/local/share/substrate/super-repo/scripts/substrate/units/obsidian-xorg.service	0644	B
 scripts/substrate/units/obsidian-xorg.service.d/10-secrets-out-of-reach.conf	/usr/local/share/substrate/super-repo/scripts/substrate/units/obsidian-xorg.service.d/10-secrets-out-of-reach.conf	0644	B
 scripts/substrate/units/records-vessel.service.d/10-secrets-out-of-reach.conf	/usr/local/share/substrate/super-repo/scripts/substrate/units/records-vessel.service.d/10-secrets-out-of-reach.conf	0644	B

@@ -23,9 +23,6 @@ BOREDOM_STATE_REFRESH_MS           cadence
 DB_MAINTENANCE                     on/off switch
 EMIT_GAPS                          on/off switch
 MAX_PEER_DEPTH                     federation fan-out cap
-OBSIDIAN_LEARN_GRANT               grant level
-OBSIDIAN_LEARN_MAX                 cap
-OBSIDIAN_LEARN_MODE                mode switch
 PEER_FANOUT_MODE                   federation mode switch
 RECOVER_CAP                        cap
 REPAIR                             on/off switch

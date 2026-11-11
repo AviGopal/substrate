@@ -27,7 +27,7 @@ FROZEN_GRANDFATHERED="AUTO_DESCRIBE_RESOLVERS BOREDOM_AUTOPROMOTE_INTERVAL_MS BO
 BOREDOM_IDLE_WINDOW_SECONDS BOREDOM_IN_FLIGHT_TIMEOUT_MS BOREDOM_MAX_CONCURRENT BOREDOM_MIN_DISPATCH_INTERVAL_MS
 BOREDOM_POOL_LOOP_INTERVAL_MS BOREDOM_STATE_REFRESH_MS DB_MAINTENANCE EMIT_GAPS EXTRA_WORKSPACE_ROOTS GOAL_HOST_BEHAVIOR_LIMIT
 GOAL_HOST_BEHAVIOR_WINDOW_HOURS GOAL_HOST_DRAIN_MS GOAL_HOST_WS_SUBSCRIBER MAX_PEER_DEPTH MITOSIS_DIRECT_PUSH OBSIDIAN_LEARN_GRANT
-OBSIDIAN_LEARN_MAX OBSIDIAN_LEARN_MODE OPERATOR_GOAL_GEN PEER_FANOUT_MODE PREFER_LIBP2P_ROUTE RECOVER_CAP REPAIR SELF_DEV_TREND
+OBSIDIAN_LEARN_MAX RECOVER_CAP OPERATOR_GOAL_GEN PEER_FANOUT_MODE PREFER_LIBP2P_ROUTE RECOVER_CAP REPAIR SELF_DEV_TREND
 SURGICAL_SCAN_CAP SURREAL_ROCKSDB_BLOCK_CACHE_SIZE TASK_GENERATION_ENABLED VESSEL_DRAIN_MS WATCHDOG_RELEVANT_SHAPE
 WATCHDOG_RESTART_IMPULSE WATCHDOG_ROUTE_FILTER WATCHDOG_STALL_MIN"
 
@@ -93,10 +93,10 @@ fails "an allowlist entry without a reason fails" "RELAY_URL has no reason"
 G -C "$R" rm -q scripts/git-hooks/env-ratchet/bootstrap-allowlist.txt; G -C "$R" commit -qm "no allowlist" --no-verify
 fails "a tree without the allowlist fails closed" "fail closed"
 
-sed -i '/^Environment=OBSIDIAN_LEARN_MODE=/d' "$R/scripts/substrate/units/obsidian-learn.service"; commit_nv "remove a grandfathered line, keep the name"
-fails "removing the last line of a grandfathered switch without shrinking the list fails" "OBSIDIAN_LEARN_MODE is set by no unit"
-sed -i '/^Environment=OBSIDIAN_LEARN_MODE=/d' "$R/scripts/substrate/units/obsidian-learn.service"
-sed -i '/^OBSIDIAN_LEARN_MODE /d' "$R/scripts/git-hooks/env-ratchet/grandfathered-behaviour.txt"; commit_nv "shrink"
+sed -i '/^Environment=RECOVER_CAP=/d' "$R/scripts/substrate/units/coherence-recover.service"; commit_nv "remove a grandfathered line, keep the name"
+fails "removing the last line of a grandfathered switch without shrinking the list fails" "RECOVER_CAP is set by no unit"
+sed -i '/^Environment=RECOVER_CAP=/d' "$R/scripts/substrate/units/coherence-recover.service"
+sed -i '/^RECOVER_CAP /d' "$R/scripts/git-hooks/env-ratchet/grandfathered-behaviour.txt"; commit_nv "shrink"
 judge && ok "removing a grandfathered line together with its list entry passes (the list shrinks)" || bad "a shrink failed: $(head -3 "$T/out" | tr '\n' ' ')"
 
 echo; [ "$FAILS" = 0 ] && { echo PASS; exit 0; } || { echo "$FAILS FAILED"; exit 1; }
