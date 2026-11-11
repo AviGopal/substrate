@@ -55,7 +55,9 @@ const JSON_ONLY = "Reply with only the JSON object: no prose, no code fence.";
 const SCHEMAS: Row[] = [
   {
     target: "answer",
-    description: `The answer to what the world_changed row's \`what\` field asks for. ${JSON_ONLY}`,
+    description: "The answer to what the world_changed row's `what` field asks for. An ask that changes something is " +
+      "done only when a hop row shows the change landed (a git_land call that ended). Until then say what you will do " +
+      `next, never that it was done. ${JSON_ONLY}`,
     schema: { type: "object", required: ["text"], properties: { text: { type: "string", minLength: 1 } } },
     inputs: ["world_changed"],
     context: ["hop"],
@@ -69,7 +71,8 @@ const SCHEMAS: Row[] = [
     description: "How the world_changed row's request went. First: if reads lists a due row of this request, its " +
       "deadline passed with no person's verdict, so the request lapsed: r is 0 and evidence_refs holds that due row's " +
       "id, whether or not an answer row exists. Otherwise, if there is an answer row, r is 1 when it does what `what` " +
-      "asks, correctly and completely, and 0 when not, and evidence_refs holds the answer row's id. event_ref is the " +
+      "asks, correctly and completely, and 0 when not, and evidence_refs holds the answer row's id. An answer that " +
+      "claims a change with no hop row showing a git_land call that ended is r 0. event_ref is the " +
       `world_changed row's id. ${JSON_ONLY}`,
     schema: {
       type: "object",
@@ -81,7 +84,8 @@ const SCHEMAS: Row[] = [
       },
     },
     inputs: ["world_changed"],
-    context: ["answer", "due"],
+    // hop: so the grader can see whether a change landed (a git_land call that ended) before grading a claim of one.
+    context: ["answer", "due", "hop"],
     reads: [{ type: "record_lapsed", deadline_shape: "due", answer_shape: "answer" }],
   },
   {

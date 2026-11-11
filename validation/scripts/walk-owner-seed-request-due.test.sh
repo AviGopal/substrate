@@ -5,7 +5,10 @@
 #   (b) the request producer sees the answer and its grade (context answer, outcome), and is told a change is done only
 #       when a git_land call ended;
 #   (c) a due may run from a minute to a day: 3 h is allowed, 25 h refused;
-#   (d) the due producer reads the grades people gave before (record_read outcome, role person).
+#   (d) the due producer reads the grades people gave before (record_read outcome, role person);
+#   (e) the answer producer is told a change is done only when a git_land call ended, and never to claim it before;
+#   (f) the outcome grader is told an answer claiming a change with no ended git_land hop is r 0;
+#   (g) and it can see the hops it is told to check.
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 SEED="$ROOT/scripts/substrate/walk-owner-seed.ts"
@@ -59,6 +62,13 @@ leg(!!due && fits(due.schema, { at: 0, within_ms: 3 * 3_600_000 }) && !fits(due.
   "(c) a due runs from a minute to a day");
 leg(!!due && (due.reads ?? []).some((r: Row) => r.type === "record_read" && r.shape === "outcome" && r.where?.role === "person"),
   "(d) the due producer reads the grades people gave before");
+const answer = schema("answer");
+const outcome = schema("outcome");
+leg(!!answer && String(answer.description).includes("git_land call that ended") && String(answer.description).includes("never that it was done"),
+  "(e) the answer producer never claims a change before it landed");
+leg(!!outcome && String(outcome.description).includes("claims a change with no hop row showing a git_land call that ended is r 0"),
+  "(f) the outcome grader grades a claimed but unlanded change r 0");
+leg(!!outcome && (outcome.context ?? []).includes("hop"), "(g) the outcome grader sees the hops it is told to check");
 process.exit(failed === 0 ? 0 : 1);
 TS
 out="$(cd "$W" && "$BUN" "$W/drive.ts" 2>&1)"; rc=$?
