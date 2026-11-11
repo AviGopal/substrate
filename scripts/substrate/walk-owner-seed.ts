@@ -251,6 +251,10 @@ for (const tool of CHANGE_TOOLS) {
   await ensure({ shape: "requires", for: tool, needs: "change_wanted", where: { wanted: true } }, { for: tool, needs: "change_wanted" }, `requires ${tool} change_wanted`);
   await ensure({ shape: "requires", for: tool, needs: "gap", where: { status: "open" } }, { for: tool, needs: "gap" }, `requires ${tool} gap`);
 }
+// walk_trees_reclaim removes clones: it is called only for the root of the gap whose work it is (pull-sync's walk-trees
+// check), while that gap is open.
+await ensure({ shape: "requires", for: "walk_trees_reclaim", needs: "gap", where: { gap_id: "pull-sync-walk-trees-unreclaimed", status: "open" } },
+  { for: "walk_trees_reclaim", needs: "gap" }, "requires walk_trees_reclaim gap");
 await ensure({ shape: "arm", vessel_id: "walk-vessel", arm: "treated", as_of_seq: MAX_SEQ }, { vessel_id: "walk-vessel" }, "arm walk-vessel");
 // What a detector's gap row is. A description, not a shape_schema: described-shape serves every schema target from a
 // model, and a gap must only ever be an observation a detector made. records holds shape_description as owner

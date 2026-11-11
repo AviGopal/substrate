@@ -18,7 +18,8 @@
 #       other field (the words and checks) the same as the plain one;
 #   (l) the seeder run again writes no schema or precondition row: each is its own row, kept by an exact match;
 #   (m) whether an ask wants a change is judged from the ask alone (change_wanted: inputs [world_changed], no context,
-#       wanted boolean), and every call that changes something requires a wanted change or an open gap.
+#       wanted boolean), and every call that changes something requires a wanted change or an open gap;
+#   (n) walk_trees_reclaim, which removes clones, is called only for the open walk-trees gap's own root.
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 SEED="$ROOT/scripts/substrate/walk-owner-seed.ts"
@@ -114,6 +115,9 @@ leg(!!cw && JSON.stringify(cw.inputs) === JSON.stringify(["world_changed"]) && J
   && cw.schema?.properties?.wanted?.type === "boolean" && (cw.schema?.required ?? []).includes("wanted")
   && tools.every((t) => pre(t, "change_wanted", { wanted: true }) && pre(t, "gap", { status: "open" })),
   "(m) change_wanted is judged from the ask alone, and every change tool requires a wanted change or an open gap");
+leg(pre("walk_trees_reclaim", "gap", { gap_id: "pull-sync-walk-trees-unreclaimed", status: "open" })
+  && !rows.some((r) => r.shape === "requires" && r.for === "walk_trees_reclaim" && r.needs !== "gap"),
+  "(n) walk_trees_reclaim is called only for the open walk-trees gap's own root");
 process.exit(failed === 0 ? 0 : 1);
 TS
 out="$(cd "$W" && "$BUN" "$W/drive.ts" 2>&1)"; rc=$?
