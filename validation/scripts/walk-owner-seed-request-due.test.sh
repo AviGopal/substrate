@@ -8,7 +8,9 @@
 #   (d) the due producer reads the grades people gave before (record_read outcome, role person);
 #   (e) the answer producer is told a change is done only when a git_land call ended, and never to claim it before;
 #   (f) the outcome grader is told an answer claiming a change with no ended git_land hop is r 0;
-#   (g) and it can see the hops it is told to check.
+#   (g) and it can see the hops it is told to check;
+#   (h) the request producer reads every gap row (open and closing alike), and is told a request names one next call
+#       toward closing one, first a clone; that a gap's test file is not where to edit; and that a held gap is left.
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 SEED="$ROOT/scripts/substrate/walk-owner-seed.ts"
@@ -69,6 +71,11 @@ leg(!!answer && String(answer.description).includes("git_land call that ended") 
 leg(!!outcome && String(outcome.description).includes("claims a change with no hop row showing a git_land call that ended is r 0"),
   "(f) the outcome grader grades a claimed but unlanded change r 0");
 leg(!!outcome && (outcome.context ?? []).includes("hop"), "(g) the outcome grader sees the hops it is told to check");
+leg(!!req && (req.reads ?? []).some((r: Row) => r.type === "record_read" && r.shape === "gap" && r.where === undefined)
+  && String(req.description).includes("whose status is closed is already closed") && String(req.description).includes("first a clone of the repo the gap names")
+  && String(req.description).includes("not the place to edit: the fix is in the source it checks")
+  && String(req.description).includes("operator_hold is held: leave it"),
+  "(h) the request producer sees every gap row and is told to ask one next call toward closing one");
 process.exit(failed === 0 ? 0 : 1);
 TS
 out="$(cd "$W" && "$BUN" "$W/drive.ts" 2>&1)"; rc=$?

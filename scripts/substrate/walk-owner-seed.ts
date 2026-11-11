@@ -97,7 +97,11 @@ const SCHEMAS: Row[] = [
       "one. A hop row shows what an earlier call returned, so ask for the step after it, not the same call again; a " +
       "failure row says why one did not. If the ask is already done, or needs no call, write {\"none\": \"<why>\"} " +
       "instead of a pointer. An ask that changes something is done only when a hop row shows the change landed (a " +
-      "git_land call that ended); an answer graded r 1 without that does not do it, so ask for the next call. " + JSON_ONLY,
+      "git_land call that ended); an answer graded r 1 without that does not do it, so ask for the next call. Gaps " +
+      "(reads) are failures detectors found, each naming its repo and the failing check (a test file, which is not the " +
+      "place to edit: the fix is in the source it checks). A gap whose row says operator_hold is held: leave it. A gap " +
+      "with a later row of the same gap_id whose status is closed is already closed. To close an open one, ask for the " +
+      "next call toward closing it: first a clone of the repo the gap names. " + JSON_ONLY,
     // A request either names the next call or declines (none); the walk reads a request without a pointer as a decline.
     schema: {
       type: "object",
@@ -111,7 +115,8 @@ const SCHEMAS: Row[] = [
     // The answer and its grade are here so the producer can see the ask is done; the hops show whether a change landed.
     context: ["hop", "failure", "answer", "outcome"],
     // declared: only shapes whose producer declared their inputs, the ones a request can fill (discovery resolvers.ts).
-    reads: [{ type: "shapeDescriptions", declared: true }],
+    // gap: every detector gap row, opening and closing alike, so a closed gap is seen as closed.
+    reads: [{ type: "shapeDescriptions", declared: true }, { type: "record_read", shape: "gap" }],
   },
   {
     target: "due",
