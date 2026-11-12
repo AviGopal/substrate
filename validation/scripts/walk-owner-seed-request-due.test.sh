@@ -12,7 +12,8 @@
 #       call_id), not the walk's own produce, wait or started hops; each evidence ref must name a row it was shown; and
 #       its lapsed read is bound to its own request (asks {x-inputs});
 #   (h) the request producer reads every gap row (open and closing alike), and is told a request names one next call
-#       toward closing one, first a clone; that a gap's test file is not where to edit; and that a held gap is left;
+#       toward closing one, first a clone; that it edits where the gap's edit_site names (a repos/ path, the same path
+#       in the clone), and with none the source its check tests, never the check's test file; and that a held gap is left;
 #   (j) the request producer is told later calls on a change work in the cwd the clone's hop returned;
 #   (i) the owner describes what a person reads of world_changed, answer and outcome rows: words what, text, r; an
 #       older description already present without words is superseded by a later row;
