@@ -2924,7 +2924,7 @@
     },
     "/usr/local/share/substrate/active-scripts/walk-owner-seed.ts": {
       "src": "scripts/substrate/walk-owner-seed.ts",
-      "src_blob": "fe38adde9db1ca05263e633118d9d3e56a12f8e5",
+      "src_blob": "d94a04154abadcae1788e52739e6ae32b08fa904",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -2933,12 +2933,12 @@
       "evidence": {
         "accepted": "ba2a622b413e1612436a28a328be9fa44b0b8784",
         "mutation": "insert `exit 99` after line 1",
-        "mutated_blob": "1df8416aa06ffeedbd611479ec3dcccad0d17604"
+        "mutated_blob": "127d0e5ee863fb6aaa97bbc807cb67ea168261ba"
       }
     },
     "/vessels/walk-owner-seed.ts": {
       "src": "scripts/substrate/walk-owner-seed.ts",
-      "src_blob": "fe38adde9db1ca05263e633118d9d3e56a12f8e5",
+      "src_blob": "d94a04154abadcae1788e52739e6ae32b08fa904",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -2947,7 +2947,7 @@
       "evidence": {
         "accepted": "ba2a622b413e1612436a28a328be9fa44b0b8784",
         "mutation": "insert `exit 99` after line 1",
-        "mutated_blob": "1df8416aa06ffeedbd611479ec3dcccad0d17604"
+        "mutated_blob": "127d0e5ee863fb6aaa97bbc807cb67ea168261ba"
       }
     },
     "/usr/lib/systemd/system/records-vessel.service.d/50-restart-with-deps.conf": {

@@ -305,6 +305,10 @@ await ensure({
     "summary says what failed, in at most 2 KiB; meta carries what the detector measured (cut past 4 KiB). The latest " +
     "row for a gap_id, written by a detector, is its state: a gap closes by a later row, never by an edit.",
 }, { of: "gap" }, "shape_description gap");
+// What a gap's closing credits: no one grades the walk's work on a gap, so records counts the detector closing it as the
+// grade, but only when a call of this shape ended among the walk's steps on it first (the walk changed something there).
+// Configuration records reads (its fold), never a request.
+await ensure({ shape: "credits", target: "gap", by_call: "git_land" }, { target: "gap" }, "credits gap");
 // What a person reads of the rows the surface shows: each description's words name the fields (1 to 4) that say what
 // a row is, so the surface draws them from these rows instead of a list of its own.
 const SHOWN: Array<{ of: string; words: string[]; description: string }> = [
