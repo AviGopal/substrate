@@ -4596,6 +4596,17 @@ EOF
       | sed 's/[[:space:]]*$//' \
       | sort -u || true
   }
+  # Every test a run named, whatever its result, in fail_names' form ("(fail) <name>"), so the two compare: what a run
+  # HAS, not only what failed in it.
+  ran_names() {
+    printf '%s' "$1" \
+      | sed 's/\x1b\[[0-9;]*m//g' \
+      | grep -E '^\((pass|fail|skip|todo)\)|^[✓✗]' \
+      | sed -E 's/^\((pass|skip|todo)\)/(fail)/; s/^✓/✗/' \
+      | sed 's/ \[[0-9.]*m*s\]$//' \
+      | sed 's/[[:space:]]*$//' \
+      | sort -u || true
+  }
   # --kill-after IS LOAD-BEARING, not belt-and-braces. Measured: a
   # convergence tick hung with pull-sync sleeping in pipe_read for 7+ minutes and no output
   # after "Starting". The leaf was `bun test` in /workspace/git/vessels/activity-api,
@@ -4679,7 +4690,7 @@ EOF
   # DOWN, so a suite that grew could never converge again. Left as a comment rather than
   # deleted silently because its absence is the point: no count of failures, however measured,
   # can distinguish "a test broke" from "more tests exist".
-  REG=""; REG_F=""; REG_P=""; REG_U=""; REG_NAMED=""; CONF_SET=""; OUT_STILL=""; OVL_KILLED=""; PROT_RED=""
+  REG=""; REG_F=""; REG_P=""; REG_U=""; REG_NAMED=""; CONF_SET=""; OUT_STILL=""; OVL_KILLED=""; PROT_RED=""; OVL_CLEARED=""
   if [ -z "$BUN_BIN" ]; then
     # NO INSTRUMENT IS NOT A PASS: HOLD. This used to converge ungated. A runner is a
     # property of the node, not of the vessel, so the gap is one per node; every vessel holds until it
@@ -5059,8 +5070,19 @@ EOF
               # stored baseline, AND failing at the candidate but not the parent under identical
               # conditions. Strictly stronger than either test alone.
               OVL_NEW="$(comm -23 <(printf '%s\n' "$C_NAMES" | sort -u) <(printf '%s\n' "$P_NAMES" | sort -u) 2>/dev/null || true)"
+              # A TEST THE PARENT DOES NOT HAVE IS NEVER CLEARED HERE. The overlay clears a name by showing it fails
+              # at the parent too, or passes at the candidate under the overlay's conditions. A test the commit adds
+              # cannot fail at a parent that lacks it, so a pass in the worktree alone would clear the strongest red
+              # there is (new, and failing in both candidate runs), through the path-dependence the overlay exists to
+              # guard against. Such a name stays attributable to the commit.
+              _ovl_pre="$CONF_SET"
+              _ovl_newtests="$(comm -23 <(printf '%s\n' "$_ovl_pre" | grep . | sort -u) <(ran_names "$P_OUT") 2>/dev/null || true)"
               CONF_SET="$(comm -12 <(printf '%s\n' "$CONF_SET" | sort -u) <(printf '%s\n' "$OVL_NEW" | sort -u) 2>/dev/null || true)"
+              CONF_SET="$(printf '%s\n%s\n' "$CONF_SET" "$_ovl_newtests" | grep . | sort -u || true)"
               CONFIRMED="$(printf '%s' "$CONF_SET" | grep -c . || true)"
+              OVL_CLEARED="$(comm -23 <(printf '%s\n' "$_ovl_pre" | grep . | sort -u) <(printf '%s\n' "$CONF_SET" | grep . | sort -u) 2>/dev/null || true)"
+              [ -n "$_ovl_newtests" ] && log "$v: overlay kept $(printf '%s' "$_ovl_newtests" | grep -c .) test(s) the parent does not have, failing in both candidate runs: $(printf '%s\n' "$_ovl_newtests" | head -n 20 | tr '\n' ';' | cut -c1-400)"
+              [ -n "$OVL_CLEARED" ] && log "$v: cleared by overlay (failing in both candidate runs, but at the parent too or not at the candidate under identical conditions): $(printf '%s\n' "$OVL_CLEARED" | head -n 20 | tr '\n' ';' | cut -c1-400)"
               log "$v: overlay comparison ${PARENT_REF:0:10} (last converged, or the parent) -> ${HEAD:0:10} under identical conditions — $(printf '%s' "$P_NAMES" | grep -c . || true) failing at parent, $(printf '%s' "$C_NAMES" | grep -c . || true) at candidate, ${CONFIRMED:-0} attributable to this commit"
             else
               # UNUSABLE, NOT CLEAN. A run with no passing tests means the measurement failed
@@ -5079,7 +5101,11 @@ EOF
           if [ -n "$TRACKED_ONLY" ]; then
             log "$v: every newly-failing test is tracked by an open gap — converging"
           else
-            log "$v: newly-failing tests did not reproduce on re-run — flake, converging (run1 $(printf '%s' "$NEW1" | grep -c . || true) new, run2 $(printf '%s' "$NEW2" | grep -c . || true) new, intersection 0)"
+            if [ -n "$OVL_CLEARED" ]; then
+              log "$v: newly-failing tests reproduced in both runs but the overlay cleared them (named above) — converging"
+            else
+              log "$v: newly-failing tests did not reproduce on re-run — flake, converging (run1 $(printf '%s' "$NEW1" | grep -c . || true) new, run2 $(printf '%s' "$NEW2" | grep -c . || true) new, intersection 0)"
+            fi
             # NAME THE FLAKE BEFORE THE BASELINE IS OVERWRITTEN. The line above carried only counts, and
             # tg_write_failnames below replaces the stored names with this run's, so no later reader could
             # say which tests flaked: every flake verdict was unattributable, and a test that flakes on
