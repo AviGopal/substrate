@@ -101,9 +101,10 @@ leg(hops.length === 1 && JSON.stringify(hops[0]) === JSON.stringify({ shape: "ho
   "(g) the outcome grader is given only tool calls' ended hops, its own request's lapses, and cites only rows it was shown");
 leg(!!req && (req.reads ?? []).some((r: Row) => r.type === "record_read" && r.shape === "gap" && r.where === undefined)
   && String(req.description).includes("whose status is closed is already closed") && String(req.description).includes("first a clone of the repo the gap names")
-  && String(req.description).includes("not the place to edit: the fix is in the source it checks")
+  && String(req.description).includes("Edit where the gap's meta.edit_site names; with none, the source its check tests, never the check's test file")
+  && !String(req.description).includes("not the place to edit")
   && String(req.description).includes("operator_hold is held: leave it"),
-  "(h) the request producer sees every gap row and is told to ask one next call toward closing one");
+  "(h) the request producer sees every gap row, edits where its edit_site names, and is told to ask one next call toward closing one");
 const words = (of: string) => rows.filter((r) => r.shape === "shape_description" && r.of === of).at(-1)?.words;
 leg(JSON.stringify([words("world_changed"), words("answer"), words("outcome")]) === JSON.stringify([["what"], ["text"], ["r"]]),
   "(i) the owner's descriptions name the words a person reads: what, text, r (a stale one superseded by a later row)");

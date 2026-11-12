@@ -105,8 +105,8 @@ const SCHEMAS: Row[] = [
       "failure row says why one did not. If the ask is already done, or needs no call, write {\"none\": \"<why>\"} " +
       "instead of a pointer. An ask that changes something is done only when a hop row shows the change landed (a " +
       "git_land call that ended); an answer graded r 1 without that does not do it, so ask for the next call. Gaps " +
-      "(reads) are failures detectors found, each naming its repo and the failing check (a test file, which is not the " +
-      "place to edit: the fix is in the source it checks). A gap whose row says operator_hold is held: leave it. A gap " +
+      "(reads) are failures detectors found, each naming its repo and the failing check. Edit where the gap's " +
+      "meta.edit_site names; with none, the source its check tests, never the check's test file. A gap whose row says operator_hold is held: leave it. A gap " +
       "with a later row of the same gap_id whose status is closed is already closed. To close an open one, ask for the " +
       "next call toward closing it: first a clone of the repo the gap names. Every later call on that change (an edit, " +
       "a commit, a diff, a landing) works in the clone: its cwd (or a path under it) is the cwd the clone's hop " +
