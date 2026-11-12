@@ -963,6 +963,22 @@ lift_held_gaps() {
   return 0
 }
 
+# Every tick, not only when the gate tests a new HEAD: a vessel whose held gap a person graded may not move again (its
+# gap is held, so the walk does not work it). Each vessel with an open generator gap is released against its clone in
+# <clones dir>/<vessel>, at the HEAD it sits on; a vessel with no clone there is skipped.
+lift_held_gaps_each() {
+  local cl="$1" vs v
+  command -v jq >/dev/null 2>&1 || return 0
+  vs="$(dev_resolve '{"impulse":{"pointer":{"type":"substrateGap","status":"open","limit":5000}}}' --max-time 30 2>/dev/null \
+    | jq -r '[.body.gaps[]? | select((.classification_metadata.filed_by? // "") == "pull-sync failing-test generator")
+        | (.classification_metadata.evidence_resolve.input.vessel // "") | sub("^repos/"; "") | select(. != "")] | unique | .[]' 2>/dev/null)"
+  for v in $vs; do
+    [ -d "$cl/$v" ] || { log "$v: held-gap release: no clone at $cl/$v; skipped"; continue; }
+    lift_held_gaps "$v" "$(git -C "$cl/$v" rev-parse HEAD 2>/dev/null)" "$cl/$v" || true
+  done
+  return 0
+}
+
 # THE WALK'S CHANGE CLONES. git_worktree makes a whole clone for a change; walk_trees_reclaim (local-tools) removes the
 # ones nothing will use again. Nothing made the walk call it, and the clones filled a node's disk. This detector files
 # one gap while more than <threshold> clones sit under the clones directory (it is work: records makes an open detector
@@ -6107,11 +6123,13 @@ while IFS='|' read -r gv gq gh gd; do
   gleft=$(( ${UNIT_TIMEOUT_S:-3600} - ( $(date +%s) - PULLSYNC_T0 ) - ${FAILTEST_GEN_MARGIN_S:-240} ))
   if [ "$gleft" -lt 200 ]; then log "$gv: failing-test generator deferred to a later tick (${gleft}s of tick budget left)"; rm -rf "$gq"; continue; fi
   FAILTEST_GEN_DEADLINE=$(( $(date +%s) + gleft )) close_failing_test_gaps "$gv" "$gh" "$gd" || true
-  lift_held_gaps "$gv" "$gh" "$gd" || true
   gleft=$(( ${UNIT_TIMEOUT_S:-3600} - ( $(date +%s) - PULLSYNC_T0 ) - ${FAILTEST_GEN_MARGIN_S:-240} ))
   FAILTEST_GEN_DEADLINE=$(( $(date +%s) + gleft )) gen_failing_test_gaps "$gv" "$(cat "$gq/out" 2>/dev/null)" "$gq/prev" "$gh" "$gd" || true
   rm -rf "$gq"
 done <<< "$GEN_QUEUE"
+
+# A person's release of a held failing-test gap, every tick (see lift_held_gaps_each).
+lift_held_gaps_each "$CLONE_DIR" || true
 
 # The walk's change clones, every tick (see walk_trees_check).
 walk_trees_check 50 3 || true

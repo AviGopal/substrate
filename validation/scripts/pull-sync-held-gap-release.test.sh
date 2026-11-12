@@ -13,6 +13,8 @@
 #   (j) gap_resolve writes an emit that differs from the latest row only in its claim;
 #   (k) a later outcome re-decides a released gap (r 1 then r 0), keeping the size at the first release; the same
 #       deciding outcome writes nothing again;
+#   (l) every tick, with no gate run: lift_held_gaps_each releases each graded vessel's gap against its clone, skips a
+#       vessel with no clone, and the tick calls it outside the gate's queue;
 #   (i) the closer leaves a released gap open while its test file has fewer expects than at release, and closes it when
 #       it has as many.
 # usage: validation/scripts/pull-sync-held-gap-release.test.sh [path/to/substrate-pull-sync.sh]
@@ -23,7 +25,7 @@ FAILS=0
 ok()  { echo "ok   - $*"; }
 bad() { echo "FAIL - $*"; FAILS=$((FAILS+1)); }
 {
-  for f in shape_route gap_resolve dev_resolve emit_gap close_failing_test_gaps test_size lift_held_gaps; do sed -n "/^$f() {/,/^}/p" "$SCRIPT"; done
+  for f in shape_route gap_resolve dev_resolve emit_gap close_failing_test_gaps test_size lift_held_gaps lift_held_gaps_each; do sed -n "/^$f() {/,/^}/p" "$SCRIPT"; done
 } > "$T/fns.sh"
 grep -q '^lift_held_gaps()' "$T/fns.sh" && grep -q '^test_size()' "$T/fns.sh" \
   || { echo "FAIL - could not extract lift_held_gaps and test_size"; exit 1; }
@@ -155,6 +157,15 @@ if printf '%s' "$L" | jq -e --argjson b "$b1" '.meta.edit_site == "repos/x/src/a
     and .meta.baseline == $b and $b == {cases: 2, expects: 3} and (.summary | contains("leave the source as it is")) and (.summary | contains("judged the test right") | not)' >/dev/null && [ "$again" = 0 ]; then
   ok "(k) a later outcome re-decides a released gap, keeping the first release's size; the same outcome writes nothing again"
 else bad "(k) latest=$L again=$again log=$(cat "$LOG")"; fi
+
+CL="$T/clones"; mkdir -p "$CL/x/src"; cp "$DIR/src/a.test.ts" "$CL/x/src/a.test.ts"
+reset "$(held g-a x src/a.test.ts "$GEN")" "$(held g-y y src/a.test.ts "$GEN")" "$(outcome 0 r0)" "$(outcome 0 r1)"
+lift_held_gaps_each "$CL"
+if [ "$(latest g-a | jq -r '.meta.edit_site // "none"')" = "repos/x/src/a.test.ts" ] && [ "$(latest g-y | jq -r '.meta.operator_hold')" = true ] \
+  && grep -q 'y: held-gap release: no clone' "$LOG" \
+  && grep -qE '^lift_held_gaps_each "\$CLONE_DIR"' "$SCRIPT" && ! sed -n '/^while IFS=.|. read -r gv gq gh gd/,/^done/p' "$SCRIPT" | grep -q lift_held_gaps; then
+  ok "(l) every tick, no gate run: a graded vessel's gap is released against its clone; a vessel with no clone is skipped"
+else bad "(l) g-a=$(latest g-a) g-y=$(latest g-y) log=$(cat "$LOG")"; fi
 
 echo; [ "$FAILS" = 0 ] && { echo "PASS - a person releases a held generator gap, and its fix is held to the test's released size"; exit 0; }
 echo "$FAILS FAILED"; exit 1
