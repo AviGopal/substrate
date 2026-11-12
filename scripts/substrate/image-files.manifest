@@ -250,6 +250,7 @@ scripts/substrate/lib/gap-tracked-red.sh	/usr/local/share/substrate/lib/gap-trac
 scripts/substrate/secrets.env.sh	/usr/local/share/substrate/secrets.env.sh	0755	A
 scripts/substrate/secrets-manifest.json	/usr/local/share/substrate/secrets-manifest.json	0644	A
 scripts/substrate/acceptance/extract-install-fences.sh	/usr/local/share/substrate/super-repo/scripts/substrate/acceptance/extract-install-fences.sh	0755	B
+scripts/substrate/acceptance/glue-verdict.sh	/usr/local/share/substrate/super-repo/scripts/substrate/acceptance/glue-verdict.sh	0644	B
 scripts/substrate/acceptance/post-result.sh	/usr/local/share/substrate/super-repo/scripts/substrate/acceptance/post-result.sh	0755	B
 scripts/substrate/acceptance/provider-of-key.sh	/usr/local/share/substrate/super-repo/scripts/substrate/acceptance/provider-of-key.sh	0644	B
 scripts/substrate/acceptance/run-acceptance.sh	/usr/local/share/substrate/super-repo/scripts/substrate/acceptance/run-acceptance.sh	0755	B

@@ -121,6 +121,7 @@ ACCEPTANCE_CASE="${ACCEPTANCE_CASE:-standalone}"
 ACCEPTANCE_PROFILE="${ACCEPTANCE_PROFILE:-$ACCEPTANCE_CASE}"
 # The key names its own provider by prefix; ACCEPTANCE_PROVIDER_VAR only overrides that.
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/provider-of-key.sh"
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/glue-verdict.sh"
 ACCEPTANCE_PROVIDER_VAR="$(resolve_provider_var "${ACCEPTANCE_PROVIDER_KEY:-}" "${ACCEPTANCE_PROVIDER_VAR:-}")"
 INSTALL_IMAGE_REF="${INSTALL_IMAGE_REF:-ghcr.io/avigopal/substrate:dev}"
 ACCEPTANCE_CONTAINER="${ACCEPTANCE_CONTAINER:-substrate-live}"
@@ -219,16 +220,15 @@ set_check() {  # name result [detail-json]
 # The pull-sync / unit / seeder tests guard glue that ships in this image; run them on
 # every acceptance run so they always have a caller. Hermetic: no engine, network or
 # container. Bun tests use the cockpit's bun when given (never added to the fences' PATH)
-# and SKIP when bun or a submodule worktree is absent; a skip is recorded, never a pass.
+# and SKIP when bun or a submodule worktree is absent; a skip is recorded, never a pass, and in
+# gating mode a skip fails the check (glue-verdict.sh).
 glue_rc=0
 GLUE_TESTS_BUN="${COCKPIT_BUN_DIR:+$COCKPIT_BUN_DIR/bun}" \
   bash "$repo_root/validation/scripts/run-glue-tests.sh" --log-dir "$RESULT_DIR/diag/glue-tests" \
   >"$RESULT_DIR/diag/glue-tests.txt" 2>&1 || glue_rc=$?
-glue_failed="$(sed -n 's/^FAIL .*s  \([^ ]*\)  (exit.*/\1/p' "$RESULT_DIR/diag/glue-tests.txt" | jq -R . | jq -sc .)"
-glue_skipped="$(sed -n 's/^SKIP .*-  \([^ ]*\)  (.*/\1/p' "$RESULT_DIR/diag/glue-tests.txt" | jq -R . | jq -sc .)"
-glue_r=fail; [ "$glue_rc" -eq 0 ] && glue_r=pass
-set_check glue_tests "$glue_r" "$(jq -nc --argjson rc "$glue_rc" --argjson f "$glue_failed" --argjson s "$glue_skipped" \
-  '{exit: $rc, failed: $f, skipped: $s, log: "diag/glue-tests.txt"}')"
+glue_v="$(glue_verdict "$RESULT_DIR/diag/glue-tests.txt" "$glue_rc" "$mode")"
+glue_r="$(jq -r .result <<<"$glue_v")"
+set_check glue_tests "$glue_r" "$(jq -c 'del(.result) + {log: "diag/glue-tests.txt"}' <<<"$glue_v")"
 log "glue tests: $glue_r ($(tail -n 1 "$RESULT_DIR/diag/glue-tests.txt" 2>/dev/null))"
 
 # ── 1. Cold host ───────────────────────────────────────────────────────────────

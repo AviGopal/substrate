@@ -18,7 +18,8 @@
 #
 # SKIP IS NOT PASS. A bun test is SKIPPED, loudly and counted, when bun is absent or when
 # a submodule worktree it reads is not checked out (NEEDS below); and a test that says it
-# skipped (a line starting SKIP, nothing reported passing) is counted a skip too. A skip never
+# skipped (a line starting SKIP, nothing reported passing or failing, whatever its exit status) is
+# counted a skip too. A skip never
 # prints as PASS and never fails the run; the summary names how many were skipped and why.
 #
 # TRACKED RED IS NOT A REGRESSION. A check-first glue test (deliberately red until its fix lands,
@@ -230,9 +231,10 @@ for b in "${TESTS[@]}"; do
   rc=$?
   t1="$(now)"
   rm -rf "$tdir"
-  # A test that says it skipped (a line starting SKIP) and reports nothing passing is a skip, not a pass,
-  # whatever its exit status: SKIP IS NOT PASS holds for a test's own skip as for this runner's.
-  if [ "$rc" -eq 0 ] && grep -qE '^SKIP\b' "$log" && ! grep -qE '^(ok|PASS)\b' "$log"; then
+  # A test that says it skipped (a line starting SKIP) and reports nothing passing and nothing failing is a
+  # skip, whatever its exit status (a test may exit non-zero to say it judged nothing): SKIP IS NOT PASS holds
+  # for a test's own skip as for this runner's. Any failing line (FAIL…, not ok) keeps it a failure.
+  if grep -qE '^SKIP\b' "$log" && ! grep -qE '^(ok|PASS)\b' "$log" && ! grep -qE '^(FAIL|not ok)' "$log"; then
     printf 'SKIP  %5ss  %s  (%s)\n' "$(secs "$t0" "$t1")" "$b" "$(grep -m1 -E '^SKIP\b' "$log" | cut -c1-120)"
     skip=$((skip + 1))
   elif [ "$rc" -eq 0 ]; then
