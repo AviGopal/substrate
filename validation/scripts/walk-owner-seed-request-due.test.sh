@@ -28,7 +28,9 @@
 #   (o) the land verdict's grader reads only the request and the gitDiff, and is told r 0 when that tree's typecheck
 #       ran and did not pass, as when the diff was cut;
 #   (p) a gap's change is judged from the gap and the gitDiff (variant gap, the same schema), told r 0 when the gap's
-#       check did not pass; and git_land, in a group of its own, also needs a land_verdict at r 1 for its tree.
+#       check did not pass; and git_land, in a group of its own, also needs a land_verdict at r 1 for its tree;
+#   (q) fs_edit, in a group of its own, needs a whole-file read (fileContent) of the path the edit names, bound to the
+#       edit's own pointer.
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 SEED="$ROOT/scripts/substrate/walk-owner-seed.ts"
@@ -144,6 +146,10 @@ leg(!!lvGap && !!lv && JSON.stringify(lvGap.inputs) === JSON.stringify(["gap", "
     && r.latest_by === "tree" && r.group === "verdict")
   && !rows.some((r) => r.shape === "requires" && r.for === "git_land" && r.needs !== "land_verdict" && r.group !== undefined),
   "(p) a gap's change is judged from the gap and its diff, and git_land also waits for a land_verdict at r 1");
+leg(rows.some((r) => r.shape === "requires" && r.for === "fs_edit" && r.needs === "fileContent" && r.group === "read" && r.latest_by === "path"
+    && JSON.stringify(r.where) === JSON.stringify({ path: { "x-pointer": "path" } }))
+  && !rows.some((r) => r.shape === "requires" && r.for === "fs_edit" && r.needs === "codeReadResult"),
+  "(q) an edit needs a whole-file read of the very path it names");
 process.exit(failed === 0 ? 0 : 1);
 TS
 out="$(cd "$W" && "$BUN" "$W/drive.ts" 2>&1)"; rc=$?

@@ -282,6 +282,12 @@ for (const tool of CHANGE_TOOLS) {
 // an open gap, not instead of one. git_land still decides from the verdict rows themselves.
 await ensure({ shape: "requires", for: "git_land", needs: "land_verdict", where: { r: 1 }, latest_by: "tree", group: "verdict" },
   { for: "git_land", needs: "land_verdict" }, "requires git_land land_verdict");
+// An edit waits for a read of the very file it changes: the root's whole-file read (fileContent) of the path the edit
+// names (bound to the edit's own pointer). A clone's files sit under the clone's own directory, so a read made in an
+// older clone, or none, does not open an edit in a fresh one. A line-range read does not count: an edit's old text must
+// come from the file as it is. Its own group: needed besides a wanted change or an open gap.
+await ensure({ shape: "requires", for: "fs_edit", needs: "fileContent", where: { path: { "x-pointer": "path" } }, latest_by: "path", group: "read" },
+  { for: "fs_edit", needs: "fileContent" }, "requires fs_edit fileContent");
 // walk_trees_reclaim removes clones: it is called only for the root of the gap whose work it is (pull-sync's walk-trees
 // check), while that gap is open.
 await ensure({ shape: "requires", for: "walk_trees_reclaim", needs: "gap", where: { gap_id: "pull-sync-walk-trees-unreclaimed", status: "open" }, latest_by: "gap_id" },
