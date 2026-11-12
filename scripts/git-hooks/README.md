@@ -51,8 +51,7 @@ The hook runs these checks, in order, and stops at the first refusal:
 4. **SOPS** — a staged `secrets/*.secrets.yaml` must be encrypted.
 5. **Secrets scan (`gitleaks protect --staged`)** — scans the staged diff for credentials. If gitleaks isn't installed, the scan is skipped with a one-line install hint.
 6. **Human-surface bundle** — a staged UI source change must carry its rebuilt `ui/dist`.
-7. **Verdict-token copies** — the vendored copies of `packages/verdict-token` must stay byte-identical.
-8. **Glue tests** — a commit touching `scripts/substrate/`, `validation/scripts/`, the seeder, the vendored packages or this hook runs `validation/scripts/run-glue-tests.sh` against the staged tree.
+7. **Glue tests** — a commit touching `scripts/substrate/`, `validation/scripts/`, the seeder, the vendored packages or this hook runs `validation/scripts/run-glue-tests.sh` against the staged tree.
 
 Fix the first refusal, re-stage, and commit again. Bypass with `git commit --no-verify` only for a known refusal unrelated to the commit.
 

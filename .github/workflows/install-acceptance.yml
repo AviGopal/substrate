@@ -201,6 +201,20 @@ jobs:
           curl -fsSL https://bun.sh/install | BUN_INSTALL="$RUNNER_TEMP/cockpit-bun" bash >/dev/null
           "$RUNNER_TEMP/cockpit-bun/bin/bun" --version
 
+      # The glue tests that read a submodule worktree must RUN here, not skip: a gating run fails
+      # its glue check on any skip (glue-verdict.sh). Exactly the worktrees the runner names
+      # (--print-needs), so the list cannot drift from its NEEDS, fetched anonymously, each with
+      # its own locked dependencies (the federation tests load libp2p from the transport's
+      # install). Any fetch or install error fails this step rather than turning into a skip.
+      - name: Check out the submodules the glue tests read
+        run: |
+          set -euo pipefail
+          mapfile -t needs < <(bash validation/scripts/run-glue-tests.sh --print-needs)
+          [ "${#needs[@]}" -eq 0 ] || git submodule update --init --depth 1 -- "${needs[@]}"
+          for n in "${needs[@]}"; do
+            [ ! -f "$n/bun.lock" ] || (cd "$n" && "$RUNNER_TEMP/cockpit-bun/bin/bun" install --frozen-lockfile)
+          done
+
       - name: Install the Podman compose implementation
         if: matrix.engine == 'podman'
         run: |

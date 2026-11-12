@@ -9,6 +9,9 @@
 #   (e) a bash test that prints SKIP and a failing line and exits non-zero is still FAIL (a guard)
 #   (f) MUST-FAIL: acceptance's glue verdict names every skipped test, whatever its duration, and fails the
 #       check in gating mode when any test was skipped; report-only keeps the exit status (a guard)
+#   (g) MUST-FAIL: --print-needs prints each worktree a test reads, every one a submodule this tree declares (a
+#       retired repo can never be checked out, so its test could only ever skip), and the acceptance workflow checks
+#       out exactly that list, so CI runs those tests instead of skipping them
 set -uo pipefail
 SRC="$(cd "$(dirname "$0")/../.." && pwd)"
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
@@ -46,4 +49,12 @@ g="$(glue_verdict "$OUT" 0 gating)"; r="$(glue_verdict "$OUT" 0 report-only)"; c
   && ok "(f) gating: every skip is named and fails the check" || bad "(f) gating verdict $g"
 [ "$(jq -r .result <<<"$r")" = pass ] && [ "$(jq -r .result <<<"$c")" = pass ] \
   && ok "(f) report-only keeps the exit status; a run with no skip passes gating" || bad "(f) report-only $r clean $c"
+# (g) the worktrees named, against this tree's .gitmodules and the acceptance workflow
+pn="$(bash "$SRC/validation/scripts/run-glue-tests.sh" --print-needs 2>&1)"; prc=$?
+declared="$(sed -n 's/^[[:space:]]*path = //p' "$SRC/.gitmodules")"
+undeclared="$(printf '%s\n' "$pn" | grep -vxF -f <(printf '%s\n' "$declared") || true)"
+[ "$prc" -eq 0 ] && [ -n "$pn" ] && [ -z "$undeclared" ] \
+  && ok "(g) every worktree a test reads is a declared submodule: $(echo $pn)" || bad "(g) --print-needs rc=$prc: $(echo $pn); undeclared: $(echo $undeclared)"
+grep -qF 'run-glue-tests.sh --print-needs' "$SRC/.github/workflows/install-acceptance.yml" \
+  && ok "(g) the acceptance workflow checks out what --print-needs names" || bad "(g) install-acceptance.yml does not read --print-needs"
 echo; [ "$FAILS" -eq 0 ] && { echo PASS; exit 0; } || { echo "$FAILS FAIL"; exit 1; }

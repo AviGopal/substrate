@@ -19,8 +19,11 @@
 # SKIP IS NOT PASS. A bun test is SKIPPED, loudly and counted, when bun is absent or when
 # a submodule worktree it reads is not checked out (NEEDS below); and a test that says it
 # skipped (a line starting SKIP, nothing reported passing or failing, whatever its exit status) is
-# counted a skip too. A skip never
-# prints as PASS and never fails the run; the summary names how many were skipped and why.
+# counted a skip too, so a test that prints SKIP and then crashes with no failing line is a skip.
+# A skip never prints as PASS and never fails this run; the summary names how many were skipped
+# and why. Whether a skip fails a judged run is the caller's verdict: acceptance in gating mode
+# fails on any skip (scripts/substrate/acceptance/glue-verdict.sh), and its CI checks out the
+# worktrees --print-needs names so that those tests run there.
 #
 # TRACKED RED IS NOT A REGRESSION. A check-first glue test (deliberately red until its fix lands,
 # tracked by an OPEN gap) may be committed: a red *.test.sh is reported TRACKED-RED and does not
@@ -39,7 +42,7 @@
 # stale?`, and the run exits 3 (environment) when nothing else failed. That still stops the
 # pre-commit hook, under its own banner: the fault is in the environment and no test failed.
 #
-# usage: run-glue-tests.sh [--fast] [--root DIR] [--log-dir DIR] [--gap-store SRC] [--list]
+# usage: run-glue-tests.sh [--fast] [--root DIR] [--log-dir DIR] [--gap-store SRC] [--list] [--print-needs]
 #   --fast      run only the declared FAST subset (the bounded-time tests)
 #   --root DIR  tree to test (default: the tree this script sits in). The pre-commit hook
 #               passes a checkout-index export of the index here.
@@ -48,6 +51,7 @@
 #               (read through the substrateGap resolver), a JSON file, or `client-config`:
 #               the address the emitted client config names (below). Absent = no exemption.
 #   --list      print the tests that would run, and exit
+#   --print-needs print each submodule worktree a test reads (NEEDS), once, and exit
 # env: GLUE_TESTS_BUN  path to a bun binary (default: bun on PATH)
 #      GTR_MAX_TIME    seconds to wait for a --gap-store URL (default 10)
 #
@@ -68,12 +72,10 @@ SLOW=(pull-sync-hold-channel.test.sh)
 
 # Submodule worktrees a test reads (space-separated, relative to --root). Absent -> SKIP.
 declare -A NEEDS=(
-  [argument-chain-check.test.ts]="repos/ias-executor-ts repos/activity-api"
   [fed-ingress-log.test.ts]="repos/libp2p-federation-transport"
   [fed-ingress-auth-enforce.test.ts]="repos/libp2p-federation-transport"
   [fed-ingress-auth-unattested.test.ts]="repos/libp2p-federation-transport"
-  [verdict-token-copies.test.ts]="repos/activity-api repos/development-vessel"
-  [write-containment-copies.test.ts]="repos/local-tools-vessel repos/development-vessel"
+  [write-containment-copies.test.ts]="repos/local-tools-vessel"
 )
 
 FAST=0; LIST=0; ROOT=""; LOG_DIR=""; GAP_STORE=""
@@ -81,13 +83,14 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --fast) FAST=1 ;;
     --list) LIST=1 ;;
+    --print-needs) printf '%s\n' ${NEEDS[@]+"${NEEDS[@]}"} | tr ' ' '\n' | sed '/^$/d' | sort -u; exit 0 ;;
     --root) ROOT="${2:-}"; shift ;;
     --root=*) ROOT="${1#--root=}" ;;
     --log-dir) LOG_DIR="${2:-}"; shift ;;
     --log-dir=*) LOG_DIR="${1#--log-dir=}" ;;
     --gap-store) GAP_STORE="${2:-}"; shift ;;
     --gap-store=*) GAP_STORE="${1#--gap-store=}" ;;
-    -h|--help) sed -n '2,46p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) sed -n '2,66p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "run-glue-tests: unknown argument: $1" >&2; exit 64 ;;
   esac
   shift
