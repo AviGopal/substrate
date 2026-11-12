@@ -26,7 +26,9 @@
 #   (n) walk_trees_reclaim, which removes clones, is called only for the open walk-trees gap's own root;
 #   (m, n) a gap requirement reads each gap by its own latest row (latest_by gap_id);
 #   (o) the land verdict's grader reads only the request and the gitDiff, and is told r 0 when that tree's typecheck
-#       ran and did not pass, as when the diff was cut.
+#       ran and did not pass, as when the diff was cut;
+#   (p) a gap's change is judged from the gap and the gitDiff (variant gap, the same schema), told r 0 when the gap's
+#       check did not pass; and git_land, in a group of its own, also needs a land_verdict at r 1 for its tree.
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 SEED="$ROOT/scripts/substrate/walk-owner-seed.ts"
@@ -135,6 +137,13 @@ const lv = rows.find((r) => r.shape === "shape_schema" && r.target === "land_ver
 leg(!!lv && JSON.stringify(lv.inputs) === JSON.stringify(["world_changed", "gitDiff"]) && lv.context === undefined
   && String(lv.description).includes("0 when its typecheck ran and did not pass") && String(lv.description).includes("truncated is true"),
   "(o) the land verdict's grader reads only the request and the gitDiff, and grades a tree that does not typecheck r 0");
+const lvGap = rows.find((r) => r.shape === "shape_schema" && r.target === "land_verdict" && r.variant === "gap");
+leg(!!lvGap && !!lv && JSON.stringify(lvGap.inputs) === JSON.stringify(["gap", "gitDiff"]) && JSON.stringify(lvGap.schema) === JSON.stringify(lv.schema)
+  && String(lvGap.description).includes("check (the gap's own check, run on that tree) did not pass")
+  && rows.some((r) => r.shape === "requires" && r.for === "git_land" && r.needs === "land_verdict" && JSON.stringify(r.where) === JSON.stringify({ r: 1 })
+    && r.latest_by === "tree" && r.group === "verdict")
+  && !rows.some((r) => r.shape === "requires" && r.for === "git_land" && r.needs !== "land_verdict" && r.group !== undefined),
+  "(p) a gap's change is judged from the gap and its diff, and git_land also waits for a land_verdict at r 1");
 process.exit(failed === 0 ? 0 : 1);
 TS
 out="$(cd "$W" && "$BUN" "$W/drive.ts" 2>&1)"; rc=$?

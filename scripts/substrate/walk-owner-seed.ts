@@ -247,6 +247,20 @@ SCHEMAS.push({
 });
 const asked = SCHEMAS.find((s) => s.target === "request") as Row;
 SCHEMAS.push({ ...asked, variant: "gap", inputs: ["gap"] });
+// A change made for a gap is judged from the gap row in place of an ask: whether it fixes what the gap's check says is
+// failing. git_land takes a grader's r 1 on a gap's change only when the gap's own check passed on the tree (the
+// gitDiff row carries it, made with the tree), so the words here are the grader's hint, not the gate.
+const landed = SCHEMAS.find((s) => s.target === "land_verdict") as Row;
+SCHEMAS.push({
+  ...landed,
+  variant: "gap",
+  inputs: ["gap", "gitDiff"],
+  description: "Whether the change in the gitDiff row fixes what the gap row says is failing, by changing the code its " +
+    "check tests, and nothing it should not: r is 1 when it does, 0 when it does not, and also 0 when the gitDiff's " +
+    "truncated is true, because then you were not shown the whole change, when its typecheck did not pass, or when its " +
+    "check (the gap's own check, run on that tree) did not pass. repo and tree are copied exactly from the gitDiff row. " +
+    `why says, in a sentence or two, what decided it. ${JSON_ONLY}`,
+});
 // Each target and variant is its own row; the plain one is the variant "" (records matches it exactly, so a row
 // written before variants is rewritten once with it, and the two request rows never rewrite each other).
 for (const s of SCHEMAS) {
@@ -263,6 +277,11 @@ for (const tool of CHANGE_TOOLS) {
   await ensure({ shape: "requires", for: tool, needs: "change_wanted", where: { wanted: true } }, { for: tool, needs: "change_wanted" }, `requires ${tool} change_wanted`);
   await ensure({ shape: "requires", for: tool, needs: "gap", where: { status: "open" }, latest_by: "gap_id" }, { for: tool, needs: "gap" }, `requires ${tool} gap`);
 }
+// A landing waits for a verdict as well: git_land is called only once the root holds a land_verdict at r 1 (the latest
+// for its tree), so a change is diffed, then judged, then landed. Its own group: it is needed besides a wanted change or
+// an open gap, not instead of one. git_land still decides from the verdict rows themselves.
+await ensure({ shape: "requires", for: "git_land", needs: "land_verdict", where: { r: 1 }, latest_by: "tree", group: "verdict" },
+  { for: "git_land", needs: "land_verdict" }, "requires git_land land_verdict");
 // walk_trees_reclaim removes clones: it is called only for the root of the gap whose work it is (pull-sync's walk-trees
 // check), while that gap is open.
 await ensure({ shape: "requires", for: "walk_trees_reclaim", needs: "gap", where: { gap_id: "pull-sync-walk-trees-unreclaimed", status: "open" }, latest_by: "gap_id" },
