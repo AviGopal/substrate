@@ -909,15 +909,17 @@ test_size() {
 # what the check tests. Each resolves inside the checkout to an existing file (as written, or with .ts, .tsx, /index.ts,
 # or a .js import's .ts), never to another test file and never outside it; one that does not resolve is left out.
 test_sources() { # <checkout> <test file> <vessel>
-  local d="$1" tf="$2" v="$3" spec p c
-  command grep -oE "(from|import\()[[:space:]]*['\"]\.{1,2}/[^'\"]+['\"]" "$d/$tf" 2>/dev/null \
+  local d="$1" tf="$2" v="$3" spec p c out
+  out="$(command grep -oE "(from|import\()[[:space:]]*['\"]\.{1,2}/[^'\"]+['\"]" "$d/$tf" 2>/dev/null \
     | sed -E "s/^(from|import\()[[:space:]]*['\"]//; s/['\"]$//" | sort -u | while IFS= read -r spec; do
       p="$(realpath -m --relative-to="$d" "$d/$(dirname "$tf")/$spec")"
       for c in "$p" "$p.ts" "$p.tsx" "$p/index.ts" "${p%.js}.ts"; do
         case "$c" in ../*|/*|*.test.*) continue ;; esac
         [ -f "$d/$c" ] && { printf '%s\n' "$c"; break; }
       done
-    done | jq -R --arg v "$v" '"repos/" + $v + "/" + .' | jq -sc 'unique'
+    done | jq -R --arg v "$v" '"repos/" + $v + "/" + .' | jq -sc 'unique')"
+  # Always a list: a release that named none would be released again every tick, waiting for one.
+  printf '%s' "${out:-[]}"
 }
 
 # A HELD GAP IS RELEASED BY A PERSON. The generator holds a gap it cannot localize (operator_hold, needs_localization):
@@ -933,7 +935,7 @@ test_sources() { # <checkout> <test file> <vessel>
 # Either way the released row records the outcome that released it and the test file's size at the first release
 # (test_size), which the closer holds the fix to. Only this vessel's open generator gaps are read; a store that cannot be read releases nothing.
 lift_held_gaps() {
-  local v="$1" head="$2" dir="${3:-}" gaps outs p
+  local v="$1" head="$2" dir="${3:-}" gaps outs p src
   command -v jq >/dev/null 2>&1 && [ -n "$dir" ] || return 0
   gaps="$(dev_resolve '{"impulse":{"pointer":{"type":"record_read","shape":"gap"}}}' --max-time 30 2>/dev/null \
     | jq -c 'if type == "array" then . elif (.content | type) == "array" then .content else error("no rows") end' 2>/dev/null)"
@@ -950,7 +952,9 @@ lift_held_gaps() {
       p="$(printf '%s' "$p" | jq -c --argjson s "$size" '.gap.classification_metadata.baseline = $s')"
     fi
     if [ "$(printf '%s' "$p" | jq -r '.by.r // empty')" = 1 ]; then
-      [ -f "$dir/$tf" ] && p="$(printf '%s' "$p" | jq -c --argjson s "$(test_sources "$dir" "$tf" "$v")" '.gap.classification_metadata.sources = $s')"
+      # A test file no longer in the checkout names none: [] rather than nothing, so the release is not made again.
+      src='[]'; [ -f "$dir/$tf" ] && src="$(test_sources "$dir" "$tf" "$v")"
+      p="$(printf '%s' "$p" | jq -c --argjson s "$src" '.gap.classification_metadata.sources = $s')"
     fi
     emit_gap "$(printf '%s' "$p" | jq -c '{impulse: {pointer: {type: "substrateGap_write", gap: .gap}}}')"
     log "$v: held-gap release: $(printf '%s' "$p" | jq -r 'if .by.r == null then "stated the claim of " + .gap.id else "released " + .gap.id + " by outcome " + .by.id + " (r " + (.by.r | tostring) + ")" end')"

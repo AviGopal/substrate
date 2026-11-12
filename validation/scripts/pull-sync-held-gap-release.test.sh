@@ -16,7 +16,8 @@
 #   (l) every tick, with no gate run: lift_held_gaps_each releases each graded vessel's gap against its clone, skips a
 #       vessel with no clone, and the tick calls it outside the gate's queue;
 #   (m) r 1 names the test's sources (relative imports resolved inside the checkout, no test file, nothing outside it,
-#       nothing unresolved); r 0 names none; a gap released r 1 before sources existed gets them once;
+#       nothing unresolved); r 0 names none; a gap released r 1 before sources existed gets them once, and one whose
+#       test file is gone from the checkout gets [] once, not a rewrite every tick;
 #   (i) the closer leaves a released gap open while its test file has fewer expects than at release, and closes it when
 #       it has as many.
 # usage: validation/scripts/pull-sync-held-gap-release.test.sh [path/to/substrate-pull-sync.sh]
@@ -187,6 +188,14 @@ lift_held_gaps x 0123456789abcdef "$DIR"; back="$(latest g-a | jq -c '[.meta.sou
 if [ "$r1" = "$want" ] && [ "$r0" = '"none"' ] && [ "$back" = "[$want,\"r1\",{\"cases\":1,\"expects\":1}]" ] && [ "$again" = 0 ]; then
   ok "(m) r 1 names the sources the test imports (inside the checkout, no tests); r 0 none; an older r 1 release gets them once"
 else bad "(m) r1=$r1 r0=$r0 back=$back again=$again log=$(cat "$LOG")"; fi
+
+gone="$(held g-a x src/gone.test.ts "$GEN" | jq -c '.meta |= (del(.operator_hold, .operator_hold_reason, .disposition) + {localized_by: "r1", baseline: {cases: 1, expects: 1}})')"
+reset "$gone" "$(outcome 1 r0)"
+lift_held_gaps x 0123456789abcdef "$DIR"; first="$(wc -l < "$WRITES")"; gsrc="$(latest g-a | jq -c '.meta.sources')"
+: > "$WRITES"; lift_held_gaps x 0123456789abcdef "$DIR"; second="$(wc -l < "$WRITES")"
+if [ "$first" = 1 ] && [ "$gsrc" = "[]" ] && [ "$second" = 0 ]; then
+  ok "(m) a released gap whose test file is gone gets sources [] once, and is not written again"
+else bad "(m) gone: first=$first sources=$gsrc second=$second log=$(cat "$LOG")"; fi
 
 echo; [ "$FAILS" = 0 ] && { echo "PASS - a person releases a held generator gap, and its fix is held to the test's released size"; exit 0; }
 echo "$FAILS FAILED"; exit 1
