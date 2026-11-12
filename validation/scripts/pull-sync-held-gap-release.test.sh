@@ -15,6 +15,8 @@
 #       deciding outcome writes nothing again;
 #   (l) every tick, with no gate run: lift_held_gaps_each releases each graded vessel's gap against its clone, skips a
 #       vessel with no clone, and the tick calls it outside the gate's queue;
+#   (m) r 1 names the test's sources (relative imports resolved inside the checkout, no test file, nothing outside it,
+#       nothing unresolved); r 0 names none; a gap released r 1 before sources existed gets them once;
 #   (i) the closer leaves a released gap open while its test file has fewer expects than at release, and closes it when
 #       it has as many.
 # usage: validation/scripts/pull-sync-held-gap-release.test.sh [path/to/substrate-pull-sync.sh]
@@ -25,7 +27,7 @@ FAILS=0
 ok()  { echo "ok   - $*"; }
 bad() { echo "FAIL - $*"; FAILS=$((FAILS+1)); }
 {
-  for f in shape_route gap_resolve dev_resolve emit_gap close_failing_test_gaps test_size lift_held_gaps lift_held_gaps_each; do sed -n "/^$f() {/,/^}/p" "$SCRIPT"; done
+  for f in shape_route gap_resolve dev_resolve emit_gap close_failing_test_gaps test_size test_sources lift_held_gaps lift_held_gaps_each; do sed -n "/^$f() {/,/^}/p" "$SCRIPT"; done
 } > "$T/fns.sh"
 grep -q '^lift_held_gaps()' "$T/fns.sh" && grep -q '^test_size()' "$T/fns.sh" \
   || { echo "FAIL - could not extract lift_held_gaps and test_size"; exit 1; }
@@ -166,6 +168,25 @@ if [ "$(latest g-a | jq -r '.meta.edit_site // "none"')" = "repos/x/src/a.test.t
   && grep -qE '^lift_held_gaps_each "\$CLONE_DIR"' "$SCRIPT" && ! sed -n '/^while IFS=.|. read -r gv gq gh gd/,/^done/p' "$SCRIPT" | grep -q lift_held_gaps; then
   ok "(l) every tick, no gate run: a graded vessel's gap is released against its clone; a vessel with no clone is skipped"
 else bad "(l) g-a=$(latest g-a) g-y=$(latest g-y) log=$(cat "$LOG")"; fi
+
+mkdir -p "$DIR/src/lib"
+printf 'export const s = 1;\n' > "$DIR/src/lib.ts"; printf 'export const h = 1;\n' > "$DIR/src/helper.test.ts"
+printf 'export const i = 1;\n' > "$DIR/src/lib/index.ts"; printf 'x\n' > "$T/outside.ts"
+printf '%s\n' 'import { describe, it, expect } from "bun:test";' 'import { s } from "./lib";' 'import { i } from "./lib/index.js";' \
+  'import { h } from "./helper.test";' 'import { o } from "../../outside";' 'import { m } from "./missing";' \
+  'const late = await import("../src/lib.ts");' 'describe("d", () => { it("one", () => { expect(s).toBe(1); }); });' > "$DIR/src/b.test.ts"
+want='["repos/x/src/lib.ts","repos/x/src/lib/index.ts"]'
+reset "$(held g-a x src/b.test.ts "$GEN")" "$(outcome 1 r0)"
+lift_held_gaps x 0123456789abcdef "$DIR"; r1="$(latest g-a | jq -c '.meta.sources')"
+reset "$(held g-a x src/b.test.ts "$GEN")" "$(outcome 0 r0)"
+lift_held_gaps x 0123456789abcdef "$DIR"; r0="$(latest g-a | jq -c '.meta.sources // "none"')"
+old_rel="$(held g-a x src/b.test.ts "$GEN" | jq -c '.meta |= (del(.operator_hold, .operator_hold_reason, .disposition) + {localized_by: "r1", baseline: {cases: 1, expects: 1}})')"
+reset "$old_rel" "$(outcome 1 r0)"
+lift_held_gaps x 0123456789abcdef "$DIR"; back="$(latest g-a | jq -c '[.meta.sources, .meta.localized_by, .meta.baseline]')"
+: > "$WRITES"; lift_held_gaps x 0123456789abcdef "$DIR"; again="$(wc -l < "$WRITES")"
+if [ "$r1" = "$want" ] && [ "$r0" = '"none"' ] && [ "$back" = "[$want,\"r1\",{\"cases\":1,\"expects\":1}]" ] && [ "$again" = 0 ]; then
+  ok "(m) r 1 names the sources the test imports (inside the checkout, no tests); r 0 none; an older r 1 release gets them once"
+else bad "(m) r1=$r1 r0=$r0 back=$back again=$again log=$(cat "$LOG")"; fi
 
 echo; [ "$FAILS" = 0 ] && { echo "PASS - a person releases a held generator gap, and its fix is held to the test's released size"; exit 0; }
 echo "$FAILS FAILED"; exit 1

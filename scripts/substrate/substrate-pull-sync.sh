@@ -905,12 +905,29 @@ test_size() {
   printf '{"cases":%d,"expects":%d}' "$c" "$e"
 }
 
+# The source files a test file imports by a relative path (from "./x", import("./x")), as repos/<vessel>/<path>, sorted:
+# what the check tests. Each resolves inside the checkout to an existing file (as written, or with .ts, .tsx, /index.ts,
+# or a .js import's .ts), never to another test file and never outside it; one that does not resolve is left out.
+test_sources() { # <checkout> <test file> <vessel>
+  local d="$1" tf="$2" v="$3" spec p c
+  command grep -oE "(from|import\()[[:space:]]*['\"]\.{1,2}/[^'\"]+['\"]" "$d/$tf" 2>/dev/null \
+    | sed -E "s/^(from|import\()[[:space:]]*['\"]//; s/['\"]$//" | sort -u | while IFS= read -r spec; do
+      p="$(realpath -m --relative-to="$d" "$d/$(dirname "$tf")/$spec")"
+      for c in "$p" "$p.ts" "$p.tsx" "$p/index.ts" "${p%.js}.ts"; do
+        case "$c" in ../*|/*|*.test.*) continue ;; esac
+        [ -f "$d/$c" ] && { printf '%s\n' "$c"; break; }
+      done
+    done | jq -R --arg v "$v" '"repos/" + $v + "/" + .' | jq -sc 'unique'
+}
+
 # A HELD GAP IS RELEASED BY A PERSON. The generator holds a gap it cannot localize (operator_hold, needs_localization):
 # whether the test or the source is wrong is not something a stack can say. The person's surface shows gap rows with a
 # grade, which judges a row's claim, so each held row first states one (claim: the test is right and the source must
 # change). A person's outcome on any detector row of the gap then releases it, the latest by seq deciding (a later one
 # re-decides a released gap):
-#   - r 1, the claim is right: the hold goes, protected_files stay, no edit_site (the walk fixes the source);
+#   - r 1, the claim is right: the hold goes, protected_files stay, no edit_site (the walk fixes the source), and sources
+#     names the files the test imports (test_sources), so the walk edits what the check tests rather than guessing a
+#     file from the test's name; a gap released before sources existed gets them once;
 #   - r 0, the claim is wrong: the hold goes, edit_site becomes the test file and protected_files go (the test is fixed,
 #     the source left as it is).
 # Either way the released row records the outcome that released it and the test file's size at the first release
@@ -931,6 +948,9 @@ lift_held_gaps() {
       [ -f "$dir/$tf" ] || { log "$v: held-gap release: $tf is not in the checkout; $(printf '%s' "$p" | jq -r .gap.id) stays held"; continue; }
       size="$(test_size "$dir/$tf")"
       p="$(printf '%s' "$p" | jq -c --argjson s "$size" '.gap.classification_metadata.baseline = $s')"
+    fi
+    if [ "$(printf '%s' "$p" | jq -r '.by.r // empty')" = 1 ]; then
+      [ -f "$dir/$tf" ] && p="$(printf '%s' "$p" | jq -c --argjson s "$(test_sources "$dir" "$tf" "$v")" '.gap.classification_metadata.sources = $s')"
     fi
     emit_gap "$(printf '%s' "$p" | jq -c '{impulse: {pointer: {type: "substrateGap_write", gap: .gap}}}')"
     log "$v: held-gap release: $(printf '%s' "$p" | jq -r 'if .by.r == null then "stated the claim of " + .gap.id else "released " + .gap.id + " by outcome " + .by.id + " (r " + (.by.r | tostring) + ")" end')"
@@ -955,8 +975,8 @@ lift_held_gaps() {
            + (($m.evidence_resolve.input.only_tests // []) | join(" ; ")))})}
     | ($g.summary | split($held) | join("\u0000") | split($right) | join("\u0000") | split($wrong) | join("\u0000")) as $s
     | if .by == null then select($was == null and ($g.claim // "") != .gap.claim)
-      else select(.by.id != $was)
-        | .gap.classification_metadata |= del(.operator_hold, .operator_hold_reason, .disposition, .localized_by, .claim_rejected_by, .edit_site, .protected_files)
+      else select(.by.id != $was or (.by.r == 1 and $m.sources == null))
+        | .gap.classification_metadata |= del(.operator_hold, .operator_hold_reason, .disposition, .localized_by, .claim_rejected_by, .edit_site, .protected_files, .sources)
         | if .by.r == 1 then .gap.classification_metadata += {protected_files: [$file], localized_by: $by.id} | .gap.summary = ($s | split("\u0000") | join($right))
           else .gap.classification_metadata += {edit_site: $file, claim_rejected_by: $by.id} | .gap.summary = ($s | split("\u0000") | join($wrong)) end
       end' 2>/dev/null)"
