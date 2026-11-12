@@ -124,7 +124,9 @@ const SCHEMAS: Row[] = [
     },
     inputs: ["world_changed"],
     // The answer and its grade are here so the producer can see the ask is done; the hops show whether a change landed.
-    context: ["hop", "failure", "answer", "outcome"],
+    // A file read is shown whole (an edit quotes text from it, so a cut copy cannot be quoted), only its newest read per
+    // path (a read after an edit replaces the older one), and in place of the hop that fetched it.
+    context: ["hop", "failure", "answer", "outcome", { shape: "fileContent", whole: true, latest_by: "path", covers: { shape: "hop", on: "call_id" } }],
     // declared: only shapes whose producer declared their inputs, the ones a request can fill (discovery resolvers.ts).
     // gap: every detector gap row, opening and closing alike, so a closed gap is seen as closed.
     reads: [{ type: "shapeDescriptions", declared: true }, { type: "record_read", shape: "gap" }],

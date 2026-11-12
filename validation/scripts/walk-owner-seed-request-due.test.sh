@@ -31,6 +31,8 @@
 #       check did not pass; and git_land, in a group of its own, also needs a land_verdict at r 1 for its tree;
 #   (q) fs_edit, in a group of its own, needs a whole-file read (fileContent) of the path the edit names, bound to the
 #       edit's own pointer.
+#   (r) the request producer is shown a file read whole, only its newest read per path, in place of the hop that
+#       fetched it (context fileContent: whole, latest_by path, covers hop on call_id), in both request variants.
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 SEED="$ROOT/scripts/substrate/walk-owner-seed.ts"
@@ -150,6 +152,9 @@ leg(rows.some((r) => r.shape === "requires" && r.for === "fs_edit" && r.needs ==
     && JSON.stringify(r.where) === JSON.stringify({ path: { "x-pointer": "path" } }))
   && !rows.some((r) => r.shape === "requires" && r.for === "fs_edit" && r.needs === "codeReadResult"),
   "(q) an edit needs a whole-file read of the very path it names");
+const fileIn = (r: Row | undefined) => (r?.context ?? []).filter((e: unknown) => typeof e === "object" && (e as Row).shape === "fileContent");
+leg([req, fromGap].every((r) => JSON.stringify(fileIn(r)) === JSON.stringify([{ shape: "fileContent", whole: true, latest_by: "path", covers: { shape: "hop", on: "call_id" } }])),
+  "(r) the request producer sees a file read whole, newest per path, in place of the hop that fetched it");
 process.exit(failed === 0 ? 0 : 1);
 TS
 out="$(cd "$W" && "$BUN" "$W/drive.ts" 2>&1)"; rc=$?
