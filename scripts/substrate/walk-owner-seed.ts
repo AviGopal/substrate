@@ -151,9 +151,11 @@ const SCHEMAS: Row[] = [
     target: "land_verdict",
     // git_land (local-tools) pushes a change only on a verdict for its exact tree. A grader's counts only when it was made
     // from exactly the request and the walk's gitDiff of that tree, so this schema reads nothing else: no hop, no answer.
+    // What else the grader must know of the tree rides on the gitDiff row, made with the tree: whether it typechecks.
     description: "Whether the change in the gitDiff row does what the world_changed row's `what` asks, correctly and " +
       "completely, and nothing it should not: r is 1 when it does, 0 when it does not, and also 0 when the gitDiff's " +
-      "truncated is true, because then you were not shown the whole change. repo and tree are copied exactly from the " +
+      "truncated is true, because then you were not shown the whole change, and 0 when its typecheck ran and did not " +
+      "pass, because that tree does not compile. repo and tree are copied exactly from the " +
       `gitDiff row. why says, in a sentence or two, what decided it. ${JSON_ONLY}`,
     schema: {
       type: "object",

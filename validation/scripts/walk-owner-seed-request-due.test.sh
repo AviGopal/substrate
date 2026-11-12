@@ -23,7 +23,9 @@
 #   (m) whether an ask wants a change is judged from the ask alone (change_wanted: inputs [world_changed], no context,
 #       wanted boolean), and every call that changes something requires a wanted change or an open gap;
 #   (n) walk_trees_reclaim, which removes clones, is called only for the open walk-trees gap's own root;
-#   (m, n) a gap requirement reads each gap by its own latest row (latest_by gap_id).
+#   (m, n) a gap requirement reads each gap by its own latest row (latest_by gap_id);
+#   (o) the land verdict's grader reads only the request and the gitDiff, and is told r 0 when that tree's typecheck
+#       ran and did not pass, as when the diff was cut.
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 SEED="$ROOT/scripts/substrate/walk-owner-seed.ts"
@@ -128,6 +130,10 @@ leg(!!cw && JSON.stringify(cw.inputs) === JSON.stringify(["world_changed"]) && J
 leg(pre("walk_trees_reclaim", "gap", { gap_id: "pull-sync-walk-trees-unreclaimed", status: "open" })
   && !rows.some((r) => r.shape === "requires" && r.for === "walk_trees_reclaim" && r.needs !== "gap"),
   "(n) walk_trees_reclaim is called only for the open walk-trees gap's own root");
+const lv = rows.find((r) => r.shape === "shape_schema" && r.target === "land_verdict");
+leg(!!lv && JSON.stringify(lv.inputs) === JSON.stringify(["world_changed", "gitDiff"]) && lv.context === undefined
+  && String(lv.description).includes("0 when its typecheck ran and did not pass") && String(lv.description).includes("truncated is true"),
+  "(o) the land verdict's grader reads only the request and the gitDiff, and grades a tree that does not typecheck r 0");
 process.exit(failed === 0 ? 0 : 1);
 TS
 out="$(cd "$W" && "$BUN" "$W/drive.ts" 2>&1)"; rc=$?
