@@ -25,6 +25,10 @@ name: Install acceptance
 #                     `published-image` artifact) and the install page is read at the
 #                     commit that image was built from, so page and image always match
 #   workflow_dispatch judge any image by hand (defaults to :dev)
+#   schedule          every 6 hours, the published :dev against the install page at the
+#                     dev head, so a fleet that stops installing is seen even when no
+#                     build runs. It judges and reports; it never promotes (:dev is
+#                     already :dev, and promotion needs a digest).
 #
 # SECRETS AND VARIABLES (all optional; absence degrades, never errors)
 #   ACCEPTANCE_PROVIDER_KEY  secret  a low-budget provider key for the run's own fleet.
@@ -69,6 +73,9 @@ on:
   workflow_run:
     workflows: ["Build & publish substrate image", "Nightly dev build"]
     types: [completed]
+  schedule:
+    # :40, clear of the bump-submodules boundary (00/06/12/18) and the 07:00 nightly.
+    - cron: '40 */6 * * *'
   workflow_dispatch:
     inputs:
       image:
@@ -458,7 +465,7 @@ jobs:
     # one token and contributed to it (network), and upgraded the fleet :dev runs without
     # losing its keys or identity (upgrade), on every engine.
     needs: [resolve, accept, network, upgrade]
-    if: vars.INSTALL_ACCEPTANCE_GATES_DEV == 'true' && needs.resolve.outputs.found == 'true' && needs.accept.result == 'success' && needs.network.result == 'success' && needs.upgrade.result == 'success'
+    if: github.event_name != 'schedule' && vars.INSTALL_ACCEPTANCE_GATES_DEV == 'true' && needs.resolve.outputs.found == 'true' && needs.accept.result == 'success' && needs.network.result == 'success' && needs.upgrade.result == 'success'
     runs-on: ubuntu-latest
     # One promotion at a time across every judgement, so two runs finishing together
     # cannot interleave their reads of :dev and their copies to it.
