@@ -17,8 +17,9 @@
 # Needs no container, network or docker; the tests stub every lifecycle call.
 #
 # SKIP IS NOT PASS. A bun test is SKIPPED, loudly and counted, when bun is absent or when
-# a submodule worktree it reads is not checked out (NEEDS below). A skip never prints as
-# PASS and never fails the run; the summary names how many were skipped and why.
+# a submodule worktree it reads is not checked out (NEEDS below); and a test that says it
+# skipped (a line starting SKIP, nothing reported passing) is counted a skip too. A skip never
+# prints as PASS and never fails the run; the summary names how many were skipped and why.
 #
 # TRACKED RED IS NOT A REGRESSION. A check-first glue test (deliberately red until its fix lands,
 # tracked by an OPEN gap) may be committed: a red *.test.sh is reported TRACKED-RED and does not
@@ -211,12 +212,14 @@ for b in "${TESTS[@]}"; do
   fi
   tdir="$(mktemp -d "$base_tmp/glue-test.XXXXXX")"
   t0="$(now)"
+  # A test may spawn `bun` by name (a bun test's seeder, a bash test's own `command -v bun`): put
+  # GLUE_TESTS_BUN's directory first on every test's PATH, never on the caller's. env -i below drops
+  # GLUE_TESTS_BUN itself, so without this a bash test that needs bun sees none and goes red or skips.
   tpath="$PATH"
+  [ -n "$BUN" ] && tpath="$(dirname "$BUN"):$PATH"
   case "$b" in
     *.test.sh) cmd=(bash "$DIR/$b") ;;
-    # A bun test may spawn `bun` by name (the seeder test does): put GLUE_TESTS_BUN's
-    # directory first on that test's PATH only, never on the caller's.
-    *.test.ts) cmd=("$BUN" test "$DIR/$b"); tpath="$(dirname "$BUN"):$PATH" ;;
+    *.test.ts) cmd=("$BUN" test "$DIR/$b") ;;
   esac
   # Git identity is supplied, not inherited: a fresh runner (CI, a clean HOME) has no
   # global config, and the tests commit into their own temp repos.
@@ -227,7 +230,12 @@ for b in "${TESTS[@]}"; do
   rc=$?
   t1="$(now)"
   rm -rf "$tdir"
-  if [ "$rc" -eq 0 ]; then
+  # A test that says it skipped (a line starting SKIP) and reports nothing passing is a skip, not a pass,
+  # whatever its exit status: SKIP IS NOT PASS holds for a test's own skip as for this runner's.
+  if [ "$rc" -eq 0 ] && grep -qE '^SKIP\b' "$log" && ! grep -qE '^(ok|PASS)\b' "$log"; then
+    printf 'SKIP  %5ss  %s  (%s)\n' "$(secs "$t0" "$t1")" "$b" "$(grep -m1 -E '^SKIP\b' "$log" | cut -c1-120)"
+    skip=$((skip + 1))
+  elif [ "$rc" -eq 0 ]; then
     note=""
     if [ "$GTR_STATE" = loaded ] && [ -n "$(gtr_tracked_names "$GTR_STORE" super-repo "validation/scripts/$b")" ]; then
       note="  (tracked by an open gap and now green: that gap can close)"
