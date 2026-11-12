@@ -1,0 +1,160 @@
+#!/usr/bin/env bash
+# A person releases a gap the failing-test generator held (scripts/substrate/substrate-pull-sync.sh lift_held_gaps), and
+# the closer holds the fix to the test file's size at release (close_failing_test_gaps). Runs the script's own functions
+# with curl stubbed as discovery in front of an in-memory records store.
+#   (a) a held row with no claim gets one (still held); a second call writes nothing;
+#   (b) a person's r 1 on any row of the gap: open, unheld, protected_files kept, no edit_site, localized_by, the size;
+#   (c) a person's r 0: edit_site the test file, protected_files gone, claim_rejected_by, the size;
+#   (d) the latest outcome decides;
+#   (e) an outcome by anyone but a person, or on another gap's row, releases nothing;
+#   (f) another vessel's held gap, a gap the generator did not file, and a closed gap are not touched;
+#   (g) records unreadable: nothing written;
+#   (h) the test file missing from the checkout: the gap stays held;
+#   (j) gap_resolve writes an emit that differs from the latest row only in its claim;
+#   (k) a later outcome re-decides a released gap (r 1 then r 0), keeping the size at the first release; the same
+#       deciding outcome writes nothing again;
+#   (i) the closer leaves a released gap open while its test file has fewer expects than at release, and closes it when
+#       it has as many.
+# usage: validation/scripts/pull-sync-held-gap-release.test.sh [path/to/substrate-pull-sync.sh]
+set -uo pipefail
+SCRIPT="${1:-$(cd "$(dirname "$0")/../.." && pwd)/scripts/substrate/substrate-pull-sync.sh}"
+T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
+FAILS=0
+ok()  { echo "ok   - $*"; }
+bad() { echo "FAIL - $*"; FAILS=$((FAILS+1)); }
+{
+  for f in shape_route gap_resolve dev_resolve emit_gap close_failing_test_gaps test_size lift_held_gaps; do sed -n "/^$f() {/,/^}/p" "$SCRIPT"; done
+} > "$T/fns.sh"
+grep -q '^lift_held_gaps()' "$T/fns.sh" && grep -q '^test_size()' "$T/fns.sh" \
+  || { echo "FAIL - could not extract lift_held_gaps and test_size"; exit 1; }
+LOG="$T/log.txt"; log() { echo "$*" >> "$LOG"; }
+ROWS="$T/rows.json"; WRITES="$T/writes.txt"; DOWN=""
+DISCOVERY=http://discovery.test; SHAPE_ROUTES=" "; SR_ROUTE=""; DEV_VESSEL=""
+export METABOB_API_KEY=""
+curl() {
+  cat > /dev/null
+  local d="" a prev=""; for a in "$@"; do case "$prev" in -d) d="$a" ;; esac; prev="$a"; done
+  local t; t="$(printf '%s' "$d" | jq -r '.pointer.type // empty')"
+  case "$t" in
+    vesselCapability) printf '{"content":{"vessels":[{"vesselId":"v"}]}}' ;;
+    record_read) if [ -n "$DOWN" ]; then printf '{"error":"down"}'; else jq -c --arg s "$(printf '%s' "$d" | jq -r .pointer.shape)" 'map(select(.shape == $s))' "$ROWS"; fi ;;
+    record_write)
+      local n row; n="$(jq length "$ROWS")"
+      row="$(printf '%s' "$d" | jq -c --argjson n "$n" '.pointer as $p | $p.row + {id: ("row-" + ($n | tostring)), seq: ($n + 1), writer: $p.writer, role: $p.role}')"
+      jq -c --argjson r "$row" '. + [$r]' "$ROWS" > "$ROWS.new" && mv "$ROWS.new" "$ROWS"
+      echo "$row" >> "$WRITES"; printf '%s' "$row" ;;
+    *) printf '{}' ;;
+  esac
+}
+# shellcheck disable=SC1090
+source "$T/fns.sh"
+scrubbed_env() { shift; "$@"; }
+FAKE="$T/fake"; mkdir -p "$FAKE"
+cat > "$FAKE/bun" <<'B'
+#!/usr/bin/env bash
+f="$(basename "$2")"; cat "$(dirname "$0")/$f.out" 2>/dev/null
+B
+chmod +x "$FAKE/bun"; BUN_BIN="$FAKE/bun"
+DIR="$T/checkout"; mkdir -p "$DIR/src"
+export TEST_BASELINE_DIR="$T/baseline"; mkdir -p "$TEST_BASELINE_DIR"
+GEN="pull-sync failing-test generator"
+HELD="Not yet localized (no source frame in the stack, or an unclassified error): needs a diagnosis of whether the source or the test is wrong before any compose."
+held() { # gap_id vessel test_file filed_by [status]
+  jq -cn --arg id "$1" --arg v "$2" --arg tf "$3" --arg by "$4" --arg st "${5:-open}" --arg h "$HELD" \
+    '{shape: "gap", gap_id: $id, status: $st, category: "failing_test", summary: ("Failing test(s) in " + $tf + ". " + $h + " Done when the named tests pass."),
+      writer: "pull-sync", role: "detector",
+      meta: {filed_by: $by, evidence_resolve: {shape: "test_suite", input: {vessel: $v, test_file: $tf, only_tests: ["d > one"]}},
+             protected_files: [("repos/" + $v + "/" + $tf)], disposition: "needs_information", operator_hold: true, operator_hold_reason: "needs_localization"}}'
+}
+outcome() { jq -cn --argjson r "$1" --arg ref "$2" --arg role "${3:-person}" '{shape: "outcome", r: $r, input_refs: [$ref], role: $role, writer: "someone"}'; }
+reset() { printf '%s\n' "$@" | jq -s -c 'to_entries | map(.value + {id: ("r" + (.key | tostring)), seq: (.key + 1)})' > "$ROWS"; : > "$WRITES"; : > "$LOG"; }
+latest() { jq -c --arg id "$1" '[.[] | select(.shape == "gap" and .gap_id == $id)] | sort_by(.seq) | last' "$ROWS"; }
+printf 'describe("d", () => {\n  it("one", () => { expect(1).toBe(1); expect(2).toBe(2); });\n  test("two", () => { expect(3).toBe(3); });\n});\n' > "$DIR/src/a.test.ts"
+
+reset "$(held g-a x src/a.test.ts "$GEN")"
+lift_held_gaps x 0123456789abcdef "$DIR"
+L="$(latest g-a)"
+if [ "$(wc -l < "$WRITES")" = 1 ] && printf '%s' "$L" | jq -e '.claim | startswith("The test is right: the source must change so these tests in repos/x/src/a.test.ts pass: d > one")' >/dev/null \
+  && printf '%s' "$L" | jq -e --argjson o "$(held g-a x src/a.test.ts "$GEN")" '.status == "open" and .meta == $o.meta and .summary == $o.summary and .category == $o.category' >/dev/null; then
+  : > "$WRITES"; lift_held_gaps x 0123456789abcdef "$DIR"
+  if [ ! -s "$WRITES" ]; then ok "(a) a held row gets its claim and nothing else changes (still held); it is not written again"; else bad "(a) second call wrote $(cat "$WRITES")"; fi
+else bad "(a) writes=$(cat "$WRITES") log=$(cat "$LOG")"; fi
+
+reset "$(held g-a x src/a.test.ts "$GEN")" "$(held g-a x src/a.test.ts "$GEN")" "$(outcome 1 r0)"
+lift_held_gaps x 0123456789abcdef "$DIR"
+L="$(latest g-a)"
+if printf '%s' "$L" | jq -e '.status == "open" and (.meta | has("operator_hold") or has("disposition") or has("edit_site") | not)
+    and .meta.protected_files == ["repos/x/src/a.test.ts"] and .meta.localized_by == "r2" and .meta.baseline == {cases: 2, expects: 3}
+    and (.summary | contains("A person judged the test right")) and (.summary | contains("Not yet localized") | not)' >/dev/null; then
+  ok "(b) r 1 releases it: unheld, the test still protected, no edit_site, by that outcome, at the file's size"
+else bad "(b) latest=$L log=$(cat "$LOG")"; fi
+
+reset "$(held g-a x src/a.test.ts "$GEN")" "$(outcome 0 r0)"
+lift_held_gaps x 0123456789abcdef "$DIR"
+L="$(latest g-a)"
+if printf '%s' "$L" | jq -e '.status == "open" and (.meta | has("operator_hold") or has("protected_files") | not)
+    and .meta.edit_site == "repos/x/src/a.test.ts" and .meta.claim_rejected_by == "r1" and .meta.baseline == {cases: 2, expects: 3}
+    and (.summary | contains("leave the source as it is"))' >/dev/null; then
+  ok "(c) r 0 releases it with the test file as edit_site and the test no longer protected"
+else bad "(c) latest=$L log=$(cat "$LOG")"; fi
+
+reset "$(held g-a x src/a.test.ts "$GEN")" "$(outcome 1 r0)" "$(outcome 0 r0)"
+lift_held_gaps x 0123456789abcdef "$DIR"
+if [ "$(latest g-a | jq -r '.meta.edit_site // "none"')" = "repos/x/src/a.test.ts" ]; then ok "(d) the latest outcome decides"
+else bad "(d) latest=$(latest g-a)"; fi
+
+reset "$(held g-a x src/a.test.ts "$GEN")" "$(held g-b x src/a.test.ts "$GEN")" "$(outcome 1 r0 described)" "$(outcome 1 r1)"
+lift_held_gaps x 0123456789abcdef "$DIR"
+if [ "$(latest g-a | jq -r '.meta.operator_hold')" = true ] && [ "$(latest g-b | jq -r '.meta.operator_hold // "gone"')" = gone ]; then
+  ok "(e) an outcome not by a person, or on another gap's row, releases nothing"
+else bad "(e) g-a=$(latest g-a) g-b=$(latest g-b)"; fi
+
+reset "$(held g-y y src/a.test.ts "$GEN")" "$(held g-h x src/a.test.ts operator)" "$(held g-c x src/a.test.ts "$GEN" closed)" \
+  "$(outcome 1 r0)" "$(outcome 1 r1)" "$(outcome 1 r2)"
+lift_held_gaps x 0123456789abcdef "$DIR"
+if [ ! -s "$WRITES" ]; then ok "(f) another vessel's gap, one the generator did not file, and a closed one are not touched"
+else bad "(f) writes=$(cat "$WRITES")"; fi
+
+reset "$(held g-a x src/a.test.ts "$GEN")" "$(outcome 1 r0)"; DOWN=1
+lift_held_gaps x 0123456789abcdef "$DIR"; DOWN=""
+if [ ! -s "$WRITES" ] && grep -q 'records unreadable' "$LOG"; then ok "(g) records unreadable: nothing written"
+else bad "(g) writes=$(cat "$WRITES") log=$(cat "$LOG")"; fi
+
+reset "$(held g-a x src/gone.test.ts "$GEN")" "$(outcome 1 r0)"
+lift_held_gaps x 0123456789abcdef "$DIR"
+if [ "$(latest g-a | jq -r '.meta.operator_hold')" = true ]; then ok "(h) the test file missing from the checkout: the gap stays held"
+else bad "(h) latest=$(latest g-a)"; fi
+
+reset "$(held g-a x src/a.test.ts "$GEN")" "$(outcome 0 r0)"
+lift_held_gaps x 0123456789abcdef "$DIR"
+printf '(pass) d > one\n 1 pass\n 0 fail\n' > "$FAKE/a.test.ts.out"
+printf 'describe("d", () => {\n  it("one", () => { expect(1).toBe(1); });\n  test("two", () => { expect(3).toBe(3); });\n});\n' > "$DIR/src/a.test.ts"
+: > "$WRITES"; close_failing_test_gaps x 1111111111aaaa "$DIR"
+weak="$(wc -l < "$WRITES")"
+printf 'describe("d", () => {\n  it("one", () => { expect(1).toBe(1); expect(2).toBe(2); });\n  test("two", () => { expect(3).toBe(3); });\n});\n' > "$DIR/src/a.test.ts"
+close_failing_test_gaps x 2222222222bbbb "$DIR"
+if [ "$weak" = 0 ] && [ "$(latest g-a | jq -r .status)" = closed ]; then
+  ok "(i) the closer leaves a released gap open while its test lost an expect, and closes it at its released size"
+else bad "(i) weak-writes=$weak latest=$(latest g-a) log=$(cat "$LOG")"; fi
+
+reset "$(held g-a x src/a.test.ts "$GEN")"
+emit_gap "$(jq -cn '{impulse: {pointer: {type: "substrateGap_write", gap: {id: "g-a", status: "open", category: "failing_test", claim: "c",
+  summary: "Failing test(s) in src/a.test.ts. '"$HELD"' Done when the named tests pass.",
+  classification_metadata: ('"$(held g-a x src/a.test.ts "$GEN" | jq -c .meta)"')}}}}')"
+if [ "$(wc -l < "$WRITES")" = 1 ] && [ "$(latest g-a | jq -r .claim)" = c ]; then ok "(j) an emit differing only in its claim writes a new row"
+else bad "(j) writes=$(cat "$WRITES") log=$(cat "$LOG")"; fi
+
+reset "$(held g-a x src/a.test.ts "$GEN")" "$(outcome 1 r0)"
+lift_held_gaps x 0123456789abcdef "$DIR"
+b1="$(latest g-a | jq -c .meta.baseline)"
+printf 'describe("d", () => {\n  it("one", () => { expect(1).toBe(1); });\n});\n' > "$DIR/src/a.test.ts"
+jq -c --argjson o "$(outcome 0 r0)" '. + [$o + {id: "late", seq: 99}]' "$ROWS" > "$ROWS.new" && mv "$ROWS.new" "$ROWS"
+: > "$WRITES"; lift_held_gaps x 0123456789abcdef "$DIR"
+L="$(latest g-a)"; : > "$WRITES"; lift_held_gaps x 0123456789abcdef "$DIR"; again="$(wc -l < "$WRITES")"
+if printf '%s' "$L" | jq -e --argjson b "$b1" '.meta.edit_site == "repos/x/src/a.test.ts" and .meta.claim_rejected_by == "late" and (.meta | has("localized_by") or has("protected_files") | not)
+    and .meta.baseline == $b and $b == {cases: 2, expects: 3} and (.summary | contains("leave the source as it is")) and (.summary | contains("judged the test right") | not)' >/dev/null && [ "$again" = 0 ]; then
+  ok "(k) a later outcome re-decides a released gap, keeping the first release's size; the same outcome writes nothing again"
+else bad "(k) latest=$L again=$again log=$(cat "$LOG")"; fi
+
+echo; [ "$FAILS" = 0 ] && { echo "PASS - a person releases a held generator gap, and its fix is held to the test's released size"; exit 0; }
+echo "$FAILS FAILED"; exit 1

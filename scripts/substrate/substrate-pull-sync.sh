@@ -300,7 +300,7 @@ gap_resolve() { # <pointer json> [curl args...]: answers as the old store did ({
       | if ($rest | tostring | length) <= 1024 then $rest + . else . end')"
     if printf '%s' "$_g_rows" | jq -e --argjson r "$_g_row" '
         map(select(.id == $r.gap_id)) | .[0] // null
-        | . != null and .status == $r.status and .summary == $r.summary and .classification_metadata == $r.meta' >/dev/null 2>&1; then
+        | . != null and .status == $r.status and .summary == $r.summary and .classification_metadata == $r.meta and .claim == $r.claim' >/dev/null 2>&1; then
       _g_out='{"body":{"ok":true,"unchanged":true}}'
     else
       _g_out="$(_g_post "$(jq -cn --argjson r "$_g_row" '{pointer: {type: "record_write", row: $r, writer: "pull-sync", role: "detector"}}')" \
@@ -850,7 +850,8 @@ close_failing_test_gaps() {
     | select((.classification_metadata.filed_by? // "") == "pull-sync failing-test generator")
     | select(.classification_metadata.evidence_resolve.shape? == "test_suite")
     | select(((.classification_metadata.evidence_resolve.input.vessel // "") | sub("^repos/"; "")) == $v)
-    | {id, tf: .classification_metadata.evidence_resolve.input.test_file, names: (.classification_metadata.evidence_resolve.input.only_tests // [])}
+    | {id, tf: .classification_metadata.evidence_resolve.input.test_file, names: (.classification_metadata.evidence_resolve.input.only_tests // []),
+       baseline: .classification_metadata.baseline}
     | select((.tf // "") != "" and (.names | length) > 0)
     | . + {last: (($seen[0] // {})[.id] // {at: 0, head: ""})}
     | select(.last.head != $head)]
@@ -876,6 +877,14 @@ close_failing_test_gaps() {
       | [.names[] | select(("(pass) " + .) as $x | $L | index($x)) | select(("(fail) " + .) as $x | $L | index($x) | not)] as $ok
       | if ($ok | length) == (.names | length) then "all" else "\($ok | length)/\(.names | length)" end')"
     if [ "$names" != "all" ]; then log "$v: failing-test closer: $id still red alone ($names named tests pass); left open"; continue; fi
+    # A gap a person released carries the test file's size when released (lift_held_gaps): green by losing a case or
+    # an expect is not a fix, so it stays open.
+    if [ "$(printf '%s' "$g" | jq -r '.baseline | type')" = object ]; then
+      local now; now="$(test_size "$dir/$tf")"
+      if ! jq -en --argjson b "$(printf '%s' "$g" | jq -c .baseline)" --argjson n "$now" '$n.cases >= $b.cases and $n.expects >= $b.expects' >/dev/null; then
+        log "$v: failing-test closer: $id passes alone but $tf has fewer cases or expects than when it was released ($now); left open"; continue
+      fi
+    fi
     emit_gap "$(jq -cn --arg id "$id" --arg v "$v" --arg tf "$tf" --arg head "${head:0:10}" \
       '{impulse:{pointer:{type:"substrateGap_write",gap:{id:$id,category:"failing_test",source:"substrate_detected",status:"closed",closed_reason:"named_tests_pass",
         summary:("Every test this gap checks in repos/" + $v + "/" + $tf + " passes when the file runs alone, at " + $head + "."),
@@ -884,6 +893,73 @@ close_failing_test_gaps() {
     n=$((n + 1))
   done <<< "$gaps"
   [ "$n" -gt 0 ] && log "$v: failing-test closer: $n gap(s) closed this tick"
+  return 0
+}
+
+# How big a test file is, statically: its cases (it( / test( calls) and its expect( calls, as {"cases":n,"expects":n}.
+# The closer compares a released gap's test file against the size it had when released.
+test_size() {
+  local c e
+  c="$(command grep -oE '(^|[^A-Za-z0-9_.$])(it|test)(\.each\([^)]*\))?\(' "$1" 2>/dev/null | wc -l)"
+  e="$(command grep -oE '(^|[^A-Za-z0-9_.$])expect\(' "$1" 2>/dev/null | wc -l)"
+  printf '{"cases":%d,"expects":%d}' "$c" "$e"
+}
+
+# A HELD GAP IS RELEASED BY A PERSON. The generator holds a gap it cannot localize (operator_hold, needs_localization):
+# whether the test or the source is wrong is not something a stack can say. The person's surface shows gap rows with a
+# grade, which judges a row's claim, so each held row first states one (claim: the test is right and the source must
+# change). A person's outcome on any detector row of the gap then releases it, the latest by seq deciding (a later one
+# re-decides a released gap):
+#   - r 1, the claim is right: the hold goes, protected_files stay, no edit_site (the walk fixes the source);
+#   - r 0, the claim is wrong: the hold goes, edit_site becomes the test file and protected_files go (the test is fixed,
+#     the source left as it is).
+# Either way the released row records the outcome that released it and the test file's size at the first release
+# (test_size), which the closer holds the fix to. Only this vessel's open generator gaps are read; a store that cannot be read releases nothing.
+lift_held_gaps() {
+  local v="$1" head="$2" dir="${3:-}" gaps outs p
+  command -v jq >/dev/null 2>&1 && [ -n "$dir" ] || return 0
+  gaps="$(dev_resolve '{"impulse":{"pointer":{"type":"record_read","shape":"gap"}}}' --max-time 30 2>/dev/null \
+    | jq -c 'if type == "array" then . elif (.content | type) == "array" then .content else error("no rows") end' 2>/dev/null)"
+  outs="$(dev_resolve '{"impulse":{"pointer":{"type":"record_read","shape":"outcome","where":{"role":"person"}}}}' --max-time 30 2>/dev/null \
+    | jq -c 'if type == "array" then . elif (.content | type) == "array" then .content else error("no rows") end' 2>/dev/null)"
+  [ -n "$gaps" ] && [ -n "$outs" ] || { log "$v: held-gap release: records unreadable; nothing released"; return 0; }
+  while IFS= read -r p; do
+    [ -n "$p" ] || continue
+    local tf size
+    tf="$(printf '%s' "$p" | jq -r '.tf')"
+    if [ "$(printf '%s' "$p" | jq -r '.by.r // empty')" != "" ] && [ "$(printf '%s' "$p" | jq -r '.gap.classification_metadata.baseline | type')" != object ]; then
+      [ -f "$dir/$tf" ] || { log "$v: held-gap release: $tf is not in the checkout; $(printf '%s' "$p" | jq -r .gap.id) stays held"; continue; }
+      size="$(test_size "$dir/$tf")"
+      p="$(printf '%s' "$p" | jq -c --argjson s "$size" '.gap.classification_metadata.baseline = $s')"
+    fi
+    emit_gap "$(printf '%s' "$p" | jq -c '{impulse: {pointer: {type: "substrateGap_write", gap: .gap}}}')"
+    log "$v: held-gap release: $(printf '%s' "$p" | jq -r 'if .by.r == null then "stated the claim of " + .gap.id else "released " + .gap.id + " by outcome " + .by.id + " (r " + (.by.r | tostring) + ")" end')"
+  done <<< "$(jq -cn --arg v "$v" --argjson rows "$gaps" --argjson outs "$outs" '
+    "Not yet localized (no source frame in the stack, or an unclassified error): needs a diagnosis of whether the source or the test is wrong before any compose." as $held
+    | "A person judged the test right: fix the source so the named tests pass, keeping every case and expect." as $right
+    | "A person judged the test wrong: fix the test at edit_site so it checks what the source does now, keeping every case and expect, and leave the source as it is." as $wrong
+    | ($outs | map(select(.role == "person" and (.r == 0 or .r == 1)))) as $o
+    | $rows | map(select(.shape == "gap" and .role == "detector")) | group_by(.gap_id)[] | sort_by(.seq) as $all | $all[-1] as $g
+    | ($g.meta // {}) as $m
+    | ($m.localized_by // $m.claim_rejected_by) as $was
+    | select($g.status == "open" and ($m.operator_hold == true or $was != null) and $m.filed_by == "pull-sync failing-test generator")
+    | select((($m.evidence_resolve.input.vessel // "") | sub("^repos/"; "")) == $v)
+    | ($m.evidence_resolve.input.test_file // "") as $tf | select($tf != "")
+    | ([$all[].id] | map(tostring)) as $ids
+    | ([$o[] | select([(.input_refs // [])[] | tostring] | any(. as $x | $ids | index($x)))] | sort_by(.seq) | last) as $by
+    | ($g | del(.shape, .id, .seq, .t, .writer, .role, .input_refs, .gap_id, .meta)) as $rest
+    | ("repos/" + $v + "/" + $tf) as $file
+    | {tf: $tf, by: (if $by then {id: $by.id, r: $by.r} else null end),
+       gap: ($rest + {id: $g.gap_id, classification_metadata: $m,
+         claim: ("The test is right: the source must change so these tests in " + $file + " pass: "
+           + (($m.evidence_resolve.input.only_tests // []) | join(" ; ")))})}
+    | ($g.summary | split($held) | join("\u0000") | split($right) | join("\u0000") | split($wrong) | join("\u0000")) as $s
+    | if .by == null then select($was == null and ($g.claim // "") != .gap.claim)
+      else select(.by.id != $was)
+        | .gap.classification_metadata |= del(.operator_hold, .operator_hold_reason, .disposition, .localized_by, .claim_rejected_by, .edit_site, .protected_files)
+        | if .by.r == 1 then .gap.classification_metadata += {protected_files: [$file], localized_by: $by.id} | .gap.summary = ($s | split("\u0000") | join($right))
+          else .gap.classification_metadata += {edit_site: $file, claim_rejected_by: $by.id} | .gap.summary = ($s | split("\u0000") | join($wrong)) end
+      end' 2>/dev/null)"
   return 0
 }
 
@@ -6031,6 +6107,7 @@ while IFS='|' read -r gv gq gh gd; do
   gleft=$(( ${UNIT_TIMEOUT_S:-3600} - ( $(date +%s) - PULLSYNC_T0 ) - ${FAILTEST_GEN_MARGIN_S:-240} ))
   if [ "$gleft" -lt 200 ]; then log "$gv: failing-test generator deferred to a later tick (${gleft}s of tick budget left)"; rm -rf "$gq"; continue; fi
   FAILTEST_GEN_DEADLINE=$(( $(date +%s) + gleft )) close_failing_test_gaps "$gv" "$gh" "$gd" || true
+  lift_held_gaps "$gv" "$gh" "$gd" || true
   gleft=$(( ${UNIT_TIMEOUT_S:-3600} - ( $(date +%s) - PULLSYNC_T0 ) - ${FAILTEST_GEN_MARGIN_S:-240} ))
   FAILTEST_GEN_DEADLINE=$(( $(date +%s) + gleft )) gen_failing_test_gaps "$gv" "$(cat "$gq/out" 2>/dev/null)" "$gq/prev" "$gh" "$gd" || true
   rm -rf "$gq"
