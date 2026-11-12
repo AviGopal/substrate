@@ -38,8 +38,19 @@ async function post(url: string, payload: object): Promise<unknown> {
 const records = (shape: string, pointer: object): Promise<unknown> =>
   post(new URL("/resolve", DISCOVERY_URL).href, { pointer: { ...pointer, type: shape } });
 
-const read = async (shape: string, where?: Row): Promise<Row[]> =>
-  (await records("record_read", { shape, ...(where ? { where } : {}) })) as Row[];
+// What records answers a read with: its rows, as a list (or under content). A records that is starting or restarting
+// can answer anything else: that is not an answer, and is read again until READY_WAIT_MS has passed. Taking it as rows
+// failed a rerun mid-way, and the vessels that Require this unit stopped with it.
+const read = async (shape: string, where?: Row): Promise<Row[]> => {
+  for (const deadline = Date.now() + READY_WAIT_MS; ; ) {
+    const a = await records("record_read", { shape, ...(where ? { where } : {}) });
+    const rows = Array.isArray(a) ? a : (a as { content?: unknown } | null)?.content;
+    if (Array.isArray(rows)) return rows as Row[];
+    if (Date.now() > deadline) throw new Error(`records answered no list of ${shape} rows for ${READY_WAIT_MS} ms`);
+    console.log(`[walk-owner-seed] records answered no list of ${shape} rows; reading again`);
+    await Bun.sleep(READY_RETRY_MS);
+  }
+};
 
 // A row "already says it" when every field we write equals the latest matching row's (JSON-compared).
 async function ensure(row: Row, where: Row | undefined, label: string): Promise<void> {
