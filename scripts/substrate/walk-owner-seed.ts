@@ -169,19 +169,25 @@ const SCHEMAS: Row[] = [
     description: "Whether the change in the gitDiff row does what the world_changed row's `what` asks, correctly and " +
       "completely, and nothing it should not: r is 1 when it does, 0 when it does not, and also 0 when the gitDiff's " +
       "truncated is true, because then you were not shown the whole change, and 0 when its typecheck ran and did not " +
-      "pass, because that tree does not compile. repo and tree are copied exactly from the " +
-      `gitDiff row. why says, in a sentence or two, what decided it. ${JSON_ONLY}`,
+      "pass, because that tree does not compile. repo, tree and typecheck_ran (its typecheck.ran) are copied exactly " +
+      "from the gitDiff row; when typecheck_ran is false the typecheck did not run (its why says why): say that, never " +
+      `that it failed or passed. why says, in a sentence or two, what decided it. ${JSON_ONLY}`,
+    // x-equals: what the grader states about the diff is held to the diff row it was shown (described-shape refuses
+    // anything else), so a verdict cannot name another tree or say a check ran that did not.
     schema: {
       type: "object",
-      required: ["repo", "tree", "r", "why"],
+      required: ["repo", "tree", "typecheck_ran", "r", "why"],
       properties: {
-        repo: { type: "string", minLength: 1 },
-        tree: { type: "string", pattern: "^[0-9a-f]{40}$" },
+        repo: { type: "string", minLength: 1, "x-equals": { shape: "gitDiff", path: "repo" } },
+        tree: { type: "string", pattern: "^[0-9a-f]{40}$", "x-equals": { shape: "gitDiff", path: "tree" } },
+        typecheck_ran: { type: "boolean", "x-equals": { shape: "gitDiff", path: "typecheck.ran" } },
         r: { enum: [0, 1] },
         why: { type: "string", minLength: 1 },
       },
     },
-    inputs: ["world_changed", "gitDiff"],
+    // Only the root's newest gitDiff (latest_by over a field every gitDiff shares: one per root): a grader shown an older
+    // diff beside it judged that one instead.
+    inputs: ["world_changed", { shape: "gitDiff", latest_by: "shape" }],
   },
   {
     target: "activity_template",
@@ -267,12 +273,13 @@ const landed = SCHEMAS.find((s) => s.target === "land_verdict") as Row;
 SCHEMAS.push({
   ...landed,
   variant: "gap",
-  inputs: ["gap", "gitDiff"],
+  inputs: ["gap", { shape: "gitDiff", latest_by: "shape" }],
   description: "Whether the change in the gitDiff row fixes what the gap row says is failing, by changing the code its " +
     "check tests, and nothing it should not: r is 1 when it does, 0 when it does not, and also 0 when the gitDiff's " +
     "truncated is true, because then you were not shown the whole change, when its typecheck did not pass, or when its " +
-    "check (the gap's own check, run on that tree) did not pass. repo and tree are copied exactly from the gitDiff row. " +
-    `why says, in a sentence or two, what decided it. ${JSON_ONLY}`,
+    "check (the gap's own check, run on that tree) did not pass. repo, tree and typecheck_ran (its typecheck.ran) are " +
+    "copied exactly from the gitDiff row; when typecheck_ran is false the typecheck did not run (its why says why): say " +
+    `that, never that it failed or passed. why says, in a sentence or two, what decided it. ${JSON_ONLY}`,
 });
 // Each target and variant is its own row; the plain one is the variant "" (records matches it exactly, so a row
 // written before variants is rewritten once with it, and the two request rows never rewrite each other).

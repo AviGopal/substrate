@@ -29,6 +29,9 @@
 #       ran and did not pass, as when the diff was cut;
 #   (p) a gap's change is judged from the gap and the gitDiff (variant gap, the same schema), told r 0 when the gap's
 #       check did not pass; and git_land, in a group of its own, also needs a land_verdict at r 1 for its tree;
+#   (u) the land verdict (both variants) is judged from only the root's newest gitDiff, and what it states of the diff
+#       (repo, tree, typecheck_ran) is bound to that row (x-equals), typecheck_ran required, so it cannot say a check ran
+#       that did not;
 #   (q) fs_edit, in a group of its own, needs a whole-file read (fileContent) of the path the edit names, bound to the
 #       edit's own pointer.
 #   (s) a gap's closing credits the walk only after a landing: one owner credits row for gap, by_call git_land;
@@ -139,11 +142,12 @@ leg(pre("walk_trees_reclaim", "gap", { gap_id: "pull-sync-walk-trees-unreclaimed
   && !rows.some((r) => r.shape === "requires" && r.for === "walk_trees_reclaim" && r.needs !== "gap"),
   "(n) walk_trees_reclaim is called only for the open walk-trees gap's own root");
 const lv = rows.find((r) => r.shape === "shape_schema" && r.target === "land_verdict");
-leg(!!lv && JSON.stringify(lv.inputs) === JSON.stringify(["world_changed", "gitDiff"]) && lv.context === undefined
+const newestDiff = { shape: "gitDiff", latest_by: "shape" };
+leg(!!lv && JSON.stringify(lv.inputs) === JSON.stringify(["world_changed", newestDiff]) && lv.context === undefined
   && String(lv.description).includes("0 when its typecheck ran and did not pass") && String(lv.description).includes("truncated is true"),
   "(o) the land verdict's grader reads only the request and the gitDiff, and grades a tree that does not typecheck r 0");
 const lvGap = rows.find((r) => r.shape === "shape_schema" && r.target === "land_verdict" && r.variant === "gap");
-leg(!!lvGap && !!lv && JSON.stringify(lvGap.inputs) === JSON.stringify(["gap", "gitDiff"]) && JSON.stringify(lvGap.schema) === JSON.stringify(lv.schema)
+leg(!!lvGap && !!lv && JSON.stringify(lvGap.inputs) === JSON.stringify(["gap", newestDiff]) && JSON.stringify(lvGap.schema) === JSON.stringify(lv.schema)
   && String(lvGap.description).includes("check (the gap's own check, run on that tree) did not pass")
   && rows.some((r) => r.shape === "requires" && r.for === "git_land" && r.needs === "land_verdict" && JSON.stringify(r.where) === JSON.stringify({ r: 1 })
     && r.latest_by === "tree" && r.group === "verdict")
@@ -159,6 +163,14 @@ leg([req, fromGap].every((r) => JSON.stringify(fileIn(r)) === JSON.stringify([{ 
 const credits = rows.filter((r) => r.shape === "credits");
 leg(credits.length === 1 && credits[0].target === "gap" && credits[0].by_call === "git_land",
   "(s) a gap's closing credits the walk only after a landing (credits gap by_call git_land), written once");
+const bound = (v: Row | undefined) => {
+  const p = (v?.schema as Row | undefined)?.properties as Row | undefined;
+  const eq = (k: string, path: string) => JSON.stringify(p?.[k]?.["x-equals"]) === JSON.stringify({ shape: "gitDiff", path });
+  return !!p && eq("repo", "repo") && eq("tree", "tree") && eq("typecheck_ran", "typecheck.ran")
+    && ((v?.schema as Row).required as string[]).includes("typecheck_ran");
+};
+leg([lv, lvGap].every((v) => !!v && bound(v) && JSON.stringify(v.inputs?.[1]) === JSON.stringify({ shape: "gitDiff", latest_by: "shape" })),
+  "(u) the land verdict judges only the root's newest gitDiff, and what it states of it is bound to that row");
 process.exit(failed === 0 ? 0 : 1);
 TS
 out="$(cd "$W" && "$BUN" "$W/drive.ts" 2>&1)"; rc=$?
