@@ -150,6 +150,11 @@ describe('the policy is the latest row the OWNER wrote in this node\'s records (
   test('the latest owner row is the policy', () => {
     expect(policyFromRecordsRows([row('owner', 1, 'log'), row('owner', 5, 'enforce')])?.mode).toBe('enforce')
   })
+  test('MUST-FAIL: a node-key owner row naming a peer routes no caller key: the peer list is never read from records', () => {
+    const p = policyFromRecordsRows([row('owner', 3, 'enforce')])
+    expect(p?.same_authority_peers).toEqual([])
+    expect(pointerForDial('/dns4/relay.invalid/tcp/1/p2p/12D3KooWRelay/p2p-circuit/p2p/12D3KooWAttackerPlaceholderPeer', { type: 'concept' }, KEY, p)).toEqual({ type: 'concept' })
+  })
   test('MUST-FAIL: a person, operator or walk row of the shape is not the policy, however late; empty and malformed reads are null', () => {
     for (const role of ['person', 'operator', 'walk', 'detector']) {
       expect([role, policyFromRecordsRows([row(role, 9)])]).toEqual([role, null])

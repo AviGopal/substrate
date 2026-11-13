@@ -151,15 +151,20 @@ export function resolveMode(policy: Policy | null, ratchetSeen: boolean, emergen
 }
 
 /**
- * The policy from records: the latest fedIngressAuthPolicy row the OWNER wrote (records refuses an owner row under any
- * key but the node's own, and stamps the role). A row any other role wrote (person, operator, walk) is not the policy.
- * No owner row, or a malformed one, is null: unreadable, so the ratchet decides.
+ * The policy from records: the latest fedIngressAuthPolicy row the OWNER wrote. A row any other role wrote (person,
+ * operator, walk) is not the policy. No owner row, or a malformed one, is null: unreadable, so the ratchet decides.
+ *
+ * Its peer list is NEVER read from the row. records takes an owner role from the node key, and every vessel on the node
+ * holds that key, so a row naming a peer could be any process's, and a peer list routes callers' keys (pointerForDial).
+ * Who is same-authority comes only from a source identity vouches for (the OBO change). Until then the row decides the
+ * mode, which resolveMode lets only rise above the ratchet, so a forged row cannot lower enforcement or route a key.
  */
 export function policyFromRecordsRows(rows: unknown): Policy | null {
   if (!Array.isArray(rows)) return null
   const owned = rows.filter((r): r is Record<string, unknown> => !!r && typeof r === 'object' && (r as Record<string, unknown>).role === 'owner')
   const latest = owned.reduce<Record<string, unknown> | null>((a, r) => (!a || Number(r.seq) > Number(a.seq) ? r : a), null)
-  return latest ? parsePolicy(latest) : null
+  const parsed = latest ? parsePolicy(latest) : null
+  return parsed ? { ...parsed, same_authority_peers: [], same_authority_substrates: [] } : null
 }
 
 /** The final /p2p/<id> component of a multiaddr (the destination peer of a circuit address), or null. */
