@@ -367,6 +367,45 @@ export async function probeReservationOnce(d: ProbeDeps): Promise<'held' | 'redi
   return 'redialed'
 }
 
+export interface ProbeScheduleDeps {
+  /** Whether a relay connection is up now. */
+  connected: () => boolean
+  /** One probe (the transport's probeReservation: one at a time, never throws). */
+  probe: () => Promise<unknown>
+  /** The pace between probes after the first (reservationProbeMs of the policy as it is then). */
+  paceMs: () => number
+  log: (line: string) => void
+  sleep?: (ms: number) => Promise<unknown>
+  /** How often to look for the first relay connection, and for how long (defaults 1 s, 120 s). */
+  pollMs?: number
+  firstWaitMs?: number
+  /** Ends the schedule (tests); the transport never stops it. */
+  stop?: () => boolean
+}
+/**
+ * The probe's schedule. The first probe runs as soon as the transport's first relay connection is up, not a whole pace
+ * after start: a restarted transport's reservation could otherwise go unanswered, and every dialer's forward be refused,
+ * for that whole pace (seen: twelve refusals in the ten minutes before the first probe). With no relay connection within
+ * firstWaitMs, one line says so and the paced probes ask once one is up. Then one probe per pace, as before.
+ */
+export async function runReservationProbes(d: ProbeScheduleDeps): Promise<void> {
+  const sleep = d.sleep ?? ((ms: number) => new Promise((r) => setTimeout(r, ms)))
+  const poll = d.pollMs ?? 1_000
+  const first = d.firstWaitMs ?? 120_000
+  let waited = 0
+  while (!d.connected() && waited < first) {
+    if (d.stop?.()) return
+    await sleep(poll)
+    waited += poll
+  }
+  if (d.connected()) await d.probe()
+  else d.log(`[federation] reservation probe: no relay connection within ${Math.round(first / 1000)} s of start; the paced probe asks once one is up`)
+  while (!d.stop?.()) {
+    await sleep(d.paceMs())
+    await d.probe()
+  }
+}
+
 /** How long a token the sending transport asks for lives: one dial and one identity round trip at the far end. */
 export const OBO_TTL_SECONDS = 30
 

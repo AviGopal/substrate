@@ -18,7 +18,7 @@ import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import {
-  ECHO_MAX_BYTES, ECHO_RATE_MAX, ECHO_RATE_WINDOW_MS, HOP_RESERVE_FRAME, OBO_TTL_SECONDS, PUBLIC_SHAPES, makeEchoRateGate, callerKeyFromHeader, decideIngress, decodeHopStatus, destinationPeer, echoRefusal, forwardAddresses, hopFrameFrom, isRelayRefusal, makeOboMinter, makeValidator, oboAudience, probeReservationOnce, reservationProbeMs,
+  ECHO_MAX_BYTES, ECHO_RATE_MAX, ECHO_RATE_WINDOW_MS, HOP_RESERVE_FRAME, OBO_TTL_SECONDS, PUBLIC_SHAPES, makeEchoRateGate, callerKeyFromHeader, decideIngress, decodeHopStatus, destinationPeer, echoRefusal, forwardAddresses, hopFrameFrom, isRelayRefusal, makeOboMinter, makeValidator, oboAudience, probeReservationOnce, reservationProbeMs, runReservationProbes,
   oboToken, parsePolicy, pointerForDial, policyFromRecordsRows, resolveMode, stripCredentials, withoutFedAuth, type Policy, type Validate,
 } from '../../scripts/substrate/federation-relay/ingress-auth'
 
@@ -428,6 +428,37 @@ describe('the relay\'s own answer about our reservation (circuit relay v2 HOP RE
   test('MUST-FAIL: no relay connection is nothing to ask: no line, no re-dial', async () => {
     expect(await run(null)).toEqual({ got: 'no-connection', lines: [], redials: [] })
   })
+  // The schedule, driven by a stand-in clock: sleep records each wait and refuses past 200 calls, so a schedule that never
+  // probes (or never stops) fails in milliseconds rather than running away.
+  const schedule = async (connectAfterPolls: number, probesWanted: number, firstWaitMs = 5_000) => {
+    const events: string[] = []
+    let polls = 0
+    let probes = 0
+    let calls = 0
+    await runReservationProbes({
+      connected: () => polls >= connectAfterPolls,
+      probe: async () => { probes++; events.push('probe') },
+      paceMs: () => 600_000,
+      log: (l) => events.push('log: ' + l),
+      sleep: async (ms) => { if (++calls > 200) throw new Error('stand-in clock: too many sleeps'); events.push(`sleep ${ms}`); if (ms === 1_000) polls++ },
+      pollMs: 1_000,
+      firstWaitMs,
+      stop: () => probes >= probesWanted,
+    })
+    return events
+  }
+  test('MUST-FAIL: after a restart the first probe runs as soon as the first relay connection is up, not a whole pace later', async () => {
+    expect(await schedule(3, 2)).toEqual(['sleep 1000', 'sleep 1000', 'sleep 1000', 'probe', 'sleep 600000', 'probe'])
+  })
+  test('MUST-FAIL: a transport already connected at start probes before any wait', async () => {
+    expect((await schedule(0, 1))[0]).toBe('probe')
+  })
+  test('no relay connection within the first wait: one line says so, and the paced probes ask once one is up', async () => {
+    const ev = await schedule(99, 1, 3_000)
+    expect(ev.slice(0, 3)).toEqual(['sleep 1000', 'sleep 1000', 'sleep 1000'])
+    expect(ev[3]).toBe('log: [federation] reservation probe: no relay connection within 3 s of start; the paced probe asks once one is up')
+    expect(ev.slice(4)).toEqual(['sleep 600000', 'probe'])
+  })
   test('the pace is the policy row\'s reservation_probe_s, clamped to 60..3600 s, else 600 s', () => {
     expect(reservationProbeMs(null)).toBe(600_000)
     expect(reservationProbeMs(parsePolicy({ mode: 'enforce', reservation_probe_s: 5 }))).toBe(60_000)
@@ -435,15 +466,18 @@ describe('the relay\'s own answer about our reservation (circuit relay v2 HOP RE
     expect(reservationProbeMs(parsePolicy({ mode: 'enforce', reservation_probe_s: 99999 }))).toBe(3_600_000)
     expect(reservationProbeMs(parsePolicy({ mode: 'enforce', reservation_probe_s: 'x' }))).toBe(600_000)
   })
-  test('MUST-FAIL: the transport probes on its existing relay connection, one at a time, re-dialing through redialRelay, on the row\'s pace', () => {
+  test('MUST-FAIL: the transport probes on its existing relay connection, one at a time, re-dialing through redialRelay, first on connect and then on the row\'s pace', () => {
     const src = readFileSync(join(ROOT, 'scripts/substrate/federation-relay/federation-transport-server.ts'), 'utf8')
     const probe = src.slice(src.indexOf('async function probeReservation('), src.indexOf('async function redialRelay('))
     expect(probe).toContain('if (probing || !RELAY) return')
     expect(probe).toContain('const c: any = relayConnections()[0]')
     expect(probe).toContain('c.newStream(RELAY_V2_HOP_CODEC')
     expect(probe).toContain('redial: (why) => redialRelay(why),')
-    expect(probe).toContain('reservationProbeMs(cachedPolicy())')
-    expect(probe).toContain('\nscheduleReservationProbe()')
+    expect(probe).toContain('void runReservationProbes({')
+    expect(probe).toContain('connected: () => relayConnections().length > 0,')
+    expect(probe).toContain('probe: () => probeReservation(),')
+    expect(probe).toContain('paceMs: () => reservationProbeMs(cachedPolicy()),')
+    expect(src).not.toContain('scheduleReservationProbe')
   })
 })
 

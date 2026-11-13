@@ -15,7 +15,7 @@ import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { AsyncLocalStorage } from 'node:async_hooks'
 import { RELAY_V2_HOP_CODEC } from '@libp2p/circuit-relay-v2'
-import { callerKeyFromHeader, decideIngress, echoRefusal, forwardAddresses, isRelayRefusal, makeEchoRateGate, makeOboMinter, makeValidator, oboAudience, pointerForDial, probeReservationOnce, reservationProbeMs, policyFromRecordsRows, resolveMode, stripCredentials, withoutFedAuth, type Decision, type Mode, type Policy } from './ingress-auth'
+import { callerKeyFromHeader, decideIngress, echoRefusal, forwardAddresses, isRelayRefusal, makeEchoRateGate, makeOboMinter, makeValidator, oboAudience, pointerForDial, probeReservationOnce, reservationProbeMs, runReservationProbes, policyFromRecordsRows, resolveMode, stripCredentials, withoutFedAuth, type Decision, type Mode, type Policy } from './ingress-auth'
 import { multiaddr } from '@multiformats/multiaddr'
 
 // RESILIENCE: libp2p internals emit 'error' events on streams/sockets that have no
@@ -1495,10 +1495,13 @@ async function probeReservation(): Promise<void> {
     })
   } finally { probing = false }
 }
-function scheduleReservationProbe(): void {
-  setTimeout(() => { void probeReservation().finally(scheduleReservationProbe) }, reservationProbeMs(cachedPolicy()))
-}
-scheduleReservationProbe()
+// The first probe as soon as the first relay connection is up, then one per pace (runReservationProbes, ingress-auth.ts).
+void runReservationProbes({
+  connected: () => relayConnections().length > 0,
+  probe: () => probeReservation(),
+  paceMs: () => reservationProbeMs(cachedPolicy()),
+  log: (line) => console.log(line),
+})
 async function redialRelay(reason: string): Promise<void> {
   if (redialing) return
   // No anchor ⇒ nothing to dial. Without this guard every caller below (the egress repair
