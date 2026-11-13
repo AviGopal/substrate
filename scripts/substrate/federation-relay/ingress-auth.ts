@@ -228,18 +228,35 @@ export function oboAudience(address: string, pointer: unknown): Audience | null 
 }
 
 export type Mint = (callerKey: string, audience: Audience) => Promise<string | null>
-export interface MinterOptions { identityUrl: () => string; actorKey: () => string; fetchImpl: Fetch; timeoutMs?: number }
+export interface MinterOptions { identityUrl: () => string; actorKey: () => string; fetchImpl: Fetch; timeoutMs?: number; log?: (line: string) => void; now?: () => number }
 
 /**
  * identity POST /v1/auth/on-behalf-of: this transport is the actor (its own key), the caller is the key the local caller
  * presented. Returns the token, or null on any refusal or failure (then the dial carries no credential and the far end
  * refuses it as absent). Never throws, and never returns the caller's key.
+ *
+ * A mint that yields no token says why, once a minute per status: the HTTP status identity answered, unreachable (no
+ * answer), no_identity (no identity URL or no key of its own), or no_token (an answer with no usable token). Without
+ * it a refused mint and a caller with no key both read only as "absent" at the far end. The line names the shape and
+ * the destination peer's tail, never a key or a token.
  */
 export function makeOboMinter(o: MinterOptions): Mint {
+  const now = o.now ?? (() => Date.now())
+  const said = new Map<string, number>()
+  const refused = (status: string, audience: Audience): null => {
+    const t = now()
+    const last = said.get(status)
+    if (o.log && (last === undefined || t - last >= 60_000)) {
+      said.set(status, t)
+      o.log(`[fed-egress] obo mint refused status=${status} shape=${audience.shape.replace(/[^A-Za-z0-9_.:-]/g, '?').slice(0, 64)} peer=…${audience.node.slice(-8)}`)
+    }
+    return null
+  }
   return async (callerKey: string, audience: Audience): Promise<string | null> => {
     const base = o.identityUrl().replace(/\/$/, '')
     const actor = o.actorKey()
-    if (!base || !actor || !callerKey) return null
+    if (!callerKey) return null
+    if (!base || !actor) return refused('no_identity', audience)
     try {
       const r = await o.fetchImpl(base + '/v1/auth/on-behalf-of', {
         method: 'POST',
@@ -247,10 +264,10 @@ export function makeOboMinter(o: MinterOptions): Mint {
         body: JSON.stringify({ caller: 'ApiKey ' + callerKey, audience, ttl_seconds: OBO_TTL_SECONDS }),
         signal: AbortSignal.timeout(o.timeoutMs ?? 5_000),
       })
-      if (!r.ok) return null
+      if (!r.ok) return refused(String(r.status), audience)
       const token = ((await r.json()) as { data?: { token?: unknown } })?.data?.token
-      return typeof token === 'string' && token && token !== callerKey ? token : null
-    } catch { return null }
+      return typeof token === 'string' && token && token !== callerKey ? token : refused('no_token', audience)
+    } catch { return refused('unreachable', audience) }
   }
 }
 

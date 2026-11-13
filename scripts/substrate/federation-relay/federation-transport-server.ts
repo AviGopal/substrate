@@ -102,6 +102,7 @@ const mintObo = makeOboMinter({
   identityUrl: () => process.env.IDENTITY_VESSEL_URL || '',
   actorKey: () => API_KEY,
   fetchImpl: fetch as any,
+  log: (line) => console.log(line),
 })
 // Pointers the ingress authenticated for THIS request. The registry branch (resolveHandler) admits these. Local callers
 // keep the transitional `_auth === API_KEY` check there; an overlay frame never reaches it with an _auth, since

@@ -284,6 +284,44 @@ describe('makeOboMinter (identity /v1/auth/on-behalf-of, at the sending node)', 
   })
 })
 
+describe('a mint that yields no token says why (observability: refused and absent read alike at the far end)', () => {
+  const AUD = { node: PEER, shape: 'record_write' }
+  const mk = (f: any, t: { v: number }, lines: string[], url = 'http://identity.invalid', actor = OTHER) =>
+    makeOboMinter({ identityUrl: () => url, actorKey: () => actor, fetchImpl: f, log: (l) => lines.push(l), now: () => t.v })
+  const r = (status: number, data: unknown) => async () => ({ ok: status >= 200 && status < 300, status, json: async () => ({ data }) })
+  test('MUST-FAIL: a refused mint logs its status once a minute, naming shape and peer tail, never the key or a token', async () => {
+    const lines: string[] = []; const t = { v: 0 }
+    const m = mk(r(403, { token: TOKEN }), t, lines)
+    expect(await m(KEY, AUD)).toBeNull(); expect(await m(KEY, AUD)).toBeNull()
+    expect(lines).toEqual([`[fed-egress] obo mint refused status=403 shape=record_write peer=…${PEER.slice(-8)}`])
+    t.v += 60_001; await m(KEY, AUD)
+    expect(lines).toHaveLength(2)
+    expect(lines.join('\n')).not.toContain(KEY)
+    expect(lines.join('\n')).not.toContain(OTHER)
+    expect(lines.join('\n')).not.toContain(TOKEN)
+  })
+  test('MUST-FAIL: an outage, no identity, and an answer without a usable token each log their own status', async () => {
+    const lines: string[] = []; const t = { v: 0 }
+    await mk(async () => { throw new Error('down') }, t, lines)(KEY, AUD)
+    await mk(r(200, {}), t, lines)(KEY, AUD)
+    await mk(r(200, { token: KEY }), t, lines)(KEY, AUD)
+    await mk(r(200, { token: TOKEN }), t, lines, '')(KEY, AUD)
+    expect(lines.map((l) => l.split(' ')[4])).toEqual(['status=unreachable', 'status=no_token', 'status=no_token', 'status=no_identity'])
+    expect(lines.join('\n')).not.toContain(KEY)
+  })
+  test('MUST-FAIL: a minted token, and a caller with no key, log nothing', async () => {
+    const lines: string[] = []; const t = { v: 0 }
+    expect(await mk(r(200, { token: TOKEN }), t, lines)(KEY, AUD)).toBe(TOKEN)
+    expect(await mk(r(403, {}), t, lines)('', AUD)).toBeNull()
+    expect(lines).toEqual([])
+  })
+  test('MUST-FAIL: the transport wires the minter\'s log to its output', () => {
+    const src = readFileSync(join(ROOT, 'scripts/substrate/federation-relay/federation-transport-server.ts'), 'utf8')
+    const minter = src.slice(src.indexOf('const mintObo = makeOboMinter({'), src.indexOf('const mintObo = makeOboMinter({') + 300)
+    expect(minter).toContain('log: (line) => console.log(line),')
+  })
+})
+
 describe('wiring pins (federation-transport-server.ts)', () => {
   const src = readFileSync(join(ROOT, 'scripts/substrate/federation-relay/federation-transport-server.ts'), 'utf8')
   const ingress = src.slice(src.indexOf('const ingressHandler = async (raw'), src.indexOf('await serveResolve(vl, ingressHandler)'))
