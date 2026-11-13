@@ -37,6 +37,10 @@
 #   (q) fs_edit, in a group of its own, needs a whole-file read (fileContent) of the path the edit names, bound to the
 #       edit's own pointer.
 #   (s) a gap's closing credits the walk only after a landing: one owner credits row for gap, by_call git_land;
+#   (v) how credit travels to selections is an owner row (credits target selection: w_person, w_lapse, w_close 1,
+#       gamma 0.7, depth 12), written once, so records' fold reads it, not its seeded fallback;
+#   (w) the answer, request and land verdict (every variant) may name the rows they used (uses: ids, each held to the
+#       rows shown, x-shown), and are told to name only those;
 #   (r) the request producer is shown a file read whole, only its newest read per path, in place of the hop that
 #       fetched it (context fileContent: whole, latest_by path, covers hop on call_id), in both request variants.
 set -uo pipefail
@@ -165,8 +169,8 @@ leg(rows.some((r) => r.shape === "requires" && r.for === "fs_edit" && r.needs ==
 const fileIn = (r: Row | undefined) => (r?.context ?? []).filter((e: unknown) => typeof e === "object" && (e as Row).shape === "fileContent");
 leg([req, fromGap].every((r) => JSON.stringify(fileIn(r)) === JSON.stringify([{ shape: "fileContent", whole: true, latest_by: "path", covers: { shape: "hop", on: "call_id" } }])),
   "(r) the request producer sees a file read whole, newest per path, in place of the hop that fetched it");
-const credits = rows.filter((r) => r.shape === "credits");
-leg(credits.length === 1 && credits[0].target === "gap" && credits[0].by_call === "git_land",
+const credits = rows.filter((r) => r.shape === "credits" && r.target === "gap");
+leg(credits.length === 1 && credits[0].by_call === "git_land",
   "(s) a gap's closing credits the walk only after a landing (credits gap by_call git_land), written once");
 const bound = (v: Row | undefined) => {
   const p = (v?.schema as Row | undefined)?.properties as Row | undefined;
@@ -176,6 +180,14 @@ const bound = (v: Row | undefined) => {
 };
 leg([lv, lvGap].every((v) => !!v && bound(v) && JSON.stringify(v.inputs?.[1]) === JSON.stringify({ shape: "gitDiff", latest_by: "shape" })),
   "(u) the land verdict judges only the root's newest gitDiff, and what it states of it is bound to that row");
+const travel = rows.filter((r) => r.shape === "credits" && r.target === "selection");
+leg(travel.length === 1 && travel[0].w_person === 1 && travel[0].w_lapse === 1 && travel[0].w_close === 1
+  && travel[0].gamma === 0.7 && travel[0].depth === 12,
+  "(v) how credit travels to selections is one owner credits row: weights 1, gamma 0.7, depth 12");
+const using = rows.filter((r) => r.shape === "shape_schema" && ["answer", "request", "land_verdict"].includes(String(r.target)));
+leg(using.length === 5 && using.every((r) => JSON.stringify((r.schema as Row)?.properties?.uses) === JSON.stringify({ type: "array", items: { type: "string", "x-shown": true } })
+    && !((r.schema as Row)?.required ?? []).includes("uses") && String(r.description).includes("uses lists the id of each row you were shown that this relies on")),
+  "(w) the answer, request and land verdict (every variant) may name the rows they used, each held to the rows shown");
 process.exit(failed === 0 ? 0 : 1);
 TS
 out="$(cd "$W" && "$BUN" "$W/drive.ts" 2>&1)"; rc=$?

@@ -63,13 +63,19 @@ async function ensure(row: Row, where: Row | undefined, label: string): Promise<
 }
 
 const JSON_ONLY = "Reply with only the JSON object: no prose, no code fence.";
+// What a produced row used: the ids of the rows it was shown that it relies on. Credit travels back only through what
+// a step used (records' fold), never through what it was merely shown, so a produce names its own. Each id is held to
+// the rows shown (x-shown: described-shape refuses anything else). It is not required: a row naming none passes no
+// credit back past itself.
+const USES = { type: "array", items: { type: "string", "x-shown": true } };
+const USES_WORDS = "uses lists the id of each row you were shown that this relies on, and only those.";
 const SCHEMAS: Row[] = [
   {
     target: "answer",
     description: "The answer to what the world_changed row's `what` field asks for. An ask that changes something is " +
       "done only when a hop row shows the change landed (a git_land call that ended). Until then say what you will do " +
-      `next, never that it was done. ${JSON_ONLY}`,
-    schema: { type: "object", required: ["text"], properties: { text: { type: "string", minLength: 1 } } },
+      `next, never that it was done. ${USES_WORDS} ${JSON_ONLY}`,
+    schema: { type: "object", required: ["text"], properties: { text: { type: "string", minLength: 1 }, uses: USES } },
     inputs: ["world_changed"],
     context: ["hop"],
   },
@@ -123,7 +129,7 @@ const SCHEMAS: Row[] = [
       "with a later row of the same gap_id whose status is closed is already closed. To close an open one, ask for the " +
       "next call toward closing it: first a clone of the repo the gap names. Every later call on that change (an edit, " +
       "a commit, a diff, a landing) works in the clone: its cwd (or a path under it) is the cwd the clone's hop " +
-      "returned, never a repos/ path. " + JSON_ONLY,
+      "returned, never a repos/ path. " + USES_WORDS + " " + JSON_ONLY,
     // A request either names the next call or declines (none); the walk reads a request without a pointer as a decline.
     schema: {
       type: "object",
@@ -131,6 +137,7 @@ const SCHEMAS: Row[] = [
       properties: {
         pointer: { type: "object", required: ["type"], properties: { type: { type: "string", minLength: 1 } } },
         none: { type: "string", minLength: 1 },
+        uses: USES,
       },
     },
     inputs: ["world_changed"],
@@ -171,7 +178,7 @@ const SCHEMAS: Row[] = [
       "truncated is true, because then you were not shown the whole change, and 0 when its typecheck ran and did not " +
       "pass, because that tree does not compile. repo, tree and typecheck_ran (its typecheck.ran) are copied exactly " +
       "from the gitDiff row; when typecheck_ran is false the typecheck did not run (its why says why): say that, never " +
-      `that it failed or passed. why says, in a sentence or two, what decided it. ${JSON_ONLY}`,
+      `that it failed or passed. why says, in a sentence or two, what decided it. ${USES_WORDS} ${JSON_ONLY}`,
     // x-equals: what the grader states about the diff is held to the diff row it was shown (described-shape refuses
     // anything else), so a verdict cannot name another tree or say a check ran that did not.
     schema: {
@@ -183,6 +190,7 @@ const SCHEMAS: Row[] = [
         typecheck_ran: { type: "boolean", "x-equals": { shape: "gitDiff", path: "typecheck.ran" } },
         r: { enum: [0, 1] },
         why: { type: "string", minLength: 1 },
+        uses: USES,
       },
     },
     // Only the root's newest gitDiff (latest_by over a field every gitDiff shares: one per root): a grader shown an older
@@ -285,7 +293,7 @@ SCHEMAS.push({
     "truncated is true, because then you were not shown the whole change, when its typecheck did not pass, or when its " +
     "check (the gap's own check, run on that tree) did not pass. repo, tree and typecheck_ran (its typecheck.ran) are " +
     "copied exactly from the gitDiff row; when typecheck_ran is false the typecheck did not run (its why says why): say " +
-    `that, never that it failed or passed. why says, in a sentence or two, what decided it. ${JSON_ONLY}`,
+    `that, never that it failed or passed. why says, in a sentence or two, what decided it. ${USES_WORDS} ${JSON_ONLY}`,
 });
 // Each target and variant is its own row; the plain one is the variant "" (records matches it exactly, so a row
 // written before variants is rewritten once with it, and the two request rows never rewrite each other).
@@ -339,6 +347,10 @@ await ensure({
 // grade, but only when a call of this shape ended among the walk's steps on it first (the walk changed something there).
 // Configuration records reads (its fold), never a request.
 await ensure({ shape: "credits", target: "gap", by_call: "git_land" }, { target: "gap" }, "credits gap");
+// How credit travels to the walk's selections (records' fold): the weight a person's verdict, a lapse and a gap's
+// closing each carry, the discount per step back along what each step used (gamma) and how many steps it goes (depth).
+await ensure({ shape: "credits", target: "selection", w_person: 1, w_lapse: 1, w_close: 1, gamma: 0.7, depth: 12 },
+  { target: "selection" }, "credits selection");
 // What a person reads of the rows the surface shows: each description's words name the fields (1 to 4) that say what
 // a row is, so the surface draws them from these rows instead of a list of its own.
 const SHOWN: Array<{ of: string; words: string[]; description: string }> = [
