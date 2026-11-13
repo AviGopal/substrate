@@ -430,11 +430,17 @@ if [ -n "${HUMAN_SURFACE_PUBLIC_URL:-}" ]; then
     http://*|https://*) _hspu_rest="${HUMAN_SURFACE_PUBLIC_URL#*://}" ;;
     *) _hspu_rest="" ;;
   esac
+  # A host, then at most one ':' and a numeric port. A bracketed (IPv6) host is refused: a public surface is
+  # reached by name.
+  _hspu_bad=""
   case "$_hspu_rest" in
-    ""|*/*|*\?*|*\#*|*@*|*[[:space:]]*)
-      _refuse "HUMAN_SURFACE_PUBLIC_URL='$HUMAN_SURFACE_PUBLIC_URL' is not a bare http(s) origin." \
-        "Give the address people open the surface at, as scheme://host[:port] with nothing after it (no path)." ;;
+    ""|:*|\[*|*/*|*\?*|*\#*|*@*|*[[:space:]]*) _hspu_bad=1 ;;
+    *:*) case "${_hspu_rest#*:}" in ""|*[!0-9]*) _hspu_bad=1 ;; esac ;;
   esac
+  if [ -n "$_hspu_bad" ]; then
+    _refuse "HUMAN_SURFACE_PUBLIC_URL='$HUMAN_SURFACE_PUBLIC_URL' is not a bare http(s) origin." \
+      "Give the address people open the surface at, as scheme://host[:port] with nothing after it (no path; a numeric port)."
+  fi
 fi
 # ★ END THE SURFACE'S PUBLIC ADDRESS
 

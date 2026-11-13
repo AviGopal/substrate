@@ -3,7 +3,7 @@
 # (HUMAN_SURFACE_PUBLIC_URL, one full origin) and gen-env delivers it to the surface's env file. Unset, nothing is
 # written and nothing changes.
 #   (a) MUST-FAIL: gen-env checks the value and refuses anything but a bare http(s) origin (a path, a query, a
-#       fragment, credentials, a space, or no scheme)
+#       fragment, credentials, a space, no scheme, no host, a port that is not a number, or a bracketed host)
 #   (b) MUST-FAIL: bare origins pass (https, http, with a port)
 #   (c) MUST-FAIL: the value is written to the env file only when set, and is recorded as supplied by the run env
 #   (d) MUST-FAIL: the compose lane forwards it to the container
@@ -18,7 +18,8 @@ grep -q 'HUMAN_SURFACE_PUBLIC_URL' "$T/blk.sh" || { echo "FAIL - gen-env does no
 # verdict <value> -> refused|passed
 verdict() { ( _refuse() { echo refused; exit 3; }; HUMAN_SURFACE_PUBLIC_URL="$1"; . "$T/blk.sh"; echo passed ) 2>/dev/null | tail -1; }
 for v in "https://surface.example/" "https://surface.example/app" "https://surface.example?x=1" "https://surface.example#a" \
-         "https://user@surface.example" "https://surface .example" "surface.example" "ftp://surface.example" "https://"; do
+         "https://user@surface.example" "https://surface .example" "surface.example" "ftp://surface.example" "https://" \
+         "https://:8443" "https://surface.example:abc" "https://surface.example:" "https://surface.example:84:43" "https://[::1]:8443"; do
   [ "$(verdict "$v")" = refused ] && ok "(a) refused: '$v'" || bad "(a) accepted: '$v'"
 done
 for v in "https://surface.example" "http://surface.example" "https://surface.example:8443"; do
