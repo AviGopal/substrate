@@ -419,6 +419,25 @@ prov() { # prov <NAME> <env|persisted|generated|derived|hardcoded>
   printf '%s=%s\n' "$1" "$2" >> "$PROV_TMP"
 }
 
+# ★ THE SURFACE'S PUBLIC ADDRESS
+# A deployment that serves its human surface to people through a TLS proxy states that address here: one full
+# origin (scheme://host[:port]), the surface's own page at that exact origin. Unset (the default, and every
+# deployment that publishes no surface), it is not written and nothing changes. Anything but a bare http(s) origin
+# is refused: a path, a query or a missing scheme would never match a browser's Origin, and the page would be
+# refused as foreign with no word why.
+if [ -n "${HUMAN_SURFACE_PUBLIC_URL:-}" ]; then
+  case "$HUMAN_SURFACE_PUBLIC_URL" in
+    http://*|https://*) _hspu_rest="${HUMAN_SURFACE_PUBLIC_URL#*://}" ;;
+    *) _hspu_rest="" ;;
+  esac
+  case "$_hspu_rest" in
+    ""|*/*|*\?*|*\#*|*@*|*[[:space:]]*)
+      _refuse "HUMAN_SURFACE_PUBLIC_URL='$HUMAN_SURFACE_PUBLIC_URL' is not a bare http(s) origin." \
+        "Give the address people open the surface at, as scheme://host[:port] with nothing after it (no path)." ;;
+  esac
+fi
+# ★ END THE SURFACE'S PUBLIC ADDRESS
+
 # Snapshot which names arrived in the RUN environment, before any resolution
 # overwrites them. This is the only moment the distinction is observable.
 _ENV_SUPPLIED=""
@@ -433,7 +452,7 @@ for _n in ANTHROPIC_API_KEY OPENAI_API_KEY OPENAI_BASE_URL GOOGLE_API_KEY GROQ_A
           LLM_ARMS LLM_DEFAULT_MODEL MITOSIS_DIRECT_PUSH SUBSTRATE_UPDATE_CHANNEL \
           ROUTE_EDIT_INTENT_TO_COMPOSE API_KEY_SECRET_PREVIOUS \
           SUBSTRATE_REPO_OWNER GITHUB_TOKEN SUBSTRATE_BIND_HOST \
-          SUBSTRATE_NAME SUBSTRATE_PORT_PREFIX RELAY_PORT RELAY_ANNOUNCE_PORT \
+          SUBSTRATE_NAME SUBSTRATE_PORT_PREFIX RELAY_PORT RELAY_ANNOUNCE_PORT HUMAN_SURFACE_PUBLIC_URL \
           SUBSTRATE_CONTAINER WORKSPACE_VOLUME SURREAL_VOLUME LIVE_NAME \
           RUNPOD_ENDPOINT_ID RUNPOD_MODELS \
           LOCAL_TOOLS_VESSEL_API_KEY GOAL_HOST_VESSEL_API_KEY RIBOSOME_VESSEL_API_KEY CONCEPT_DB_API_KEY \
@@ -1795,6 +1814,8 @@ echo "[gen-env] wrote per-model llm-resolver env files (opus, haiku, google)"
   # client the PUBLIC identity + discovery URLs (not loopback) to point at. The
   # ports are the PUBLISHED ones, derived from the prefix like every other host
   # port; with no prefix supplied they are the conventional 18xxx block.
+  # The human surface's public address (checked above), for the surface alone: its own page's origin.
+  [ -n "${HUMAN_SURFACE_PUBLIC_URL:-}" ] && echo "HUMAN_SURFACE_PUBLIC_URL=\"$(_env_escape "${HUMAN_SURFACE_PUBLIC_URL}")\""
   PUB="${PUBLIC_IP:-${FED_PUBLIC_IP:-}}"
   _pub_prefix="${SUBSTRATE_PORT_PREFIX:-18}"
   if [ -n "$PUB" ]; then

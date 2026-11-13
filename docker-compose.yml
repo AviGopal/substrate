@@ -156,6 +156,8 @@ services:
       DISCOVERY_PUBLIC_PORT: ${DISCOVERY_PUBLIC_PORT:-}
       IDENTITY_PUBLIC_PORT: ${IDENTITY_PUBLIC_PORT:-}
       ACTIVITY_PUBLIC_PORT: ${ACTIVITY_PUBLIC_PORT:-}
+      # The address people open the human surface at through a TLS proxy (scheme://host[:port]); unset, none.
+      HUMAN_SURFACE_PUBLIC_URL: ${HUMAN_SURFACE_PUBLIC_URL:-}
       SUBSTRATE_BIND_HOST: ${SUBSTRATE_BIND_HOST:-}
       # ── Vessel selection ─────────────────────────────────────────────────────
       # Precedence (highest first): PROFILE > ENABLED_VESSELS > ENABLED_ROLES,
