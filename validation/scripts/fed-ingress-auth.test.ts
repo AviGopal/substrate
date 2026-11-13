@@ -383,10 +383,11 @@ describe('the relay\'s own answer about our reservation (circuit relay v2 HOP RE
   const stream = (answer: Uint8Array[] | 'throw' | 'never') => {
     const sent: Uint8Array[] = []
     let closed = 0
+    const closeOpts: unknown[] = []
     return {
-      sent, get closed() { return closed },
+      sent, closeOpts, get closed() { return closed },
       send: (b: Uint8Array) => { sent.push(b); return true },
-      close: async () => { closed++ },
+      close: async (o?: unknown) => { closed++; closeOpts.push(o) },
       async *[Symbol.asyncIterator]() {
         if (answer === 'throw') throw new Error('stream reset')
         if (answer === 'never') { await new Promise(() => {}) }
@@ -399,12 +400,17 @@ describe('the relay\'s own answer about our reservation (circuit relay v2 HOP RE
     const got = await probeReservationOnce({ openHop: async () => s as any, redial: async (w) => { redials.push(w) }, log: (l) => lines.push(l), now: () => 1700000000_000, timeoutMs })
     return { got, lines, redials }
   }
-  test('MUST-FAIL: the relay holding it is one fact line with the expire, and no re-dial', async () => {
+  test('MUST-FAIL: OK is one line saying the relay granted a reservation (new or refreshed, never "holds it") with the expire, and no re-dial', async () => {
     const s = stream([lp(OK_BODY).subarray(0, 4), lp(OK_BODY).subarray(4)])
     const r = await run(s)
-    expect(r).toEqual({ got: 'held', lines: ['[federation] reservation probe: the relay holds it (expires in 600 s)'], redials: [] })
+    expect(r).toEqual({ got: 'held', lines: ['[federation] reservation probe: the relay granted a reservation (new or refreshed; expires in 600 s)'], redials: [] })
     expect(s.sent.map((b) => [...b])).toEqual([[0x02, 0x08, 0x00]])
     expect(s.closed).toBe(1)
+  })
+  test('MUST-FAIL: the stream is closed under a time bound, so a stuck close cannot hold the probe', async () => {
+    const s = stream([lp(OK_BODY)])
+    await run(s)
+    expect((s.closeOpts[0] as { signal?: unknown })?.signal).toBeInstanceOf(AbortSignal)
   })
   test('MUST-FAIL: any other status, a stream error, no answer, or no answer in time re-dials once and says what the relay answered', async () => {
     for (const [s, said] of [

@@ -246,8 +246,10 @@ export function forwardAddresses(row: unknown, live: readonly string[]): string[
 // A node's reservation store will not ask the relay again while it believes an unexpired reservation is held, so a
 // relay that dropped it (a failed confirmation close, a restart) leaves the node advertising a circuit every dialer is
 // refused NO_RESERVATION on, for up to the reservation's TTL. The probe asks the relay itself: a RESERVE on the existing
-// relay connection, which the relay treats as a refresh of a reservation it holds. Only the two messages the probe
-// needs are encoded here, from the spec (a varint length, then fields as protobuf): the package does not export them.
+// relay connection. The relay refreshes a reservation it holds and makes a new one if it holds none, answering OK either
+// way, so OK means "the relay holds one now" and never tells a refresh from a re-creation: a dropped reservation is
+// repaired by the probe itself within one period. Only the two messages the probe needs are encoded here, from the
+// spec (a varint length, then fields as protobuf): the package does not export them.
 export const HOP_STATUS: Readonly<Record<number, string>> = {
   0: 'UNUSED', 100: 'OK', 200: 'RESERVATION_REFUSED', 201: 'RESOURCE_LIMIT_EXCEEDED', 202: 'PERMISSION_DENIED',
   203: 'CONNECTION_FAILED', 204: 'NO_RESERVATION', 400: 'MALFORMED_MESSAGE', 401: 'UNEXPECTED_MESSAGE',
@@ -309,7 +311,7 @@ export const reservationProbeMs = (policy: Policy | null): number => {
 }
 export interface ProbeDeps {
   /** A new HOP stream on the existing relay connection (send(bytes), async-iterable chunks, close()), or null if none. */
-  openHop: () => Promise<{ send: (b: Uint8Array) => unknown; close: () => Promise<unknown>; [Symbol.asyncIterator]: () => AsyncIterator<unknown> } | null>
+  openHop: () => Promise<{ send: (b: Uint8Array) => unknown; close: (opts?: { signal?: AbortSignal }) => Promise<unknown>; [Symbol.asyncIterator]: () => AsyncIterator<unknown> } | null>
   redial: (why: string) => Promise<unknown>
   log: (line: string) => void
   now?: () => number
@@ -317,15 +319,17 @@ export interface ProbeDeps {
   timeoutMs?: number
 }
 /**
- * Ask the relay once whether it holds our reservation. OK: one fact line with the relay's expire. Anything else (another
- * status, no answer, a stream error): one line saying what the relay answered, and a re-dial, so a fresh reservation is
- * made. No relay connection: nothing to ask. Never throws; returns what it found.
+ * Ask the relay once for our reservation. OK: one line saying the relay granted one (new or refreshed: it does not say
+ * which) with its expire. Anything else (a refusal, no answer, a stream error): one line saying what the relay answered,
+ * and a re-dial. No relay connection: nothing to ask. The stream is closed within the same time bound, so a stuck close
+ * cannot hold the probe. Never throws; returns what it found.
  */
 export async function probeReservationOnce(d: ProbeDeps): Promise<'held' | 'redialed' | 'no-connection'> {
   const now = d.now ?? (() => Date.now())
   let answer: { status?: number; expire?: number } | null = null
   let why = ''
   let stream: Awaited<ReturnType<ProbeDeps['openHop']>> = null
+  const limit = d.timeoutMs ?? 10_000
   try {
     stream = await d.openHop()
     if (!stream) return 'no-connection'
@@ -340,7 +344,6 @@ export async function probeReservationOnce(d: ProbeDeps): Promise<'held' | 'redi
       }
       return null
     })()
-    const limit = d.timeoutMs ?? 10_000
     let timer: ReturnType<typeof setTimeout> | undefined
     const late = new Promise<'late'>((r) => { timer = setTimeout(() => r('late'), limit) })
     const got = await Promise.race([read, late])
@@ -351,11 +354,11 @@ export async function probeReservationOnce(d: ProbeDeps): Promise<'held' | 'redi
   } catch (e) {
     why = 'stream error: ' + String((e as Error)?.message ?? e).replace(/[^A-Za-z0-9 _.:-]/g, '?').slice(0, 80)
   } finally {
-    if (stream) await stream.close().catch(() => {})
+    if (stream) await stream.close({ signal: AbortSignal.timeout(limit) }).catch(() => {})
   }
   if (answer?.status === 100) {
     const left = answer.expire ? Math.max(0, Math.round(answer.expire - now() / 1000)) : null
-    d.log(`[federation] reservation probe: the relay holds it${left === null ? '' : ` (expires in ${left} s)`}`)
+    d.log(`[federation] reservation probe: the relay granted a reservation (new or refreshed${left === null ? '' : `; expires in ${left} s`})`)
     return 'held'
   }
   const said = why || `status ${HOP_STATUS[answer?.status ?? -1] ?? String(answer?.status)}`

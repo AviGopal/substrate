@@ -1477,8 +1477,9 @@ let lastRedialReason = ''
 // THE RELAY'S OWN ANSWER ABOUT OUR RESERVATION: a RESERVE on the existing relay connection every reservationProbeMs (the
 // policy row's reservation_probe_s, else 600 s). The reservation store will not ask again while it believes it holds an
 // unexpired reservation, so one the relay dropped would otherwise be advertised, and refused to every dialer, for up to
-// its TTL. One probe at a time; no relay connection, nothing to ask (the watchdog handles that). probeReservationOnce
-// (ingress-auth.ts) re-dials on any answer but OK.
+// its TTL. The relay answers a RESERVE by refreshing the reservation or, if it dropped it, making a new one, so the probe
+// itself repairs a drop within one period (OK cannot say which happened). One probe at a time; no relay connection,
+// nothing to ask (the watchdog handles that). probeReservationOnce (ingress-auth.ts) re-dials on any answer but OK.
 let probing = false
 async function probeReservation(): Promise<void> {
   if (probing || !RELAY) return
