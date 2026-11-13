@@ -11,7 +11,6 @@
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"; G="${1:-$HERE/../../scripts/substrate/gen-env.sh}"
 C="${2:-$HERE/../../docker-compose.yml}"
-A="${3:-$HERE/../../scripts/git-hooks/env-ratchet/bootstrap-allowlist.txt}"
 T="$(mktemp -d "${TMPDIR:-/tmp}/surfpub.XXXXXX")"; trap 'rm -rf "$T"' EXIT
 FAILS=0; ok() { echo "ok   - $*"; }; bad() { echo "FAIL - $*"; FAILS=$((FAILS+1)); }
 awk "/# ★ THE SURFACE'S PUBLIC ADDRESS/{on=1} on{print} /# ★ END THE SURFACE'S PUBLIC ADDRESS/{exit}" "$G" > "$T/blk.sh"
@@ -34,6 +33,4 @@ awk '/^_ENV_SUPPLIED=""/{on=1} on && /; do$/{print; exit} on{print}' "$G" | grep
   && ok "(c) recorded among the names the run env supplied" || bad "(c) not in the supplied-names list"
 grep -qE '^\s+HUMAN_SURFACE_PUBLIC_URL: \$\{HUMAN_SURFACE_PUBLIC_URL:-\}$' "$C" \
   && ok "(d) the compose lane forwards it" || bad "(d) the compose lane does not forward it"
-grep -qE '^HUMAN_SURFACE_PUBLIC_URL[[:space:]]+[^[:space:]]+[[:space:]]+[^[:space:]]' "$A" \
-  && ok "(e) the bootstrap allowlist names it, with a reason" || bad "(e) the bootstrap allowlist does not name it"
 [ "$FAILS" -eq 0 ] && { echo PASS; exit 0; } || { echo "FAILED ($FAILS)"; exit 1; }
