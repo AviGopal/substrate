@@ -51,6 +51,18 @@ The order keeps each step safe on its own: measurement first, debits before the 
 
 ## 2. Schemas name what a produce used (walk-owner-seed, described-shape; design §1 (b))
 
+**Order: task 2 installs before task 1.2, or with it.** On a node's store today every origination credits depth 0
+only (77 of 77, the longest consumption chain 2, no row with `uses`). Produces consume only rows no selection made
+(an ask, a gap), and nothing consumes a hop except through `uses`. So 1.2 without task 2 leaves every step before
+the answer at its prior. `uses` appears only on rows produced after task 2 installs: historical originations stay at
+depth 0.
+
+**The producer writes this part of the credit graph.** `uses` is the only edge that carries credit back past an answer,
+and the producer that names it is often a model. The x-shown check (2.2) stops it naming a row it never saw. It does
+not stop it naming everything it saw, which would be presence again. The watch is 8.1's share of shown rows named in
+`uses`, per target. Trigger: when a target's median share is 0.9 or more over a week, the database fork's weekly 8.1
+read files the gap (no detector is built for it: that is a gap of its own, law 6).
+
 - [ ] 2.1 Owner schemas for request, answer and land_verdict gain `uses`: an array of row ids held to the rows shown
       (`x-shown`).
 - [ ] 2.2 Must-fail: `uses` naming a row not shown is refused by schema.
@@ -154,9 +166,13 @@ The order keeps each step safe on its own: measurement first, debits before the 
 ## 8. By-effect checks after install (database fork; no code)
 
 - [ ] 8.1 After 1–3: cells reached by travelling credit per day rises from zero. Produce cells' means are reported
-      weekly, and so is the share of shown rows each target's produces name in `uses` (C3: a producer naming
-      everything it was shown would be presence again), to see that the superseded-unconsumed debit (weight 1) does not drive produce cells to the floor while
-      Thompson re-picks them before their consumer runs.
+      weekly, to see that the superseded-unconsumed debit (weight 1) does not drive produce cells to the floor while
+      Thompson re-picks them before their consumer runs. The share of shown rows each target's produces name in
+      `uses` is reported weekly too (C3: a producer naming everything it was shown would be presence again). When a
+      target's median share is 0.9 or more over a week, the database fork's weekly 8.1 read files the gap. That an
+      agent files it means the detector for this class is not built: the missing detector is itself a gap (law 6).
+      From task 2's install on, it also reports the share of new produces with a non-empty `uses`, and the depth
+      distribution of credit per day.
 - [ ] 8.2 After 4: no open root has zero candidates (the agf_kj751u9hu5ry count goes to 0); the model calls spent on
       refused-only roots per day are against design §9's estimate.
 - [ ] 8.3 After 5: each landing on a gap root is followed by a `gapObservation`. Reported:
