@@ -762,6 +762,10 @@ gen_failing_test_gaps() {
     | {impulse: {pointer: {type: "substrateGap_write", gap: ({
         id: ("failing-test-" + $v + "-" + (.file | ascii_downcase | gsub("[^a-z0-9]+"; "-") | sub("-+$"; "")) + "-gen-" + .cls),
         category: "failing_test", source: "substrate_detected", status: "open",
+        # The repository the failing check belongs to, as a top-level fact of the row: the same $v its evidence_resolve
+        # runs the suite in. The walk call preconditions compare top-level fields, so a clone for this gap can be held
+        # to this repository (never parsed from the summary).
+        repo: $v,
         summary: ("Failing test(s) in repos/" + $v + "/" + .file + ", detected by pull-sync at " + $head
           + " (red on two consecutive ticks under the checker env; not an environment failure): "
           + ([.t[] | (.name + (if .why != "" then " [" + .why + "]" else "" end))] | join(" ; "))

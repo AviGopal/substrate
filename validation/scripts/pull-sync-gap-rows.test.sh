@@ -9,7 +9,10 @@
 #   (e) reads answer as the old store did: {body: {gaps: [...]}}; a write asked for its status code gets 200;
 #   (f) the gate exemption (tracked_fail_names) is untouched by a detector row naming a test;
 #   (g) a read records answers with an error fails closed: rc 7, and nothing is written;
-#   (h) a write records answers with a row not stamped detector (another key's) is a failure, not "ok".
+#   (h) a write records answers with a row not stamped detector (another key's) is a failure, not "ok";
+#   (i) a gap's repo is a top-level field of its row, and the same gap again writes nothing;
+#   (k) the failing-test generator states repo from the same vessel its evidence_resolve runs (never from the summary),
+#       and the script still parses (its jq programs sit in single quotes: a stray quote in one ends the string).
 # usage: validation/scripts/pull-sync-gap-rows.test.sh [path/to/substrate-pull-sync.sh]
 set -uo pipefail
 SCRIPT="${1:-$(cd "$(dirname "$0")/../.." && pwd)/scripts/substrate/substrate-pull-sync.sh}"
@@ -93,6 +96,19 @@ curl() {
     *) curl_store "$@" ;;
   esac
 }
+before="$(wc -l < "$WRITES")"
+withrepo() { gap "$1" open | jq -c --arg r "$2" '.impulse.pointer.gap.repo = $r'; }
+w0="$(wc -l < "$WRITES")"
+dev_resolve "$(withrepo g7 local-tools-vessel)" --max-time 5 > /dev/null
+dev_resolve "$(withrepo g7 local-tools-vessel)" --max-time 5 > /dev/null
+r7="$(jq -c '[.[] | select(.gap_id == "g7")] | max_by(.seq)' "$ROWS")"
+if [ "$(( $(wc -l < "$WRITES") - w0 ))" = 1 ] && [ "$(printf '%s' "$r7" | jq -r '.repo')" = local-tools-vessel ]; then
+  ok "(i) a gap's repo is a top-level field of its row; the same gap again writes nothing"
+else bad "(i) writes $(( $(wc -l < "$WRITES") - w0 )), row=$r7"; fi
+gen="$(sed -n '/FAILING-TEST GAP GENERATOR/,/^  rm -f "$st"/p' "$SCRIPT")"
+if bash -n "$SCRIPT" && printf '%s' "$gen" | grep -q 'evidence_resolve: {shape: "test_suite", input: {vessel: $v,' && printf '%s' "$gen" | grep -qE '^ *repo: \$v,$'; then
+  ok "(k) the failing-test generator states repo from the vessel its evidence_resolve runs"
+else bad "(k) the script does not parse, or the generator does not set repo: \$v beside evidence_resolve.input.vessel"; fi
 before="$(wc -l < "$WRITES")"
 READ_MODE=error; dev_resolve "$(gap g5 open)" --max-time 5 > /dev/null; rc=$?
 if [ "$rc" = 7 ] && [ "$(wc -l < "$WRITES")" = "$before" ]; then ok "(g) an error answer to the read fails closed: rc 7, nothing written"
