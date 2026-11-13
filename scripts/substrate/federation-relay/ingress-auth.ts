@@ -165,8 +165,11 @@ export function makeValidator(o: ValidatorOptions): Validate {
   }
 }
 
-/** cache: false switches the identity-validation cache off (a measurement knob, shaped like the mode, never an env var). */
-export interface Policy { mode: Mode; cache: boolean }
+/**
+ * cache: false switches the identity-validation cache off (a measurement knob, shaped like the mode, never an env var).
+ * reservation_probe_s paces the relay reservation probe (seconds, clamped to 60..3600; absent = the default).
+ */
+export interface Policy { mode: Mode; cache: boolean; reservation_probe_s?: number }
 const isMode = (m: unknown): m is Mode => m === 'off' || m === 'log' || m === 'enforce'
 
 /** Parse the open fedIngressAuthPolicy record body; anything malformed is null (treated as unreadable). */
@@ -174,7 +177,8 @@ export function parsePolicy(body: unknown): Policy | null {
   if (!body || typeof body !== 'object') return null
   const b = body as Record<string, unknown>
   if (!isMode(b.mode)) return null
-  return { mode: b.mode, cache: b.cache !== false }
+  const pace = typeof b.reservation_probe_s === 'number' && Number.isFinite(b.reservation_probe_s) ? { reservation_probe_s: b.reservation_probe_s } : {}
+  return { mode: b.mode, cache: b.cache !== false, ...pace }
 }
 
 const RANK: Record<Mode, number> = { off: 0, log: 1, enforce: 2 }
@@ -236,6 +240,128 @@ export function forwardAddresses(row: unknown, live: readonly string[]): string[
   const sameDest = live.map(String).filter((a) => a.includes('/p2p-circuit/') && destinationPeer(a) === dest)
   const ownRest = addrs.slice(1).filter((a) => destinationPeer(a) === dest)
   return [...new Set([addrs[0]!, ...sameDest, ...ownRest])].slice(0, 6)
+}
+
+// ── THE RELAY'S OWN ANSWER ABOUT OUR RESERVATION (circuit relay v2, HOP) ──────────────────────────────────────────
+// A node's reservation store will not ask the relay again while it believes an unexpired reservation is held, so a
+// relay that dropped it (a failed confirmation close, a restart) leaves the node advertising a circuit every dialer is
+// refused NO_RESERVATION on, for up to the reservation's TTL. The probe asks the relay itself: a RESERVE on the existing
+// relay connection, which the relay treats as a refresh of a reservation it holds. Only the two messages the probe
+// needs are encoded here, from the spec (a varint length, then fields as protobuf): the package does not export them.
+export const HOP_STATUS: Readonly<Record<number, string>> = {
+  0: 'UNUSED', 100: 'OK', 200: 'RESERVATION_REFUSED', 201: 'RESOURCE_LIMIT_EXCEEDED', 202: 'PERMISSION_DENIED',
+  203: 'CONNECTION_FAILED', 204: 'NO_RESERVATION', 400: 'MALFORMED_MESSAGE', 401: 'UNEXPECTED_MESSAGE',
+}
+/** HopMessage { type: RESERVE } with its varint length prefix. */
+export const HOP_RESERVE_FRAME = Uint8Array.of(0x02, 0x08, 0x00)
+const varint = (b: Uint8Array, p: number): [number, number] | null => {
+  let v = 0n, shift = 0n
+  for (let i = p; i < b.length && i < p + 10; i++) {
+    v |= BigInt(b[i]! & 0x7f) << shift
+    if ((b[i]! & 0x80) === 0) return [Number(v), i + 1]
+    shift += 7n
+  }
+  return null
+}
+/** One length-prefixed HOP message body from the bytes read so far, or null while it is incomplete. */
+export function hopFrameFrom(acc: Uint8Array): Uint8Array | null {
+  const h = varint(acc, 0)
+  if (!h) return null
+  const [len, at] = h
+  return acc.length >= at + len ? acc.subarray(at, at + len) : null
+}
+/** The type, status and reservation expire (seconds since the epoch) of a HopMessage body; unknown fields skipped. */
+export function decodeHopStatus(b: Uint8Array): { type?: number; status?: number; expire?: number } {
+  const out: { type?: number; status?: number; expire?: number } = {}
+  for (let p = 0; p < b.length; ) {
+    const k = varint(b, p)
+    if (!k) break
+    const [key, q] = k
+    const field = key >>> 3, wire = key & 7
+    if (wire === 0) {
+      const v = varint(b, q)
+      if (!v) break
+      if (field === 1) out.type = v[0]
+      if (field === 5) out.status = v[0]
+      p = v[1]
+    } else if (wire === 2) {
+      const l = varint(b, q)
+      if (!l) break
+      const body = b.subarray(l[1], l[1] + l[0])
+      if (field === 3) {
+        for (let r = 0; r < body.length; ) {
+          const rk = varint(body, r)
+          if (!rk) break
+          if ((rk[0] & 7) === 0) { const v = varint(body, rk[1]); if (!v) break; if (rk[0] >>> 3 === 1) out.expire = v[0]; r = v[1] }
+          else if ((rk[0] & 7) === 2) { const rl = varint(body, rk[1]); if (!rl) break; r = rl[1] + rl[0] }
+          else break
+        }
+      }
+      p = l[1] + l[0]
+    } else break
+  }
+  return out
+}
+/** How often the probe runs: the policy row's reservation_probe_s, clamped to 60..3600 s, else 600 s. */
+export const reservationProbeMs = (policy: Policy | null): number => {
+  const s = policy?.reservation_probe_s
+  return 1000 * (typeof s === 'number' && Number.isFinite(s) ? Math.min(3600, Math.max(60, s)) : 600)
+}
+export interface ProbeDeps {
+  /** A new HOP stream on the existing relay connection (send(bytes), async-iterable chunks, close()), or null if none. */
+  openHop: () => Promise<{ send: (b: Uint8Array) => unknown; close: () => Promise<unknown>; [Symbol.asyncIterator]: () => AsyncIterator<unknown> } | null>
+  redial: (why: string) => Promise<unknown>
+  log: (line: string) => void
+  now?: () => number
+  /** How long to wait for the relay's answer before taking it as none (default 10 s). */
+  timeoutMs?: number
+}
+/**
+ * Ask the relay once whether it holds our reservation. OK: one fact line with the relay's expire. Anything else (another
+ * status, no answer, a stream error): one line saying what the relay answered, and a re-dial, so a fresh reservation is
+ * made. No relay connection: nothing to ask. Never throws; returns what it found.
+ */
+export async function probeReservationOnce(d: ProbeDeps): Promise<'held' | 'redialed' | 'no-connection'> {
+  const now = d.now ?? (() => Date.now())
+  let answer: { status?: number; expire?: number } | null = null
+  let why = ''
+  let stream: Awaited<ReturnType<ProbeDeps['openHop']>> = null
+  try {
+    stream = await d.openHop()
+    if (!stream) return 'no-connection'
+    stream.send(HOP_RESERVE_FRAME)
+    const read = (async () => {
+      let acc = new Uint8Array(0)
+      for await (const chunk of stream as AsyncIterable<unknown>) {
+        const c = chunk instanceof Uint8Array ? chunk : (chunk as { subarray: () => Uint8Array }).subarray()
+        const next = new Uint8Array(acc.length + c.length); next.set(acc); next.set(c, acc.length); acc = next
+        const body = hopFrameFrom(acc)
+        if (body) return decodeHopStatus(body)
+      }
+      return null
+    })()
+    const limit = d.timeoutMs ?? 10_000
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const late = new Promise<'late'>((r) => { timer = setTimeout(() => r('late'), limit) })
+    const got = await Promise.race([read, late])
+    clearTimeout(timer)
+    if (got === 'late') why = `no answer within ${Math.round(limit / 1000)} s`
+    else if (!got) why = 'no answer'
+    else answer = got
+  } catch (e) {
+    why = 'stream error: ' + String((e as Error)?.message ?? e).replace(/[^A-Za-z0-9 _.:-]/g, '?').slice(0, 80)
+  } finally {
+    if (stream) await stream.close().catch(() => {})
+  }
+  if (answer?.status === 100) {
+    const left = answer.expire ? Math.max(0, Math.round(answer.expire - now() / 1000)) : null
+    d.log(`[federation] reservation probe: the relay holds it${left === null ? '' : ` (expires in ${left} s)`}`)
+    return 'held'
+  }
+  const said = why || `status ${HOP_STATUS[answer?.status ?? -1] ?? String(answer?.status)}`
+  d.log(`[federation] reservation probe: the relay answered ${said}; re-dialing for a fresh reservation`)
+  await d.redial('reservation probe: ' + said).catch(() => {})
+  return 'redialed'
 }
 
 /** How long a token the sending transport asks for lives: one dial and one identity round trip at the far end. */

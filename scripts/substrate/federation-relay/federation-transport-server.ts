@@ -14,7 +14,8 @@ import { hostname } from 'node:os'
 import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { AsyncLocalStorage } from 'node:async_hooks'
-import { callerKeyFromHeader, decideIngress, echoRefusal, forwardAddresses, isRelayRefusal, makeEchoRateGate, makeOboMinter, makeValidator, oboAudience, pointerForDial, policyFromRecordsRows, resolveMode, stripCredentials, withoutFedAuth, type Decision, type Mode, type Policy } from './ingress-auth'
+import { RELAY_V2_HOP_CODEC } from '@libp2p/circuit-relay-v2'
+import { callerKeyFromHeader, decideIngress, echoRefusal, forwardAddresses, isRelayRefusal, makeEchoRateGate, makeOboMinter, makeValidator, oboAudience, pointerForDial, probeReservationOnce, reservationProbeMs, policyFromRecordsRows, resolveMode, stripCredentials, withoutFedAuth, type Decision, type Mode, type Policy } from './ingress-auth'
 import { multiaddr } from '@multiformats/multiaddr'
 
 // RESILIENCE: libp2p internals emit 'error' events on streams/sockets that have no
@@ -1473,6 +1474,30 @@ let redialCount = 0
 let egressNoReservationCount = 0
 let lastEgressNoResLogAt = 0
 let lastRedialReason = ''
+// THE RELAY'S OWN ANSWER ABOUT OUR RESERVATION: a RESERVE on the existing relay connection every reservationProbeMs (the
+// policy row's reservation_probe_s, else 600 s). The reservation store will not ask again while it believes it holds an
+// unexpired reservation, so one the relay dropped would otherwise be advertised, and refused to every dialer, for up to
+// its TTL. One probe at a time; no relay connection, nothing to ask (the watchdog handles that). probeReservationOnce
+// (ingress-auth.ts) re-dials on any answer but OK.
+let probing = false
+async function probeReservation(): Promise<void> {
+  if (probing || !RELAY) return
+  probing = true
+  try {
+    await probeReservationOnce({
+      openHop: async () => {
+        const c: any = relayConnections()[0]
+        return c ? await c.newStream(RELAY_V2_HOP_CODEC, { signal: AbortSignal.timeout(10_000) }) : null
+      },
+      redial: (why) => redialRelay(why),
+      log: (line) => console.log(line),
+    })
+  } finally { probing = false }
+}
+function scheduleReservationProbe(): void {
+  setTimeout(() => { void probeReservation().finally(scheduleReservationProbe) }, reservationProbeMs(cachedPolicy()))
+}
+scheduleReservationProbe()
 async function redialRelay(reason: string): Promise<void> {
   if (redialing) return
   // No anchor ⇒ nothing to dial. Without this guard every caller below (the egress repair

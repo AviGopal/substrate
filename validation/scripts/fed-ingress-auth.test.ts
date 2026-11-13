@@ -18,7 +18,7 @@ import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import {
-  ECHO_MAX_BYTES, ECHO_RATE_MAX, ECHO_RATE_WINDOW_MS, OBO_TTL_SECONDS, PUBLIC_SHAPES, makeEchoRateGate, callerKeyFromHeader, decideIngress, destinationPeer, echoRefusal, forwardAddresses, isRelayRefusal, makeOboMinter, makeValidator, oboAudience,
+  ECHO_MAX_BYTES, ECHO_RATE_MAX, ECHO_RATE_WINDOW_MS, HOP_RESERVE_FRAME, OBO_TTL_SECONDS, PUBLIC_SHAPES, makeEchoRateGate, callerKeyFromHeader, decideIngress, decodeHopStatus, destinationPeer, echoRefusal, forwardAddresses, hopFrameFrom, isRelayRefusal, makeOboMinter, makeValidator, oboAudience, probeReservationOnce, reservationProbeMs,
   oboToken, parsePolicy, pointerForDial, policyFromRecordsRows, resolveMode, stripCredentials, withoutFedAuth, type Policy, type Validate,
 } from '../../scripts/substrate/federation-relay/ingress-auth'
 
@@ -357,6 +357,87 @@ describe('a forward the relay refuses tries the same peer another way (the ingre
     const m = makeOboMinter({ identityUrl: () => 'http://identity.invalid', actorKey: () => OTHER, fetchImpl: async () => ({ ok: true, status: 200, json: async () => { throw new SyntaxError('not json') } }) as any, log: (l) => lines.push(l), now: () => 0 })
     expect(await m(KEY, { node: PEER, shape: 'record_write' })).toBeNull()
     expect(lines.map((l) => l.split(' ')[4])).toEqual(['status=no_token'])
+  })
+})
+
+describe('the relay\'s own answer about our reservation (circuit relay v2 HOP RESERVE probe)', () => {
+  // Golden vectors: HopMessage.encode from @libp2p/circuit-relay-v2's own pb, taken once (the package does not export it).
+  const hex = (h: string) => Uint8Array.from(Buffer.from(h, 'hex'))
+  const OK_BODY = hex('08021a0d08d8e6cfaa061205047f00000122060878108080082864') // STATUS OK, expire 1700000600, an addr, a limit
+  const NORES_BODY = hex('080228cc01') // STATUS NO_RESERVATION
+  const REFUSED_BODY = hex('080228c801') // STATUS RESERVATION_REFUSED
+  const lp = (b: Uint8Array) => Uint8Array.from([b.length, ...b])
+  test('MUST-FAIL: the RESERVE frame is the library\'s encoding with its varint length; STATUS replies decode to status and expire', () => {
+    expect([...HOP_RESERVE_FRAME]).toEqual([0x02, 0x08, 0x00])
+    expect(decodeHopStatus(OK_BODY)).toEqual({ type: 2, status: 100, expire: 1700000600 })
+    expect(decodeHopStatus(NORES_BODY)).toEqual({ type: 2, status: 204 })
+    expect(decodeHopStatus(REFUSED_BODY)).toEqual({ type: 2, status: 200 })
+  })
+  test('a frame is returned only once it is whole, from bytes read in any number of chunks', () => {
+    const f = lp(OK_BODY)
+    expect(hopFrameFrom(f.subarray(0, 5))).toBeNull()
+    expect(hopFrameFrom(new Uint8Array(0))).toBeNull()
+    expect([...hopFrameFrom(f)!]).toEqual([...OK_BODY])
+  })
+  // A stand-in HOP stream: what it was sent, the chunks it answers with, or a throw, or nothing ever.
+  const stream = (answer: Uint8Array[] | 'throw' | 'never') => {
+    const sent: Uint8Array[] = []
+    let closed = 0
+    return {
+      sent, get closed() { return closed },
+      send: (b: Uint8Array) => { sent.push(b); return true },
+      close: async () => { closed++ },
+      async *[Symbol.asyncIterator]() {
+        if (answer === 'throw') throw new Error('stream reset')
+        if (answer === 'never') { await new Promise(() => {}) }
+        for (const c of answer as Uint8Array[]) yield c
+      },
+    }
+  }
+  const run = async (s: ReturnType<typeof stream> | null, timeoutMs = 50) => {
+    const lines: string[] = [], redials: string[] = []
+    const got = await probeReservationOnce({ openHop: async () => s as any, redial: async (w) => { redials.push(w) }, log: (l) => lines.push(l), now: () => 1700000000_000, timeoutMs })
+    return { got, lines, redials }
+  }
+  test('MUST-FAIL: the relay holding it is one fact line with the expire, and no re-dial', async () => {
+    const s = stream([lp(OK_BODY).subarray(0, 4), lp(OK_BODY).subarray(4)])
+    const r = await run(s)
+    expect(r).toEqual({ got: 'held', lines: ['[federation] reservation probe: the relay holds it (expires in 600 s)'], redials: [] })
+    expect(s.sent.map((b) => [...b])).toEqual([[0x02, 0x08, 0x00]])
+    expect(s.closed).toBe(1)
+  })
+  test('MUST-FAIL: any other status, a stream error, no answer, or no answer in time re-dials once and says what the relay answered', async () => {
+    for (const [s, said] of [
+      [stream([lp(NORES_BODY)]), 'status NO_RESERVATION'],
+      [stream([lp(REFUSED_BODY)]), 'status RESERVATION_REFUSED'],
+      [stream('throw'), 'stream error: stream reset'],
+      [stream([]), 'no answer'],
+      [stream('never'), 'no answer within 0 s'],
+    ] as const) {
+      const r = await run(s)
+      expect([said, r.got, r.redials, r.lines]).toEqual([said, 'redialed', [`reservation probe: ${said}`], [`[federation] reservation probe: the relay answered ${said}; re-dialing for a fresh reservation`]])
+      expect([said, s.closed]).toEqual([said, 1])
+    }
+  })
+  test('MUST-FAIL: no relay connection is nothing to ask: no line, no re-dial', async () => {
+    expect(await run(null)).toEqual({ got: 'no-connection', lines: [], redials: [] })
+  })
+  test('the pace is the policy row\'s reservation_probe_s, clamped to 60..3600 s, else 600 s', () => {
+    expect(reservationProbeMs(null)).toBe(600_000)
+    expect(reservationProbeMs(parsePolicy({ mode: 'enforce', reservation_probe_s: 5 }))).toBe(60_000)
+    expect(reservationProbeMs(parsePolicy({ mode: 'enforce', reservation_probe_s: 120 }))).toBe(120_000)
+    expect(reservationProbeMs(parsePolicy({ mode: 'enforce', reservation_probe_s: 99999 }))).toBe(3_600_000)
+    expect(reservationProbeMs(parsePolicy({ mode: 'enforce', reservation_probe_s: 'x' }))).toBe(600_000)
+  })
+  test('MUST-FAIL: the transport probes on its existing relay connection, one at a time, re-dialing through redialRelay, on the row\'s pace', () => {
+    const src = readFileSync(join(ROOT, 'scripts/substrate/federation-relay/federation-transport-server.ts'), 'utf8')
+    const probe = src.slice(src.indexOf('async function probeReservation('), src.indexOf('async function redialRelay('))
+    expect(probe).toContain('if (probing || !RELAY) return')
+    expect(probe).toContain('const c: any = relayConnections()[0]')
+    expect(probe).toContain('c.newStream(RELAY_V2_HOP_CODEC')
+    expect(probe).toContain('redial: (why) => redialRelay(why),')
+    expect(probe).toContain('reservationProbeMs(cachedPolicy())')
+    expect(probe).toContain('\nscheduleReservationProbe()')
   })
 })
 
