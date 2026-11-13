@@ -4,7 +4,8 @@ Each requirement names the check that falsifies it. The design contract is conce
 
 ## Requirement: credit travels from outcomes along consumption, once per ancestor
 
-Credit SHALL originate only at a closure observation with provenance or at a person's verdict. It SHALL travel
+Credit SHALL originate only at a closure observation with provenance, at a person's verdict, or at a lapse (r 0, at
+its own owner weight). The walk's own described outcome SHALL originate nothing. It SHALL travel
 backward only along consumption edges:
 - a produced row's schema inputs, and the rows it names in `uses` (held to rows it was shown);
 - a call's request (`from`);
@@ -19,6 +20,7 @@ presence in a pool, and a move SHALL earn nothing by ending.
 - A produce whose row nothing consumes earns nothing.
 - A context row not named in `uses` passes nothing.
 - A cell whose calls always end and are never consumed keeps its prior mean.
+- A described outcome at r 1 originates nothing, and a lapse originates r 0 at w_lapse.
 - A diamond credits the shared ancestor once.
 - Mutants (the presence chain, credit for ending, credit per path) each fail a check.
 

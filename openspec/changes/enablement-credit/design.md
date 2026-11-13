@@ -29,8 +29,23 @@ saw: presence.
 - A call or run that ended is a **non-failure**: no debit, and **no credit of its own**. Its cell gains only what
   travels back to it through consumption.
 - Credit **originates** only at:
-  - a closure observation with provenance (sections 4 and 5), at w_close; or
-  - a person's verdict r on the answer it judged, at w_person.
+  - a closure observation with provenance (sections 4 and 5), at w_close;
+  - a person's verdict r on the answer it judged, at w_person; or
+  - a lapse: a person's or owner's request whose first deadline passed unanswered by a verdict, as records counts it
+    today, which originates r 0 at **w_lapse**. A lapse is the absence of a verdict, a fact about the clock, not a
+    person's r 0, so it has its own weight, separately learnable (law 1).
+- **Not an origination: the walk's own described outcome.** Today records counts a described `outcome` (the walk's
+  model grading its own answer, "clean" when it saw only the request, owner rows and answers) as a grade that credits
+  the chain (`grades()`, `GRADERS = {described, person}`). That is a model judging an outcome, a grader, which the
+  contract excludes. It follows the USER's ruling that positive signal is a person's verdict and a check passing
+  after a landing. Described outcomes stay as rows but originate nothing. Replacement: closure and person
+  originations. The REMOVAL, with every consumer found by resolved references, is in task 1.2's body.
+- `land_verdict` rows are a different shape and never pass through `grades()`, which reads only `outcome`. They
+  are unaffected: git_land's requires row reads them directly, as before.
+- **Cold start, named.** With described outcomes gone and no landing yet, the only originations are person verdicts
+  and lapses. Most cells then sit at their prior, and Thompson draws near-uniformly within a root until closures
+  arrive. Task 1.2's body states how much evidence remains (the split of today's standing grades into described,
+  person and lapse, and person verdicts per day), and task 8.1 watches the share of draws made at the prior.
 - From an originating success O, evidence travels backward along consumption edges. A produce, call or run is credited
   only when travelling credit reaches it through a row that a consumer on O's path took.
 
@@ -44,8 +59,8 @@ for O: r = O's r, at weight w(O)·γᵏ, where k is the length of the **shortest
 - **Failed re-observation.** An observation with provenance showing the check still fails (the landing did not fix it)
   originates r 0 at w_close along the same edges and weights. It is evidence, not a void of earlier credit.
 
-**Owner row.** w_close, w_person, γ and D are fields of the owner's `credits` row for target `selection`.
-Seeded: w_close = 1, w_person = 1, γ = 0.7, D = 12. Records reads them at fold time (law 1). A posterior
+**Owner row.** w_close, w_person, w_lapse, γ and D are fields of the owner's `credits` row for target `selection`.
+Seeded: w_close = 1, w_person = 1, w_lapse = 1 (today's weight for a lapse), γ = 0.7, D = 12. Records reads them at fold time (law 1). A posterior
 is Beta(α₀ + Σ w·r, β₀ + Σ w·(1−r)) over the evidence reaching its cell.
 
 **Why not busywork.** No move earns credit by ending. A chain of edits and commits that never lands earns
@@ -64,6 +79,9 @@ terminal gate.
 - A diamond credits the shared ancestor once, at w·γ^(shortest k). Mutant: credit per path, which goes red.
 - Credit at depth k is w·γᵏ, and nothing passes beyond D.
 - A failed re-observation sends r 0 along the chain at the same weights.
+- A described outcome at r 1 originates nothing. Mutant: described restored as a grader, which goes red.
+- A lapse originates r 0 along consumption at w_lapse, and changing w_lapse changes the posterior.
+- git_land's requirement still meets on a land_verdict r 1 (must-pass).
 
 **Waits:** none added.
 
@@ -137,8 +155,9 @@ from the selection's recorded seed, then the move within the root as today.
   missing, read from pool_refs otherwise).
 - **Person asks too.** This applies to roots of a person's ask as well as to gap roots. An ask whose moves keep being
   debited, or reach nothing, is drawn less and less until something travels from it (a person's verdict or a
-  closure). It is never drawn at zero. This changes how a person's asks are served, so the USER is asked to confirm it
-  before task 4 is built.
+  closure). It is never drawn at zero. A lapse on a person's ask is an origination at r 0 (section 1), so it also
+  counts against that ask's root. This changes how a person's asks are served, so the USER is asked to confirm it
+  (with its lapse effect) before task 4 is built.
 
 **Must-fails.**
 - Two roots with equal history and 1 vs 10 current options are drawn at equal rates: over 4000 seeds, each rate
@@ -317,7 +336,9 @@ seeded at 3600), as its own fact:
   originated at a closure or a person's verdict (B6). It does not count:
   - a success's own cell (depth 0);
   - debits;
-  - refusals.
+  - refusals;
+  - a lapse's r 0. A lapse is an origination, but at r 0. Stability counts only credit that travelled from a closure
+    or a person's verdict.
 - `mixing = cells_reached / window`, `growth = (cells_new + templates_new) / window`, `keeps_up = mixing ≥ growth`.
 
 **A proxy, named.** λ₁(L) is the rate at which credit spreads across the cell complex (`SUBSTRATE_AS_DYNAMICS.md`

@@ -26,22 +26,28 @@ The order keeps each step safe on its own: measurement first, debits before the 
 
 ## 1. Consumption edges, travelling credit (records; design §1)
 
-- [ ] 1.1 Owner `credits` row for target `selection`: w_close, w_person, γ, D. Seeder writes them; the fixture judges
+- [ ] 1.1 Owner `credits` row for target `selection`: w_close, w_person, w_lapse, γ, D. Seeder writes them; the fixture judges
       the row.
 - [ ] 1.2 `fold.ts`:
       - the consumption edges (a)–(e);
-      - credit originating only at a closure observation or a person's verdict;
+      - credit originating only at a closure observation, a person's verdict, or a lapse (at w_lapse); described
+        outcomes originate nothing;
       - a backward breadth-first walk crediting each reached selection once, at the shortest path;
       - ending earns nothing.
       This replaces the `pool_refs` presence chain in `grades()`. Before install: the fold is timed at D = 12 on a
       hub-sized copy, off the hub's host (design §11), and the time goes in the body.
+      The body also carries:
+      - a REMOVAL line for described outcomes as originations, with every consumer of their credit found by resolved
+        references (fold posteriors, earned(), the tally and its reports, any surface view);
+      - the database fork's split of today's standing grades (described / person / lapse) and person verdicts per day.
 - [ ] 1.3 Must-fails:
       - an unconsumed produce earns nothing;
       - a context row not in `uses` passes nothing;
       - a cell whose calls always end and are never consumed keeps its prior mean;
+      - a described r 1 originates nothing; a lapse originates r 0 at w_lapse; git_land still meets on land_verdict r 1;
       - a diamond credits the shared ancestor once;
       - weight at depth k; nothing past D.
-      Mutants: the presence chain, credit for ending, and credit per path.
+      Mutants: the presence chain, credit for ending, credit per path, and described restored as a grader.
 
 ## 2. Schemas name what a produce used (walk-owner-seed, described-shape; design §1 (b))
 
