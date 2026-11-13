@@ -11,6 +11,8 @@
 #   (g) a read records answers with an error fails closed: rc 7, and nothing is written;
 #   (h) a write records answers with a row not stamped detector (another key's) is a failure, not "ok";
 #   (i) a gap's repo is a top-level field of its row, and the same gap again writes nothing;
+#   (l) a top-level fact the latest row lacks (a repo, a raised severity) is written though status, summary and meta
+#       are unchanged, and a repeat writes nothing;
 #   (k) the failing-test generator states repo from the same vessel its evidence_resolve runs (never from the summary),
 #       and the script still parses (its jq programs sit in single quotes: a stray quote in one ends the string).
 # usage: validation/scripts/pull-sync-gap-rows.test.sh [path/to/substrate-pull-sync.sh]
@@ -105,6 +107,17 @@ r7="$(jq -c '[.[] | select(.gap_id == "g7")] | max_by(.seq)' "$ROWS")"
 if [ "$(( $(wc -l < "$WRITES") - w0 ))" = 1 ] && [ "$(printf '%s' "$r7" | jq -r '.repo')" = local-tools-vessel ]; then
   ok "(i) a gap's repo is a top-level field of its row; the same gap again writes nothing"
 else bad "(i) writes $(( $(wc -l < "$WRITES") - w0 )), row=$r7"; fi
+# A top-level fact the latest row lacks, with status, summary and meta unchanged, is written: the repo of a gap filed
+# before gaps named one, or a severity raised. The same emit again writes nothing.
+w1="$(wc -l < "$WRITES")"
+dev_resolve "$(gap g8 open)" --max-time 5 > /dev/null
+dev_resolve "$(withrepo g8 local-tools-vessel)" --max-time 5 > /dev/null
+dev_resolve "$(withrepo g8 local-tools-vessel | jq -c '.impulse.pointer.gap.severity = "high"')" --max-time 5 > /dev/null
+dev_resolve "$(withrepo g8 local-tools-vessel | jq -c '.impulse.pointer.gap.severity = "high"')" --max-time 5 > /dev/null
+r8="$(jq -c '[.[] | select(.gap_id == "g8")] | max_by(.seq)' "$ROWS")"
+if [ "$(( $(wc -l < "$WRITES") - w1 ))" = 3 ] && printf '%s' "$r8" | jq -e '.repo == "local-tools-vessel" and .severity == "high"' >/dev/null; then
+  ok "(l) a top-level fact the latest row lacks (repo, then severity) is written though status, summary and meta are unchanged; a repeat is not"
+else bad "(l) writes $(( $(wc -l < "$WRITES") - w1 )) of 3, row=$r8"; fi
 gen="$(sed -n '/FAILING-TEST GAP GENERATOR/,/^  rm -f "$st"/p' "$SCRIPT")"
 if bash -n "$SCRIPT" && printf '%s' "$gen" | grep -q 'evidence_resolve: {shape: "test_suite", input: {vessel: $v,' && printf '%s' "$gen" | grep -qE '^ *repo: \$v,$'; then
   ok "(k) the failing-test generator states repo from the vessel its evidence_resolve runs"

@@ -6,10 +6,11 @@
 # candidate's). The range is the last-good pin (LAST_GOOD_DIR/<v>) .. HEAD. No network.
 #
 #   (a) a TEST-ONLY range with a newly failing name is refused on every tick, past
-#       TEST_GATE_MAX_REFUSALS: no break, no convergence, baseline byte-identical
+#       TEST_GATE_MAX_REFUSALS: no break, no convergence, baseline byte-identical; the gap names its repo
 #   (b) a RUNTIME range past the refusal bound is NOT converged: the starvation break may
 #       defer, never promote past red. The regression gap is escalated (severity high), the
-#       regressed name is not written into <v>.failnames, nothing is held outstanding
+#       regressed name is not written into <v>.failnames, nothing is held outstanding; every regression gap names
+#       its repo (the vessel) as a top-level field
 #   OUTSTANDING STATE (b2-e) is what a break left behind before it stopped promoting; it is
 #   seeded directly (seed_outstanding), and the gate keeps draining it:
 #   (b2) the NEXT commit (tests unchanged, the name still failing) converges, the name
@@ -121,14 +122,16 @@ setup
 echo 'test("b", () => { throw 1; });' >> "$d/test/x.test.ts"; g commit -am test-only
 printf '%s\n' "$NEW_OUT" > "$T/stub/clone-out"
 BEFORE="$(cat "$TEST_BASELINE_DIR/$VESSEL.failnames"; echo; cat "$TEST_BASELINE_DIR/$VESSEL")"
-A_CONV=0; A_REF=0; A_BREAK=0
+A_CONV=0; A_REF=0; A_BREAK=0; A_REPO=0
 for i in 1 2 3 4 5 6; do
   tick
   grep -q "^CONVERGED $VESSEL" "$CALLS" && A_CONV=$((A_CONV+1))
   grep -q 'GAP .*pull-sync-test-regression-demo-vessel' "$CALLS" && A_REF=$((A_REF+1))
+  [ "$(grep '^GAP ' "$CALLS" | sed 's/^GAP //' | jq -r 'select(.impulse.pointer.gap.id? == "pull-sync-test-regression-demo-vessel") | .impulse.pointer.gap.repo' 2>/dev/null | sort -u)" = demo-vessel ] && A_REPO=$((A_REPO+1))
   grep -q 'STARVATION BREAK' "$LOG" && A_BREAK=$((A_BREAK+1))
 done
 [ "$A_REF" = 6 ] && ok "(a) test-only regression refused on all 6 ticks (bound is 3)" || bad "(a) refused on $A_REF of 6 ticks"
+[ "$A_REPO" = 6 ] && ok "(a) the regression gap names its repo, demo-vessel, on all 6 ticks" || bad "(a) the regression gap named repo demo-vessel on $A_REPO of 6 ticks"
 [ "$A_CONV" = 0 ] && ok "(a) never converged" || bad "(a) converged on $A_CONV tick(s)"
 [ "$A_BREAK" = 0 ] && ok "(a) the starvation break never fired on a test-only range" || bad "(a) starvation break fired $A_BREAK time(s) on a test-only range"
 [ "$(cat "$TEST_BASELINE_DIR/$VESSEL.failnames"; echo; cat "$TEST_BASELINE_DIR/$VESSEL")" = "$BEFORE" ] && ok "(a) baseline (names + counts) byte-identical" || bad "(a) baseline rewritten: $(tr '\n' '|' < "$TEST_BASELINE_DIR/$VESSEL.failnames")"
@@ -145,6 +148,10 @@ for i in 4 5 6; do tick; grep -q "^CONVERGED $VESSEL" "$CALLS" && B_CONV=$((B_CO
 [ "$B_CONV" = 0 ] && ok "(b) past the bound a runtime range is still refused (the break defers, never promotes past red)" || bad "(b) the break promoted a runtime range past red on $B_CONV of 3 ticks"
 rg() { grep '^GAP ' "$CALLS" | sed 's/^GAP //' | jq -r "select(.impulse.pointer.gap.id? == \"pull-sync-test-regression-$VESSEL\") | .impulse.pointer.gap | $1" 2>/dev/null || true; }
 [ "$(rg .severity)" = high ] && ok "(b) past the bound the regression gap is escalated (severity high)" || bad "(b) regression gap severity past the bound: '$(rg .severity)'"
+# Every regression gap this vessel emitted (here the escalated one, past the bound) names its repository
+# as a top-level field: the walk holds a clone for the gap to that repo.
+REG_N="$(rg .id | grep -c .)"; REG_REPOS="$(rg .repo | sort -u | tr '\n' ' ')"
+[ "$REG_N" -ge 1 ] && [ "$REG_REPOS" = "$VESSEL " ] && ok "(b) each of the $REG_N regression gaps names its repo, $VESSEL" || bad "(b) regression gaps ($REG_N) name repo '$REG_REPOS', not $VESSEL"
 in_failnames "$X" && bad "(b) the regressed name was written into failnames" || ok "(b) the regressed name is NOT in failnames"
 in_failnames "$BASE_NAMES" && ok "(b) the pre-regression baseline names are kept" || bad "(b) the pre-regression baseline lost '$BASE_NAMES'"
 [ -s "$TEST_BASELINE_DIR/$VESSEL.outstanding" ] && bad "(b) a refused regression was held outstanding (it is not live)" || ok "(b) nothing held outstanding: nothing was deployed"

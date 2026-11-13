@@ -126,6 +126,9 @@ tick
 grep -q 'TEST REGRESSION' "$LOG" && ! converged && ok "(c) control: a reproduced newly-failing test REFUSES the install" || bad "(c) control changed (log: $(tr '\n' '|' < "$LOG" | cut -c1-400))"
 grep -q 'flake names' "$LOG" && bad "(c) a flake line was written for a refused regression" || ok "(c) no flake line on a refusal"
 grep -q 'pull-sync-test-regression-activity-api' "$CALLS" && ok "(c) the regression gap is filed as before" || bad "(c) no regression gap"
+# Inside the refusal bound the gap is the plain one; it names its repository (the vessel) as a top-level field.
+REPO="$(grep '^GAP ' "$CALLS" | sed 's/^GAP //' | jq -r 'select(.impulse.pointer.gap.id? == "pull-sync-test-regression-activity-api") | .impulse.pointer.gap.repo' 2>/dev/null | sort -u)"
+[ "$REPO" = activity-api ] && ok "(c) the regression gap names its repo, activity-api" || bad "(c) the regression gap names repo '$REPO', not activity-api"
 
 echo
 [ "$FAILS" -eq 0 ] && { echo "PASS"; exit 0; } || { echo "$FAILS FAIL"; exit 1; }

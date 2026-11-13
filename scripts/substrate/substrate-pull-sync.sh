@@ -298,9 +298,12 @@ gap_resolve() { # <pointer json> [curl args...]: answers as the old store did ({
       | {shape: "gap", gap_id: $g.id, status: ($g.status // "open"), summary: (($g.summary // "") | .[:2048]),
          meta: (if ($ms | length) <= 4096 then $m else {cut: true, bytes: ($ms | length), start: $ms[:4096]} end)}
       | if ($rest | tostring | length) <= 1024 then $rest + . else . end')"
+    # Unchanged only when every field the row would carry is already the latest row's (a top-level fact such as repo or
+    # severity is a change, as status, summary and meta are), and the claim is too (a row with none over one with one).
     if printf '%s' "$_g_rows" | jq -e --argjson r "$_g_row" '
         map(select(.id == $r.gap_id)) | .[0] // null
-        | . != null and .status == $r.status and .summary == $r.summary and .classification_metadata == $r.meta and .claim == $r.claim' >/dev/null 2>&1; then
+        | . as $l | ($r | del(.shape) | . + {id: .gap_id, classification_metadata: .meta} | del(.gap_id, .meta)) as $w
+        | $l != null and ([$w | to_entries[] | $l[.key] == .value] | all) and $l.claim == $r.claim' >/dev/null 2>&1; then
       _g_out='{"body":{"ok":true,"unchanged":true}}'
     else
       _g_out="$(_g_post "$(jq -cn --argjson r "$_g_row" '{pointer: {type: "record_write", row: $r, writer: "pull-sync", role: "detector"}}')" \
@@ -1004,6 +1007,34 @@ lift_held_gaps_each() {
     [ -d "$cl/$v" ] || { log "$v: held-gap release: no clone at $cl/$v; skipped"; continue; }
     lift_held_gaps "$v" "$(git -C "$cl/$v" rev-parse HEAD 2>/dev/null)" "$cl/$v" || true
   done
+  return 0
+}
+
+# A FAILING-TEST GAP FILED BEFORE ITS ROW NAMED A REPOSITORY gets one row that does. The walk makes a clone for a gap only
+# of the repo the gap's latest row names, and the generator names one only on gaps it files from then on (it skips an id
+# that is open), so an open gap filed before would never name one and no clone could ever be made for it. Its latest row
+# is written again with every field as it is (status, summary, meta and any hold kept), plus repo: the vessel its own
+# evidence_resolve runs the suite in. A gap whose latest row names a repo is not written again. Only open gaps the
+# generator filed are read; a store that cannot be read writes nothing, and a jq error is logged, never silent.
+carry_gap_repo() {
+  local gaps out p
+  command -v jq >/dev/null 2>&1 || return 0
+  gaps="$(dev_resolve '{"impulse":{"pointer":{"type":"record_read","shape":"gap"}}}' --max-time 30 2>/dev/null \
+    | jq -c 'if type == "array" then . elif (.content | type) == "array" then .content else error("no rows") end' 2>/dev/null)"
+  [ -n "$gaps" ] || { log "gap repo carry: records unreadable; nothing written"; return 0; }
+  out="$(printf '%s' "$gaps" | jq -c '
+    map(select(.shape == "gap" and .role == "detector")) | group_by(.gap_id)[] | (sort_by(.seq) | last) as $g
+    | ($g.meta // {}) as $m
+    | select($g.status == "open" and ($g.repo // "") == "" and $m.filed_by == "pull-sync failing-test generator")
+    | (($m.evidence_resolve.input.vessel // "") | sub("^repos/"; "")) as $v | select($v != "")
+    | {impulse: {pointer: {type: "substrateGap_write",
+        gap: (($g | del(.shape, .id, .seq, .t, .writer, .role, .input_refs, .gap_id, .meta)) + {id: $g.gap_id, repo: $v, classification_metadata: $m})}}}' 2>&1)" \
+    || { log "gap repo carry: jq failed, nothing written: $(printf '%s' "$out" | tr -d '\n' | cut -c1-200)"; return 0; }
+  while IFS= read -r p; do
+    [ -n "$p" ] || continue
+    emit_gap "$p"
+    log "gap repo carry: $(printf '%s' "$p" | jq -r '.impulse.pointer.gap.id + " names repo " + .impulse.pointer.gap.repo')"
+  done <<< "$out"
   return 0
 }
 
@@ -5334,7 +5365,7 @@ EOF
     TG_TESTONLY=""
     test_only_range "$d" "$TG_PREV_GOOD" "$HEAD" && TG_TESTONLY=1
     if [ -n "$TG_TESTONLY" ]; then
-      emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-test-regression-$v\",\"category\":\"systematic_failure\",\"source\":\"substrate_detected\",\"summary\":\"pull-sync test gate: $v at ${HEAD:0:10} regressed its own suite ($REG), confirmed on a second run. The range ${TG_PREV_GOOD:0:10}..${HEAD:0:10} changes only tests, so it is refused until repaired (refusal $RC); the starvation break never applies to a test-only range, which changes no runtime code.\",\"status\":\"open\",\"classification_metadata\":{\"vessel\":\"$v\",\"effective_wall_s\":${SUITE_EFF_WALL_S:-240},\"wall_why\":\"${SUITE_WALL_WHY:-}\"}}}}}"
+      emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-test-regression-$v\",\"category\":\"systematic_failure\",\"source\":\"substrate_detected\",\"summary\":\"pull-sync test gate: $v at ${HEAD:0:10} regressed its own suite ($REG), confirmed on a second run. The range ${TG_PREV_GOOD:0:10}..${HEAD:0:10} changes only tests, so it is refused until repaired (refusal $RC); the starvation break never applies to a test-only range, which changes no runtime code.\",\"status\":\"open\",\"repo\":\"$v\",\"classification_metadata\":{\"vessel\":\"$v\",\"effective_wall_s\":${SUITE_EFF_WALL_S:-240},\"wall_why\":\"${SUITE_WALL_WHY:-}\"}}}}}"
       log "$v: TEST REGRESSION at ${HEAD:0:10} ($REG) — REFUSING to converge (refusal $RC; ${TG_PREV_GOOD:0:10}..${HEAD:0:10} is test-only, so no starvation break); runtime keeps running its current code"
       tg_verdict "refused: $REG"; skipped=$((skipped + 1)); continue
     fi
@@ -5345,12 +5376,12 @@ EOF
     # stop. So past the bound the refusal stands and the gap is ESCALATED (severity high, which the gap
     # picker ranks above routine work). Outstanding state left by earlier breaks is still drained above.
     if [ "$RC" -le "${TEST_GATE_MAX_REFUSALS:-3}" ]; then
-      emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-test-regression-$v\",\"category\":\"systematic_failure\",\"source\":\"substrate_detected\",\"summary\":\"pull-sync test gate: $v at ${HEAD:0:10} regressed its own suite ($REG), confirmed on a second run. Refusal $RC of ${TEST_GATE_MAX_REFUSALS:-3}; the runtime stays on the code it is already running until this is repaired.\",\"status\":\"open\",\"classification_metadata\":{\"vessel\":\"$v\",\"effective_wall_s\":${SUITE_EFF_WALL_S:-240},\"wall_why\":\"${SUITE_WALL_WHY:-}\"}}}}}"
+      emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-test-regression-$v\",\"category\":\"systematic_failure\",\"source\":\"substrate_detected\",\"summary\":\"pull-sync test gate: $v at ${HEAD:0:10} regressed its own suite ($REG), confirmed on a second run. Refusal $RC of ${TEST_GATE_MAX_REFUSALS:-3}; the runtime stays on the code it is already running until this is repaired.\",\"status\":\"open\",\"repo\":\"$v\",\"classification_metadata\":{\"vessel\":\"$v\",\"effective_wall_s\":${SUITE_EFF_WALL_S:-240},\"wall_why\":\"${SUITE_WALL_WHY:-}\"}}}}}"
       log "$v: TEST REGRESSION at ${HEAD:0:10} ($REG) — REFUSING to converge ($RC/${TEST_GATE_MAX_REFUSALS:-3}); runtime keeps running its current code"
       tg_verdict "refused: $REG"; skipped=$((skipped + 1)); continue
     fi
     emit_gap "$(jq -n -c --arg v "$v" --arg head "${HEAD:0:10}" --arg reg "$REG" --arg rc "$RC" --arg max "${TEST_GATE_MAX_REFUSALS:-3}" --argjson ew "${SUITE_EFF_WALL_S:-240}" --arg why "${SUITE_WALL_WHY:-}" \
-      '{impulse:{pointer:{type:"substrateGap_write",gap:{id:("pull-sync-test-regression-" + $v),category:"systematic_failure",source:"substrate_detected",status:"open",severity:"high",
+      '{impulse:{pointer:{type:"substrateGap_write",gap:{id:("pull-sync-test-regression-" + $v),category:"systematic_failure",source:"substrate_detected",status:"open",severity:"high",repo:$v,
         summary:("Repair needed (ESCALATED): pull-sync test gate has refused " + $v + " " + $rc + " consecutive runs, past the bound of " + $max + ", at " + $head + " (" + $reg + "). The starvation break defers convergence; it never promotes past red, so the runtime stays on its current code until the regression is repaired."),
         classification_metadata:{vessel:$v,head:$head,refusals:($rc | tonumber),refusal_bound:($max | tonumber),escalated:true,regression:$reg,effective_wall_s:$ew,wall_why:$why}}}}}' 2>/dev/null)"
     log "$v: TEST REGRESSION at ${HEAD:0:10} ($REG) — REFUSING to converge (refusal $RC, past the bound ${TEST_GATE_MAX_REFUSALS:-3}: gap ESCALATED; the starvation break defers, it never promotes past red); runtime keeps running its current code"
@@ -6184,6 +6215,8 @@ done <<< "$GEN_QUEUE"
 
 # A person's release of a held failing-test gap, every tick (see lift_held_gaps_each).
 lift_held_gaps_each "$CLONE_DIR" || true
+# An open failing-test gap filed before gaps named their repository names it, once (see carry_gap_repo).
+carry_gap_repo || true
 
 # The walk's change clones, every tick (see walk_trees_check).
 walk_trees_check 50 3 || true

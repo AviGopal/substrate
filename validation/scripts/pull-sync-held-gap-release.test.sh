@@ -18,6 +18,10 @@
 #   (m) r 1 names the test's sources (relative imports resolved inside the checkout, no test file, nothing outside it,
 #       nothing unresolved); r 0 names none; a gap released r 1 before sources existed gets them once, and one whose
 #       test file is gone from the checkout gets [] once, not a rewrite every tick;
+#   (n) an open generator gap whose latest row names no repo gets one row naming the vessel its evidence runs, the
+#       rest of the row (status, summary, meta, any hold) as it was, and not again; (n2) a gap naming a repo, a closed
+#       one, one another writer filed, one naming no vessel: nothing; (n3) records unreadable: nothing, logged;
+#   (o) a release keeps the repo of the gap; (p) the tick calls carry_gap_repo after the release;
 #   (i) the closer leaves a released gap open while its test file has fewer expects than at release, and closes it when
 #       it has as many.
 # usage: validation/scripts/pull-sync-held-gap-release.test.sh [path/to/substrate-pull-sync.sh]
@@ -28,7 +32,7 @@ FAILS=0
 ok()  { echo "ok   - $*"; }
 bad() { echo "FAIL - $*"; FAILS=$((FAILS+1)); }
 {
-  for f in shape_route gap_resolve dev_resolve emit_gap close_failing_test_gaps test_size test_sources lift_held_gaps lift_held_gaps_each; do sed -n "/^$f() {/,/^}/p" "$SCRIPT"; done
+  for f in shape_route gap_resolve dev_resolve emit_gap close_failing_test_gaps test_size test_sources lift_held_gaps lift_held_gaps_each carry_gap_repo; do sed -n "/^$f() {/,/^}/p" "$SCRIPT"; done
 } > "$T/fns.sh"
 grep -q '^lift_held_gaps()' "$T/fns.sh" && grep -q '^test_size()' "$T/fns.sh" \
   || { echo "FAIL - could not extract lift_held_gaps and test_size"; exit 1; }
@@ -196,6 +200,41 @@ lift_held_gaps x 0123456789abcdef "$DIR"; first="$(wc -l < "$WRITES")"; gsrc="$(
 if [ "$first" = 1 ] && [ "$gsrc" = "[]" ] && [ "$second" = 0 ]; then
   ok "(m) a released gap whose test file is gone gets sources [] once, and is not written again"
 else bad "(m) gone: first=$first sources=$gsrc second=$second log=$(cat "$LOG")"; fi
+
+# ── (n)-(p) an open generator gap filed before gaps named their repository names it, once ──────────────────────────
+withrepo() { printf '%s' "$1" | jq -c --arg r "$2" '. + {repo: $r}'; }
+reset "$(held g-a x src/a.test.ts "$GEN")"
+carry_gap_repo
+L="$(latest g-a)"
+if [ "$(wc -l < "$WRITES")" = 1 ] && printf '%s' "$L" | jq -e --argjson o "$(held g-a x src/a.test.ts "$GEN")" \
+    '.repo == "x" and .status == "open" and .meta == $o.meta and .summary == $o.summary and .category == $o.category and .meta.operator_hold == true' >/dev/null; then
+  : > "$WRITES"; : > "$LOG"; carry_gap_repo
+  # Not again: the carry itself emits nothing for a gap whose latest row names a repo (no log line), so it can never
+  # become a periodic write that re-offers the walk a produce; records' dedupe is not what stops it.
+  if [ ! -s "$WRITES" ] && ! grep -q 'gap repo carry:' "$LOG"; then ok "(n) an open generator gap with no repo gets one row naming its vessel, everything else (the hold too) as it was; not again, not even emitted"
+  else bad "(n) a second call wrote $(cat "$WRITES")"; fi
+else bad "(n) writes=$(cat "$WRITES") latest=$L log=$(cat "$LOG")"; fi
+
+NOVESSEL="$(held g-e x src/a.test.ts "$GEN" | jq -c '.meta.evidence_resolve.input.vessel = ""')"
+reset "$(withrepo "$(held g-r x src/a.test.ts "$GEN")" x)" "$(held g-c x src/a.test.ts "$GEN" closed)" "$(held g-h x src/a.test.ts operator)" "$NOVESSEL"
+carry_gap_repo
+if [ ! -s "$WRITES" ]; then ok "(n2) a gap naming a repo, a closed one, one the generator did not file, and one naming no vessel are not written"
+else bad "(n2) wrote $(cat "$WRITES")"; fi
+
+reset "$(held g-a x src/a.test.ts "$GEN")"; DOWN=1
+carry_gap_repo; DOWN=""
+if [ ! -s "$WRITES" ] && grep -q 'gap repo carry: records unreadable' "$LOG"; then ok "(n3) records unreadable: nothing written, and the log says so"
+else bad "(n3) writes=$(cat "$WRITES") log=$(cat "$LOG")"; fi
+
+reset "$(withrepo "$(held g-a x src/a.test.ts "$GEN")" x)" "$(outcome 1 r0)"
+lift_held_gaps x 0123456789abcdef "$DIR"
+if [ "$(latest g-a | jq -r '.repo // "none"')" = x ] && [ "$(latest g-a | jq -r '.meta.operator_hold // "gone"')" = gone ]; then
+  ok "(o) a release keeps the gap's repo"
+else bad "(o) latest=$(latest g-a)"; fi
+
+if grep -qE '^carry_gap_repo \|\| true$' "$SCRIPT" && [ "$(grep -nE '^(lift_held_gaps_each "\$CLONE_DIR"|carry_gap_repo \|\| true$)' "$SCRIPT" | cut -d: -f2 | tr '\n' ' ')" = 'lift_held_gaps_each "$CLONE_DIR" || true carry_gap_repo || true ' ]; then
+  ok "(p) the tick calls carry_gap_repo, after the release"
+else bad "(p) the tick does not call carry_gap_repo after lift_held_gaps_each"; fi
 
 echo; [ "$FAILS" = 0 ] && { echo "PASS - a person releases a held generator gap, and its fix is held to the test's released size"; exit 0; }
 echo "$FAILS FAILED"; exit 1
