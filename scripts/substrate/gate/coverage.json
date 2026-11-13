@@ -2867,17 +2867,17 @@
     },
     "/usr/lib/systemd/system/described-shape-vessel.service.d/40-after-owner-seed.conf": {
       "src": "scripts/substrate/units/described-shape-vessel.service.d/40-after-owner-seed.conf",
-      "level": "parse",
+      "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
-        "unit-verify.sh"
+        "unit-dependencies.sh"
       ],
       "evidence": {
-        "accepted": "claimed by hand with the walk owner seed; earned by image-coverage-map.check.sh",
-        "mutation": "insert `exit 99` after line 1",
-        "mutated_blob": "1e328a910d647c695d340896b93a0046c42801cc"
+        "accepted": "claimed by hand with unit-dependencies.sh (gate-fixture-unit-dependencies.test.sh b/c); earned by image-coverage-map.check.sh",
+        "mutation": "rewrite Wants= to Requires=",
+        "mutated_blob": "22c74f0220aa43c1e4102d7ce50232aa4b34628d"
       },
-      "src_blob": "5812e0aa668bfdcc8e3d65c68365adf06cec3992"
+      "src_blob": "cc69f933dfb04005266f2c6dc8ec828550281a49"
     },
     "/usr/lib/systemd/system/walk-owner-seed.service": {
       "src": "scripts/substrate/units/walk-owner-seed.service",
@@ -2910,17 +2910,17 @@
     },
     "/usr/lib/systemd/system/walk-vessel.service.d/40-after-owner-seed.conf": {
       "src": "scripts/substrate/units/walk-vessel.service.d/40-after-owner-seed.conf",
-      "level": "parse",
+      "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
-        "unit-verify.sh"
+        "unit-dependencies.sh"
       ],
       "evidence": {
-        "accepted": "claimed by hand with the walk owner seed; earned by image-coverage-map.check.sh",
-        "mutation": "insert `exit 99` after line 1",
-        "mutated_blob": "1e328a910d647c695d340896b93a0046c42801cc"
+        "accepted": "claimed by hand with unit-dependencies.sh (gate-fixture-unit-dependencies.test.sh b/c); earned by image-coverage-map.check.sh",
+        "mutation": "rewrite Wants= to Requires=",
+        "mutated_blob": "22c74f0220aa43c1e4102d7ce50232aa4b34628d"
       },
-      "src_blob": "5812e0aa668bfdcc8e3d65c68365adf06cec3992"
+      "src_blob": "cc69f933dfb04005266f2c6dc8ec828550281a49"
     },
     "/usr/local/share/substrate/active-scripts/walk-owner-seed.ts": {
       "src": "scripts/substrate/walk-owner-seed.ts",
