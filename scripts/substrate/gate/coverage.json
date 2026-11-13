@@ -842,7 +842,7 @@
     },
     "/usr/lib/systemd/system/human-surface-vessel.service": {
       "src": "scripts/substrate/units/human-surface-vessel.service",
-      "src_blob": "1b9da9abd43d00c2fdc83380082ed9395cc1a334",
+      "src_blob": "d0bf5a54738bb1d68125b7d20318aad0817ca076",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -851,7 +851,7 @@
       "evidence": {
         "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
         "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "b51888505102ed27bdd7b7b58c9b084f22a47529"
+        "mutated_blob": "ad2c0cdaf60ec2a1c985a3384554fe492d53db53"
       }
     },
     "/usr/lib/systemd/system/human-surface-vessel.service.d/10-secrets-out-of-reach.conf": {
