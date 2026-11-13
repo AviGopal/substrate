@@ -18,11 +18,14 @@ The order keeps each step safe on its own: measurement first, debits before the 
 - [ ] 0.2 Widen/tighten check: the database fork counts live owner `requires` rows on each node by `for`. Any row whose
       `for` names a produce target starts to bite once task 7.2 extends the requires rule to produces. Each one is
       listed with what it tightens, in task 7.2's body.
-- [ ] 0.3 The USER confirms three things before the tasks that depend on them:
+- [x] 0.3 The USER confirmed three things before the tasks that depend on them (all yes):
       - person-ask roots are drawn by their decayed history too (design §3; before task 4);
       - asks are re-observed only by a person's verdict, never by re-running change_wanted (design §5);
       - templates are offered by enablement (`offer_at` = 2 closures on different roots) instead of a person's r 1
         (design §6, before task 6).
+      The USER also confirmed that a lapse on a person's ask counts r 0 against that ask's root, and granted the
+      local-tools exception for task 5.2 (the check in its own network namespace, conditions a–f, no host fallback),
+      for that one change only.
 
 ## 1. Consumption edges, travelling credit (records; design §1)
 
@@ -81,7 +84,10 @@ read files the gap (no detector is built for it: that is a gap of its own, law 6
         `unreached_after_s`, plus debits.
       Selection rows carry `root`.
 - [ ] 4.2 Walk `choose()`: Thompson over root posteriors, then the move as today.
-- [ ] 4.3 Walk `pending()`: remove `refusedOver`. Keep the ungraded-duplicate rule only for targets that an owner
+- [ ] 4.3 Walk `pending()`: remove `refusedOver`. **Not installed before the stale-test fact (agf_b6a2e6slqshv):** a
+      gap whose check a correct source change cannot pass carries a fact the walk reads, and its change calls are not
+      offered. Today the refusal hold is the only thing that stops the walk from going back to a stale-test gap's
+      source (a secret-read seam among them). Remove it without the fact, and the walk returns there. Keep the ungraded-duplicate rule only for targets that an owner
       `shape_description` gives `words` (shown to a person); remove it for every other target.
 - [ ] 4.4 Must-fails:
       - an always-refused single option draws at a falling rate, never 0, never parks;
