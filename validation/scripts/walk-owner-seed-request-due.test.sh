@@ -24,7 +24,7 @@
 #   (m) whether an ask wants a change is judged from the ask and the owner's repository rows only (change_wanted: inputs
 #       [world_changed], context exactly [{shape: repository, latest_by: repo}], wanted boolean): nothing the walk has
 #       done is in view, so a call already planned cannot steer it. Every call that changes something requires a wanted
-#       change or an open gap;
+#       change or an open gap, and a clone (git_worktree) one naming the very repo the call asks for;
 #   (n) walk_trees_reclaim, which removes clones, is called only for the open walk-trees gap's own root;
 #   (m, n) a gap requirement reads each gap by its own latest row (latest_by gap_id);
 #   (o) the land verdict's grader reads only the request and the gitDiff, and is told r 0 when that tree's typecheck
@@ -138,8 +138,11 @@ const pre = (tool: string, needs: string, where: Row) => rows.some((r) => r.shap
   && (needs !== "gap" || r.latest_by === "gap_id"));
 leg(!!cw && JSON.stringify(cw.inputs) === JSON.stringify(["world_changed"]) && JSON.stringify(cw.context) === JSON.stringify([{ shape: "repository", latest_by: "repo" }])
   && cw.schema?.properties?.wanted?.type === "boolean" && (cw.schema?.required ?? []).includes("wanted")
-  && tools.every((t) => pre(t, "change_wanted", { wanted: true }) && pre(t, "gap", { status: "open" })),
-  "(m) change_wanted is judged from the ask and the repository rows only, and every change tool requires a wanted change or an open gap");
+  && tools.every((t) => {
+    const repo = t === "git_worktree" ? { repo: { "x-pointer": "repo" } } : {};
+    return pre(t, "change_wanted", { wanted: true, ...repo }) && pre(t, "gap", { status: "open", ...repo });
+  }),
+  "(m) change_wanted is judged from the ask and the repository rows only, and every change tool requires a wanted change or an open gap, a clone one of its own repo");
 leg(pre("walk_trees_reclaim", "gap", { gap_id: "pull-sync-walk-trees-unreclaimed", status: "open" })
   && !rows.some((r) => r.shape === "requires" && r.for === "walk_trees_reclaim" && r.needs !== "gap"),
   "(n) walk_trees_reclaim is called only for the open walk-trees gap's own root");

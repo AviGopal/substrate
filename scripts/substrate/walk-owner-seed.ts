@@ -259,7 +259,8 @@ SCHEMAS.push({
   description: "Whether the world_changed row's `what` asks for a change to files in a repository (wanted true) or for " +
     "anything else (wanted false). The repository rows are the repositories this fleet holds, each with the units built " +
     "from it and their roles: an ask to change any of them, or what one of them does or shows, is a change to files in " +
-    "it. what says the change in a few words, and repo is the repository row's repo it is about, when there is one. " +
+    "it. what says the change in a few words, and repo is the repository row's repo it is about, or super when it is " +
+    "about the super-repo itself (its scripts, docs or configuration); a change wanted with no repo opens no clone. " +
     JSON_ONLY,
   schema: {
     type: "object",
@@ -297,10 +298,15 @@ for (const s of SCHEMAS) {
 // detector opened (its check failing is the change wanted). The walk reads these rows where it chooses (records shares
 // them with every root); the tools are named here, by the owner, not in the walk. Each gap speaks for itself, so a gap
 // requirement reads the latest row of each gap_id (latest_by), never another gap's.
+// A clone is made only of the repository the root wants changed: git_worktree's repo must be the repo the change_wanted
+// judgment or the open gap names ({"x-pointer": "repo"} is the call's own repo). A root that names no repository opens
+// no clone. Each row replaces the one before it for the same tool and shape (the walk counts only the latest).
+const CLONE = "git_worktree";
+const sameRepo = (tool: string): Row => (tool === CLONE ? { repo: { "x-pointer": "repo" } } : {});
 const CHANGE_TOOLS = ["git_worktree", "fs_edit", "fs_write", "code_replace_lines", "code_insert_after_line", "code_add_import", "git_commit", "git_land"];
 for (const tool of CHANGE_TOOLS) {
-  await ensure({ shape: "requires", for: tool, needs: "change_wanted", where: { wanted: true } }, { for: tool, needs: "change_wanted" }, `requires ${tool} change_wanted`);
-  await ensure({ shape: "requires", for: tool, needs: "gap", where: { status: "open" }, latest_by: "gap_id" }, { for: tool, needs: "gap" }, `requires ${tool} gap`);
+  await ensure({ shape: "requires", for: tool, needs: "change_wanted", where: { wanted: true, ...sameRepo(tool) } }, { for: tool, needs: "change_wanted" }, `requires ${tool} change_wanted`);
+  await ensure({ shape: "requires", for: tool, needs: "gap", where: { status: "open", ...sameRepo(tool) }, latest_by: "gap_id" }, { for: tool, needs: "gap" }, `requires ${tool} gap`);
 }
 // A landing waits for a verdict as well: git_land is called only once the root holds a land_verdict at r 1 (the latest
 // for its tree), so a change is diffed, then judged, then landed. Its own group: it is needed besides a wanted change or
@@ -325,8 +331,9 @@ await ensure({
   shape: "shape_description", of: "gap", written_by_role: "detector",
   description: "A check a detector made failed (or, with status closed, has stopped failing). gap_id names the failure " +
     "and stays the same while it lasts; status is open or closed; category and severity say what kind and how bad; " +
-    "summary says what failed, in at most 2 KiB; meta carries what the detector measured (cut past 4 KiB). The latest " +
-    "row for a gap_id, written by a detector, is its state: a gap closes by a later row, never by an edit.",
+    "summary says what failed, in at most 2 KiB; repo, when the check belongs to one repository, names it (a " +
+    "vessel's name, or super), and only a gap naming one can have a clone made for it; meta carries what the detector " +
+    "measured (cut past 4 KiB). The latest row for a gap_id, written by a detector, is its state: a gap closes by a later row, never by an edit.",
 }, { of: "gap" }, "shape_description gap");
 // What a gap's closing credits: no one grades the walk's work on a gap, so records counts the detector closing it as the
 // grade, but only when a call of this shape ended among the walk's steps on it first (the walk changed something there).
