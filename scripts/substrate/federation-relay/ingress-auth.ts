@@ -136,30 +136,30 @@ export function parsePolicy(body: unknown): Policy | null {
   return { mode: b.mode, same_authority_peers: list(b.same_authority_peers), same_authority_substrates: list(b.same_authority_substrates), cache: b.cache !== false }
 }
 
-/**
- * The policy from a development-vessel poolImpulse read, ONLY when the row is a verified operator write: the pool marks
- * attested_verified only for a trust-root row whose stamp verifies under that node's key, and fedIngressAuthPolicy is a
- * trust-root shape (operator credential required). Anything else (no row, an unattested or forged row, an evaluator or
- * runner stamp, a malformed body) is null: unreadable, so the ratchet decides. A forged {mode: enforce} therefore can
- * never arm the ratchet, and a forged same_authority_peers can never route a caller's key.
- */
-export function policyFromPoolResponse(j: unknown): Policy | null {
-  const rows = (j as { body?: { impulses?: unknown } } | null)?.body?.impulses
-  const row = Array.isArray(rows) ? (rows[0] as Record<string, unknown> | undefined) : undefined
-  if (!row || row.attested_verified !== true) return null
-  const by = (row.attested as { by?: unknown } | undefined)?.by
-  if (by !== 'operator') return null
-  return parsePolicy(row.body)
-}
+const RANK: Record<Mode, number> = { off: 0, log: 1, enforce: 2 }
 
 /**
- * The effective mode. emergencyOff is the named bootstrap exception (an env rollback that needs no record). A readable
- * record wins. Absent or unreadable: `off` until this node has once read `enforce`, `enforce` after (fail-closed ratchet).
+ * The effective mode. emergencyOff is the named bootstrap exception (an env rollback that needs no record). Otherwise the
+ * ratchet is a floor: once this node has read `enforce`, it stays `enforce`. A readable record can RAISE the mode above
+ * the floor, never lower it, so a record (seeded or written) cannot downgrade a node that once enforced.
  */
 export function resolveMode(policy: Policy | null, ratchetSeen: boolean, emergencyOff: boolean): Mode {
   if (emergencyOff) return 'off'
-  if (policy) return policy.mode
-  return ratchetSeen ? 'enforce' : 'off'
+  const floor: Mode = ratchetSeen ? 'enforce' : 'off'
+  if (!policy) return floor
+  return RANK[policy.mode] >= RANK[floor] ? policy.mode : floor
+}
+
+/**
+ * The policy from records: the latest fedIngressAuthPolicy row the OWNER wrote (records refuses an owner row under any
+ * key but the node's own, and stamps the role). A row any other role wrote (person, operator, walk) is not the policy.
+ * No owner row, or a malformed one, is null: unreadable, so the ratchet decides.
+ */
+export function policyFromRecordsRows(rows: unknown): Policy | null {
+  if (!Array.isArray(rows)) return null
+  const owned = rows.filter((r): r is Record<string, unknown> => !!r && typeof r === 'object' && (r as Record<string, unknown>).role === 'owner')
+  const latest = owned.reduce<Record<string, unknown> | null>((a, r) => (!a || Number(r.seq) > Number(a.seq) ? r : a), null)
+  return latest ? parsePolicy(latest) : null
 }
 
 /** The final /p2p/<id> component of a multiaddr (the destination peer of a circuit address), or null. */
@@ -192,7 +192,10 @@ export function pointerForDial(address: string, pointer: unknown, callerKey: str
   const src = pointer && typeof pointer === 'object' ? (pointer as Record<string, unknown>) : {}
   const { _fedAuth: _drop, ...rest } = src
   const sameAuthority = shouldAttachCredential(address, policy)
-  const out: Record<string, unknown> = policy && policy.mode !== 'off' && !sameAuthority ? withoutLegacyAuth(rest) : rest
+  // The legacy _auth is dropped for a foreign peer only once the policy names who is same-authority: a readable policy that
+  // names no peer yet changes nothing for _auth (federation design R-b; the derivation of peers comes with the OBO change).
+  const knowsPeers = !!policy && policy.same_authority_peers.length > 0
+  const out: Record<string, unknown> = policy && policy.mode !== 'off' && knowsPeers && !sameAuthority ? withoutLegacyAuth(rest) : rest
   return callerKey && sameAuthority ? { ...out, _fedAuth: callerKey } : out
 }
 

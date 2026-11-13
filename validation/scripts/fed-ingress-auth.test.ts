@@ -15,7 +15,7 @@ import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import {
-  ECHO_MAX_BYTES, ECHO_RATE_MAX, ECHO_RATE_WINDOW_MS, PUBLIC_SHAPES, makeEchoRateGate, callerKeyFromHeader, decideIngress, destinationPeer, echoRefusal, makeValidator, parsePolicy, pointerForDial, policyFromPoolResponse,
+  ECHO_MAX_BYTES, ECHO_RATE_MAX, ECHO_RATE_WINDOW_MS, PUBLIC_SHAPES, makeEchoRateGate, callerKeyFromHeader, decideIngress, destinationPeer, echoRefusal, makeValidator, parsePolicy, pointerForDial, policyFromRecordsRows,
   resolveMode, shouldAttachCredential, stripCredentials, withoutFedAuth, type Policy, type Validate,
 } from '../../scripts/substrate/federation-relay/ingress-auth'
 
@@ -132,38 +132,32 @@ describe('policy and mode (law 1: a shaped record, a fail-closed ratchet)', () =
     expect(parsePolicy({ mode: 'log', same_authority_peers: [SAME, 3] })).toEqual({ mode: 'log', same_authority_peers: [SAME], same_authority_substrates: [], cache: true })
     expect(parsePolicy({ mode: 'off', cache: false })?.cache).toBe(false)
   })
-  test('MUST-FAIL: absent/unreadable = off before any enforce, enforce after (ratchet); a readable record wins; emergency off wins', () => {
+  test('MUST-FAIL: absent/unreadable = off before any enforce, enforce after (ratchet); a record can only RAISE the mode; emergency off wins', () => {
     expect(resolveMode(null, false, false)).toBe('off')
     expect(resolveMode(null, true, false)).toBe('enforce')
-    expect(resolveMode(policy({ mode: 'log' }), true, false)).toBe('log')
+    // the ratchet is a floor: a record of log or off never lowers a node that once enforced
+    expect(resolveMode(policy({ mode: 'log' }), true, false)).toBe('enforce')
+    expect(resolveMode(policy({ mode: 'off' }), true, false)).toBe('enforce')
+    // above the floor a record raises it
+    expect(resolveMode(policy({ mode: 'log' }), false, false)).toBe('log')
+    expect(resolveMode(policy({ mode: 'enforce' }), false, false)).toBe('enforce')
     expect(resolveMode(policy({ mode: 'enforce' }), true, true)).toBe('off')
   })
 })
 
-describe('policy rows count ONLY when the pool verified an operator stamp (a forged row is unreadable)', () => {
-  const body = { mode: 'enforce', same_authority_peers: ['12D3KooWAttackerPlaceholderPeer'] }
-  const read = (row: Record<string, unknown> | null) => ({ body: { impulses: row ? [row] : [] } })
-  test('a verified operator row is the policy', () => {
-    expect(policyFromPoolResponse(read({ body, attested_verified: true, attested: { by: 'operator' } }))?.mode).toBe('enforce')
+describe('the policy is the latest row the OWNER wrote in this node\'s records (any other role\'s row is not the policy)', () => {
+  const row = (role: string, seq: number, mode = 'enforce') => ({ shape: 'fedIngressAuthPolicy', role, seq, mode, same_authority_peers: ['12D3KooWAttackerPlaceholderPeer'] })
+  test('the latest owner row is the policy', () => {
+    expect(policyFromRecordsRows([row('owner', 1, 'log'), row('owner', 5, 'enforce')])?.mode).toBe('enforce')
   })
-  test('MUST-FAIL: unattested, unverified, forged-verified-without-operator, evaluator, runner, empty and malformed reads are all null', () => {
-    for (const row of [
-      { body },
-      { body, attested: { by: 'operator' } },
-      { body, attested_verified: false, attested: { by: 'operator' } },
-      { body, attested_verified: true },
-      { body, attested_verified: true, attested: { by: 'evaluator' } },
-      { body, attested_verified: true, attested: { by: 'runner' } },
-      { body: { mode: 'nonsense' }, attested_verified: true, attested: { by: 'operator' } },
-    ]) expect([JSON.stringify(row).slice(0, 70), policyFromPoolResponse(read(row))]).toEqual([JSON.stringify(row).slice(0, 70), null])
-    expect(policyFromPoolResponse(read(null))).toBeNull()
-    expect(policyFromPoolResponse(null)).toBeNull()
-    expect(policyFromPoolResponse({ body: { impulses: 'x' } })).toBeNull()
-  })
-  test('MUST-FAIL: so an unattested row naming an attacker peer routes NO key, and its enforce cannot arm the ratchet', () => {
-    const p = policyFromPoolResponse(read({ body, attested_verified: false }))
-    expect(pointerForDial('/dns4/x.invalid/tcp/1/p2p/12D3KooWAttackerPlaceholderPeer', { type: 'concept' }, KEY, p)).toEqual({ type: 'concept' })
-    expect(resolveMode(p, false, false)).toBe('off')
+  test('MUST-FAIL: a person, operator or walk row of the shape is not the policy, however late; empty and malformed reads are null', () => {
+    for (const role of ['person', 'operator', 'walk', 'detector']) {
+      expect([role, policyFromRecordsRows([row(role, 9)])]).toEqual([role, null])
+      expect([role, policyFromRecordsRows([row('owner', 1, 'log'), row(role, 9, 'enforce')])?.mode]).toEqual([role, 'log'])
+    }
+    expect(policyFromRecordsRows([])).toBeNull()
+    expect(policyFromRecordsRows(null)).toBeNull()
+    expect(policyFromRecordsRows([{ ...row('owner', 2), mode: 'nonsense' }])).toBeNull()
   })
 })
 
@@ -195,6 +189,11 @@ describe('the caller key crosses only to the same identity authority (no bearer 
     expect(callerKeyFromHeader('Bearer ' + KEY)).toBeNull()
     expect(callerKeyFromHeader('ApiKey ' + KEY)).toBe(KEY)
   })
+  test('MUST-FAIL: a readable policy that names no same-authority peer yet leaves the legacy _auth as before (no peer derivation, no stripping)', () => {
+    expect(pointerForDial(circuitTo(FOREIGN), { type: 'vesselRegistry', _auth: OTHER }, null, policy({ same_authority_peers: [] }))).toEqual({ type: 'vesselRegistry', _auth: OTHER })
+    expect(pointerForDial(circuitTo(FOREIGN), { type: 'vesselRegistry', _auth: OTHER }, KEY, policy({ mode: 'enforce', same_authority_peers: [] }))).toEqual({ type: 'vesselRegistry', _auth: OTHER })
+  })
+
   test('MUST-FAIL: the legacy _auth (shared fleet key) never reaches a foreign peer once a policy is in force', () => {
     expect(pointerForDial(circuitTo(FOREIGN), { type: 'vesselRegistry', _auth: OTHER }, KEY, policy())).toEqual({ type: 'vesselRegistry' })
     expect(pointerForDial(circuitTo(FOREIGN), { type: 'vesselRegistry', _auth: OTHER }, null, policy({ mode: 'enforce' }))).toEqual({ type: 'vesselRegistry' })
@@ -225,9 +224,12 @@ describe('wiring pins (federation-transport-server.ts)', () => {
     const fn = src.slice(src.indexOf('async function resolveOverLibp2p('), src.indexOf('async function resolveOverLibp2p(') + 600)
     expect(fn).toContain('pointerForDial(target, pointer, callerCtx.getStore()?.key ?? null, cachedPolicy())')
   })
-  test('MUST-FAIL: the policy reader trusts only policyFromPoolResponse (a verified operator row), never a raw body', () => {
+  test('MUST-FAIL: the policy reader trusts only policyFromRecordsRows (the owner\'s row in local records), never a raw body or the retired pool', () => {
     const reader = src.slice(src.indexOf('async function readIngressPolicy('), src.indexOf('const cachedPolicy ='))
-    expect(reader).toContain('policy = policyFromPoolResponse(j)')
+    expect(reader).toContain('policy = policyFromRecordsRows(Array.isArray(j) ? j : j?.content)')
+    expect(reader).toContain("shape: 'fedIngressAuthPolicy', where: { role: 'owner' }")
+    expect(reader).toContain("'X-Discovery-Depth': '99'")
+    expect(reader).not.toContain('DEVELOPMENT_VESSEL_URL')
     expect(reader).not.toMatch(/parsePolicy\(/)
     const mode = src.slice(src.indexOf('async function ingressMode('), src.indexOf('const validateKey ='))
     expect(mode).toContain("if (policy?.mode === 'enforce' && !existsSync(RATCHET_FILE))")

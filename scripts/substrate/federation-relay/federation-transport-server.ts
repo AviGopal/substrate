@@ -14,7 +14,7 @@ import { hostname } from 'node:os'
 import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { AsyncLocalStorage } from 'node:async_hooks'
-import { callerKeyFromHeader, decideIngress, echoRefusal, makeEchoRateGate, makeValidator, pointerForDial, policyFromPoolResponse, resolveMode, stripCredentials, withoutFedAuth, type Decision, type Mode, type Policy } from './ingress-auth'
+import { callerKeyFromHeader, decideIngress, echoRefusal, makeEchoRateGate, makeValidator, pointerForDial, policyFromRecordsRows, resolveMode, stripCredentials, withoutFedAuth, type Decision, type Mode, type Policy } from './ingress-auth'
 import { multiaddr } from '@multiformats/multiaddr'
 
 // RESILIENCE: libp2p internals emit 'error' events on streams/sockets that have no
@@ -45,9 +45,10 @@ const HUB_API_KEY = process.env.HUB_API_KEY || API_KEY
 
 // ── INBOUND AUTHENTICATION (operator exception; logic in ./ingress-auth.ts) ─────────────
 // The MODE is a shaped per-node policy record, fedIngressAuthPolicy {mode: off|log|enforce, same_authority_peers,
-// same_authority_substrates, cache}, read from the local development-vessel pool at use time (30 s cache), never an env
-// var (law 1). Absent or unreadable = `off` until this node has once read `enforce`; after that = `enforce` (a ratchet
-// recorded in a sentinel file in the transport's state dir). FED_INGRESS_AUTH_EMERGENCY_OFF=1 is the one env input: the
+// same_authority_substrates, cache}: the latest row the OWNER wrote in this node's records, read through local discovery at
+// use time (30 s cache), never an env var (law 1). Absent or unreadable = `off` until this node has once read `enforce`;
+// after that = `enforce` (a ratchet recorded in a sentinel file in the transport's state dir), and a record can only raise
+// the mode above that floor, never lower it (resolveMode). FED_INGRESS_AUTH_EMERGENCY_OFF=1 is the one env input: the
 // named bootstrap exception, an emergency rollback needing no record, logged loudly whenever it is in force.
 // The CALLER's key reaches a dial only through callerCtx (set at the two local entry points from the caller's own
 // Authorization header); an ingress-originated hop runs with an empty context, so nothing re-attaches a key.
@@ -60,16 +61,17 @@ async function readIngressPolicy(): Promise<Policy | null> {
   if (policyCache && Date.now() - policyCache.at < POLICY_TTL_MS) return policyCache.policy
   let policy: Policy | null = null
   try {
-    const r = await fetch((process.env.DEVELOPMENT_VESSEL_URL || 'http://127.0.0.1:8090') + '/v2/impulses/resolve', {
+    // This node's own records (local only: the policy is per node, so no peer fan-out).
+    const r = await fetch(DISCOVERY + '/resolve', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: 'ApiKey ' + API_KEY },
-      body: JSON.stringify({ impulse: { pointer: { type: 'poolImpulse', shape: 'fedIngressAuthPolicy', status: 'open', limit: 1 } } }),
+      headers: { 'Content-Type': 'application/json', Authorization: 'ApiKey ' + API_KEY, 'X-Discovery-Depth': '99' },
+      body: JSON.stringify({ pointer: { type: 'record_read', shape: 'fedIngressAuthPolicy', where: { role: 'owner' } } }),
       signal: AbortSignal.timeout(5000),
     })
-    // Only a VERIFIED OPERATOR row counts (fedIngressAuthPolicy is a trust-root pool shape); an unattested or forged row
-    // is unreadable, so it can neither route a caller's key nor arm the enforce ratchet below.
+    // Only the OWNER's row counts (records stamps the role and refuses an owner row under any key but the node's own); a
+    // row another role wrote is not the policy, so it can neither route a caller's key nor arm the enforce ratchet.
     const j: any = r.ok ? await r.json() : null
-    policy = policyFromPoolResponse(j)
+    policy = policyFromRecordsRows(Array.isArray(j) ? j : j?.content)
   } catch { policy = null }
   policyCache = { at: Date.now(), policy }
   return policy
