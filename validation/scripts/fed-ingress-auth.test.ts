@@ -459,6 +459,50 @@ describe('the relay\'s own answer about our reservation (circuit relay v2 HOP RE
     expect(ev[3]).toBe('log: [federation] reservation probe: no relay connection within 3 s of start; the paced probe asks once one is up')
     expect(ev.slice(4)).toEqual(['sleep 600000', 'probe'])
   })
+  // Throws from what the schedule asks never end it. The same capped stand-in clock: a schedule that loops without
+  // sleeping, or never probes again, trips the 200-call cap or never reaches its probes.
+  const throwing = async (o: { probeThrows?: (n: number) => boolean; paceThrows?: boolean; upThrows?: (polls: number) => boolean; up?: (polls: number) => boolean; probesWanted: number; firstWaitMs?: number }) => {
+    const events: string[] = []
+    let polls = 0
+    let probes = 0
+    let calls = 0
+    await runReservationProbes({
+      connected: () => { if (o.upThrows?.(polls)) throw new Error('getConnections failed {at /dns4/x/tcp/1}'); return o.up ? o.up(polls) : true },
+      probe: async () => { probes++; if (o.probeThrows?.(probes)) { events.push('probe threw'); throw new Error('redial failed\nsecond line') } events.push('probe') },
+      paceMs: () => { if (o.paceThrows) throw new Error('no policy'); return 120_000 },
+      log: (l) => events.push('log: ' + l),
+      sleep: async (ms) => { if (++calls > 200) throw new Error('stand-in clock: too many sleeps'); events.push(`sleep ${ms}`); if (ms === 1_000) polls++ },
+      pollMs: 1_000,
+      firstWaitMs: o.firstWaitMs ?? 5_000,
+      stop: () => probes >= o.probesWanted,
+    })
+    return events
+  }
+  test('MUST-FAIL: a probe that throws is said in one line and followed by more probes, at the pace', async () => {
+    expect(await throwing({ probeThrows: (n) => n <= 2, probesWanted: 4 })).toEqual([
+      'probe threw', 'log: [federation] reservation probe schedule: the probe threw (redial failed?second line); asked again next time',
+      'sleep 120000', 'probe threw', 'log: [federation] reservation probe schedule: the probe threw (redial failed?second line); asked again next time',
+      'sleep 120000', 'probe', 'sleep 120000', 'probe',
+    ])
+  })
+  test('MUST-FAIL: a pace that throws on every call sleeps the default pace each time, never none', async () => {
+    const ev = await throwing({ paceThrows: true, probesWanted: 6 })
+    expect(ev.filter((e) => e.startsWith('sleep'))).toEqual(Array(5).fill('sleep 600000'))
+    expect(ev.filter((e) => e === 'probe')).toHaveLength(6)
+  })
+  test('MUST-FAIL: a relay connection check that keeps throwing in the first wait leaves it bounded, said once and counted', async () => {
+    const ev = await throwing({ upThrows: () => true, probesWanted: 1, firstWaitMs: 5_000 })
+    const lines = ev.filter((e) => e.startsWith('log: '))
+    expect(ev.filter((e) => e === 'sleep 1000')).toHaveLength(5)
+    expect(lines[0]).toBe('log: [federation] reservation probe schedule: the relay connection check threw (getConnections failed ?at ?dns4?x?tcp?1?); asked again next time')
+    expect(lines[1]).toBe('log: [federation] reservation probe schedule: the relay connection check threw 6 more time(s) in the first wait')
+    expect(lines[2]).toBe('log: [federation] reservation probe: no relay connection within 5 s of start; the paced probe asks once one is up')
+    expect(ev.at(-1)).toBe('probe')
+  })
+  test('a check that throws once in the first wait and then sees the connection probes at once', async () => {
+    const ev = await throwing({ upThrows: (p) => p === 0, up: (p) => p >= 1, probesWanted: 1 })
+    expect(ev.filter((e) => !e.startsWith('log: '))).toEqual(['sleep 1000', 'probe'])
+  })
   test('the pace is the policy row\'s reservation_probe_s, clamped to 60..3600 s, else 600 s', () => {
     expect(reservationProbeMs(null)).toBe(600_000)
     expect(reservationProbeMs(parsePolicy({ mode: 'enforce', reservation_probe_s: 5 }))).toBe(60_000)

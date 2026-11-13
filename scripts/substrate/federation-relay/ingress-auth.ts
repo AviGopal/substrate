@@ -392,17 +392,37 @@ export async function runReservationProbes(d: ProbeScheduleDeps): Promise<void> 
   const sleep = d.sleep ?? ((ms: number) => new Promise((r) => setTimeout(r, ms)))
   const poll = d.pollMs ?? 1_000
   const first = d.firstWaitMs ?? 120_000
+  // A throw from what the schedule asks (is a relay connection up, the pace, a probe) is said in one line and asked again
+  // next time: it never ends the schedule, which would stop every later probe with nothing but an unhandled rejection.
+  // Only the message is said, cut to safe characters, never a stack or an object. A throwing pace sleeps the default
+  // pace, never none. The first wait polls every second, so there only its first throw is said, and how many came, once
+  // it ends; it stays bounded, a throw counting as no connection.
+  let waiting = true
+  let quiet = false
+  let unsaid = 0
+  const said = (what: string, e: unknown) => {
+    if (quiet) { unsaid++; return }
+    d.log(`[federation] reservation probe schedule: ${what} threw (${
+      String((e as Error)?.message ?? e).replace(/[^A-Za-z0-9 _.:-]/g, '?').slice(0, 80)}); asked again next time`)
+  }
+  const isUp = (): boolean => { try { return d.connected() } catch (e) { said('the relay connection check', e); quiet = quiet || waiting; return false } }
+  const pace = (): number => { try { return d.paceMs() } catch (e) { said('the pace', e); return reservationProbeMs(null) } }
+  const probe = async (): Promise<void> => { try { await d.probe() } catch (e) { said('the probe', e) } }
   let waited = 0
-  while (!d.connected() && waited < first) {
+  while (!isUp() && waited < first) {
     if (d.stop?.()) return
     await sleep(poll)
     waited += poll
   }
-  if (d.connected()) await d.probe()
+  const up = isUp()
+  waiting = false
+  quiet = false
+  if (unsaid > 0) d.log(`[federation] reservation probe schedule: the relay connection check threw ${unsaid} more time(s) in the first wait`)
+  if (up) await probe()
   else d.log(`[federation] reservation probe: no relay connection within ${Math.round(first / 1000)} s of start; the paced probe asks once one is up`)
   while (!d.stop?.()) {
-    await sleep(d.paceMs())
-    await d.probe()
+    await sleep(pace())
+    await probe()
   }
 }
 
