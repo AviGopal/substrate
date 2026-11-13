@@ -6,7 +6,7 @@
 // repos/libp2p-federation-transport) runs as a child process. A fixture-owned client node
 // dials it directly on loopback over both inbound protocols. Asserted:
 //   - one line per inbound request: shape, the CLIENT's peer id, transport,
-//     carries_credential, would_refuse, outcome;
+//     carries_credential, outcome;
 //   - a recognisable fake `_auth` value never appears anywhere in the server's output;
 //   - the lpStream response bytes for a fixed frame equal the bytes the unchanged server
 //     produced for it, through the same stubbed local owner;
@@ -184,28 +184,28 @@ test('the lpStream response to a fixed frame is byte-identical to the unchanged 
 test('an inbound lpStream frame writes exactly one [fed-ingress] line, without the credential', async () => {
   const before = ingressLines().length
   await rawResolve({ type: 'fedlog_owned', q: 'lp', _auth: MARKER })
-  const want = `[fed-ingress] shape=fedlog_owned peer=${client.peerId} transport=lpstream carries_credential=y would_refuse=y outcome=ok`
+  const want = `[fed-ingress] shape=fedlog_owned peer=${client.peerId} transport=lpstream carries_credential=y outcome=ok`
   await waitFor(() => ingressLines().length > before, 5_000, 'the [fed-ingress] line')
   await sleep(300)
   expect(ingressLines().slice(before)).toEqual([want])
 }, 30_000)
 
-test('an inbound HTTP-over-libp2p request writes one line; an allowlisted shape is would_refuse=n', async () => {
+test('an inbound HTTP-over-libp2p request writes one line', async () => {
   const before = ingressLines().length
   const res = await pkg.resolveViaHttp(client, serverAddr, { type: 'concept', q: 'http' })
   expect(res?.content?.shape).toBe('concept')
   await waitFor(() => ingressLines().length > before, 5_000, 'the [fed-ingress] line')
   await sleep(300)
-  expect(ingressLines().slice(before)).toEqual([`[fed-ingress] shape=concept peer=${client.peerId} transport=http carries_credential=n would_refuse=n outcome=ok`])
+  expect(ingressLines().slice(before)).toEqual([`[fed-ingress] shape=concept peer=${client.peerId} transport=http carries_credential=n outcome=ok`])
 }, 30_000)
 
-test('a federation control shape is on the seed list: would_refuse=n', async () => {
+test('a federation control shape writes one line like any other', async () => {
   const before = ingressLines().length
   const raw = await rawResolve({ type: 'federation_probe' })
   expect(JSON.parse(raw).content.shape).toBe('federation_probe')
   await waitFor(() => ingressLines().length > before, 5_000, 'the [fed-ingress] line')
   await sleep(300)
-  expect(ingressLines().slice(before)).toEqual([`[fed-ingress] shape=federation_probe peer=${client.peerId} transport=lpstream carries_credential=n would_refuse=n outcome=ok`])
+  expect(ingressLines().slice(before)).toEqual([`[fed-ingress] shape=federation_probe peer=${client.peerId} transport=lpstream carries_credential=n outcome=ok`])
 }, 30_000)
 
 test('an inbound request the handler answers with an error logs outcome=error', async () => {
@@ -214,7 +214,7 @@ test('an inbound request the handler answers with an error logs outcome=error', 
   expect(JSON.parse(raw).content.error).toContain('unknown shape')
   await waitFor(() => ingressLines().length > before, 5_000, 'the [fed-ingress] line')
   await sleep(300)
-  expect(ingressLines().slice(before)).toEqual([`[fed-ingress] shape=fedlog_unowned peer=${client.peerId} transport=lpstream carries_credential=n would_refuse=y outcome=error`])
+  expect(ingressLines().slice(before)).toEqual([`[fed-ingress] shape=fedlog_unowned peer=${client.peerId} transport=lpstream carries_credential=n outcome=error`])
 }, 30_000)
 
 test('the local callers of the shared handler log no [fed-ingress] line', async () => {
@@ -246,6 +246,6 @@ test('a _fedAuth credential is stripped before anything is written: it never app
   await rawResolve({ type: 'fedlog_owned', q: 'fedauth', _fedAuth: FED_MARKER })
   await waitFor(() => ingressLines().length > before, 5_000, 'the [fed-ingress] line')
   await sleep(300)
-  expect(ingressLines().slice(before)).toEqual([`[fed-ingress] shape=fedlog_owned peer=${client.peerId} transport=lpstream carries_credential=y would_refuse=y outcome=ok`])
+  expect(ingressLines().slice(before)).toEqual([`[fed-ingress] shape=fedlog_owned peer=${client.peerId} transport=lpstream carries_credential=y outcome=ok`])
   expect(output).not.toContain(FED_MARKER)
 }, 30_000)

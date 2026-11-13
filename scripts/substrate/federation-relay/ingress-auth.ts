@@ -213,6 +213,27 @@ export function destinationPeer(target: string): string | null {
   return last || null
 }
 
+/** True for a dial the relay refused for the destination (no reservation, or no relay↔destination connection). */
+export const isRelayRefusal = (res: unknown): boolean =>
+  !!res && typeof res === 'object' && /NO_RESERVATION|failed to connect via relay/i.test(String((res as { error?: unknown }).error ?? ''))
+
+/**
+ * Where a forward to a registered libp2p row is tried, in order: the row's own first address (its circuit, as
+ * registered); then any LIVE connection this node already holds to the same destination peer through a relay (a
+ * reservation the registered circuit no longer reaches can still have a working circuit, which is why reads got
+ * through while a write's single dial was refused); then the row's other addresses (its direct listen addrs). Each
+ * address once, at most 6. The destination is the /p2p/ peer of the first address; a live circuit to another peer is
+ * never used.
+ */
+export function forwardAddresses(row: unknown, live: readonly string[]): string[] {
+  const addrs = (Array.isArray((row as { libp2p_multiaddr?: unknown })?.libp2p_multiaddr) ? ((row as { libp2p_multiaddr: unknown[] }).libp2p_multiaddr) : [])
+    .map(String).filter((a) => a.length > 0)
+  if (addrs.length === 0) return []
+  const dest = destinationPeer(addrs[0]!)
+  const sameDest = dest ? live.map(String).filter((a) => a.includes('/p2p-circuit/') && destinationPeer(a) === dest) : []
+  return [...new Set([addrs[0]!, ...sameDest, ...addrs.slice(1)])].slice(0, 6)
+}
+
 /** How long a token the sending transport asks for lives: one dial and one identity round trip at the far end. */
 export const OBO_TTL_SECONDS = 30
 
@@ -265,7 +286,8 @@ export function makeOboMinter(o: MinterOptions): Mint {
         signal: AbortSignal.timeout(o.timeoutMs ?? 5_000),
       })
       if (!r.ok) return refused(String(r.status), audience)
-      const token = ((await r.json()) as { data?: { token?: unknown } })?.data?.token
+      // An answer that is not JSON is identity answering, not identity unreachable.
+      const token = ((await r.json().catch(() => null)) as { data?: { token?: unknown } } | null)?.data?.token
       return typeof token === 'string' && token && token !== callerKey ? token : refused('no_token', audience)
     } catch { return refused('unreachable', audience) }
   }

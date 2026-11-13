@@ -18,7 +18,7 @@ import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import {
-  ECHO_MAX_BYTES, ECHO_RATE_MAX, ECHO_RATE_WINDOW_MS, OBO_TTL_SECONDS, PUBLIC_SHAPES, makeEchoRateGate, callerKeyFromHeader, decideIngress, destinationPeer, echoRefusal, makeOboMinter, makeValidator, oboAudience,
+  ECHO_MAX_BYTES, ECHO_RATE_MAX, ECHO_RATE_WINDOW_MS, OBO_TTL_SECONDS, PUBLIC_SHAPES, makeEchoRateGate, callerKeyFromHeader, decideIngress, destinationPeer, echoRefusal, forwardAddresses, isRelayRefusal, makeOboMinter, makeValidator, oboAudience,
   oboToken, parsePolicy, pointerForDial, policyFromRecordsRows, resolveMode, stripCredentials, withoutFedAuth, type Policy, type Validate,
 } from '../../scripts/substrate/federation-relay/ingress-auth'
 
@@ -322,6 +322,38 @@ describe('a mint that yields no token says why (observability: refused and absen
   })
 })
 
+describe('a forward the relay refuses tries the same peer another way (the ingress→libp2p path)', () => {
+  const OTHER_PEER = '12D3KooWOtherPlaceholderPeer'
+  const reg = circuitTo(PEER)
+  const direct = `/ip4/198.51.100.7/tcp/4001/p2p/${PEER}`
+  const liveSame = `/dns4/relay2.invalid/tcp/1/p2p/12D3KooWRelayTwoPlaceholder/p2p-circuit/p2p/${PEER}`
+  const liveOther = circuitTo(OTHER_PEER)
+  test('MUST-FAIL: the registered circuit first, then a live circuit to the SAME peer, then the row\'s other addresses', () => {
+    expect(forwardAddresses({ libp2p_multiaddr: [reg, direct] }, [liveOther, liveSame, '/ip4/203.0.113.9/tcp/1/p2p/' + PEER])).toEqual([reg, liveSame, direct])
+  })
+  test('MUST-FAIL: a live circuit to another peer is never tried, nor a live non-circuit address', () => {
+    const got = forwardAddresses({ libp2p_multiaddr: [reg] }, [liveOther, '/ip4/203.0.113.9/tcp/1/p2p/' + PEER])
+    expect(got).toEqual([reg])
+  })
+  test('each address once, at most 6; no address at all is no try', () => {
+    const many = Array.from({ length: 9 }, (_, i) => `/ip4/198.51.100.${i + 1}/tcp/4001/p2p/${PEER}`)
+    expect(forwardAddresses({ libp2p_multiaddr: [reg, reg, ...many] }, [liveSame, liveSame])).toHaveLength(6)
+    expect(forwardAddresses({ libp2p_multiaddr: [] }, [liveSame])).toEqual([])
+    expect(forwardAddresses({}, [liveSame])).toEqual([])
+  })
+  test('MUST-FAIL: only the relay\'s refusal moves a forward on; any other answer or failure is the answer', () => {
+    expect(isRelayRefusal({ error: 'failed to connect via relay with status NO_RESERVATION' })).toBe(true)
+    expect(isRelayRefusal({ error: 'NO_RESERVATION' })).toBe(true)
+    for (const r of [{ error: 'unauthorized' }, { content: { error: 'NO_RESERVATION' } }, { content: {} }, null, 'NO_RESERVATION']) expect([r, isRelayRefusal(r)]).toEqual([r, false])
+  })
+  test('MUST-FAIL: a mint answered with something that is not JSON is no_token, not unreachable', async () => {
+    const lines: string[] = []
+    const m = makeOboMinter({ identityUrl: () => 'http://identity.invalid', actorKey: () => OTHER, fetchImpl: async () => ({ ok: true, status: 200, json: async () => { throw new SyntaxError('not json') } }) as any, log: (l) => lines.push(l), now: () => 0 })
+    expect(await m(KEY, { node: PEER, shape: 'record_write' })).toBeNull()
+    expect(lines.map((l) => l.split(' ')[4])).toEqual(['status=no_token'])
+  })
+})
+
 describe('wiring pins (federation-transport-server.ts)', () => {
   const src = readFileSync(join(ROOT, 'scripts/substrate/federation-relay/federation-transport-server.ts'), 'utf8')
   const ingress = src.slice(src.indexOf('const ingressHandler = async (raw'), src.indexOf('await serveResolve(vl, ingressHandler)'))
@@ -365,6 +397,20 @@ describe('wiring pins (federation-transport-server.ts)', () => {
     expect(reader).not.toMatch(/parsePolicy\(/)
     const mode = src.slice(src.indexOf('async function ingressMode('), src.indexOf('const validateKey ='))
     expect(mode).toContain("if (policy?.mode === 'enforce' && !existsSync(RATCHET_FILE))")
+  })
+  test('MUST-FAIL: the ingress→libp2p forward tries forwardAddresses in order, moving on only on a relay refusal, and logs each refusal', () => {
+    const fwd = src.slice(src.indexOf('const forwardLibp2p = async (v: any) => {'), src.indexOf('const forwardLibp2p = async (v: any) => {') + 1400)
+    expect(fwd).toContain('const tries = forwardAddresses(v, live)')
+    expect(fwd).toContain('if (!isRelayRefusal(res)) break')
+    expect(fwd).toContain('[fed-transport] forward relay refusal #')
+    expect(fwd).toContain('.catch((e) => ({ error: String((e as Error)?.message ?? e) }))')
+  })
+  test('MUST-FAIL: the 5-minute window line says how many reservations the relay transport holds, beside the advertised circuit', () => {
+    expect(src).toContain("window circuit_up=${currentCircuit() ? 'y' : 'n'} reservations_held=${reservationTruth().held} mode=${m}")
+  })
+  test('MUST-FAIL: the pre-enforcement allowlist column is gone: the ingress line says what happened, not what a list would have done', () => {
+    expect(src).not.toContain('FED_INGRESS_SEED_ALLOWLIST')
+    expect(src).not.toContain('would_refuse')
   })
   test('the refusal body echoes no pointer field, only the shape and a fixed reason', () => {
     const refusal = ingress.slice(ingress.indexOf("return { error: 'unauthorized'"), ingress.indexOf("return { error: 'unauthorized'") + 400)

@@ -14,7 +14,7 @@ import { hostname } from 'node:os'
 import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { AsyncLocalStorage } from 'node:async_hooks'
-import { callerKeyFromHeader, decideIngress, echoRefusal, makeEchoRateGate, makeOboMinter, makeValidator, oboAudience, pointerForDial, policyFromRecordsRows, resolveMode, stripCredentials, withoutFedAuth, type Decision, type Mode, type Policy } from './ingress-auth'
+import { callerKeyFromHeader, decideIngress, echoRefusal, forwardAddresses, isRelayRefusal, makeEchoRateGate, makeOboMinter, makeValidator, oboAudience, pointerForDial, policyFromRecordsRows, resolveMode, stripCredentials, withoutFedAuth, type Decision, type Mode, type Policy } from './ingress-auth'
 import { multiaddr } from '@multiformats/multiaddr'
 
 // RESILIENCE: libp2p internals emit 'error' events on streams/sockets that have no
@@ -55,6 +55,10 @@ const HUB_API_KEY = process.env.HUB_API_KEY || API_KEY
 // request it validated: the on-behalf-of token and its audience go to the owning vessel in place of this node's key.
 const callerCtx = new AsyncLocalStorage<{ key: string | null; forward?: { authorization: string; audience: string } | null }>()
 const FED_STATE_DIR = process.env.FED_STATE_DIR || '/workspace/.fed-transport'
+// Relay refusals on the ingress→libp2p forward path (resolveHandler's forwardLibp2p), declared before anything can serve:
+// an inbound frame can reach that path while this module is still starting.
+let forwardRefusedCount = 0
+let lastForwardRefusedLogAt = 0
 const RATCHET_FILE = FED_STATE_DIR + '/ingress-auth-enforce-seen'
 const POLICY_TTL_MS = 30_000
 let policyCache: { at: number; policy: Policy | null } | null = null
@@ -378,9 +382,24 @@ async function proxyToLocalOwner(pointer: any): Promise<any> {
       return { error: 'discovery short-circuit failed: ' + String((e as Error)?.message ?? e) }
     }
   }
+  // A forward tries the row's registered circuit, then a live circuit this node already holds to the same peer, then the
+  // row's other addresses (forwardAddresses), moving on only when the relay refused the dial. Each refusal is logged with
+  // the shape, the address's tail and a running count, rate-limited like egress's: this path used to try one address,
+  // once, and say nothing when the relay refused it (a person's record_write was lost so while reads got through).
   const forwardLibp2p = async (v: any) => {
-    console.log('[fed-transport] ingress→libp2p forward ' + t + ' to ' + String(v.libp2p_multiaddr[0]).slice(-20))
-    const res = await resolveOverLibp2p(String(v.libp2p_multiaddr[0]), { ...pointer, _fedHop: hop + 1 })
+    const live = (((vl.health() as any)?.connections ?? []) as Array<{ addr?: unknown }>).map((c) => String(c?.addr ?? ''))
+    const tries = forwardAddresses(v, live)
+    let res: any = { error: 'no libp2p address to forward ' + t + ' to' }
+    for (const [i, a] of tries.entries()) {
+      console.log('[fed-transport] ingress→libp2p forward ' + t + (i === 0 ? ' to ' : ' retry via ') + a.slice(-20))
+      res = await resolveOverLibp2p(a, { ...pointer, _fedHop: hop + 1 }).catch((e) => ({ error: String((e as Error)?.message ?? e) }))
+      if (!isRelayRefusal(res)) break
+      forwardRefusedCount++
+      if (Date.now() - lastForwardRefusedLogAt >= 60_000) {
+        lastForwardRefusedLogAt = Date.now()
+        console.log(`[fed-transport] forward relay refusal #${forwardRefusedCount} type=${t} target=…${a.slice(-20)} tries=${tries.length}`)
+      }
+    }
     return (res && typeof res === 'object' && 'content' in (res as any)) ? (res as any).content : res
   }
   // Per-vessel addressing: a caller that discovered `<vesselId>@<substrate>` through
@@ -682,27 +701,6 @@ const resolveHandler = async (pointer: any): Promise<any> => {
 // this existed an inbound success logged nothing, so who resolves what over the overlay
 // could not be measured. Local callers of resolveHandler (/egress/resolve to self, POST
 // /v2/impulses/resolve) are not ingress and are not logged here.
-//
-// FED_INGRESS_SEED_ALLOWLIST is DATA for the `would_refuse` column, not enforcement:
-// nothing is refused. It answers "what would a default-deny with this seed list refuse?"
-// so that question can be judged from the log before anything is enforced. The four
-// registry shapes are the ones proxyToLocalOwner already checks (DISCOVERY_SHAPES).
-// Written as one space-separated list: these are names this file compares against, not
-// pointers it writes, and resolve-writers-send-credentials reads a quoted `*_write` name
-// as a writer.
-// The federation control shapes are on the list because refusing them would break the
-// overlay itself, not one caller:
-//   substrateBootstrap: deliberately unauthenticated, so a node can join knowing only a multiaddr.
-//   federation_probe: the transport's own reachability answer ("resolved over libp2p").
-//   federation_echo: the round trip federation-probe-tick sends to measure a circuit.
-//   federation_verification_report: serves the latest probe-witnessed reachability report.
-const FED_INGRESS_SEED_ALLOWLIST: ReadonlySet<string> = new Set((
-  'llm_completion executionReplicationPull activeDispatches goalWalkState composeOwnership ' +
-  'resolver_schema concept relatedConcepts conceptGraph concept_create_write ' +
-  'conceptSignatureUpsert_write conceptLink_write ' +
-  'vesselRegistry vesselCapability vesselEndpoint vesselHealth ' +
-  'substrateBootstrap federation_probe federation_echo federation_verification_report'
-).split(' '))
 // Key names (lowercased, non-alphanumerics stripped) that mark a credential-like field.
 // Exact names, not substrings: `max_tokens` is not a credential. Only the PRESENCE of
 // such a key is logged, never its value.
@@ -755,7 +753,7 @@ const ingressHandler = async (raw: any, ctx?: { remotePeer?: string, transport?:
     outcome = (res && typeof res === 'object' && 'error' in res) ? 'error' : 'ok'
     return res
   } finally {
-    console.log(`[fed-ingress] shape=${logSafe(shape)} peer=${logSafe(ctx?.remotePeer ?? 'unknown')} transport=${logSafe(ctx?.transport ?? 'unknown')} carries_credential=${credentialPresent ? 'y' : 'n'} would_refuse=${FED_INGRESS_SEED_ALLOWLIST.has(shape) ? 'n' : 'y'} outcome=${outcome}`)
+    console.log(`[fed-ingress] shape=${logSafe(shape)} peer=${logSafe(ctx?.remotePeer ?? 'unknown')} transport=${logSafe(ctx?.transport ?? 'unknown')} carries_credential=${credentialPresent ? 'y' : 'n'} outcome=${outcome}`)
     if (mode !== 'off') {
       const pr = decision?.principal
       console.log(`[fed-ingress-auth] mode=${mode} shape=${logSafe(shape)} decision=${decision?.allow ? 'allow' : 'refuse'} reason=${decision?.reason ?? 'none'} credential_present=${credentialPresent ? 'y' : 'n'} principal=${pr ? logSafe(pr.org_id) + '/' + logSafe(pr.user_id) + '/' + pr.key_hash + '/' + logSafe(pr.key_id) : '-'} enforced=${mode === 'enforce' ? 'y' : 'n'}`)
@@ -835,7 +833,7 @@ Bun.serve({
       const rt = reservationTruth()
       const transport = {
         ...(vl.health() as unknown as Record<string, unknown>),
-        redialCount, egressNoReservationCount, lastRedialReason,
+        redialCount, egressNoReservationCount, forwardRefusedCount, lastRedialReason,
         reservationsHeld: rt.held,
         reservationRelays: rt.relays,
         reservationExpiresInMs: rt.expiresInMs,
@@ -1428,7 +1426,9 @@ await registerAtHub()
 setInterval(register, 120_000) // refresh discovery TTL
 // The inbound-auth denominator: refusals only mean something per hour the circuit was UP (the reservation lapses
 // for long stretches; a NO_RESERVATION failure never reaches any ingress and is logged on the egress side instead).
-setInterval(() => { void ingressMode().then((m) => console.log(`[fed-ingress-auth] window circuit_up=${currentCircuit() ? 'y' : 'n'} mode=${m}`)).catch(() => {}) }, 300_000)
+// circuit_up says only that a circuit address is advertised; reservations_held is what the relay transport actually holds
+// (reservationTruth). An advertised circuit with none held is the phantom the relay answers NO_RESERVATION for.
+setInterval(() => { void ingressMode().then((m) => console.log(`[fed-ingress-auth] window circuit_up=${currentCircuit() ? 'y' : 'n'} reservations_held=${reservationTruth().held} mode=${m}`)).catch(() => {}) }, 300_000)
 setInterval(registerAtHub, 120_000)
 
 // RESERVATION (RE)ACQUISITION HOOK: VesselLibp2p exposes no reservation event, so the
