@@ -14,7 +14,7 @@ import { hostname } from 'node:os'
 import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { AsyncLocalStorage } from 'node:async_hooks'
-import { callerKeyFromHeader, decideIngress, echoRefusal, makeEchoRateGate, makeValidator, pointerForDial, policyFromRecordsRows, resolveMode, stripCredentials, withoutFedAuth, type Decision, type Mode, type Policy } from './ingress-auth'
+import { callerKeyFromHeader, decideIngress, echoRefusal, makeEchoRateGate, makeOboMinter, makeValidator, oboAudience, pointerForDial, policyFromRecordsRows, resolveMode, stripCredentials, withoutFedAuth, type Decision, type Mode, type Policy } from './ingress-auth'
 import { multiaddr } from '@multiformats/multiaddr'
 
 // RESILIENCE: libp2p internals emit 'error' events on streams/sockets that have no
@@ -44,15 +44,16 @@ const API_KEY = process.env.METABOB_API_KEY || ''
 const HUB_API_KEY = process.env.HUB_API_KEY || API_KEY
 
 // ── INBOUND AUTHENTICATION (operator exception; logic in ./ingress-auth.ts) ─────────────
-// The MODE is a shaped per-node policy record, fedIngressAuthPolicy {mode: off|log|enforce, same_authority_peers,
-// same_authority_substrates, cache}: the latest row the OWNER wrote in this node's records, read through local discovery at
+// The MODE is a shaped per-node policy record, fedIngressAuthPolicy {mode: off|log|enforce, cache}: the latest row the OWNER wrote in this node's records, read through local discovery at
 // use time (30 s cache), never an env var (law 1). Absent or unreadable = `off` until this node has once read `enforce`;
 // after that = `enforce` (a ratchet recorded in a sentinel file in the transport's state dir), and a record can only raise
 // the mode above that floor, never lower it (resolveMode). FED_INGRESS_AUTH_EMERGENCY_OFF=1 is the one env input: the
 // named bootstrap exception, an emergency rollback needing no record, logged loudly whenever it is in force.
 // The CALLER's key reaches a dial only through callerCtx (set at the two local entry points from the caller's own
-// Authorization header); an ingress-originated hop runs with an empty context, so nothing re-attaches a key.
-const callerCtx = new AsyncLocalStorage<{ key: string | null }>()
+// Authorization header), and only as the input to an on-behalf-of mint: the dial carries the token, never the key. An
+// ingress-originated hop runs with no key, so nothing is minted for it. `forward` is set only by the ingress, for a
+// request it validated: the on-behalf-of token and its audience go to the owning vessel in place of this node's key.
+const callerCtx = new AsyncLocalStorage<{ key: string | null; forward?: { authorization: string; audience: string } | null }>()
 const FED_STATE_DIR = process.env.FED_STATE_DIR || '/workspace/.fed-transport'
 const RATCHET_FILE = FED_STATE_DIR + '/ingress-auth-enforce-seen'
 const POLICY_TTL_MS = 30_000
@@ -96,8 +97,15 @@ const validateKey = makeValidator({
   fetchImpl: fetch as any,
   cacheEnabled: () => cachedPolicy()?.cache !== false,
 })
-// Pointers the ingress authenticated for THIS request. The registry branch (resolveHandler) admits these; local callers
-// keep the transitional `_auth === API_KEY` check there.
+// The sending side: this transport is the actor (its own key) and the caller is the key the local caller presented.
+const mintObo = makeOboMinter({
+  identityUrl: () => process.env.IDENTITY_VESSEL_URL || '',
+  actorKey: () => API_KEY,
+  fetchImpl: fetch as any,
+})
+// Pointers the ingress authenticated for THIS request. The registry branch (resolveHandler) admits these. Local callers
+// keep the transitional `_auth === API_KEY` check there; an overlay frame never reaches it with an _auth, since
+// stripCredentials removes the field before resolveHandler sees the pointer.
 const ingressAuthenticated = new WeakSet<object>()
 const HEALTH_PORT = parseInt(process.env.FED_HEALTH_PORT || '8401', 10)
 
@@ -483,9 +491,14 @@ async function proxyToVessel(pointer: any, t: string, owner: any): Promise<any> 
   const fwd: any = { ...pointer }
   delete fwd._fedTargetVessel
   delete fwd._fedHop
+  // A request the ingress validated goes to the vessel under the caller's on-behalf-of token and its audience, never
+  // under this node's key; everything else (a local caller's resolve) keeps this node's key as before.
+  const forward = callerCtx.getStore()?.forward
   const rr = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: 'ApiKey ' + API_KEY },
+    headers: forward
+      ? { 'Content-Type': 'application/json', Authorization: forward.authorization, 'X-Auth-Audience': forward.audience }
+      : { 'Content-Type': 'application/json', Authorization: 'ApiKey ' + API_KEY },
     // Envelope that satisfies every resolve reader in the fleet: top-level pointer
     // fields (goal-host reads body.type), impulse=pointer (dev-vessel reads
     // impulse.type), and impulse.pointer (goal-host's impulse-contract path). A
@@ -712,18 +725,19 @@ const echoRateGate = makeEchoRateGate()
 const ingressHandler = async (raw: any, ctx?: { remotePeer?: string, transport?: string }): Promise<any> => {
   // FIRST STATEMENT: the credential leaves the pointer before anything can log, resolve, trace or echo it. Below this
   // line only presence flags and the validated principal (org, user, key hash) are ever written.
-  const { pointer, credential, legacyAuth } = stripCredentials(raw)
-  const credentialPresent = credential !== null || carriesCredential(pointer)
+  const { pointer, credential, carried } = stripCredentials(raw)
+  const credentialPresent = carried || carriesCredential(pointer)
   const shape = String((pointer as any)?.type ?? '')
   let outcome = 'error'
   let mode: Mode = 'off'
   let decision: Decision | null = null
   try {
     mode = await ingressMode()
-    if (mode !== 'off') decision = await decideIngress(shape, credential, validateKey)
-    // Who may use the registry branch for this request: under enforce, an identity-validated caller; under off/log,
-    // exactly today's rule (the shared fleet key echoed as _auth), so log mode changes no behaviour.
-    if ((mode === 'enforce' && decision?.allow) || (!!API_KEY && legacyAuth === API_KEY)) ingressAuthenticated.add(pointer)
+    // The token must have been minted for THIS transport's peer id (the libp2p node's own, never config) and this shape.
+    if (mode !== 'off') decision = await decideIngress(shape, credential, vl.peerId, validateKey)
+    // Who may use the registry branch for this request: a caller identity validated for this node and shape. The shared
+    // fleet key echoed as _auth no longer admits an overlay frame: nothing sends one, and it is stripped above.
+    if (decision?.reason === 'valid') ingressAuthenticated.add(pointer)
     if (mode === 'enforce' && decision && !decision.allow) {
       outcome = 'refused'
       return { error: 'unauthorized', shape, reason: decision.reason, note: decision.reason === 'validator_unreachable' ? 'the identity validator could not be reached; refused (fail closed)' : 'this shape requires a caller credential identity validates' }
@@ -733,15 +747,17 @@ const ingressHandler = async (raw: any, ctx?: { remotePeer?: string, transport?:
       const limited = echoRateGate(String(ctx?.remotePeer ?? 'unknown'))
       if (limited) { outcome = 'refused'; return limited }
     }
-    // An ingress-originated onward hop never re-attaches a key: the context is explicitly empty.
-    const res = await callerCtx.run({ key: null }, () => resolveHandler(pointer))
+    // An ingress-originated onward hop never mints for a key: the context carries none. A validated token goes to the
+    // owning vessel with its audience, in place of this node's key (proxyToVessel), so the vessel acts for the caller.
+    const forward = decision?.reason === 'valid' && credential ? { authorization: credential, audience: vl.peerId + '/' + shape } : null
+    const res = await callerCtx.run({ key: null, forward }, () => resolveHandler(pointer))
     outcome = (res && typeof res === 'object' && 'error' in res) ? 'error' : 'ok'
     return res
   } finally {
     console.log(`[fed-ingress] shape=${logSafe(shape)} peer=${logSafe(ctx?.remotePeer ?? 'unknown')} transport=${logSafe(ctx?.transport ?? 'unknown')} carries_credential=${credentialPresent ? 'y' : 'n'} would_refuse=${FED_INGRESS_SEED_ALLOWLIST.has(shape) ? 'n' : 'y'} outcome=${outcome}`)
     if (mode !== 'off') {
       const pr = decision?.principal
-      console.log(`[fed-ingress-auth] mode=${mode} shape=${logSafe(shape)} decision=${decision?.allow ? 'allow' : 'refuse'} reason=${decision?.reason ?? 'none'} credential_present=${credentialPresent ? 'y' : 'n'} principal=${pr ? logSafe(pr.org_id) + '/' + logSafe(pr.user_id) + '/' + pr.key_hash : '-'} enforced=${mode === 'enforce' ? 'y' : 'n'}`)
+      console.log(`[fed-ingress-auth] mode=${mode} shape=${logSafe(shape)} decision=${decision?.allow ? 'allow' : 'refuse'} reason=${decision?.reason ?? 'none'} credential_present=${credentialPresent ? 'y' : 'n'} principal=${pr ? logSafe(pr.org_id) + '/' + logSafe(pr.user_id) + '/' + pr.key_hash + '/' + logSafe(pr.key_id) : '-'} enforced=${mode === 'enforce' ? 'y' : 'n'}`)
     }
   }
 }
@@ -752,9 +768,12 @@ await serveResolveHttp(vl, ingressHandler)
 // legacy HTTP path if the peer hasn't migrated yet (protocol not supported). Keeps
 // cross-substrate resolution working through a mixed-version rollout.
 async function resolveOverLibp2p(target: string, pointer: any): Promise<any> {
-  // The caller's key (if a local entry point set one) is attached ONLY for a same-authority destination peer, decided
-  // per address; any _fedAuth already in the pointer is dropped first (pointerForDial, ingress-auth.ts).
-  const out = pointerForDial(target, pointer, callerCtx.getStore()?.key ?? null, cachedPolicy())
+  // The caller's key (if a local entry point set one) never crosses: identity mints a token bound to the peer this
+  // address dials and to this shape, and only that is attached; every credential field the pointer carried is dropped
+  // first (pointerForDial, ingress-auth.ts). No key, no peer in the address, or a refused mint: nothing is attached.
+  const key = callerCtx.getStore()?.key ?? null
+  const audience = oboAudience(target, pointer)
+  const out = pointerForDial(pointer, key && audience ? await mintObo(key, audience) : null)
   try { return await resolveViaLibp2p(vl, target, out) }
   catch { return await resolveViaHttp(vl, target, out) }
 }
@@ -871,9 +890,8 @@ Bun.serve({
       })
     }
     if (u.pathname === '/egress/resolve' && req.method === 'POST') {
-      // The caller's OWN Authorization header is the only key a dial below may carry (same-authority peers only).
+      // The caller's OWN Authorization header is the only key a dial below mints for; the dial carries the token only.
       return await callerCtx.run({ key: callerKeyFromHeader(req.headers.get('authorization')) }, async () => {
-      await readIngressPolicy()
       try {
         const body = (await req.json().catch(() => ({}))) as any
         // Target may arrive three ways so the caller can stay maximally thin: a
@@ -1051,9 +1069,8 @@ Bun.serve({
     // or hops once over libp2p to the owning substrate (proxyToLocalOwner).
     if (u.pathname === '/v2/impulses/resolve' && req.method === 'POST') {
       // A mirrored row's resolve URL lands here and may hop once over libp2p (proxyToLocalOwner): the hop carries the
-      // caller's own key, same-authority peers only, exactly like /egress/resolve.
+      // caller's own token, minted for the dialed peer and shape, exactly like /egress/resolve.
       return await callerCtx.run({ key: callerKeyFromHeader(req.headers.get('authorization')) }, async () => {
-      await readIngressPolicy()
       try {
         const body = (await req.json().catch(() => ({}))) as any
         const pointer = withoutFedAuth(body?.impulse?.pointer ?? body?.impulse ?? body?.pointer ?? body) as any

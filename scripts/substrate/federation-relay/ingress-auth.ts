@@ -4,18 +4,20 @@
 // could dial got whatever the transport could reach (peer ids are sha256 of a guessable vesselId; Noise gives
 // confidentiality, not authorization). This module holds the pure parts of the fix so they can be judged hermetically:
 //
-//   - stripCredentials: the caller's credential travels in the pointer envelope (_fedAuth; _auth is the transitional alias
-//     the registry shapes used) and is removed from the pointer BEFORE anything logs, resolves, traces or echoes it.
-//   - decideIngress: PUBLIC shapes need nothing; every other shape needs a credential identity validates. A validator that
-//     cannot be reached refuses (fail closed) and says so, so an outage never reads as a bad key.
-//   - makeValidator: identity's POST /v1/keys/validate, with a bounded cache keyed by sha256(key): positive 60 s (so a
-//     revoked key keeps working at most 60 s: accepted), negative 10 s. The cache can be switched off per call.
+//   - stripCredentials: the caller's credential travels in the pointer envelope (_fedAuth) and is removed from the
+//     pointer BEFORE anything logs, resolves, traces or echoes it. The retired shared-key alias _auth is removed too and
+//     is never a credential.
+//   - decideIngress: PUBLIC shapes need nothing; every other shape needs an on-behalf-of token identity validates for
+//     THIS node and THIS shape. A raw key is refused (no raw credential crosses the overlay). A validator that cannot be
+//     reached refuses (fail closed) and says so, so an outage never reads as a bad credential.
+//   - makeValidator: identity's /v1/auth/resolve, stating the audience <this transport's peer id>/<shape>, with a bounded
+//     cache keyed by sha256(credential, audience): positive 60 s, negative 10 s. The cache can be switched off per call.
 //   - resolveMode: the mode is a SHAPED per-node policy record (fedIngressAuthPolicy) read at use time, never an env var
 //     (law 1). Absent or unreadable means `off` only until this node has once read `enforce`; after that it means
 //     `enforce` (a ratchet, recorded in a sentinel file). The one env input is the named emergency rollback.
-//   - shouldAttachCredential / pointerForDial: the caller's raw key is a bearer credential. It is sent ONLY to a destination
-//     peer that validates against the same identity authority that issued it (the policy's same_authority_peers), decided
-//     per dial address; an unknown destination gets nothing, and nothing re-attaches a key on an ingress-originated hop.
+//   - oboAudience / makeOboMinter / pointerForDial: the caller's own key never crosses. For each dial the SENDING
+//     transport asks identity for an on-behalf-of token bound to the destination's peer id (the /p2p/ id the dial
+//     authenticates) and to the one shape, and only that token goes in the pointer.
 import { createHash } from 'node:crypto'
 
 export type Mode = 'off' | 'log' | 'enforce'
@@ -61,30 +63,48 @@ export function echoRefusal(len: number): { error: string; shape: 'federation_ec
 }
 export const CREDENTIAL_FIELDS = ['_fedAuth', '_auth'] as const
 
-export interface Principal { org_id: string; user_id: string; key_hash: string }
+export interface Principal { org_id: string; user_id: string; key_hash: string; key_id: string }
 export type Validation =
   | { valid: true; principal: Principal }
   | { valid: false; reason: 'invalid' | 'validator_unreachable' }
-export type Validate = (key: string) => Promise<Validation>
-export interface Decision { allow: boolean; reason: 'public' | 'valid' | 'absent' | 'invalid' | 'validator_unreachable'; principal?: Principal }
+/** The node and shape a validator serves: this transport's own peer id, and the shape of the request. */
+export interface Audience { node: string; shape: string }
+export type Validate = (credential: string, audience: Audience) => Promise<Validation>
+export interface Decision { allow: boolean; reason: 'public' | 'valid' | 'absent' | 'not_obo' | 'invalid' | 'validator_unreachable'; principal?: Principal }
 
 export const keyHash = (k: string): string => createHash('sha256').update(k).digest('hex').slice(0, 12)
 
-/** A copy of the pointer without any credential field, and the credential it carried (_fedAuth wins over _auth). */
-export function stripCredentials(pointer: unknown): { pointer: Record<string, unknown>; credential: string | null; legacyAuth: string | null } {
+/**
+ * A copy of the pointer without any credential field, and the credential it carried. Only _fedAuth is a credential; the
+ * retired shared-key alias _auth is dropped like it and read by nothing. `carried` says whether the frame held either
+ * field, for the presence flag in the ingress log.
+ */
+export function stripCredentials(pointer: unknown): { pointer: Record<string, unknown>; credential: string | null; carried: boolean } {
   const src = pointer && typeof pointer === 'object' ? (pointer as Record<string, unknown>) : {}
   const out: Record<string, unknown> = {}
-  for (const [k, v] of Object.entries(src)) if (!(CREDENTIAL_FIELDS as readonly string[]).includes(k)) out[k] = v
+  let carried = false
+  for (const [k, v] of Object.entries(src)) if (!(CREDENTIAL_FIELDS as readonly string[]).includes(k)) out[k] = v; else carried = true
   const fed = typeof src._fedAuth === 'string' && src._fedAuth.trim() ? src._fedAuth.trim() : null
-  const legacy = typeof src._auth === 'string' && src._auth.trim() ? src._auth.trim() : null
-  return { pointer: out, credential: fed ?? legacy, legacyAuth: legacy }
+  return { pointer: out, credential: fed, carried }
 }
 
-export async function decideIngress(shape: string, credential: string | null, validate: Validate): Promise<Decision> {
+/** The on-behalf-of token in a `Bearer <token>` credential, or null for anything else (a raw key included). */
+export const oboToken = (credential: string): string | null => {
+  const m = /^Bearer\s+(\S+)\s*$/.exec(credential)
+  return m ? m[1]! : null
+}
+
+/**
+ * Allow or refuse one overlay request. `self` is this transport's own peer id (the libp2p node's, never config): the
+ * token must have been minted for it and for this shape. A credential that is not an on-behalf-of token is refused
+ * without asking identity: a raw key on the overlay is the bearer credential this design keeps off the wire.
+ */
+export async function decideIngress(shape: string, credential: string | null, self: string, validate: Validate): Promise<Decision> {
   if (PUBLIC_SHAPES.has(shape)) return { allow: true, reason: 'public' }
   if (!credential) return { allow: false, reason: 'absent' }
+  if (!oboToken(credential)) return { allow: false, reason: 'not_obo' }
   let v: Validation
-  try { v = await validate(credential) } catch { v = { valid: false, reason: 'validator_unreachable' } }
+  try { v = await validate(credential, { node: self, shape }) } catch { v = { valid: false, reason: 'validator_unreachable' } }
   if (v.valid) return { allow: true, reason: 'valid', principal: v.principal }
   return { allow: false, reason: v.reason }
 }
@@ -92,13 +112,19 @@ export async function decideIngress(shape: string, credential: string | null, va
 type Fetch = (url: string, init: { method: string; headers: Record<string, string>; body: string; signal: AbortSignal }) => Promise<{ ok: boolean; status: number; json(): Promise<unknown> }>
 export interface ValidatorOptions { identityUrl: () => string; fetchImpl: Fetch; now?: () => number; cacheEnabled?: () => boolean; positiveMs?: number; negativeMs?: number; max?: number; timeoutMs?: number }
 
-/** identity POST /v1/keys/validate, cached by sha256(key). A non-2xx or a thrown fetch is validator_unreachable, never invalid. */
+/**
+ * identity POST /v1/auth/resolve (nested form) with the audience stated, cached by sha256(credential, audience). Valid
+ * only when identity answers an on-behalf-of binding (data.obo): a session JWT identity accepts is still not a federation
+ * credential. A 401/403 is invalid; any other non-2xx, or a thrown fetch, is validator_unreachable.
+ */
 export function makeValidator(o: ValidatorOptions): Validate {
   const now = o.now ?? (() => Date.now())
   const pos = o.positiveMs ?? 60_000, neg = o.negativeMs ?? 10_000, max = o.max ?? 512
   const cache = new Map<string, { at: number; v: Validation }>()
-  return async (key: string): Promise<Validation> => {
-    const h = createHash('sha256').update(key).digest('hex')
+  return async (credential: string, audience: Audience): Promise<Validation> => {
+    const token = oboToken(credential)
+    if (!token) return { valid: false, reason: 'invalid' }
+    const h = createHash('sha256').update(credential).update('\n' + audience.node + '/' + audience.shape).digest('hex')
     const useCache = o.cacheEnabled ? o.cacheEnabled() : true
     if (useCache) {
       const hit = cache.get(h)
@@ -108,12 +134,21 @@ export function makeValidator(o: ValidatorOptions): Validate {
     if (!base) return { valid: false, reason: 'validator_unreachable' }
     let v: Validation
     try {
-      const r = await o.fetchImpl(base + '/v1/keys/validate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ api_key: key }), signal: AbortSignal.timeout(o.timeoutMs ?? 5_000) })
-      if (!r.ok) return { valid: false, reason: 'validator_unreachable' }
-      const d = ((await r.json()) as { data?: Record<string, unknown> })?.data ?? {}
-      v = d.valid === true
-        ? { valid: true, principal: { org_id: String(d.org_id ?? ''), user_id: String(d.user_id ?? ''), key_hash: keyHash(key) } }
-        : { valid: false, reason: 'invalid' }
+      const r = await o.fetchImpl(base + '/v1/auth/resolve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ impulse: { type: 'authentication', pointer: { type: 'session', token, audience } } }),
+        signal: AbortSignal.timeout(o.timeoutMs ?? 5_000),
+      })
+      if (r.status === 401 || r.status === 403) v = { valid: false, reason: 'invalid' }
+      else if (!r.ok) return { valid: false, reason: 'validator_unreachable' }
+      else {
+        const d = ((await r.json()) as { data?: Record<string, unknown> })?.data ?? {}
+        const obo = d.obo as Record<string, unknown> | undefined
+        v = d.authenticated === true && obo && obo.node === audience.node && obo.shape === audience.shape
+          ? { valid: true, principal: { org_id: String(d.orgId ?? ''), user_id: String(d.userId ?? ''), key_hash: keyHash(credential), key_id: String(d.keyId ?? '') } }
+          : { valid: false, reason: 'invalid' }
+      }
     } catch { return { valid: false, reason: 'validator_unreachable' } }
     if (useCache) {
       if (cache.size >= max) cache.delete(cache.keys().next().value as string)
@@ -124,7 +159,7 @@ export function makeValidator(o: ValidatorOptions): Validate {
 }
 
 /** cache: false switches the identity-validation cache off (a measurement knob, shaped like the mode, never an env var). */
-export interface Policy { mode: Mode; same_authority_peers: string[]; same_authority_substrates: string[]; cache: boolean }
+export interface Policy { mode: Mode; cache: boolean }
 const isMode = (m: unknown): m is Mode => m === 'off' || m === 'log' || m === 'enforce'
 
 /** Parse the open fedIngressAuthPolicy record body; anything malformed is null (treated as unreadable). */
@@ -132,8 +167,7 @@ export function parsePolicy(body: unknown): Policy | null {
   if (!body || typeof body !== 'object') return null
   const b = body as Record<string, unknown>
   if (!isMode(b.mode)) return null
-  const list = (x: unknown) => (Array.isArray(x) ? x.filter((s): s is string => typeof s === 'string' && s.length > 0) : [])
-  return { mode: b.mode, same_authority_peers: list(b.same_authority_peers), same_authority_substrates: list(b.same_authority_substrates), cache: b.cache !== false }
+  return { mode: b.mode, cache: b.cache !== false }
 }
 
 const RANK: Record<Mode, number> = { off: 0, log: 1, enforce: 2 }
@@ -154,17 +188,14 @@ export function resolveMode(policy: Policy | null, ratchetSeen: boolean, emergen
  * The policy from records: the latest fedIngressAuthPolicy row the OWNER wrote. A row any other role wrote (person,
  * operator, walk) is not the policy. No owner row, or a malformed one, is null: unreadable, so the ratchet decides.
  *
- * Its peer list is NEVER read from the row. records takes an owner role from the node key, and every vessel on the node
- * holds that key, so a row naming a peer could be any process's, and a peer list routes callers' keys (pointerForDial).
- * Who is same-authority comes only from a source identity vouches for (the OBO change). Until then the row decides the
- * mode, which resolveMode lets only rise above the ratchet, so a forged row cannot lower enforcement or route a key.
+ * Only the mode and the cache knob are read. records takes an owner role from the node key, and every vessel on the node
+ * holds that key, so the row decides nothing that resolveMode would not let only rise above the ratchet.
  */
 export function policyFromRecordsRows(rows: unknown): Policy | null {
   if (!Array.isArray(rows)) return null
   const owned = rows.filter((r): r is Record<string, unknown> => !!r && typeof r === 'object' && (r as Record<string, unknown>).role === 'owner')
   const latest = owned.reduce<Record<string, unknown> | null>((a, r) => (!a || Number(r.seq) > Number(a.seq) ? r : a), null)
-  const parsed = latest ? parsePolicy(latest) : null
-  return parsed ? { ...parsed, same_authority_peers: [], same_authority_substrates: [] } : null
+  return latest ? parsePolicy(latest) : null
 }
 
 /** The final /p2p/<id> component of a multiaddr (the destination peer of a circuit address), or null. */
@@ -175,38 +206,54 @@ export function destinationPeer(target: string): string | null {
   return last || null
 }
 
+/** How long a token the sending transport asks for lives: one dial and one identity round trip at the far end. */
+export const OBO_TTL_SECONDS = 30
+
 /**
- * Attach the caller's key only when the bytes go to a peer in the SAME identity namespace: the destination address's final
- * /p2p/<peer> must be one of the policy's same_authority_peers. Decided per dial address (a fan-out across live circuits
- * reaches several peers, some possibly foreign); an address with no /p2p/ component, an unknown peer, or mode off gets
- * nothing. same_authority_substrates is descriptive only and never widens this.
+ * The audience a token for this dial is bound to: the peer id in the DIALED address (the one the libp2p handshake
+ * authenticates; a discovery row's own peer-id field is never read, since a row can be written under the node key) and
+ * the shape being resolved. null when the address names no peer or the pointer no shape: then nothing is minted.
  */
-export function shouldAttachCredential(address: string, policy: Policy | null): boolean {
-  if (!policy || policy.mode === 'off') return false
-  const peer = destinationPeer(address)
-  return peer !== null && policy.same_authority_peers.includes(peer)
+export function oboAudience(address: string, pointer: unknown): Audience | null {
+  const node = destinationPeer(address)
+  const shape = pointer && typeof pointer === 'object' ? String((pointer as Record<string, unknown>).type ?? '') : ''
+  return node && shape ? { node, shape } : null
+}
+
+export type Mint = (callerKey: string, audience: Audience) => Promise<string | null>
+export interface MinterOptions { identityUrl: () => string; actorKey: () => string; fetchImpl: Fetch; timeoutMs?: number }
+
+/**
+ * identity POST /v1/auth/on-behalf-of: this transport is the actor (its own key), the caller is the key the local caller
+ * presented. Returns the token, or null on any refusal or failure (then the dial carries no credential and the far end
+ * refuses it as absent). Never throws, and never returns the caller's key.
+ */
+export function makeOboMinter(o: MinterOptions): Mint {
+  return async (callerKey: string, audience: Audience): Promise<string | null> => {
+    const base = o.identityUrl().replace(/\/$/, '')
+    const actor = o.actorKey()
+    if (!base || !actor || !callerKey) return null
+    try {
+      const r = await o.fetchImpl(base + '/v1/auth/on-behalf-of', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'ApiKey ' + actor },
+        body: JSON.stringify({ caller: 'ApiKey ' + callerKey, audience, ttl_seconds: OBO_TTL_SECONDS }),
+        signal: AbortSignal.timeout(o.timeoutMs ?? 5_000),
+      })
+      if (!r.ok) return null
+      const token = ((await r.json()) as { data?: { token?: unknown } })?.data?.token
+      return typeof token === 'string' && token && token !== callerKey ? token : null
+    } catch { return null }
+  }
 }
 
 /**
- * The pointer to send to `address`. Any caller-supplied _fedAuth is removed; the caller's key is added only when allowed.
- * The legacy _auth (the shared fleet key registry-shape callers echo) is ALSO a bearer key: once a policy is in force
- * (mode log or enforce) it reaches only a same-authority peer, and is dropped for every other address. With no policy or
- * mode off it passes through exactly as before, so a node that has not opted in behaves as it always did.
+ * The pointer to send: every credential field the pointer carried (_fedAuth, and the retired _auth) is removed, and the
+ * on-behalf-of token minted for this dial, if any, is attached as `Bearer <token>`. Nothing else is ever attached.
  */
-export function pointerForDial(address: string, pointer: unknown, callerKey: string | null, policy: Policy | null): Record<string, unknown> {
-  const src = pointer && typeof pointer === 'object' ? (pointer as Record<string, unknown>) : {}
-  const { _fedAuth: _drop, ...rest } = src
-  const sameAuthority = shouldAttachCredential(address, policy)
-  // The legacy _auth is dropped for a foreign peer only once the policy names who is same-authority: a readable policy that
-  // names no peer yet changes nothing for _auth (federation design R-b; the derivation of peers comes with the OBO change).
-  const knowsPeers = !!policy && policy.same_authority_peers.length > 0
-  const out: Record<string, unknown> = policy && policy.mode !== 'off' && knowsPeers && !sameAuthority ? withoutLegacyAuth(rest) : rest
-  return callerKey && sameAuthority ? { ...out, _fedAuth: callerKey } : out
-}
-
-function withoutLegacyAuth(p: Record<string, unknown>): Record<string, unknown> {
-  const { _auth: _drop, ...rest } = p
-  return rest
+export function pointerForDial(pointer: unknown, obo: string | null): Record<string, unknown> {
+  const { pointer: out } = stripCredentials(pointer)
+  return obo ? { ...out, _fedAuth: 'Bearer ' + obo } : out
 }
 
 /** A local caller may not smuggle a _fedAuth into the pointer: dropped at every local entry, before any log or proxy. */
@@ -217,8 +264,9 @@ export function withoutFedAuth(pointer: unknown): Record<string, unknown> {
 }
 
 /**
- * The caller's key from its own `Authorization: ApiKey <k>` header, or null. Only what the caller sent is ever attached:
- * a caller with no header gets no credential, and the transport never substitutes its own key for a missing one.
+ * The caller's key from its own `Authorization: ApiKey <k>` header, or null. Only what the caller sent is ever minted
+ * for: a caller with no header gets no token, a Bearer session gets none (the session branch is a separate change), and
+ * the transport never substitutes its own key for a missing one.
  */
 export function callerKeyFromHeader(h: string | null): string | null {
   const m = /^ApiKey\s+(\S+)\s*$/i.exec(String(h ?? ''))
