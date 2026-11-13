@@ -21,8 +21,10 @@
 #   (k) a request can also be made from a detector's gap: a second request row, variant gap, inputs [gap], with every
 #       other field (the words and checks) the same as the plain one;
 #   (l) the seeder run again writes no schema or precondition row: each is its own row, kept by an exact match;
-#   (m) whether an ask wants a change is judged from the ask alone (change_wanted: inputs [world_changed], no context,
-#       wanted boolean), and every call that changes something requires a wanted change or an open gap;
+#   (m) whether an ask wants a change is judged from the ask and the owner's repository rows only (change_wanted: inputs
+#       [world_changed], context exactly [{shape: repository, latest_by: repo}], wanted boolean): nothing the walk has
+#       done is in view, so a call already planned cannot steer it. Every call that changes something requires a wanted
+#       change or an open gap;
 #   (n) walk_trees_reclaim, which removes clones, is called only for the open walk-trees gap's own root;
 #   (m, n) a gap requirement reads each gap by its own latest row (latest_by gap_id);
 #   (o) the land verdict's grader reads only the request and the gitDiff, and is told r 0 when that tree's typecheck
@@ -134,10 +136,10 @@ const cw = rows.find((r) => r.shape === "shape_schema" && r.target === "change_w
 const tools = ["git_worktree", "fs_edit", "fs_write", "code_replace_lines", "code_insert_after_line", "code_add_import", "git_commit", "git_land"];
 const pre = (tool: string, needs: string, where: Row) => rows.some((r) => r.shape === "requires" && r.for === tool && r.needs === needs && JSON.stringify(r.where) === JSON.stringify(where)
   && (needs !== "gap" || r.latest_by === "gap_id"));
-leg(!!cw && JSON.stringify(cw.inputs) === JSON.stringify(["world_changed"]) && JSON.stringify(cw.context) === "[]"
+leg(!!cw && JSON.stringify(cw.inputs) === JSON.stringify(["world_changed"]) && JSON.stringify(cw.context) === JSON.stringify([{ shape: "repository", latest_by: "repo" }])
   && cw.schema?.properties?.wanted?.type === "boolean" && (cw.schema?.required ?? []).includes("wanted")
   && tools.every((t) => pre(t, "change_wanted", { wanted: true }) && pre(t, "gap", { status: "open" })),
-  "(m) change_wanted is judged from the ask alone, and every change tool requires a wanted change or an open gap");
+  "(m) change_wanted is judged from the ask and the repository rows only, and every change tool requires a wanted change or an open gap");
 leg(pre("walk_trees_reclaim", "gap", { gap_id: "pull-sync-walk-trees-unreclaimed", status: "open" })
   && !rows.some((r) => r.shape === "requires" && r.for === "walk_trees_reclaim" && r.needs !== "gap"),
   "(n) walk_trees_reclaim is called only for the open walk-trees gap's own root");

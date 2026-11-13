@@ -250,19 +250,24 @@ for (const model of CHANNEL_MODELS) {
 }
 // A schema row may name a variant: another way to make the same target, from other inputs. A request can come from a
 // detector's gap as well as from a person's ask, with the same words and checks: the gap row carries its specifics.
-// Whether an ask wants a change at all, judged from the ask alone: nothing the walk has done is in view, so the
-// judgment cannot be steered by a call already planned.
+// Whether an ask wants a change at all, judged from the ask and the repositories this fleet holds: nothing the walk has
+// done is in view, so the judgment cannot be steered by a call already planned. A person names what they see (a vessel,
+// what it does), never a repository or a file, so without the repository rows "not files" was the reasonable reading of
+// nearly every ask.
 SCHEMAS.push({
   target: "change_wanted",
   description: "Whether the world_changed row's `what` asks for a change to files in a repository (wanted true) or for " +
-    `anything else (wanted false), and what says the change in a few words. ${JSON_ONLY}`,
+    "anything else (wanted false). The repository rows are the repositories this fleet holds, each with the units built " +
+    "from it and their roles: an ask to change any of them, or what one of them does or shows, is a change to files in " +
+    "it. what says the change in a few words, and repo is the repository row's repo it is about, when there is one. " +
+    JSON_ONLY,
   schema: {
     type: "object",
     required: ["wanted"],
-    properties: { wanted: { type: "boolean" }, what: { type: "string" } },
+    properties: { wanted: { type: "boolean" }, what: { type: "string" }, repo: { type: "string" } },
   },
   inputs: ["world_changed"],
-  context: [],
+  context: [{ shape: "repository", latest_by: "repo" }],
 });
 const asked = SCHEMAS.find((s) => s.target === "request") as Row;
 SCHEMAS.push({ ...asked, variant: "gap", inputs: ["gap"] });
@@ -335,4 +340,43 @@ const SHOWN: Array<{ of: string; words: string[]; description: string }> = [
   { of: "outcome", words: ["r"], description: "A grade of how a request went: r is 1 when it did what was asked, 0 when not." },
 ];
 for (const d of SHOWN) await ensure({ shape: "shape_description", ...d }, { of: d.of }, `shape_description ${d.of}`);
+// The repositories this fleet holds, one row per repository: the units built from it, their roles, and whether every
+// one of them is retired. The one source is the fleet's vessels.inventory.json beside this script, which the boot seed
+// copies from the accepted gate tree into the run dir. No repository is named here. A repository the inventory changes
+// gets a new row on the next run (the latest row per repo is its state); an unchanged one gets none. A repository the
+// inventory no longer names (removal is how this fleet retires most things) gets a row saying it is retired, with no
+// units, so the judge is never shown a repository that is gone as one that is live. With no inventory beside the script,
+// or one that names no repository at all, nothing is written or retired, and the run says so.
+const repositoryRows = (inventory: unknown): Row[] => {
+  const units = (inventory as { vessels?: unknown } | null)?.vessels;
+  const by = new Map<string, Row[]>();
+  for (const u of Array.isArray(units) ? (units as Row[]) : []) {
+    if (typeof u?.repo !== "string" || u.repo === "" || typeof u.unit !== "string") continue;
+    by.set(u.repo, [...(by.get(u.repo) ?? []), u]);
+  }
+  return [...by.entries()].sort(([x], [y]) => x.localeCompare(y)).map(([repo, us]) => ({
+    shape: "repository",
+    repo,
+    units: us.map((u) => String(u.unit)).sort(),
+    roles: [...new Set(us.map((u) => String(u.role ?? "")).filter((r) => r !== ""))].sort(),
+    retired: us.every((u) => u.retired === true),
+  }));
+};
+const inventoryFile = Bun.file(new URL("./vessels.inventory.json", import.meta.url));
+if (await inventoryFile.exists()) {
+  const repos = repositoryRows(await inventoryFile.json());
+  if (repos.length === 0) console.log("[walk-owner-seed] vessels.inventory.json names no repository: no repository rows");
+  for (const r of repos) await ensure(r, { repo: r.repo }, `repository ${r.repo}`);
+  if (repos.length > 0) {
+    const named = new Set(repos.map((r) => r.repo));
+    const latest = new Map<string, Row>();
+    for (const r of await read("repository")) if (typeof r.repo === "string") latest.set(r.repo, r);
+    for (const [repo, r] of latest) {
+      if (named.has(repo) || r.retired === true) continue;
+      await ensure({ shape: "repository", repo, units: [], roles: [], retired: true }, { repo }, `repository ${repo} (no longer in the inventory)`);
+    }
+  }
+} else {
+  console.log("[walk-owner-seed] no vessels.inventory.json beside this script: no repository rows");
+}
 console.log("[walk-owner-seed] owner rows in place");
