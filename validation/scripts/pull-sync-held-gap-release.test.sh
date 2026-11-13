@@ -4,7 +4,8 @@
 # with curl stubbed as discovery in front of an in-memory records store.
 #   (a) a held row with no claim gets one (still held); a second call writes nothing;
 #   (b) a person's r 1 on any row of the gap: open, unheld, protected_files kept, no edit_site, localized_by, the size;
-#   (c) a person's r 0: edit_site the test file, protected_files gone, claim_rejected_by, the size;
+#   (c) a person's r 0: check_runnable false (top level and meta), the test still protected, no edit_site,
+#       claim_rejected_by, the size (a change must not edit the check that verifies it);
 #   (d) the latest outcome decides;
 #   (e) an outcome by anyone but a person, or on another gap's row, releases nothing;
 #   (f) another vessel's held gap, a gap the generator did not file, and a closed gap are not touched;
@@ -13,6 +14,7 @@
 #   (j) gap_resolve writes an emit that differs from the latest row only in its claim;
 #   (k) a later outcome re-decides a released gap (r 1 then r 0), keeping the size at the first release; the same
 #       deciding outcome writes nothing again;
+#   (r) a later r 1 clears check_runnable; (s) the fact survives the carry and a second release tick;
 #   (l) every tick, with no gate run: lift_held_gaps_each releases each graded vessel's gap against its clone, skips a
 #       vessel with no clone, and the tick calls it outside the gate's queue;
 #   (m) r 1 names the test's sources (relative imports resolved inside the checkout, no test file, nothing outside it,
@@ -101,15 +103,16 @@ else bad "(b) latest=$L log=$(cat "$LOG")"; fi
 reset "$(held g-a x src/a.test.ts "$GEN")" "$(outcome 0 r0)"
 lift_held_gaps x 0123456789abcdef "$DIR"
 L="$(latest g-a)"
-if printf '%s' "$L" | jq -e '.status == "open" and (.meta | has("operator_hold") or has("protected_files") | not)
-    and .meta.edit_site == "repos/x/src/a.test.ts" and .meta.claim_rejected_by == "r1" and .meta.baseline == {cases: 2, expects: 3}
-    and (.summary | contains("leave the source as it is"))' >/dev/null; then
-  ok "(c) r 0 releases it with the test file as edit_site and the test no longer protected"
+if printf '%s' "$L" | jq -e '.status == "open" and (.meta | has("operator_hold") or has("edit_site") | not)
+    and .check_runnable == false and .meta.check_runnable == false and .meta.protected_files == ["repos/x/src/a.test.ts"]
+    and .meta.claim_rejected_by == "r1" and .meta.baseline == {cases: 2, expects: 3}
+    and (.summary | contains("not worked here")) and (.summary | contains("fix the test at edit_site") | not)' >/dev/null; then
+  ok "(c) r 0 releases it as not runnable here: check_runnable false, the test still protected, no edit_site"
 else bad "(c) latest=$L log=$(cat "$LOG")"; fi
 
 reset "$(held g-a x src/a.test.ts "$GEN")" "$(outcome 1 r0)" "$(outcome 0 r0)"
 lift_held_gaps x 0123456789abcdef "$DIR"
-if [ "$(latest g-a | jq -r '.meta.edit_site // "none"')" = "repos/x/src/a.test.ts" ]; then ok "(d) the latest outcome decides"
+if [ "$(latest g-a | jq -r '.check_runnable')" = false ] && [ "$(latest g-a | jq -r '.meta.edit_site // "none"')" = none ]; then ok "(d) the latest outcome decides"
 else bad "(d) latest=$(latest g-a)"; fi
 
 reset "$(held g-a x src/a.test.ts "$GEN")" "$(held g-b x src/a.test.ts "$GEN")" "$(outcome 1 r0 described)" "$(outcome 1 r1)"
@@ -160,19 +163,41 @@ printf 'describe("d", () => {\n  it("one", () => { expect(1).toBe(1); });\n});\n
 jq -c --argjson o "$(outcome 0 r0)" '. + [$o + {id: "late", seq: 99}]' "$ROWS" > "$ROWS.new" && mv "$ROWS.new" "$ROWS"
 : > "$WRITES"; lift_held_gaps x 0123456789abcdef "$DIR"
 L="$(latest g-a)"; : > "$WRITES"; lift_held_gaps x 0123456789abcdef "$DIR"; again="$(wc -l < "$WRITES")"
-if printf '%s' "$L" | jq -e --argjson b "$b1" '.meta.edit_site == "repos/x/src/a.test.ts" and .meta.claim_rejected_by == "late" and (.meta | has("localized_by") or has("protected_files") | not)
-    and .meta.baseline == $b and $b == {cases: 2, expects: 3} and (.summary | contains("leave the source as it is")) and (.summary | contains("judged the test right") | not)' >/dev/null && [ "$again" = 0 ]; then
+if printf '%s' "$L" | jq -e --argjson b "$b1" '.check_runnable == false and .meta.claim_rejected_by == "late" and (.meta | has("localized_by") or has("edit_site") | not)
+    and .meta.protected_files == ["repos/x/src/a.test.ts"]
+    and .meta.baseline == $b and $b == {cases: 2, expects: 3} and (.summary | contains("not worked here")) and (.summary | contains("judged the test right") | not)' >/dev/null && [ "$again" = 0 ]; then
   ok "(k) a later outcome re-decides a released gap, keeping the first release's size; the same outcome writes nothing again"
 else bad "(k) latest=$L again=$again log=$(cat "$LOG")"; fi
 
 CL="$T/clones"; mkdir -p "$CL/x/src"; cp "$DIR/src/a.test.ts" "$CL/x/src/a.test.ts"
 reset "$(held g-a x src/a.test.ts "$GEN")" "$(held g-y y src/a.test.ts "$GEN")" "$(outcome 0 r0)" "$(outcome 0 r1)"
 lift_held_gaps_each "$CL"
-if [ "$(latest g-a | jq -r '.meta.edit_site // "none"')" = "repos/x/src/a.test.ts" ] && [ "$(latest g-y | jq -r '.meta.operator_hold')" = true ] \
+if [ "$(latest g-a | jq -r '.check_runnable')" = false ] && [ "$(latest g-y | jq -r '.meta.operator_hold')" = true ] \
   && grep -q 'y: held-gap release: no clone' "$LOG" \
   && grep -qE '^lift_held_gaps_each "\$CLONE_DIR"' "$SCRIPT" && ! sed -n '/^while IFS=.|. read -r gv gq gh gd/,/^done/p' "$SCRIPT" | grep -q lift_held_gaps; then
   ok "(l) every tick, no gate run: a graded vessel's gap is released against its clone; a vessel with no clone is skipped"
 else bad "(l) g-a=$(latest g-a) g-y=$(latest g-y) log=$(cat "$LOG")"; fi
+
+# (r) A person's later r 1 clears the fact: the gap is worked again, on the source.
+reset "$(held g-a x src/a.test.ts "$GEN")" "$(outcome 0 r0)"
+lift_held_gaps x 0123456789abcdef "$DIR"
+jq -c --argjson o "$(outcome 1 r0)" '. + [$o + {id: "later", seq: 99}]' "$ROWS" > "$ROWS.new" && mv "$ROWS.new" "$ROWS"
+lift_held_gaps x 0123456789abcdef "$DIR"
+L="$(latest g-a)"
+if printf '%s' "$L" | jq -e '(has("check_runnable") | not) and (.meta | has("check_runnable") | not) and .meta.localized_by == "later"' >/dev/null; then
+  ok "(r) a later r 1 clears check_runnable: the gap is worked again"
+else bad "(r) latest=$L"; fi
+
+# (s) Every other writer of an open gap row carries the fact forward: the carry copies the row whole, and a second
+# release tick on the same outcome writes nothing.
+reset "$(held g-a x src/a.test.ts "$GEN")" "$(outcome 0 r0)"
+lift_held_gaps x 0123456789abcdef "$DIR"
+: > "$WRITES"; lift_held_gaps x 0123456789abcdef "$DIR"; same="$(wc -l < "$WRITES")"
+carry_gap_repo
+L="$(latest g-a)"
+if [ "$same" = 0 ] && printf '%s' "$L" | jq -e '.repo == "x" and .check_runnable == false and .meta.check_runnable == false' >/dev/null; then
+  ok "(s) the fact survives: a second release tick writes nothing, and the carry keeps check_runnable false"
+else bad "(s) same=$same latest=$L"; fi
 
 mkdir -p "$DIR/src/lib"
 printf 'export const s = 1;\n' > "$DIR/src/lib.ts"; printf 'export const h = 1;\n' > "$DIR/src/helper.test.ts"

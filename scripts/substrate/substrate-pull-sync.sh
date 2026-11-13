@@ -937,8 +937,10 @@ test_sources() { # <checkout> <test file> <vessel>
 #   - r 1, the claim is right: the hold goes, protected_files stay, no edit_site (the walk fixes the source), and sources
 #     names the files the test imports (test_sources), so the walk edits what the check tests rather than guessing a
 #     file from the test's name; a gap released before sources existed gets them once;
-#   - r 0, the claim is wrong: the hold goes, edit_site becomes the test file and protected_files go (the test is fixed,
-#     the source left as it is).
+#   - r 0, the claim is wrong: the hold goes, the test stays protected, and the gap carries check_runnable false (top
+#     level, where the walk's clone precondition reads it, and in its meta). A change must not edit the check that
+#     verifies it, so the walk opens no clone for it: the test is fixed by a reviewed commit to the vessel, which the
+#     failing-test closer then sees pass, closing the gap. A later r 1 clears it.
 # Either way the released row records the outcome that released it and the test file's size at the first release
 # (test_size), which the closer holds the fix to. Only this vessel's open generator gaps are read; a store that cannot be read releases nothing.
 lift_held_gaps() {
@@ -968,7 +970,7 @@ lift_held_gaps() {
   done <<< "$(jq -cn --arg v "$v" --argjson rows "$gaps" --argjson outs "$outs" '
     "Not yet localized (no source frame in the stack, or an unclassified error): needs a diagnosis of whether the source or the test is wrong before any compose." as $held
     | "A person judged the test right: fix the source so the named tests pass, keeping every case and expect." as $right
-    | "A person judged the test wrong: fix the test at edit_site so it checks what the source does now, keeping every case and expect, and leave the source as it is." as $wrong
+    | "A person judged the test wrong: a change must not edit the check that verifies it, so this gap is not worked here (check_runnable false); the test is fixed by a reviewed commit to the vessel, and the source is left as it is." as $wrong
     | ($outs | map(select(.role == "person" and (.r == 0 or .r == 1)))) as $o
     | $rows | map(select(.shape == "gap" and .role == "detector")) | group_by(.gap_id)[] | sort_by(.seq) as $all | $all[-1] as $g
     | ($g.meta // {}) as $m
@@ -987,9 +989,11 @@ lift_held_gaps() {
     | ($g.summary | split($held) | join("\u0000") | split($right) | join("\u0000") | split($wrong) | join("\u0000")) as $s
     | if .by == null then select($was == null and ($g.claim // "") != .gap.claim)
       else select(.by.id != $was or (.by.r == 1 and $m.sources == null))
-        | .gap.classification_metadata |= del(.operator_hold, .operator_hold_reason, .disposition, .localized_by, .claim_rejected_by, .edit_site, .protected_files, .sources)
-        | if .by.r == 1 then .gap.classification_metadata += {protected_files: [$file], localized_by: $by.id} | .gap.summary = ($s | split("\u0000") | join($right))
-          else .gap.classification_metadata += {edit_site: $file, claim_rejected_by: $by.id} | .gap.summary = ($s | split("\u0000") | join($wrong)) end
+        | .gap.classification_metadata |= del(.operator_hold, .operator_hold_reason, .disposition, .localized_by, .claim_rejected_by, .edit_site, .protected_files, .sources, .check_runnable)
+        | if .by.r == 1 then .gap.classification_metadata += {protected_files: [$file], localized_by: $by.id} | .gap |= del(.check_runnable)
+            | .gap.summary = ($s | split("\u0000") | join($right))
+          else .gap.classification_metadata += {protected_files: [$file], claim_rejected_by: $by.id, check_runnable: false} | .gap.check_runnable = false
+            | .gap.summary = ($s | split("\u0000") | join($wrong)) end
       end' 2>/dev/null)"
   return 0
 }
