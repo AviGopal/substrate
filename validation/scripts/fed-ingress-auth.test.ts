@@ -148,15 +148,40 @@ describe('makeValidator (identity /v1/auth/resolve, audience stated)', () => {
     expect(await at(async () => { throw new Error('refused') })).toEqual({ valid: false, reason: 'validator_unreachable' })
     expect(await at(resp(200, { authenticated: true, obo }), '')).toEqual({ valid: false, reason: 'validator_unreachable' })
   })
-  test('cache: keyed by credential AND audience; a positive answer is reused within 60 s; cache off always asks; unreachable is never cached', async () => {
-    let calls = 0; let t = 0
-    const f = async (_u: string, init: any) => { calls++; const a = JSON.parse(init.body).impulse.pointer.audience; return { ok: true, status: 200, json: async () => ({ data: { authenticated: true, orgId: 'o', userId: 'u', obo: a } }) } }
+  test('MUST-FAIL: a positive answer is reused only while the token is alive: valid at t0, refused at t0+31 s, identity asked again', async () => {
+    const T0 = Date.parse('2030-01-01T00:00:00Z')
+    let t = T0, calls = 0
+    // identity answers the token valid until it expires (30 s after T0), as identity does.
+    const f = async (_u: string, init: any) => {
+      calls++
+      const a = JSON.parse(init.body).impulse.pointer.audience
+      return t < T0 + 30_000
+        ? { ok: true, status: 200, json: async () => ({ data: { authenticated: true, orgId: 'o', userId: 'u', obo: { ...a, expires_at: new Date(T0 + 30_000).toISOString() } } }) }
+        : { ok: false, status: 401, json: async () => ({}) }
+    }
+    const v = makeValidator({ identityUrl: () => 'http://identity.invalid', fetchImpl: f, now: () => t })
+    expect((await v('Bearer ' + TOKEN, AUD)).valid).toBe(true)
+    t = T0 + 20_000
+    expect((await v('Bearer ' + TOKEN, AUD)).valid).toBe(true)
+    expect(calls).toBe(1)
+    t = T0 + 31_000
+    expect(await v('Bearer ' + TOKEN, AUD)).toEqual({ valid: false, reason: 'invalid' })
+    expect(calls).toBe(2)
+  })
+  test('cache: keyed by credential AND audience; never more than 60 s; no readable expiry is never reused; off always asks; unreachable is never cached', async () => {
+    const T0 = Date.parse('2030-01-01T00:00:00Z')
+    let t = T0, calls = 0
+    const far = new Date(T0 + 600_000).toISOString()
+    const f = async (_u: string, init: any) => { calls++; const a = JSON.parse(init.body).impulse.pointer.audience; return { ok: true, status: 200, json: async () => ({ data: { authenticated: true, orgId: 'o', userId: 'u', obo: { ...a, expires_at: far } } }) } }
     const v = makeValidator({ identityUrl: () => 'http://identity.invalid', fetchImpl: f, now: () => t })
     await v('Bearer ' + TOKEN, AUD); await v('Bearer ' + TOKEN, AUD); expect(calls).toBe(1)
     await v('Bearer ' + TOKEN, { node: SELF, shape: 'other' }); expect(calls).toBe(2)
     t += 60_001; await v('Bearer ' + TOKEN, AUD); expect(calls).toBe(3)
+    let bare = 0
+    const b = makeValidator({ identityUrl: () => 'http://identity.invalid', fetchImpl: async () => { bare++; return { ok: true, status: 200, json: async () => ({ data: { authenticated: true, obo } }) } }, now: () => t })
+    await b('Bearer ' + TOKEN, AUD); await b('Bearer ' + TOKEN, AUD); expect(bare).toBe(2)
     let off = 0
-    const g = makeValidator({ identityUrl: () => 'http://identity.invalid', fetchImpl: async () => { off++; return { ok: true, status: 200, json: async () => ({ data: { authenticated: true, obo } }) } }, cacheEnabled: () => false })
+    const g = makeValidator({ identityUrl: () => 'http://identity.invalid', fetchImpl: async () => { off++; return { ok: true, status: 200, json: async () => ({ data: { authenticated: true, obo: { ...obo, expires_at: far } } }) } }, cacheEnabled: () => false, now: () => t })
     await g('Bearer ' + TOKEN, AUD); await g('Bearer ' + TOKEN, AUD); expect(off).toBe(2)
     let down = 0
     const h = makeValidator({ identityUrl: () => 'http://identity.invalid', fetchImpl: async () => { down++; throw new Error('x') } })

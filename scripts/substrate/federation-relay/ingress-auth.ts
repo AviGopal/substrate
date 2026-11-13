@@ -11,7 +11,8 @@
 //     THIS node and THIS shape. A raw key is refused (no raw credential crosses the overlay). A validator that cannot be
 //     reached refuses (fail closed) and says so, so an outage never reads as a bad credential.
 //   - makeValidator: identity's /v1/auth/resolve, stating the audience <this transport's peer id>/<shape>, with a bounded
-//     cache keyed by sha256(credential, audience): positive 60 s, negative 10 s. The cache can be switched off per call.
+//     cache keyed by sha256(credential, audience): a positive answer is kept at most 60 s and never past the token's own
+//     expiry, a negative one 10 s. The cache can be switched off per call.
 //   - resolveMode: the mode is a SHAPED per-node policy record (fedIngressAuthPolicy) read at use time, never an env var
 //     (law 1). Absent or unreadable means `off` only until this node has once read `enforce`; after that it means
 //     `enforce` (a ratchet, recorded in a sentinel file). The one env input is the named emergency rollback.
@@ -120,7 +121,7 @@ export interface ValidatorOptions { identityUrl: () => string; fetchImpl: Fetch;
 export function makeValidator(o: ValidatorOptions): Validate {
   const now = o.now ?? (() => Date.now())
   const pos = o.positiveMs ?? 60_000, neg = o.negativeMs ?? 10_000, max = o.max ?? 512
-  const cache = new Map<string, { at: number; v: Validation }>()
+  const cache = new Map<string, { until: number; v: Validation }>()
   return async (credential: string, audience: Audience): Promise<Validation> => {
     const token = oboToken(credential)
     if (!token) return { valid: false, reason: 'invalid' }
@@ -128,11 +129,14 @@ export function makeValidator(o: ValidatorOptions): Validate {
     const useCache = o.cacheEnabled ? o.cacheEnabled() : true
     if (useCache) {
       const hit = cache.get(h)
-      if (hit && now() - hit.at < (hit.v.valid ? pos : neg)) return hit.v
+      if (hit && now() < hit.until) return hit.v
     }
     const base = o.identityUrl().replace(/\/$/, '')
     if (!base) return { valid: false, reason: 'validator_unreachable' }
     let v: Validation
+    // How long a positive answer may be reused: never past the token's own expiry (identity answers it), so a token is not
+    // accepted after it lapses; with no readable expiry, not at all.
+    let expires = 0
     try {
       const r = await o.fetchImpl(base + '/v1/auth/resolve', {
         method: 'POST',
@@ -148,11 +152,14 @@ export function makeValidator(o: ValidatorOptions): Validate {
         v = d.authenticated === true && obo && obo.node === audience.node && obo.shape === audience.shape
           ? { valid: true, principal: { org_id: String(d.orgId ?? ''), user_id: String(d.userId ?? ''), key_hash: keyHash(credential), key_id: String(d.keyId ?? '') } }
           : { valid: false, reason: 'invalid' }
+        const e = Date.parse(String(obo?.expires_at ?? ''))
+        expires = Number.isFinite(e) ? e : 0
       }
     } catch { return { valid: false, reason: 'validator_unreachable' } }
-    if (useCache) {
+    const until = v.valid ? Math.min(now() + pos, expires) : now() + neg
+    if (useCache && until > now()) {
       if (cache.size >= max) cache.delete(cache.keys().next().value as string)
-      cache.set(h, { at: now(), v })
+      cache.set(h, { until, v })
     }
     return v
   }
