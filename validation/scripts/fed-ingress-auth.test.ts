@@ -331,6 +331,12 @@ describe('a forward the relay refuses tries the same peer another way (the ingre
   test('MUST-FAIL: the registered circuit first, then a live circuit to the SAME peer, then the row\'s other addresses', () => {
     expect(forwardAddresses({ libp2p_multiaddr: [reg, direct] }, [liveOther, liveSame, '/ip4/203.0.113.9/tcp/1/p2p/' + PEER])).toEqual([reg, liveSame, direct])
   })
+  test('MUST-FAIL: a row address naming another peer, or no peer, is never tried: every try names the row\'s own destination', () => {
+    const otherPeerAddr = `/ip4/198.51.100.8/tcp/4001/p2p/${OTHER_PEER}`
+    const bare = '/ip4/198.51.100.9/tcp/4001'
+    expect(forwardAddresses({ libp2p_multiaddr: [reg, otherPeerAddr, bare, direct] }, [liveSame])).toEqual([reg, liveSame, direct])
+    for (const a of forwardAddresses({ libp2p_multiaddr: [reg, otherPeerAddr, bare] }, [liveSame, liveOther])) expect([a, destinationPeer(a)]).toEqual([a, PEER])
+  })
   test('MUST-FAIL: a live circuit to another peer is never tried, nor a live non-circuit address', () => {
     const got = forwardAddresses({ libp2p_multiaddr: [reg] }, [liveOther, '/ip4/203.0.113.9/tcp/1/p2p/' + PEER])
     expect(got).toEqual([reg])

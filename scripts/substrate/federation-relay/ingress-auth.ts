@@ -222,16 +222,20 @@ export const isRelayRefusal = (res: unknown): boolean =>
  * registered); then any LIVE connection this node already holds to the same destination peer through a relay (a
  * reservation the registered circuit no longer reaches can still have a working circuit, which is why reads got
  * through while a write's single dial was refused); then the row's other addresses (its direct listen addrs). Each
- * address once, at most 6. The destination is the /p2p/ peer of the first address; a live circuit to another peer is
- * never used.
+ * address once, at most 6. The destination is the /p2p/ peer of the first address, and EVERY address tried must name
+ * that same peer as its final /p2p/ (the one the dial authenticates): a row address naming another peer would get a
+ * token minted for that peer and the forward with it, and one naming no peer would go to whatever answers there. A row
+ * is written by the node that registered it, so its later addresses are not trusted to stay on its own peer.
  */
 export function forwardAddresses(row: unknown, live: readonly string[]): string[] {
   const addrs = (Array.isArray((row as { libp2p_multiaddr?: unknown })?.libp2p_multiaddr) ? ((row as { libp2p_multiaddr: unknown[] }).libp2p_multiaddr) : [])
     .map(String).filter((a) => a.length > 0)
   if (addrs.length === 0) return []
   const dest = destinationPeer(addrs[0]!)
-  const sameDest = dest ? live.map(String).filter((a) => a.includes('/p2p-circuit/') && destinationPeer(a) === dest) : []
-  return [...new Set([addrs[0]!, ...sameDest, ...addrs.slice(1)])].slice(0, 6)
+  if (!dest) return [addrs[0]!]
+  const sameDest = live.map(String).filter((a) => a.includes('/p2p-circuit/') && destinationPeer(a) === dest)
+  const ownRest = addrs.slice(1).filter((a) => destinationPeer(a) === dest)
+  return [...new Set([addrs[0]!, ...sameDest, ...ownRest])].slice(0, 6)
 }
 
 /** How long a token the sending transport asks for lives: one dial and one identity round trip at the far end. */
