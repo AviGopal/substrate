@@ -36,6 +36,7 @@ LLM_VESSEL_ENDPOINT        address of llm-resolver
 CONCEPT_DB_URL             address of concept-db
 DISCOVERY_URL              address of discovery, the routing fixed point
 OBSIDIAN_LEARN_ENDPOINT    address of the local Obsidian learn bridge
+HUMAN_SURFACE_PUBLIC_URL   the human surface's public https address, read at start; it only adds that one origin
 
 # ── filesystem paths ──
 HOME                       home directory of the process

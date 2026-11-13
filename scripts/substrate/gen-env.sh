@@ -421,13 +421,14 @@ prov() { # prov <NAME> <env|persisted|generated|derived|hardcoded>
 
 # ★ THE SURFACE'S PUBLIC ADDRESS
 # A deployment that serves its human surface to people through a TLS proxy states that address here: one full
-# origin (scheme://host[:port]), the surface's own page at that exact origin. Unset (the default, and every
-# deployment that publishes no surface), it is not written and nothing changes. Anything but a bare http(s) origin
-# is refused: a path, a query or a missing scheme would never match a browser's Origin, and the page would be
-# refused as foreign with no word why.
+# https origin (https://host[:port]), the surface's own page at that exact origin. Unset (the default, and every
+# deployment that publishes no surface), it is not written and nothing changes. Anything but a bare https origin is
+# refused: a path, a query or a missing scheme would never match a browser's Origin, and the page would be refused as
+# foreign with no word why; plain http would hand a sign-in to a channel anyone on the path can read. The surface
+# checks it again itself and shows on /health what it took (public_origin) or why it refused it.
 if [ -n "${HUMAN_SURFACE_PUBLIC_URL:-}" ]; then
   case "$HUMAN_SURFACE_PUBLIC_URL" in
-    http://*|https://*) _hspu_rest="${HUMAN_SURFACE_PUBLIC_URL#*://}" ;;
+    https://*) _hspu_rest="${HUMAN_SURFACE_PUBLIC_URL#*://}" ;;
     *) _hspu_rest="" ;;
   esac
   # A host, then at most one ':' and a numeric port. A bracketed (IPv6) host is refused: a public surface is
@@ -438,8 +439,8 @@ if [ -n "${HUMAN_SURFACE_PUBLIC_URL:-}" ]; then
     *:*) case "${_hspu_rest#*:}" in ""|*[!0-9]*) _hspu_bad=1 ;; esac ;;
   esac
   if [ -n "$_hspu_bad" ]; then
-    _refuse "HUMAN_SURFACE_PUBLIC_URL='$HUMAN_SURFACE_PUBLIC_URL' is not a bare http(s) origin." \
-      "Give the address people open the surface at, as scheme://host[:port] with nothing after it (no path; a numeric port)."
+    _refuse "HUMAN_SURFACE_PUBLIC_URL='$HUMAN_SURFACE_PUBLIC_URL' is not a bare https origin." \
+      "Give the https address people open the surface at, as https://host[:port] with nothing after it (no path; a numeric port)."
   fi
 fi
 # ★ END THE SURFACE'S PUBLIC ADDRESS
