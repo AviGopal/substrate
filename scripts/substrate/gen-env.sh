@@ -1640,7 +1640,7 @@ EMBEDDING_PRIOR_ENABLED=true
 # activity-api spawns an in-process broadcaster subscriber that buffers
 # eligible (variant, signature) cells from task.completed events and re-fits
 # θ_α/θ_β into embedding_prior_weights on count or time threshold. Default
-# off — Layer 1 (systemd m1-trainer.timer) handles the periodic re-fit; turn
+# off — Layer 1 (a periodic systemd re-fit job) handles the periodic re-fit; turn
 # this on for sub-15min responsiveness once it's been load-tested.
 EMBEDDING_PRIOR_OBSERVER_ENABLED=false
 

@@ -44,9 +44,7 @@
       "roles": ["hub", "autonomy"],
       "vessels": [
         "runtime-drift.service",
-        "runtime-drift.timer",
-        "gap-store-census.service",
-        "gap-store-census.timer"
+        "runtime-drift.timer"
       ]
     },
     "hub-minimal": {
@@ -67,8 +65,6 @@
     "compute": [
       "discovery-vessel.service",
       "local-tools-vessel.service",
-      "gap-store-census.service",
-      "gap-store-census.timer",
       "federation-transport-vessel.service",
       "substrate-ready.service",
       "journald-stdout-forwarder.service",
@@ -81,8 +77,6 @@
     "compute_node": [
       "discovery-vessel.service",
       "local-tools-vessel.service",
-      "gap-store-census.service",
-      "gap-store-census.timer",
       "federation-transport-vessel.service",
       "substrate-ready.service",
       "journald-stdout-forwarder.service",
@@ -335,10 +329,21 @@
     { "unit": "db-maintenance.timer", "role": "store" },
     { "unit": "db-maintenance.service", "role": "store" },
     { "unit": "metric-collector-vessel.service", "role": "compute", "retired": true },
-    { "unit": "gap-store-census.timer", "role": "compute" },
-    { "unit": "gap-store-census.service", "role": "compute" },
-    { "unit": "joint-liveness.timer", "role": "store" },
-    { "unit": "joint-liveness.service", "role": "store" },
+    { "unit": "gap-store-census.timer", "role": "compute", "retired": true },
+    { "unit": "gap-store-census.service", "role": "compute", "retired": true },
+    { "unit": "joint-liveness.timer", "role": "store", "retired": true },
+    { "unit": "joint-liveness.service", "role": "store", "retired": true },
+    { "_comment": "RETIRED learning-loop units. Their unit files are gone from this tree, but an image built before their removal still ships them, and a shipped unit the inventory does not name runs in every profile. These entries make apply-inventory mask them on such an image whatever the selection; on an image without them they plan nothing. gap-store-census and joint-liveness above write to the removed development-vessel gap store and read activity-api's tables; nothing reads what they write.",
+      "unit": "development-vessel-seed.service", "role": "seed", "retired": true },
+    { "unit": "bootstrap-seeder.service", "role": "seed", "retired": true },
+    { "unit": "compose-teacher.timer", "role": "autonomy", "retired": true },
+    { "unit": "compose-teacher.service", "role": "autonomy", "retired": true },
+    { "unit": "m1-trainer.timer", "role": "autonomy", "retired": true },
+    { "unit": "m1-trainer.service", "role": "autonomy", "retired": true },
+    { "unit": "operator-goal-generator.timer", "role": "autonomy", "retired": true },
+    { "unit": "operator-goal-generator.service", "role": "autonomy", "retired": true },
+    { "unit": "rhythm-cadence.timer", "role": "compute", "retired": true },
+    { "unit": "rhythm-cadence.service", "role": "compute", "retired": true },
     { "unit": "compose-drift.timer", "role": "store" },
     { "unit": "compose-drift.service", "role": "store" },
     { "unit": "validator-liveness.timer", "role": "store" },

@@ -203,8 +203,8 @@ http_code() { curl -s -o /dev/null -w '%{http_code}' --max-time "${2:-5}" "$1" 2
 unit_prop() { systemctl show "$1" -p "$2" --value 2>/dev/null || true; }
 unit_active() { [ "$(systemctl is-active "$1" 2>/dev/null || true)" = "active" ]; }
 # A JOB, not a server: a Type=oneshot service started by a timer runs, exits and serves nothing in between, so a
-# failed last run says nothing about whether the node serves. Measured on a compute node: rhythm-cadence.service
-# (role compute, timer-triggered oneshot) failed one run and failed `served` for a node whose serving units were all up.
+# failed last run says nothing about whether the node serves. Measured on a compute node: a timer-triggered oneshot
+# (role compute) failed one run and failed `served` for a node whose serving units were all up.
 unit_is_job() {
   [ "$(systemctl show -p Type --value "$1" 2>/dev/null)" = oneshot ] && [ -n "$(systemctl show -p TriggeredBy --value "$1" 2>/dev/null)" ]
 }
