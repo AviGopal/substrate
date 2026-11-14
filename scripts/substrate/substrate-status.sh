@@ -14,7 +14,7 @@
 #   served     every unit the inventory selects is up, and every vessel port the
 #              launch manifest publishes is bound on a non-loopback address
 #   usable     an LLM completion succeeds on some arm (local or federated) AND a
-#              known-answer goal baked into this file returns reached:true
+#              known-answer goal baked into this file, asked of the walk, is graded r 1
 #   connected  an authenticated request carrying the emitted key has arrived from
 #              outside the container (recorded by activity-api)
 #
@@ -59,10 +59,10 @@
 # goal's dispatch budget spent, no provider key for the LLM probe, or no client key
 # at all once identity seeding has finished.
 #
-# Levels at or above `usable` DISPATCH A GOAL, which writes a trace and a dispatch
-# record like any other goal (tagged operator:substrate-status). They are evaluated
-# only when a level at or above `usable` is requested (the HEALTHCHECK asks for
-# `seeded`), and --wait re-polls one dispatch rather than dispatching once per poll.
+# Levels at or above `usable` ASK A GOAL: an owner's world_changed row in records,
+# which the walk works like any other ask (tagged operator:substrate-status). They are
+# evaluated only when a level at or above `usable` is requested (the HEALTHCHECK asks
+# for `seeded`), and --wait re-polls one ask rather than asking once per poll.
 #
 # Runs inside the container (`docker exec <container> substrate-status`).
 set -uo pipefail
@@ -286,62 +286,52 @@ probe_llm() {
   fi
 }
 
-# The known-answer goal: its answer is recomputed by goal-host's deterministic
-# registry oracle, so `reached` here is evidence, not an LLM judge's prose. Local
-# goal-host when this fleet runs one; otherwise dispatched by shape through
-# discovery to whichever goal-host serves it.
+# The known-answer goal, walked: written as an ask (a world_changed row in the owner's role, under this node's own
+# key) into records through discovery, and graded by the walk's own outcome row for that ask (event_ref = the ask's
+# id): r 1 reached, r 0 not. goal-host, which once took the dispatch and recomputed the answer with a registry oracle,
+# is retired; the walk roots only on a person's, operator's or owner's row, and this node's own key is the one a fresh
+# install holds. The ask stays a root until its deadline lapses (records closes a root only on a person's r 1 or a
+# lapse), so --wait re-polls one ask rather than writing one per poll.
 #
-# A federated dispatch is polled by its id (goalWalkState), not by scanning a
-# goal-host's newest dispatches: on a busy hub the probe's record falls out of any
-# newest-N window. Discovery's reply names no provider, so the poll cannot be
-# pinned to the goal-host that accepted the dispatch; when the one the poll reaches
-# does not know the id, the evidence says so (a routing split) instead of waiting
-# out the bound in silence.
+# Records refuses an owner's row from another node (it writes for its own node only), so on a spoke whose records is
+# its hub's the ask is not written and the level reads unknown, with that reason.
 GOAL_DISPATCHES=0; GOAL_DISPATCH_ID=""; GOAL_ROUTE=""; GOAL_LAST_EVID=""
 GOAL_LAST_ID=""; GOAL_LAST_EXEC=""
 WAIT_DEADLINE=0   # set by --wait; a poll never outlives it
 GOAL_MAX_DISPATCHES="${STATUS_GOAL_MAX_DISPATCHES:-3}"
 GOAL_BOUND="${STATUS_GOAL_TIMEOUT:-180}"
+records_call() { # pointer-json -> the answer body (discovery's envelope, if any, removed)
+  curl -s --max-time 30 -X POST "$DISCOVERY_EP/resolve" -H 'Content-Type: application/json' -H "$(auth_hdr)" \
+    -d "$(jq -nc --argjson p "$1" '{pointer:$p}')" 2>/dev/null \
+    | jq -c 'if type == "object" and has("body") and (has("failure") | not) then .body elif type == "object" and has("content") and (has("failure") | not) then .content else . end' 2>/dev/null || true
+}
 probe_goal() {
   P_VAL=unknown; P_EVID=""
-  local gh="http://127.0.0.1:8210" resp id rec raw st reached reason exec deadline body notfound=0
+  local resp id outs r deadline
+  GOAL_ROUTE="walk"
   if [ -z "$GOAL_DISPATCH_ID" ]; then
     if [ "$GOAL_DISPATCHES" -ge "$GOAL_MAX_DISPATCHES" ]; then
-      P_VAL=fail; P_EVID="known-answer goal did not reach after $GOAL_DISPATCHES dispatch(es); last: ${GOAL_LAST_EVID:-none}"
-      TERMINAL="the known-answer goal's dispatch budget ($GOAL_MAX_DISPATCHES) is spent"
+      P_VAL=fail; P_EVID="known-answer goal did not reach after $GOAL_DISPATCHES ask(s); last: ${GOAL_LAST_EVID:-none}"
+      TERMINAL="the known-answer goal's ask budget ($GOAL_MAX_DISPATCHES) is spent"
       return
     fi
-    # A pull-sync run restarts every vessel whose code it moves, discovery among them, and
-    # the known-answer goal reads discovery. A dispatch made while it runs can land in a
-    # restart and miss, which this level would report as the substrate being unusable.
-    # Measured on a fresh install: the first boot pull-sync restarted
-    # discovery at 13:19:18 and goal-host at 13:19:28; a dispatch between them found no
-    # content and spent the probe's budget. So no dispatch is made while one runs: the
-    # level stays unknown and says why, and --wait asks again once the run has finished.
     if [ "$(systemctl is-active substrate-pull-sync.service 2>/dev/null)" = activating ]; then
       P_VAL=unknown
-      P_EVID="pull-sync is converging this node's vessels and restarts the ones it moves; the known-answer goal is dispatched once it finishes"
+      P_EVID="pull-sync is converging this node's vessels and restarts the ones it moves; the known-answer goal is asked once it finishes"
       return
     fi
-    body="$(jq -nc --arg g "$KNOWN_ANSWER_GOAL" --arg op "substrate-status" --arg t "$OPERATOR_TAG" \
-            '{goal:$g, operator:$op, tags:[$t,"install_probe"]}')"
-    if [ "$(http_code "$gh/health" 4)" = "200" ]; then
-      GOAL_ROUTE="local"
-      resp="$(curl -s --max-time 30 -X POST "$gh/run-goal" -H 'Content-Type: application/json' -H "$(auth_hdr)" -d "$body" 2>/dev/null || true)"
-    else
-      GOAL_ROUTE="federated"
-      resp="$(curl -s --max-time 30 -X POST "$DISCOVERY_EP/resolve" -H 'Content-Type: application/json' -H "$(auth_hdr)" \
-              -d "$(printf '%s' "$body" | jq -c '{pointer:(. + {type:"goalDispatchAsync"})}')" 2>/dev/null || true)"
-    fi
-    id="$(printf '%s' "$resp" | jq -r '.dispatchId // .body.dispatchId // empty' 2>/dev/null || true)"
+    resp="$(records_call "$(jq -nc --arg g "$KNOWN_ANSWER_GOAL" --arg t "$OPERATOR_TAG" \
+      '{type:"record_write", row:{shape:"world_changed", what:$g, tags:[$t,"install_probe"]}, writer:"substrate-status", role:"owner"}')")"
+    id="$(printf '%s' "$resp" | jq -r 'if type == "object" and .shape == "world_changed" then (.id // empty) else empty end' 2>/dev/null || true)"
     if [ -z "$id" ]; then
-      if [ "$GOAL_ROUTE" = "local" ]; then
-        P_VAL=fail; P_EVID="goal-host did not accept the known-answer goal: $(printf '%s' "$resp" | tr -d '\n' | head -c 160)"
-      elif [ -z "$resp" ] || printf '%s' "$resp" | jq -e '.error' >/dev/null 2>&1; then
-        P_VAL=fail; P_EVID="no goal-host could be reached to dispatch the known-answer goal (no local goal-host; discovery answered: $(printf '%s' "${resp:-nothing}" | tr -d '\n' | head -c 120))"
-      else
-        P_VAL=unknown; P_EVID="federated dispatch returned no dispatchId: $(printf '%s' "$resp" | tr -d '\n' | head -c 120)"
-      fi
+      case "$resp" in
+        *"never a person's, an operator's or this node's owner rows"*)
+          P_VAL=unknown; P_EVID="this node's records is another node's, which takes no owner's ask from here; the known-answer goal is walked where records runs" ;;
+        "")
+          P_VAL=unknown; P_EVID="records could not be reached through discovery to write the known-answer goal" ;;
+        *)
+          P_VAL=fail; P_EVID="records did not take the known-answer goal: $(printf '%s' "$resp" | tr -d '\n' | head -c 160)" ;;
+      esac
       return
     fi
     GOAL_DISPATCH_ID="$id"; GOAL_DISPATCHES=$((GOAL_DISPATCHES+1))
@@ -349,60 +339,26 @@ probe_goal() {
   id="$GOAL_DISPATCH_ID"; GOAL_LAST_ID="$id"
   deadline=$(( $(date +%s) + GOAL_BOUND ))
   [ "$WAIT_DEADLINE" -gt 0 ] && [ "$WAIT_DEADLINE" -lt "$deadline" ] && deadline="$WAIT_DEADLINE"
-  st=""; reached=""; reason=""; exec=""
+  r=""
   while :; do
-    if [ "$GOAL_ROUTE" = "local" ]; then
-      rec="$(curl -s --max-time 10 -H "$(auth_hdr)" "$gh/executions/$id" 2>/dev/null || true)"
-    else
-      raw="$(curl -s --max-time 15 -X POST "$DISCOVERY_EP/resolve" -H 'Content-Type: application/json' -H "$(auth_hdr)" \
-             -d "$(jq -nc --arg id "$id" '{pointer:{type:"goalWalkState", dispatchId:$id}}')" 2>/dev/null || true)"
-      if printf '%s' "$raw" | jq -e '(.body.dispatchId // null) != null' >/dev/null 2>&1; then
-        rec="$(printf '%s' "$raw" | jq -c '.body' 2>/dev/null)"; notfound=0
-      else
-        rec=""
-        # "dispatch not found" is a goal-host that does not know the id; "Not found"
-        # is discovery reporting that no goal-host it can reach, local or peer,
-        # answered for it.
-        case "$raw" in *"dispatch not found"*|*'"error":"Not found"'*) notfound=$((notfound+1)) ;; esac
-        # The accepting goal-host records the id before it answers, so a goal-host
-        # that does not know it on three polls in a row is a different goal-host.
-        [ "$notfound" -ge 3 ] && break
-      fi
-    fi
-    st="$(printf '%s' "$rec" | jq -r '.status // empty' 2>/dev/null || true)"
-    reached="$(printf '%s' "$rec" | jq -r 'if has("reached") and (.reached != null) then (.reached|tostring) else "" end' 2>/dev/null || true)"
-    reason="$(printf '%s' "$rec" | jq -r '.goalReachReason // empty' 2>/dev/null | head -c 200 || true)"
-    exec="$(printf '%s' "$rec" | jq -r '.executionId // empty' 2>/dev/null || true)"
-    [ -n "$st" ] && [ "$st" != "running" ] && break
+    outs="$(records_call "$(jq -nc --arg id "$id" '{type:"record_read", shape:"outcome", where:{event_ref:$id}}')")"
+    # Any r 1 on the ask is a reach; an r 0 with none is a miss (a grade or a lapse).
+    r="$(printf '%s' "$outs" | jq -r 'if type == "array" then (if any(.[]; .r == 1) then "1" elif any(.[]; .r == 0) then "0" else "" end) else "" end' 2>/dev/null || true)"
+    GOAL_LAST_EXEC="$(printf '%s' "$outs" | jq -r 'if type == "array" then ([.[] | select(.r == 1)] + .) | (.[0].id // empty) else empty end' 2>/dev/null || true)"
+    [ -n "$r" ] && break
     [ "$(date +%s)" -ge "$deadline" ] && break
     sleep 5
   done
-  GOAL_LAST_EXEC="$exec"
-  if [ -z "$st" ]; then
-    P_VAL=unknown
-    if [ "$notfound" -ge 3 ]; then
-      P_EVID="dispatched $id ($GOAL_ROUTE) but no goal-host discovery routes goalWalkState to knows it — a routing split between goal-hosts, so no verdict is readable from here"
-    else
-      P_EVID="dispatched $id ($GOAL_ROUTE) but its record is not pollable"
-    fi
-    return
-  fi
-  if [ "$st" = "running" ]; then
-    P_VAL=unknown; P_EVID="dispatch $id ($GOAL_ROUTE) still running at the poll bound (${GOAL_BOUND}s)"
-    return   # keep the id: the next --wait iteration polls the same dispatch
-  fi
-  GOAL_DISPATCH_ID=""   # finished: a later retry dispatches afresh
-  case "$reached" in
-    true)
-      P_VAL=pass; P_EVID="known-answer goal reached (dispatch $id, $GOAL_ROUTE): ${reason:-no reason recorded}" ;;
-    false)
-      P_VAL=fail; P_EVID="known-answer goal NOT reached (dispatch $id, $GOAL_ROUTE, status $st): ${reason:-no reason recorded}"
+  case "$r" in
+    1)
+      GOAL_DISPATCH_ID=""
+      P_VAL=pass; P_EVID="known-answer goal reached: the walk graded ask $id r 1 (outcome ${GOAL_LAST_EXEC:-?})" ;;
+    0)
+      GOAL_DISPATCH_ID=""   # a later retry asks afresh
+      P_VAL=fail; P_EVID="known-answer goal NOT reached: the walk graded ask $id r 0 (outcome ${GOAL_LAST_EXEC:-?})"
       GOAL_LAST_EVID="$P_EVID" ;;
     *)
-      # Finished without a reach verdict: goal-host did not grade it, which is not
-      # evidence either way.
-      P_VAL=unknown; P_EVID="dispatch $id ($GOAL_ROUTE) finished (status $st) with no reach verdict recorded"
-      GOAL_LAST_EVID="$P_EVID" ;;
+      P_VAL=unknown; P_EVID="ask $id has no outcome yet at the poll bound (${GOAL_BOUND}s)" ;;   # keep the id: the next --wait iteration polls the same ask
   esac
 }
 

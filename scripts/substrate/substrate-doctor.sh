@@ -587,7 +587,11 @@ if [ "$SMOKE" = 1 ]; then
   if [ "$SMOKE_RC" = 0 ]; then
     ok "known-answer goal reached"
     note "$SMOKE_EV"
-    if [ -z "$EXEC_ID" ] && [ "$SMOKE_ROUTE" = "federated" ]; then
+    if [ "$SMOKE_ROUTE" = "walk" ]; then
+      # Asked of the walk and graded by its outcome row in records: there is no execution trace in a trace
+      # store to look up (activity-api is retired), so the trace check does not run.
+      note "SKIPPED trace check: the goal was walked; its evidence is the outcome row ${EXEC_ID:-?} in records"
+    elif [ -z "$EXEC_ID" ] && [ "$SMOKE_ROUTE" = "federated" ]; then
       # A federated goal-host answers the poll through discovery, and not every
       # one reports the execution id it minted; name the check that did not run.
       note "SKIPPED trace check: the goal ran on a federated goal-host that reported no executionId"
