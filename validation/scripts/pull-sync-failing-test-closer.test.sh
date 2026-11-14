@@ -31,8 +31,13 @@
 #       still absent: it is marked again, once; back and red, it is checkable again (the r 1 path still re-arms);
 #   (r) a run whose output is longer than an argument may be (MBs of output) is judged as any other: no "Argument list too
 #       long", its named test passing alone closes the gap;
-#   (s) a mark is written from the gap's whole latest row (its repo and claim kept): exactly one new row, and the repo
-#       carry, run after it as each tick runs it, has nothing to add;
+#   (s) a mark is written from the gap's whole latest row (its repo kept): exactly one new row, and the repo carry, run
+#       after it as each tick runs it, has nothing to add; but not its claim: a gap whose check cannot run is not held for a
+#       person's word (a release would set the walk on a gap whose tests are absent);
+#   (t) the person-ruled keep (absent, ruled against, back and red) writes no claim either: one row, no claim;
+#   (u) a gap with a claim, marked absent, then back and red: the re-arm starts from the mark's row, so the claim the mark
+#       ended does not come back;
+#   (v) a held gap (operator_hold) is marked with its hold kept: the mark ends a claim, never a hold;
 #   (q) a row the store does not take is said not written (no "marked" line for a mark that did not happen) and is
 #       run again by the next run of the closer at the same HEAD (a re-gate; the closer runs only for a gated vessel):
 #       a mark, and a close.
@@ -297,9 +302,38 @@ summary "(pass) d > new" > "$FAKE/a.test.ts.out"
 close_failing_test_gaps x 1212121212121212 "$DIR"
 S1="$(wc -l < "$WRITES")"; SL="$(tail -n 1 "$WRITES")"
 carry_gap_repo
-if [ "$S1" = 1 ] && [ "$(wc -l < "$WRITES")" = 1 ] && printf '%s' "$SL" | jq -e '.check_runnable == false and .repo == "x" and (.claim | startswith("The test is right"))' >/dev/null; then
-  ok "(s) the mark keeps the gap's repo and claim: one row, and the repo carry adds none"
+if [ "$S1" = 1 ] && [ "$(wc -l < "$WRITES")" = 1 ] && printf '%s' "$SL" | jq -e '.check_runnable == false and .repo == "x" and (has("claim") | not)' >/dev/null; then
+  ok "(s) the mark keeps the gap's repo, not its claim: one row, and the repo carry adds none"
 else bad "(s) S1=$S1 after-carry=$(wc -l < "$WRITES") SL=$SL log=$(cat "$LOG")"; fi
+
+# (t) the person-ruled keep branch writes no claim
+reset "$(row g-t x src/a.test.ts "$GEN" '["d > old"]' | jq -c '. + {repo: "x", claim: "The test is right: ..."} | .check_runnable = false | .meta += {names_absent: ["d > old"], absent_at_head: "0123456789", claim_rejected_by: "person-row", check_runnable: false}')"
+printf '(fail) d > old\n 0 pass\n 1 fail\n' > "$FAKE/a.test.ts.out"
+close_failing_test_gaps x 1313131313131313 "$DIR"
+T1="$(wc -l < "$WRITES")"; TL="$(tail -n 1 "$WRITES")"; carry_gap_repo
+if [ "$T1" = 1 ] && [ "$(wc -l < "$WRITES")" = 1 ] && printf '%s' "$TL" | jq -e '.check_runnable == false and .repo == "x" and (has("claim") | not)
+    and .meta.claim_rejected_by == "person-row"' >/dev/null; then ok "(t) the person-ruled keep writes no claim: one row"
+else bad "(t) T1=$T1 after-carry=$(wc -l < "$WRITES") TL=$TL log=$(cat "$LOG")"; fi
+
+# (u) claim, marked absent (claim ended), back and red: the re-arm row has no claim
+reset "$(row g-u2 x src/a.test.ts "$GEN" '["d > old"]' | jq -c '. + {repo: "x", claim: "The test is right: ..."}')"
+summary "(pass) d > new" > "$FAKE/a.test.ts.out"
+close_failing_test_gaps x 1414141414141414 "$DIR"
+printf '(fail) d > old\n 0 pass\n 1 fail\n' > "$FAKE/a.test.ts.out"
+: > "$WRITES"; close_failing_test_gaps x 1515151515151515 "$DIR"
+U1="$(wc -l < "$WRITES")"; UL="$(tail -n 1 "$WRITES")"
+if [ "$U1" = 1 ] && printf '%s' "$UL" | jq -e '.check_runnable == true and .repo == "x" and (has("claim") | not)' >/dev/null; then
+  ok "(u) the re-arm after a mark does not bring the ended claim back"
+else bad "(u) U1=$U1 UL=$UL log=$(cat "$LOG")"; fi
+
+# (v) a held gap is marked with its hold kept
+reset "$(row g-v x src/a.test.ts "$GEN" '["d > old"]' | jq -c '. + {claim: "The test is right: ..."} | .meta += {operator_hold: true, operator_hold_reason: "needs_localization"}')"
+summary "(pass) d > new" > "$FAKE/a.test.ts.out"
+close_failing_test_gaps x 1616161616161616 "$DIR"
+VL="$(tail -n 1 "$WRITES")"
+if [ "$(wc -l < "$WRITES")" = 1 ] && printf '%s' "$VL" | jq -e '.check_runnable == false and (has("claim") | not) and .meta.operator_hold == true
+    and .meta.operator_hold_reason == "needs_localization"' >/dev/null; then ok "(v) a held gap's mark keeps its hold and ends its claim"
+else bad "(v) writes=$(cat "$WRITES") log=$(cat "$LOG")"; fi
 
 [ "$FAILS" = 0 ] && { echo "PASS - pull-sync closes a generator gap once its named tests pass alone, and only then"; exit 0; }
 echo "$FAILS FAILED"; exit 1

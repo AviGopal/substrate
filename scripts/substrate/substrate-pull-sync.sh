@@ -906,7 +906,7 @@ close_failing_test_gaps() {
       # release drops check_runnable) leaves names_absent as it was, and the names still absent are said again.
       if [ "$(printf '%s' "$g" | jq -c '.meta.names_absent // null')" = "$absent" ] && [ "$(printf '%s' "$g" | jq -r '.meta.check_runnable')" = false ]; then log "$v: failing-test closer: $id names tests absent from $tf (already said); left open, not checkable"; continue; fi
       emit_gap_checked "$(printf '%s' "$g" | jq -c --arg v "$v" --arg tf "$tf" --arg head "${head:0:10}" --argjson absent "$absent" \
-        '{impulse:{pointer:{type:"substrateGap_write",gap:((.row // {}) + {id:.id,category:(.category // "failing_test"),source:"substrate_detected",status:"open",
+        '{impulse:{pointer:{type:"substrateGap_write",gap:((.row // {} | del(.claim)) + {id:.id,category:(.category // "failing_test"),source:"substrate_detected",status:"open",
           check_runnable:false,
           summary:("Not checkable here: the tests this gap names (" + ($absent | join("; ")) + ") are not in repos/" + $v + "/" + $tf
             + " at " + $head + ", so its check can neither pass nor fail. It is not worked until a test that checks it is named; the source is left as it is."),
@@ -926,7 +926,7 @@ close_failing_test_gaps() {
       # reviewed test fix ends, and this closer's mark ending does not end it.
       if [ "$(printf '%s' "$g" | jq -c '.meta.names_absent // null')" != null ] && [ "$(printf '%s' "$g" | jq -c '.meta.claim_rejected_by // null')" != null ]; then
         emit_gap_checked "$(printf '%s' "$g" | jq -c --arg v "$v" --arg tf "$tf" --arg head "${head:0:10}" \
-          '{impulse:{pointer:{type:"substrateGap_write",gap:((.row // {}) + {id:.id,category:(.category // "failing_test"),source:"substrate_detected",status:"open",
+          '{impulse:{pointer:{type:"substrateGap_write",gap:((.row // {} | del(.claim)) + {id:.id,category:(.category // "failing_test"),source:"substrate_detected",status:"open",
             check_runnable:false,
             summary:("The tests this gap names are in repos/" + $v + "/" + $tf + " again at " + $head + " and do not all pass. A person ruled against its claim, so it stays not checkable until a reviewed test fix."),
             classification_metadata:((.meta // {}) + {check_runnable:false, names_absent:null, absent_at_head:null})}
@@ -997,7 +997,7 @@ test_sources() { # <checkout> <test file> <vessel>
 # A HELD GAP IS RELEASED BY A PERSON. The generator holds a gap it cannot localize (operator_hold, needs_localization):
 # whether the test or the source is wrong is not something a stack can say. The person's surface shows gap rows with a
 # grade, which judges a row's claim, so each held row first states one (claim: the test is right and the source must
-# change). A person's outcome on any detector row of the gap then releases it, the latest by seq deciding (a later one
+# change). Not a row whose check cannot run (the closer's mark: its named tests absent): it has no claim to judge. A person's outcome on any detector row of the gap then releases it, the latest by seq deciding (a later one
 # re-decides a released gap):
 #   - r 1, the claim is right: the hold goes, protected_files stay, no edit_site (the walk fixes the source), and sources
 #     names the files the test imports (test_sources), so the walk edits what the check tests rather than guessing a
@@ -1052,7 +1052,7 @@ lift_held_gaps() {
          claim: ("The test is right: the source must change so these tests in " + $file + " pass: "
            + (($m.evidence_resolve.input.only_tests // []) | join(" ; ")))})}
     | ($g.summary | split($held) | join("\u0000") | split($right) | join("\u0000") | split($wrong) | join("\u0000")) as $s
-    | if .by == null then select($was == null and ($g.claim // "") != .gap.claim)
+    | if .by == null then select($was == null and $g.check_runnable != false and $m.check_runnable != false and ($g.claim // "") != .gap.claim)
       else select(.by.id != $was or (.by.r == 1 and $m.sources == null))
         | .gap.classification_metadata |= del(.operator_hold, .operator_hold_reason, .disposition, .localized_by, .claim_rejected_by, .edit_site, .protected_files, .sources, .check_runnable)
         | if .by.r == 1 then .gap.classification_metadata += {protected_files: [$file], localized_by: $by.id} | .gap |= del(.check_runnable)

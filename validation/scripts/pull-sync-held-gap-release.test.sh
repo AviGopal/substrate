@@ -24,6 +24,8 @@
 #       rest of the row (status, summary, meta, any hold) as it was, and not again; (n2) a gap naming a repo, a closed
 #       one, one another writer filed, one naming no vessel: nothing; (n3) records unreadable: nothing, logged;
 #   (o) a release keeps the repo of the gap; (p) the tick calls carry_gap_repo after the release;
+#   (w) a held gap the closer marked not checkable (its named tests absent: no claim, check_runnable false) is not given a
+#       claim: a person's word on it would release a gap whose check cannot run;
 #   (i) the closer leaves a released gap open while its test file has fewer expects than at release, and closes it when
 #       it has as many.
 # usage: validation/scripts/pull-sync-held-gap-release.test.sh [path/to/substrate-pull-sync.sh]
@@ -260,6 +262,12 @@ else bad "(o) latest=$(latest g-a)"; fi
 if grep -qE '^carry_gap_repo \|\| true$' "$SCRIPT" && [ "$(grep -nE '^(lift_held_gaps_each "\$CLONE_DIR"|carry_gap_repo \|\| true$)' "$SCRIPT" | cut -d: -f2 | tr '\n' ' ')" = 'lift_held_gaps_each "$CLONE_DIR" || true carry_gap_repo || true ' ]; then
   ok "(p) the tick calls carry_gap_repo, after the release"
 else bad "(p) the tick does not call carry_gap_repo after lift_held_gaps_each"; fi
+
+# (w) a held gap marked not checkable by the closer gets no claim
+reset "$(held g-w x src/a.test.ts "$GEN" | jq -c '.check_runnable = false | .meta += {check_runnable: false, names_absent: ["d > one"], absent_at_head: "0123456789"}')"
+lift_held_gaps x 0123456789abcdef "$DIR"
+if [ ! -s "$WRITES" ]; then ok "(w) a held gap whose check cannot run is not given a claim"
+else bad "(w) writes=$(cat "$WRITES") log=$(cat "$LOG")"; fi
 
 echo; [ "$FAILS" = 0 ] && { echo "PASS - a person releases a held generator gap, and its fix is held to the test's released size"; exit 0; }
 echo "$FAILS FAILED"; exit 1
