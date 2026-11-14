@@ -75,6 +75,7 @@ declare -A NEEDS=(
   [fed-ingress-log.test.ts]="repos/libp2p-federation-transport"
   [fed-ingress-auth-enforce.test.ts]="repos/libp2p-federation-transport"
   [fed-ingress-auth-unattested.test.ts]="repos/libp2p-federation-transport"
+  [fed-owner-status.test.ts]="repos/libp2p-federation-transport"
   [write-containment-copies.test.ts]="repos/local-tools-vessel"
 )
 
