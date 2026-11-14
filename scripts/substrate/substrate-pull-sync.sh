@@ -1106,6 +1106,40 @@ carry_gap_repo() {
   return 0
 }
 
+# A TEST-REGRESSION GAP CLOSES WHEN THE GATE PASSES THAT VESSEL AGAIN. The test gate files pull-sync-test-regression-<v>
+# when it refuses a head that regressed <v>'s own suite, and nothing wrote it closed: the gate's later pass only
+# cleared its refusal count. So the gap stayed open after the suite was green, a root the walk could do nothing for
+# (it names no test to check) and that nothing would ever end. It is closed here, every tick, from the gate's own
+# record of its last verdict ($MARKER_DIR/<v>.last-gate-verdict, written by tg_verdict): an open gap of this id whose
+# vessel's last verdict is "passed", given after the gap's latest row, gets one closed row naming the head that passed.
+# A refusal since, or a verdict older than the gap, leaves it open. A store that cannot be read writes nothing.
+close_passed_regressions() {
+  local gaps g id v line vt vh vv
+  command -v jq >/dev/null 2>&1 || return 0
+  gaps="$(dev_resolve '{"impulse":{"pointer":{"type":"record_read","shape":"gap"}}}' --max-time 30 2>/dev/null \
+    | jq -c 'if type == "array" then . elif (.content | type) == "array" then .content else error("no rows") end' 2>/dev/null)"
+  [ -n "$gaps" ] || { log "regression close: records unreadable; nothing written"; return 0; }
+  while IFS= read -r g; do
+    [ -n "$g" ] || continue
+    id="$(printf '%s' "$g" | jq -r '.gap_id')"; v="${id#pull-sync-test-regression-}"
+    [ -n "$v" ] && [ "$v" != "$id" ] || continue
+    line="$(cat "$MARKER_DIR/$v.last-gate-verdict" 2>/dev/null || true)"
+    read -r vt vh vv <<< "$line"
+    [ "$vv" = passed ] || continue
+    # The pass must come after the gap's latest row: a verdict older than the refusal it would close says nothing of it.
+    printf '%s' "$g" | jq -e --arg vt "$vt" '(.t // "" | sub("\\.[0-9]+Z$"; "Z") | try fromdateiso8601 catch null) as $gt
+      | ($vt | try fromdateiso8601 catch null) as $pt | $gt != null and $pt != null and $pt > $gt' >/dev/null 2>&1 || continue
+    emit_gap_checked "$(jq -n -c --arg id "$id" --arg v "$v" --arg head "$vh" --arg at "$vt" \
+      '{impulse:{pointer:{type:"substrateGap_write",gap:{id:$id,category:"systematic_failure",source:"substrate_detected",status:"closed",closed_reason:"suite_passes_again",repo:$v,
+        summary:("pull-sync test gate: " + $v + " passed its own suite again at " + $head + " (" + $at + "), after this regression was filed."),
+        classification_metadata:{vessel:$v,head:$head,passed_at:$at}}}}}' 2>/dev/null)"
+    if [ "$?" = 0 ]; then log "regression close: $id closed: $v passed at $vh ($vt)"
+    else log "regression close: $id: $v passed at $vh, but the closed row was NOT written; tried again next tick"; fi
+  done <<< "$(printf '%s' "$gaps" | jq -c 'map(select(.shape == "gap" and .role == "detector")) | group_by(.gap_id)[] | (sort_by(.seq) | last)
+    | select(.status == "open" and ((.gap_id // "") | startswith("pull-sync-test-regression-")))' 2>/dev/null)"
+  return 0
+}
+
 # THE WALK'S CHANGE CLONES. git_worktree makes a whole clone for a change; walk_trees_reclaim (local-tools) removes the
 # ones nothing will use again. Nothing made the walk call it, and the clones filled a node's disk. This detector files
 # one gap while more than <threshold> clones sit under the clones directory (it is work: records makes an open detector
@@ -6296,6 +6330,8 @@ done <<< "$GEN_QUEUE"
 lift_held_gaps_each "$CLONE_DIR" || true
 # An open failing-test gap filed before gaps named their repository names it, once (see carry_gap_repo).
 carry_gap_repo || true
+# A test-regression gap whose vessel the gate has passed since, closed (see close_passed_regressions).
+close_passed_regressions || true
 
 # The walk's change clones, every tick (see walk_trees_check).
 walk_trees_check 50 3 || true
