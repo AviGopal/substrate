@@ -28,9 +28,11 @@
 #   secret_scan_clean no value in any node's own secret store appears in that node's
 #                     journals (all units, all retained boots), its container log, or its
 #                     trace store's data rows (secret-leak-scan.sh; counts and names only)
-#   spoke_goal        with a provider key only: a goal dispatched on the spoke reaches,
-#                     and its trace is in the hub's trace store (the network learns
-#                     from the spoke's work); unjudged without a key
+#   spoke_goal        not judged: it dispatched a goal to the spoke's goal-host and read
+#                     its trace from the hub's activity-api, and both are retired. Goals
+#                     are walked from a person's or owner's ask now, which a fresh spoke
+#                     has no key to write, so there is no install-time dispatch to replace
+#                     it with yet. Reported unknown with that reason.
 #
 # None of the first four needs a model, so they are judged in every mode. The hub's own
 # `usable` wait may fall short without a key (the installer exits 20); that is excused
@@ -232,35 +234,10 @@ if [ "$spoke_rc" = 0 ] || [ "$spoke_rc" = 20 ]; then
     set_check hub_to_spoke pass "$(jq -nc --arg t "$target" --arg p "$(printf '%s' "$answer" | jq -r '.content.produced_by // empty')" '{vessel: $t, produced_by: $p}')"
   else set_check hub_to_spoke fail "$(jq -nc --arg t "$target" --arg a "$(printf '%s' "${answer:-}" | head -c 300)" '{vessel: $t, answer: $a}')"; fi
 
-  # A goal from the spoke, graded on the hub. Needs a model, so it is judged only with a key.
-  if [ -n "${ACCEPTANCE_PROVIDER_KEY:-}" ]; then
-    spoke_client_key="$(jq -r '.metabob.apiKey // empty' "$root/spoke-config.json" 2>/dev/null)"; secrets+=("$spoke_client_key")
-    done_goal() { rec="$(apikey_cfg "$spoke_client_key" | eng exec -i "$SPOKE_C" curl -K - -s -m10 "http://127.0.0.1:8210/executions/$did" 2>/dev/null)"; case "$(jq -r '.status // empty' <<<"$rec")" in running|pending|"") return 1 ;; esac; }
-    # Up to three dispatches, the same budget substrate-status gives its own known-answer
-    # goal: reach is expected with high probability, not certainty, and one miss must not
-    # decide a publish. Every attempt is recorded, so a miss stays visible in the result.
-    r=fail; attempts='[]'
-    for attempt in 1 2 3; do
-      did="$(apikey_cfg "$spoke_client_key" | eng exec -i "$SPOKE_C" sh -c "curl -K - -s -m30 -X POST http://127.0.0.1:8210/run-goal -H 'Content-Type: application/json' -d '{\"goal\":\"Read $marker_path and tell me exactly what it says.\",\"operator\":\"operator:network-acceptance\",\"tags\":[\"network_acceptance\"]}'" 2>/dev/null | jq -r '.dispatchId // empty')"
-      reached=""; on_hub=""; quoted=""
-      if [ -n "$did" ] && poll 600 done_goal; then
-        reached="$(jq -r '.goalReached // .reached // false' <<<"$rec")"; exe="$(jq -r '.executionId // .execution_id // empty' <<<"$rec")"
-        on_hub="$(curl -s -m10 -o /dev/null -w '%{http_code}' -K <(apikey_cfg "$hub_key") "http://localhost:${HUB_PREFIX}080/v2/activities/execution-traces/$exe")"
-        # Which copy the answer quoted: the spoke's marker (right), the hub's decoy (the read
-        # was placed on the wrong node), or neither (the walk never read the file).
-        quoted=neither
-        case "$rec" in *"$marker"*) quoted=spoke ;; *hub-copy-must-not-be-read*) quoted=hub_decoy ;; esac
-        [ "$reached" = true ] && [ "$on_hub" = 200 ] && [ "$quoted" = spoke ] && r=pass
-        # A miss keeps its execution record, so the result says why, not only that it missed.
-        [ "$r" = pass ] || printf '%s\n' "$rec" >"$RESULT_DIR/diag/spoke-goal-$attempt.json"
-      fi
-      attempts="$(jq -c --arg d "${did:-}" --arg re "${reached:-not finished in 600s}" --arg h "${on_hub:-}" --arg q "${quoted:-}" '. + [{dispatch: $d, reached: $re, trace_on_hub_http: $h, quoted: $q}]' <<<"$attempts")"
-      [ "$r" = pass ] && break
-    done
-    set_check spoke_goal "$r" "$(jq -nc --argjson a "$attempts" '{attempts: $a}')"
-  else
-    set_check spoke_goal unknown '{"note":"needs a provider key; not judged"}'
-  fi
+  # A goal from the spoke, graded on the hub: dispatched to goal-host and read back from activity-api,
+  # both retired. A goal is walked from a person's or owner's ask now, and a fresh spoke holds no key to
+  # write one, so nothing dispatches a goal at install. Unknown, with the reason, until one does.
+  set_check spoke_goal unknown '{"note":"retired: goal-host and activity-api no longer run, and a fresh spoke has no install-time way to root a walk"}'
 fi
 
 # ── 5. A spoke leaves, and comes back ─────────────────────────────────────────────
@@ -470,8 +447,8 @@ if [ "$ss_fail" -eq 0 ] && [ "$(jq 'length' <<<"$ss")" -ge 2 ]; then set_check s
 else set_check secret_scan_clean fail "$ss"; fi
 for f in "$RESULT_DIR"/diag/*; do [ -f "$f" ] && { t="$(cat "$f")"; redact "$t" >"$f"; }; done
 
-# An unjudged check is not a passed one. spoke_goal alone may stay unknown (it needs a
-# provider key); any other unknown means part of the promise was never measured, e.g. a
+# An unjudged check is not a passed one. spoke_goal alone may stay unknown (nothing dispatches
+# a goal at install now); any other unknown means part of the promise was never measured, e.g. a
 # second spoke that never joined leaves the leave case, rejoin and large_frame_concurrency
 # unjudged, and counting only "fail" let that leg pass with none of them run.
 failed="$(jq -r '[to_entries[] | select(.value.result == "fail" or (.value.result == "unknown" and .key != "spoke_goal")) | .key] | join(",")' <<<"$checks")"
