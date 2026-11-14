@@ -504,6 +504,8 @@ async function proxyToLocalOwner(pointer: any): Promise<any> {
 // proxyToVessel's refusal branch and by nothing else, wherever the answer sits (bare, or inside a peer's {content}
 // envelope). undefined when no owner refused. An answer's own content is never read for it: a 2xx answer whose body
 // holds a failure-shaped row (a failure record, a step result, a tool's refusal object) is an answer, and crosses as 200.
+// A peer's transport sets its own answer's status the same way (owner_status at the top of its answer): that is the
+// protocol's carrier, the peer speaking for its answer, not content.
 function ownerStatus(res: any): number | undefined {
   const s = Number(res?.owner_status ?? res?.content?.owner_status)
   return Number.isInteger(s) && s >= 400 && s <= 599 ? s : undefined
