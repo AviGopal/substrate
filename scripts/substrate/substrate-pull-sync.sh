@@ -879,8 +879,9 @@ close_failing_test_gaps() {
       runs="$(printf '%s' "$runs" | jq -c --arg tf "$tf" --arg ao "$ao" '. + {($tf): $ao}')"
     fi
     jq -c --arg id "$id" --arg head "${head:0:10}" --argjson at "$(date +%s%N)" '. + {($id): {head: $head, at: $at}}' "$seen" > "$seen.new" 2>/dev/null && mv "$seen.new" "$seen"
-    # A row this run was due to write and the store did not take is not seen: the gap is run again on the next tick at
-    # this HEAD, not only once the HEAD moves.
+    # A row this run was due to write and the store did not take is not seen: the gap runs again the next time this
+    # vessel is gated, at this HEAD too (a budget deferral or a gate-only re-run), not only once the HEAD moves. The
+    # closer runs only for a gated vessel, so at a converged HEAD that is no sooner than the next gate.
     unsee() { jq -c --arg id "$id" 'del(.[$id])' "$seen" > "$seen.new" 2>/dev/null && mv "$seen.new" "$seen"; }
     if ! printf '%s\n' "$ao" | command grep -qE '^ *[0-9]+ (pass|fail)$'; then log "$v: failing-test closer: alone run of $tf produced no result; $id left open"; continue; fi
     # A named test the file no longer has (renamed or removed since the gap was filed) neither passes nor fails. Counted
@@ -911,7 +912,7 @@ close_failing_test_gaps() {
           classification_metadata:((.meta // {}) + {check_runnable:false, names_absent:$absent, absent_at_head:$head})}
           + (if .severity then {severity:.severity} else {} end))}}}')"
       if [ "$?" = 0 ]; then log "$v: failing-test closer: $id names $(printf '%s' "$absent" | jq length) test(s) absent from $tf at ${head:0:10}; marked not checkable"
-      else log "$v: failing-test closer: $id names tests absent from $tf at ${head:0:10}; the not-checkable row was NOT written; run again next tick"; unsee; fi
+      else log "$v: failing-test closer: $id names tests absent from $tf at ${head:0:10}; the not-checkable row was NOT written; runs again the next time $v is gated (a new HEAD, or a re-gate of this one)"; unsee; fi
       continue
     fi
     names="$(printf '%s' "$g" | jq -r --arg ao "$ao" '($ao | split("\n")) as $L
@@ -930,7 +931,7 @@ close_failing_test_gaps() {
             classification_metadata:((.meta // {}) + {check_runnable:false, names_absent:null, absent_at_head:null})}
             + (if .severity then {severity:.severity} else {} end))}}}')"
         if [ "$?" = 0 ]; then log "$v: failing-test closer: $id names its tests again and they are red ($names pass); a person ruled against its claim, so it stays not checkable"
-        else log "$v: failing-test closer: $id names its tests again and they are red; the row clearing its absent names was NOT written; run again next tick"; unsee; fi
+        else log "$v: failing-test closer: $id names its tests again and they are red; the row clearing its absent names was NOT written; runs again the next time $v is gated (a new HEAD, or a re-gate of this one)"; unsee; fi
         continue
       fi
       if [ "$(printf '%s' "$g" | jq -c '.meta.names_absent // null')" != null ]; then
@@ -941,7 +942,7 @@ close_failing_test_gaps() {
             classification_metadata:((.meta // {}) + {check_runnable:true, names_absent:null, absent_at_head:null})}
             + (if .severity then {severity:.severity} else {} end))}}}')"
         if [ "$?" = 0 ]; then log "$v: failing-test closer: $id names its tests again and they are red ($names pass); checkable again"
-        else log "$v: failing-test closer: $id names its tests again and they are red; the checkable row was NOT written; run again next tick"; unsee; fi
+        else log "$v: failing-test closer: $id names its tests again and they are red; the checkable row was NOT written; runs again the next time $v is gated (a new HEAD, or a re-gate of this one)"; unsee; fi
         continue
       fi
       log "$v: failing-test closer: $id still red alone ($names named tests pass); left open"; continue
@@ -958,7 +959,7 @@ close_failing_test_gaps() {
       '{impulse:{pointer:{type:"substrateGap_write",gap:{id:$id,category:"failing_test",source:"substrate_detected",status:"closed",closed_reason:"named_tests_pass",
         summary:("Every test this gap checks in repos/" + $v + "/" + $tf + " passes when the file runs alone, at " + $head + "."),
         classification_metadata:{filed_by:"pull-sync failing-test generator",closed_at_head:$head}}}}}')"
-    if [ "$?" != 0 ]; then log "$v: failing-test closer: $id passes alone at ${head:0:10}; the closed row was NOT written; run again next tick"; unsee; continue; fi
+    if [ "$?" != 0 ]; then log "$v: failing-test closer: $id passes alone at ${head:0:10}; the closed row was NOT written; runs again the next time $v is gated (a new HEAD, or a re-gate of this one)"; unsee; continue; fi
     log "$v: failing-test closer: closed $id (named tests pass alone at ${head:0:10})"
     n=$((n + 1))
   done <<< "$gaps"
