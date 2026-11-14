@@ -1006,6 +1006,12 @@ test_sources() { # <checkout> <test file> <vessel>
 #     level, where the walk's clone precondition reads it, and in its meta). A change must not edit the check that
 #     verifies it, so the walk opens no clone for it: the test is fixed by a reviewed commit to the vessel, which the
 #     failing-test closer then sees pass, closing the gap. A later r 1 clears it.
+# A verdict decides only if a row it names comes after the closer's latest mark (check_runnable false, names_absent: the
+# named tests are absent): a grade given before the mark judged a check that could run, the mark is newer evidence, and
+# the mark row itself has no claim to judge (a page opened before the mark could still cite it). The order is read from the gap rows alone, all from the one gap read; the outcome read may reach
+# another store, whose seq says nothing about this one's (row ids name one row in any store). A row with no numeric
+# seq, on either side, releases nothing. After a mark the gap has no claim, so the surface does not offer it; a person
+# grades it again only once a later row states the claim again, when its tests are back, red, and re-armed.
 # Either way the released row records the outcome that released it and the test file's size at the first release
 # (test_size), which the closer holds the fix to. Only this vessel's open generator gaps are read; a store that cannot be read releases nothing.
 lift_held_gaps() {
@@ -1016,6 +1022,8 @@ lift_held_gaps() {
   outs="$(dev_resolve '{"impulse":{"pointer":{"type":"record_read","shape":"outcome","where":{"role":"person"}}}}' --max-time 30 2>/dev/null \
     | jq -c 'if type == "array" then . elif (.content | type) == "array" then .content else error("no rows") end' 2>/dev/null)"
   [ -n "$gaps" ] && [ -n "$outs" ] || { log "$v: held-gap release: records unreadable; nothing released"; return 0; }
+  local unseq; unseq="$(printf '%s' "$gaps" | jq -r '[.[] | select(.shape == "gap" and .role == "detector" and (.seq | type) != "number") | .gap_id] | unique | join(", ")' 2>/dev/null)"
+  [ -z "$unseq" ] || log "$v: held-gap release: gap rows with no seq ($unseq); those gaps are neither released nor given a claim"
   while IFS= read -r p; do
     [ -n "$p" ] || continue
     local tf size
@@ -1036,14 +1044,16 @@ lift_held_gaps() {
     "Not yet localized (no source frame in the stack, or an unclassified error): needs a diagnosis of whether the source or the test is wrong before any compose." as $held
     | "A person judged the test right: fix the source so the named tests pass, keeping every case and expect." as $right
     | "A person judged the test wrong: a change must not edit the check that verifies it, so this gap is not worked here (check_runnable false); the test is fixed by a reviewed commit to the vessel, and the source is left as it is." as $wrong
-    | ($outs | map(select(.role == "person" and (.r == 0 or .r == 1)))) as $o
-    | $rows | map(select(.shape == "gap" and .role == "detector")) | group_by(.gap_id)[] | sort_by(.seq) as $all | $all[-1] as $g
+    | ($outs | map(select(.role == "person" and (.r == 0 or .r == 1) and (.seq | type) == "number"))) as $o
+    | $rows | map(select(.shape == "gap" and .role == "detector")) | group_by(.gap_id)[]
+    | select(all(.[]; (.seq | type) == "number")) | sort_by(.seq) as $all | $all[-1] as $g
     | ($g.meta // {}) as $m
     | ($m.localized_by // $m.claim_rejected_by) as $was
     | select($g.status == "open" and ($m.operator_hold == true or $was != null) and $m.filed_by == "pull-sync failing-test generator")
     | select((($m.evidence_resolve.input.vessel // "") | sub("^repos/"; "")) == $v)
     | ($m.evidence_resolve.input.test_file // "") as $tf | select($tf != "")
-    | ([$all[].id] | map(tostring)) as $ids
+    | ([$all | to_entries[] | select((.value.check_runnable == false or .value.meta.check_runnable == false) and .value.meta.names_absent != null) | .key] | last) as $mark
+    | ([$all | to_entries[] | select($mark == null or .key > $mark) | .value.id] | map(tostring)) as $ids
     | ([$o[] | select([(.input_refs // [])[] | tostring] | any(. as $x | $ids | index($x)))] | sort_by(.seq) | last) as $by
     | ($g | del(.shape, .id, .seq, .t, .writer, .role, .input_refs, .gap_id, .meta)) as $rest
     | ("repos/" + $v + "/" + $tf) as $file

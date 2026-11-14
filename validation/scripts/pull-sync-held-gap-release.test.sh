@@ -26,6 +26,11 @@
 #   (o) a release keeps the repo of the gap; (p) the tick calls carry_gap_repo after the release;
 #   (w) a held gap the closer marked not checkable (its named tests absent: no claim, check_runnable false) is not given a
 #       claim: a person's word on it would release a gap whose check cannot run;
+#   (x) a verdict given before the closer's mark (on an earlier row) does not lift the mark; (x2) nor does one naming the
+#       mark row itself (it has no claim to judge); (x5) one naming a row after the mark (tests back, re-armed) releases;
+#       (x6) a mark whose row carries check_runnable false only in its meta is still a mark; (x3) a verdict with no seq
+#       releases nothing; (x4) a gap with a row with no seq: nothing written,
+#       and it is said;
 #   (i) the closer leaves a released gap open while its test file has fewer expects than at release, and closes it when
 #       it has as many.
 # usage: validation/scripts/pull-sync-held-gap-release.test.sh [path/to/substrate-pull-sync.sh]
@@ -268,6 +273,48 @@ reset "$(held g-w x src/a.test.ts "$GEN" | jq -c '.check_runnable = false | .met
 lift_held_gaps x 0123456789abcdef "$DIR"
 if [ ! -s "$WRITES" ]; then ok "(w) a held gap whose check cannot run is not given a claim"
 else bad "(w) writes=$(cat "$WRITES") log=$(cat "$LOG")"; fi
+
+# (x) r 1 on the held row, then the closer's mark: no release, the mark stands
+mark() { jq -c '. + {check_runnable: false} | .meta += {check_runnable: false, names_absent: ["d > one"], absent_at_head: "0123456789"}'; }
+reset "$(held g-x x src/a.test.ts "$GEN")" "$(outcome 1 r0)" "$(held g-x x src/a.test.ts "$GEN" | mark)"
+lift_held_gaps x 0123456789abcdef "$DIR"
+if [ ! -s "$WRITES" ] && latest g-x | jq -e '.check_runnable == false' >/dev/null; then ok "(x) a verdict from before the mark does not lift it"
+else bad "(x) writes=$(cat "$WRITES") log=$(cat "$LOG")"; fi
+
+# (x2) the mark, then r 1 naming the mark row itself (the row the surface writes: {shape: outcome, r, input_refs: [row id]})
+reset "$(held g-x x src/a.test.ts "$GEN")" "$(held g-x x src/a.test.ts "$GEN" | mark)" "$(outcome 1 r1)"
+lift_held_gaps x 0123456789abcdef "$DIR"
+if [ ! -s "$WRITES" ] && latest g-x | jq -e '.check_runnable == false' >/dev/null; then ok "(x2) a verdict naming the mark row itself releases nothing"
+else bad "(x2) writes=$(cat "$WRITES") log=$(cat "$LOG")"; fi
+
+# (x5) the mark, then the re-arm (tests back, red; claim stated again), then r 1 naming the re-arm row: released
+rearm() { jq -c '. + {check_runnable: true, claim: "The test is right: ..."} | .meta += {check_runnable: true, names_absent: null, absent_at_head: null}'; }
+reset "$(held g-x x src/a.test.ts "$GEN")" "$(held g-x x src/a.test.ts "$GEN" | mark)" "$(held g-x x src/a.test.ts "$GEN" | rearm)" "$(outcome 1 r2)"
+lift_held_gaps x 0123456789abcdef "$DIR"
+if [ "$(wc -l < "$WRITES")" = 1 ] && latest g-x | jq -e '.meta.localized_by == "r3" and (has("check_runnable") | not) and .meta.check_runnable == null' >/dev/null; then
+  ok "(x5) a verdict naming a row after the mark releases"
+else bad "(x5) writes=$(cat "$WRITES") log=$(cat "$LOG")"; fi
+
+# (x6) r 1 before a mark that says not checkable only in its meta: no release
+reset "$(held g-x x src/a.test.ts "$GEN")" "$(outcome 1 r0)" "$(held g-x x src/a.test.ts "$GEN" | mark | jq -c 'del(.check_runnable)')"
+lift_held_gaps x 0123456789abcdef "$DIR"
+if jq -se 'map(select(.meta.localized_by != null)) | length == 0' "$WRITES" >/dev/null; then ok "(x6) a mark in the meta alone is still a mark"
+else bad "(x6) writes=$(cat "$WRITES") log=$(cat "$LOG")"; fi
+
+# (x3) the (x5) verdict with no seq: nothing
+reset "$(held g-x x src/a.test.ts "$GEN")" "$(held g-x x src/a.test.ts "$GEN" | mark)" "$(held g-x x src/a.test.ts "$GEN" | rearm)" "$(outcome 1 r2)"
+jq -c 'map(if .shape == "outcome" then del(.seq) else . end)' "$ROWS" > "$ROWS.new" && mv "$ROWS.new" "$ROWS"
+lift_held_gaps x 0123456789abcdef "$DIR"
+if jq -se 'map(select(.meta.localized_by != null or (has("check_runnable") | not))) | length == 0' "$WRITES" >/dev/null; then
+  ok "(x3) a verdict with no seq releases nothing"
+else bad "(x3) writes=$(cat "$WRITES") log=$(cat "$LOG")"; fi
+
+# (x4) a gap row with no seq: nothing written for that gap, and it is said
+reset "$(held g-y x src/a.test.ts "$GEN")" "$(outcome 1 r0)"
+jq -c 'map(if .shape == "gap" then del(.seq) else . end)' "$ROWS" > "$ROWS.new" && mv "$ROWS.new" "$ROWS"
+lift_held_gaps x 0123456789abcdef "$DIR"
+if [ ! -s "$WRITES" ] && grep -q 'gap rows with no seq (g-y)' "$LOG"; then ok "(x4) a gap row with no seq: nothing written, and said"
+else bad "(x4) writes=$(cat "$WRITES") log=$(cat "$LOG")"; fi
 
 echo; [ "$FAILS" = 0 ] && { echo "PASS - a person releases a held generator gap, and its fix is held to the test's released size"; exit 0; }
 echo "$FAILS FAILED"; exit 1
