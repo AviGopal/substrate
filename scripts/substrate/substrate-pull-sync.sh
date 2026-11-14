@@ -879,6 +879,9 @@ close_failing_test_gaps() {
       runs="$(printf '%s' "$runs" | jq -c --arg tf "$tf" --arg ao "$ao" '. + {($tf): $ao}')"
     fi
     jq -c --arg id "$id" --arg head "${head:0:10}" --argjson at "$(date +%s%N)" '. + {($id): {head: $head, at: $at}}' "$seen" > "$seen.new" 2>/dev/null && mv "$seen.new" "$seen"
+    # A row this run was due to write and the store did not take is not seen: the gap is run again on the next tick at
+    # this HEAD, not only once the HEAD moves.
+    unsee() { jq -c --arg id "$id" 'del(.[$id])' "$seen" > "$seen.new" 2>/dev/null && mv "$seen.new" "$seen"; }
     if ! printf '%s\n' "$ao" | command grep -qE '^ *[0-9]+ (pass|fail)$'; then log "$v: failing-test closer: alone run of $tf produced no result; $id left open"; continue; fi
     # A named test the file no longer has (renamed or removed since the gap was filed) neither passes nor fails. Counted
     # as red, the gap could never close, and the walk was sent to change the source to make a test pass that does not
@@ -900,14 +903,15 @@ close_failing_test_gaps() {
       # Said once per set of names while the mark holds: a later row that made the gap checkable again (a person's r 1
       # release drops check_runnable) leaves names_absent as it was, and the names still absent are said again.
       if [ "$(printf '%s' "$g" | jq -c '.meta.names_absent // null')" = "$absent" ] && [ "$(printf '%s' "$g" | jq -r '.meta.check_runnable')" = false ]; then log "$v: failing-test closer: $id names tests absent from $tf (already said); left open, not checkable"; continue; fi
-      emit_gap "$(printf '%s' "$g" | jq -c --arg v "$v" --arg tf "$tf" --arg head "${head:0:10}" --argjson absent "$absent" \
-        '{impulse:{pointer:{type:"substrateGap_write",gap:{id:.id,category:(.category // "failing_test"),source:"substrate_detected",status:"open",
+      emit_gap_checked "$(printf '%s' "$g" | jq -c --arg v "$v" --arg tf "$tf" --arg head "${head:0:10}" --argjson absent "$absent" \
+        '{impulse:{pointer:{type:"substrateGap_write",gap:({id:.id,category:(.category // "failing_test"),source:"substrate_detected",status:"open",
           check_runnable:false,
           summary:("Not checkable here: the tests this gap names (" + ($absent | join("; ")) + ") are not in repos/" + $v + "/" + $tf
             + " at " + $head + ", so its check can neither pass nor fail. It is not worked until a test that checks it is named; the source is left as it is."),
           classification_metadata:((.meta // {}) + {check_runnable:false, names_absent:$absent, absent_at_head:$head})}
-          + (if .severity then {severity:.severity} else {} end)}}}')"
-      log "$v: failing-test closer: $id names $(printf '%s' "$absent" | jq length) test(s) absent from $tf at ${head:0:10}; marked not checkable"
+          + (if .severity then {severity:.severity} else {} end))}}}')"
+      if [ "$?" = 0 ]; then log "$v: failing-test closer: $id names $(printf '%s' "$absent" | jq length) test(s) absent from $tf at ${head:0:10}; marked not checkable"
+      else log "$v: failing-test closer: $id names tests absent from $tf at ${head:0:10}; the not-checkable row was NOT written; run again next tick"; unsee; fi
       continue
     fi
     names="$(printf '%s' "$g" | jq -r --arg ao "$ao" '($ao | split("\n")) as $L
@@ -919,23 +923,25 @@ close_failing_test_gaps() {
       # person ruled against (claim_rejected_by, lift_held_gaps): its check_runnable false is the person's, which only a
       # reviewed test fix ends, and this closer's mark ending does not end it.
       if [ "$(printf '%s' "$g" | jq -c '.meta.names_absent // null')" != null ] && [ "$(printf '%s' "$g" | jq -c '.meta.claim_rejected_by // null')" != null ]; then
-        emit_gap "$(printf '%s' "$g" | jq -c --arg v "$v" --arg tf "$tf" --arg head "${head:0:10}" \
-          '{impulse:{pointer:{type:"substrateGap_write",gap:{id:.id,category:(.category // "failing_test"),source:"substrate_detected",status:"open",
+        emit_gap_checked "$(printf '%s' "$g" | jq -c --arg v "$v" --arg tf "$tf" --arg head "${head:0:10}" \
+          '{impulse:{pointer:{type:"substrateGap_write",gap:({id:.id,category:(.category // "failing_test"),source:"substrate_detected",status:"open",
             check_runnable:false,
             summary:("The tests this gap names are in repos/" + $v + "/" + $tf + " again at " + $head + " and do not all pass. A person ruled against its claim, so it stays not checkable until a reviewed test fix."),
             classification_metadata:((.meta // {}) + {check_runnable:false, names_absent:null, absent_at_head:null})}
-            + (if .severity then {severity:.severity} else {} end)}}}')"
-        log "$v: failing-test closer: $id names its tests again and they are red ($names pass); a person ruled against its claim, so it stays not checkable"
+            + (if .severity then {severity:.severity} else {} end))}}}')"
+        if [ "$?" = 0 ]; then log "$v: failing-test closer: $id names its tests again and they are red ($names pass); a person ruled against its claim, so it stays not checkable"
+        else log "$v: failing-test closer: $id names its tests again and they are red; the row clearing its absent names was NOT written; run again next tick"; unsee; fi
         continue
       fi
       if [ "$(printf '%s' "$g" | jq -c '.meta.names_absent // null')" != null ]; then
-        emit_gap "$(printf '%s' "$g" | jq -c --arg v "$v" --arg tf "$tf" --arg head "${head:0:10}" \
-          '{impulse:{pointer:{type:"substrateGap_write",gap:{id:.id,category:(.category // "failing_test"),source:"substrate_detected",status:"open",
+        emit_gap_checked "$(printf '%s' "$g" | jq -c --arg v "$v" --arg tf "$tf" --arg head "${head:0:10}" \
+          '{impulse:{pointer:{type:"substrateGap_write",gap:({id:.id,category:(.category // "failing_test"),source:"substrate_detected",status:"open",
             check_runnable:true,
             summary:("The tests this gap names are in repos/" + $v + "/" + $tf + " again at " + $head + " and do not all pass: it is checkable, and worked, again."),
             classification_metadata:((.meta // {}) + {check_runnable:true, names_absent:null, absent_at_head:null})}
-            + (if .severity then {severity:.severity} else {} end)}}}')"
-        log "$v: failing-test closer: $id names its tests again and they are red ($names pass); checkable again"
+            + (if .severity then {severity:.severity} else {} end))}}}')"
+        if [ "$?" = 0 ]; then log "$v: failing-test closer: $id names its tests again and they are red ($names pass); checkable again"
+        else log "$v: failing-test closer: $id names its tests again and they are red; the checkable row was NOT written; run again next tick"; unsee; fi
         continue
       fi
       log "$v: failing-test closer: $id still red alone ($names named tests pass); left open"; continue
@@ -948,10 +954,11 @@ close_failing_test_gaps() {
         log "$v: failing-test closer: $id passes alone but $tf has fewer cases or expects than when it was released ($now); left open"; continue
       fi
     fi
-    emit_gap "$(jq -cn --arg id "$id" --arg v "$v" --arg tf "$tf" --arg head "${head:0:10}" \
+    emit_gap_checked "$(jq -cn --arg id "$id" --arg v "$v" --arg tf "$tf" --arg head "${head:0:10}" \
       '{impulse:{pointer:{type:"substrateGap_write",gap:{id:$id,category:"failing_test",source:"substrate_detected",status:"closed",closed_reason:"named_tests_pass",
         summary:("Every test this gap checks in repos/" + $v + "/" + $tf + " passes when the file runs alone, at " + $head + "."),
         classification_metadata:{filed_by:"pull-sync failing-test generator",closed_at_head:$head}}}}}')"
+    if [ "$?" != 0 ]; then log "$v: failing-test closer: $id passes alone at ${head:0:10}; the closed row was NOT written; run again next tick"; unsee; continue; fi
     log "$v: failing-test closer: closed $id (named tests pass alone at ${head:0:10})"
     n=$((n + 1))
   done <<< "$gaps"
@@ -1186,6 +1193,17 @@ emit_gap() {
   case "$code" in
     2*) ;;
     *) log "emit_gap FAILED http=${code:-000} — gap NOT filed (detector fired but nothing is queryable): $(printf '%s' "${body%$'\n'*}" | tr -d '\n' | cut -c1-200)" ;;
+  esac
+}
+# emit_gap, saying whether the gap was filed: non-zero when it was not. For a caller that acts on it (the failing-test
+# closer runs a gap again when its row was not taken); emit_gap itself still answers 0, so no caller changes.
+emit_gap_checked() {
+  local body code
+  body="$(dev_resolve "$1" --max-time 30 -w '\n%{http_code}' 2>/dev/null || printf '\n000')"
+  code="${body##*$'\n'}"
+  case "$code" in
+    2*) return 0 ;;
+    *) log "emit_gap FAILED http=${code:-000} — gap NOT filed (detector fired but nothing is queryable): $(printf '%s' "${body%$'\n'*}" | tr -d '\n' | cut -c1-200)"; return 1 ;;
   esac
 }
 

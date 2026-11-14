@@ -28,7 +28,11 @@
 #       keeps the ruling, never says it is worked again; then nothing more);
 #   (o) the other order: marked absent, then a person ruled against it, then back and red: it stays not checkable;
 #   (p) marked absent, then a person's r 1 released it (check_runnable dropped, names_absent kept) while the names are
-#       still absent: it is marked again, once; back and red, it is checkable again (the r 1 path still re-arms).
+#       still absent: it is marked again, once; back and red, it is checkable again (the r 1 path still re-arms);
+#   (q) a row the store does not take is said not written (no "marked" line for a mark that did not happen) and is
+#       run again on the next tick at the same HEAD: a mark, and a close.
+# Run it under the node's own jq as well: jq 1.6 refuses an object merged with "+" inside an object's key without
+# parentheses, so a payload that builds here can be empty there.
 # usage: validation/scripts/pull-sync-failing-test-closer.test.sh [path/to/substrate-pull-sync.sh]
 set -uo pipefail
 SCRIPT="${1:-$(cd "$(dirname "$0")/../.." && pwd)/scripts/substrate/substrate-pull-sync.sh}"
@@ -37,7 +41,7 @@ FAILS=0
 ok()  { echo "ok   - $*"; }
 bad() { echo "FAIL - $*"; FAILS=$((FAILS+1)); }
 {
-  for f in shape_route gap_resolve dev_resolve emit_gap close_failing_test_gaps; do sed -n "/^$f() {/,/^}/p" "$SCRIPT"; done
+  for f in shape_route gap_resolve dev_resolve emit_gap emit_gap_checked close_failing_test_gaps; do sed -n "/^$f() {/,/^}/p" "$SCRIPT"; done
 } > "$T/fns.sh"
 grep -q '^close_failing_test_gaps()' "$T/fns.sh" && grep -q '^gap_resolve()' "$T/fns.sh" \
   || { echo "FAIL - could not extract close_failing_test_gaps and gap_resolve"; exit 1; }
@@ -53,6 +57,7 @@ curl() {
     vesselCapability) printf '{"content":{"vessels":[{"vesselId":"v"}]}}' ;;
     record_read) jq -c --arg s "$(printf '%s' "$d" | jq -r .pointer.shape)" 'map(select(.shape == $s))' "$ROWS" ;;
     record_write)
+      [ -n "${WFAIL:-}" ] && { printf '{}'; return 0; }
       local n row; n="$(jq length "$ROWS")"
       row="$(printf '%s' "$d" | jq -c --argjson n "$n" '.pointer as $p | $p.row + {id: ("row-" + ($n | tostring)), seq: ($n + 1), writer: $p.writer, role: $p.role}')"
       jq -c --argjson r "$row" '. + [$r]' "$ROWS" > "$ROWS.new" && mv "$ROWS.new" "$ROWS"
@@ -250,6 +255,28 @@ if [ "$P1" = 1 ] && [ "$P2" = 0 ] && printf '%s' "$PL" | jq -e '.check_runnable 
     && printf '%s' "$PR" | jq -e '.check_runnable == true and .meta.names_absent == null' >/dev/null; then
   ok "(p) absent, then a person's r 1 while still absent: marked again once; back and red: checkable again"
 else bad "(p) P1=$P1 P2=$P2 PL=$PL PR=$PR log=$(cat "$LOG")"; fi
+
+# (q) the store does not take the not-checkable row: no row, and the log says so instead of "marked"
+reset "$(row g-s x src/a.test.ts "$GEN" '["d > old"]')"
+summary "(pass) d > new" > "$FAKE/a.test.ts.out"
+WFAIL=1 close_failing_test_gaps x dddddddddddddddd "$DIR"
+if [ ! -s "$WRITES" ] && grep -q 'the not-checkable row was NOT written' "$LOG" && ! grep -q 'marked not checkable' "$LOG"; then
+  ok "(q) a mark the store did not take is said not written"
+else bad "(q) writes=$(cat "$WRITES") log=$(cat "$LOG")"; fi
+# ... and is run again at the same HEAD on the next tick, which marks it
+: > "$LOG"; close_failing_test_gaps x dddddddddddddddd "$DIR"
+if [ "$(wc -l < "$WRITES")" = 1 ] && jq -e '.check_runnable == false and .meta.names_absent == ["d > old"]' "$WRITES" >/dev/null && grep -q 'marked not checkable' "$LOG"; then
+  ok "(q) the next tick at the same HEAD runs it again and marks it"
+else bad "(q) retry: writes=$(cat "$WRITES") log=$(cat "$LOG")"; fi
+# a close the store did not take is run again too
+reset "$(row g-c x src/a.test.ts "$GEN" '["d > a"]')"
+summary "(pass) d > a" > "$FAKE/a.test.ts.out"
+WFAIL=1 close_failing_test_gaps x eeeeeeeeeeeeeeee "$DIR"
+C1="$(wc -l < "$WRITES")"; grep -q 'the closed row was NOT written' "$LOG"; CL=$?
+: > "$LOG"; close_failing_test_gaps x eeeeeeeeeeeeeeee "$DIR"
+if [ "$C1" = 0 ] && [ "$CL" = 0 ] && [ "$(jq -r .status "$WRITES")" = closed ] && ! grep -q 'NOT written' "$LOG"; then
+  ok "(q) a close the store did not take is said not written and run again at the same HEAD"
+else bad "(q) close: C1=$C1 CL=$CL writes=$(cat "$WRITES") log=$(cat "$LOG")"; fi
 
 [ "$FAILS" = 0 ] && { echo "PASS - pull-sync closes a generator gap once its named tests pass alone, and only then"; exit 0; }
 echo "$FAILS FAILED"; exit 1
