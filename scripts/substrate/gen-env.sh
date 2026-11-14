@@ -244,9 +244,11 @@ case "${SUBSTRATE_UPDATE_CHANNEL:-}" in
   *) _refuse "SUBSTRATE_UPDATE_CHANNEL=${SUBSTRATE_UPDATE_CHANNEL} is not an update channel." \
        "Use canary (the default: run dev), fleet (run what canaries verified) or hold (keep what runs)." ;;
 esac
-# SUBSTRATE_ACCEPTANCE=1 declares a throwaway acceptance install (its only effect: the
-# gap-store holder may take the hold channel, below). Anything else is refused rather
-# than read as false, so a mistyped declaration is not silently a production node.
+# SUBSTRATE_ACCEPTANCE=1 declares a throwaway acceptance install. Its effects, all here:
+# the gap-store holder may take the hold channel (below), and substrate-status's usable
+# level may plant its known-answer ask in this fleet's records (probe_goal; elsewhere it
+# is planted only with --plant-ask). Anything else is refused rather than read as
+# false, so a mistyped declaration is not silently a production node.
 case "${SUBSTRATE_ACCEPTANCE:-}" in
   ""|1) ;;
   *) _refuse "SUBSTRATE_ACCEPTANCE=${SUBSTRATE_ACCEPTANCE} is not a declaration." \
