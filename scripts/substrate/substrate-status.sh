@@ -47,6 +47,8 @@
 #                    reports to — the hub when there is one, this fleet otherwise —
 #                    and, when the requested level did not pass, file a gap
 #   --probe llm      run only the LLM-completion probe (substrate-doctor uses this)
+#   --plant-ask      let usable (or --probe goal) write its ask into this fleet's records when it is
+#                    not a declared acceptance install (SUBSTRATE_ACCEPTANCE=1); see probe_goal
 #   --probe goal     run only the known-answer goal probe (substrate-doctor --smoke);
 #                    with --json it also names dispatch_id, route and execution_id
 #
@@ -71,7 +73,7 @@ LEVELS="live seeded served usable connected"
 KNOWN_ANSWER_GOAL="How many vessels are currently registered in the discovery registry? Report the number."
 OPERATOR_TAG="operator:substrate-status"
 
-REQ_LEVEL=""; WAIT=0; TIMEOUT=900; QUICK=0; JSON=0; SERVICES_ONLY=0; REPORT=0; PROBE=""
+REQ_LEVEL=""; WAIT=0; TIMEOUT=900; QUICK=0; JSON=0; SERVICES_ONLY=0; REPORT=0; PROBE=""; PLANT_ASK=0
 usage() { sed -n '2,/^set -uo/p' "$0" | sed '$d' | sed 's/^# \{0,1\}//'; }
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -83,6 +85,7 @@ while [ $# -gt 0 ]; do
     --services-only) SERVICES_ONLY=1; shift ;;
     --report) REPORT=1; shift ;;
     --probe) PROBE="${2:-}"; shift 2 ;;
+    --plant-ask) PLANT_ASK=1; shift ;;
     -h|--help) usage; exit 0 ;;
     *) echo "[status] unknown arg: $1" >&2; exit 2 ;;
   esac
@@ -297,11 +300,25 @@ probe_llm() {
 #
 # Records refuses an owner's row from another node (it writes for its own node only), so on a spoke whose records is
 # its hub's the ask is not written and the level reads unknown, with that reason.
+#
+# The ask is a root in this fleet's live records, worked by the walk until it lapses and graded into what the walk
+# learns. So it is written only on a declared acceptance install (SUBSTRATE_ACCEPTANCE=1, which gen-env validates) or
+# when the caller passes --plant-ask, naming the effect; otherwise the level reads unknown with that reason and --wait
+# stops rather than waiting out its timeout.
+#
+# r 1 alone is the walk saying it is done. The known answer is checked as well: the registry's vessel count is read
+# through discovery when the ask is written and again when it is graded, and a pass needs an r 1 outcome from the walk's
+# grader (role described) whose cited answer states one of those counts. An r 1 whose answer does not is a hollow
+# completion: a fail. Outcomes in any other role are not the walk's grade and are not read.
+GOAL_NOT_ASKED=""; GOAL_COUNTS=""
 GOAL_DISPATCHES=0; GOAL_DISPATCH_ID=""; GOAL_ROUTE=""; GOAL_LAST_EVID=""
 GOAL_LAST_ID=""; GOAL_LAST_EXEC=""
 WAIT_DEADLINE=0   # set by --wait; a poll never outlives it
 GOAL_MAX_DISPATCHES="${STATUS_GOAL_MAX_DISPATCHES:-3}"
 GOAL_BOUND="${STATUS_GOAL_TIMEOUT:-180}"
+registry_count() { # -> the number of vessels discovery's registry lists, or nothing
+  records_call '{"type":"vesselRegistry"}' | jq -r 'if type == "object" and (.vessels | type) == "array" then (.vessels | length) else empty end' 2>/dev/null || true
+}
 records_call() { # pointer-json -> the answer body (discovery's envelope, if any, removed)
   curl -s --max-time 30 -X POST "$DISCOVERY_EP/resolve" -H 'Content-Type: application/json' -H "$(auth_hdr)" \
     -d "$(jq -nc --argjson p "$1" '{pointer:$p}')" 2>/dev/null \
@@ -317,9 +334,19 @@ probe_goal() {
       TERMINAL="the known-answer goal's ask budget ($GOAL_MAX_DISPATCHES) is spent"
       return
     fi
+    if [ "$(envval SUBSTRATE_ACCEPTANCE)" != 1 ] && [ "$PLANT_ASK" != 1 ]; then
+      GOAL_NOT_ASKED="the known-answer goal is an ask the walk works in this fleet's live records until it lapses; it is written only on a declared acceptance install (SUBSTRATE_ACCEPTANCE=1) or with --plant-ask"
+      P_VAL=unknown; P_EVID="not asked: $GOAL_NOT_ASKED"
+      return
+    fi
     if [ "$(systemctl is-active substrate-pull-sync.service 2>/dev/null)" = activating ]; then
       P_VAL=unknown
       P_EVID="pull-sync is converging this node's vessels and restarts the ones it moves; the known-answer goal is asked once it finishes"
+      return
+    fi
+    GOAL_COUNTS="$(registry_count)"
+    if [ -z "$GOAL_COUNTS" ]; then
+      P_VAL=unknown; P_EVID="discovery's registry could not be read, so there is no known answer to check the walk's against; not asked"
       return
     fi
     resp="$(records_call "$(jq -nc --arg g "$KNOWN_ANSWER_GOAL" --arg t "$OPERATOR_TAG" \
@@ -343,10 +370,12 @@ probe_goal() {
   [ "$WAIT_DEADLINE" -gt 0 ] && [ "$WAIT_DEADLINE" -lt "$deadline" ] && deadline="$WAIT_DEADLINE"
   r=""
   while :; do
-    outs="$(records_call "$(jq -nc --arg id "$id" '{type:"record_read", shape:"outcome", where:{event_ref:$id}}')")"
-    # Any r 1 on the ask is a reach; an r 0 with none is a miss (a grade or a lapse).
-    r="$(printf '%s' "$outs" | jq -r 'if type == "array" then (if any(.[]; .r == 1) then "1" elif any(.[]; .r == 0) then "0" else "" end) else "" end' 2>/dev/null || true)"
-    GOAL_LAST_EXEC="$(printf '%s' "$outs" | jq -r 'if type == "array" then ([.[] | select(.r == 1)] + .) | (.[0].id // empty) else empty end' 2>/dev/null || true)"
+    # Only the walk's grader's outcomes (role described) are its grade of the ask.
+    outs="$(records_call "$(jq -nc --arg id "$id" '{type:"record_read", shape:"outcome", where:{event_ref:$id}}')" \
+      | jq -c 'if type == "array" then [.[] | select(.role == "described")] else [] end' 2>/dev/null || echo '[]')"
+    # Any r 1 on the ask is a reach claimed; an r 0 with none is a miss (a grade or a lapse).
+    r="$(printf '%s' "$outs" | jq -r 'if any(.[]; .r == 1) then "1" elif any(.[]; .r == 0) then "0" else "" end' 2>/dev/null || true)"
+    GOAL_LAST_EXEC="$(printf '%s' "$outs" | jq -r '([.[] | select(.r == 1)] + .) | (.[0].id // empty)' 2>/dev/null || true)"
     [ -n "$r" ] && break
     [ "$(date +%s)" -ge "$deadline" ] && break
     sleep 5
@@ -354,7 +383,21 @@ probe_goal() {
   case "$r" in
     1)
       GOAL_DISPATCH_ID=""
-      P_VAL=pass; P_EVID="known-answer goal reached: the walk graded ask $id r 1 (outcome ${GOAL_LAST_EXEC:-?})" ;;
+      # The answers the r 1 grades cite, and whether one states the registry's count (read at the ask and now).
+      local cited texts n said=""
+      cited="$(printf '%s' "$outs" | jq -c '[.[] | select(.r == 1) | (.evidence_refs // [])[]] | unique' 2>/dev/null || echo '[]')"
+      texts="$(records_call "$(jq -nc --argjson ids "$cited" '{type:"record_read", ids:$ids}')" \
+        | jq -r 'if type == "array" then .[] | select(.shape == "answer") | (.text // "") else empty end' 2>/dev/null || true)"
+      GOAL_COUNTS="$GOAL_COUNTS $(registry_count)"
+      for n in $GOAL_COUNTS; do
+        printf '%s' "$texts" | grep -Eq "(^|[^0-9])$n([^0-9]|\$)" && { said="$n"; break; }
+      done
+      if [ -n "$said" ]; then
+        P_VAL=pass; P_EVID="known-answer goal reached: the walk graded ask $id r 1 (outcome ${GOAL_LAST_EXEC:-?}) and its answer states the registry's $said vessels"
+      else
+        P_VAL=fail; P_EVID="known-answer goal NOT reached: the walk graded ask $id r 1 (outcome ${GOAL_LAST_EXEC:-?}) but no answer it cites states the registry's count ($(printf '%s' "$GOAL_COUNTS" | xargs)): a hollow completion"
+        GOAL_LAST_EVID="$P_EVID"
+      fi ;;
     0)
       GOAL_DISPATCH_ID=""   # a later retry asks afresh
       P_VAL=fail; P_EVID="known-answer goal NOT reached: the walk graded ask $id r 0 (outcome ${GOAL_LAST_EXEC:-?})"
@@ -759,6 +802,10 @@ evaluate
 if [ "$WAIT" = 1 ]; then
   deadline="$WAIT_DEADLINE"
   while [ "${VAL[$TARGET]}" != pass ] && [ "$(date +%s)" -lt "$deadline" ]; do
+    if [ -n "$GOAL_NOT_ASKED" ]; then
+      echo "[status] stopped waiting for $TARGET: $GOAL_NOT_ASKED" >&2
+      break
+    fi
     if [ -n "$TERMINAL" ] && [ "${VAL[$FIRST_FAIL]:-}" = fail ]; then
       echo "[status] stopped waiting for $TARGET: $FIRST_FAIL failed and will not recover by waiting ($TERMINAL)" >&2
       break
