@@ -31,6 +31,8 @@
 #       still absent: it is marked again, once; back and red, it is checkable again (the r 1 path still re-arms);
 #   (r) a run whose output is longer than an argument may be (MBs of output) is judged as any other: no "Argument list too
 #       long", its named test passing alone closes the gap;
+#   (s) a mark is written from the gap's whole latest row (its repo and claim kept): exactly one new row, and the repo
+#       carry, run after it as each tick runs it, has nothing to add;
 #   (q) a row the store does not take is said not written (no "marked" line for a mark that did not happen) and is
 #       run again by the next run of the closer at the same HEAD (a re-gate; the closer runs only for a gated vessel):
 #       a mark, and a close.
@@ -44,7 +46,7 @@ FAILS=0
 ok()  { echo "ok   - $*"; }
 bad() { echo "FAIL - $*"; FAILS=$((FAILS+1)); }
 {
-  for f in shape_route gap_resolve dev_resolve emit_gap emit_gap_checked jq_ao close_failing_test_gaps; do sed -n "/^$f() {/,/^}/p" "$SCRIPT"; done
+  for f in shape_route gap_resolve dev_resolve emit_gap emit_gap_checked jq_ao close_failing_test_gaps carry_gap_repo; do sed -n "/^$f() {/,/^}/p" "$SCRIPT"; done
 } > "$T/fns.sh"
 grep -q '^close_failing_test_gaps()' "$T/fns.sh" && grep -q '^gap_resolve()' "$T/fns.sh" \
   || { echo "FAIL - could not extract close_failing_test_gaps and gap_resolve"; exit 1; }
@@ -288,6 +290,16 @@ close_failing_test_gaps x ffffffffffffffff "$DIR" 2> "$T/r.err"
 if [ "$(jq -r 'select(.gap_id == "g-big") | .status' "$WRITES" 2>/dev/null | tail -1)" = closed ] && ! grep -q 'Argument list too long' "$T/r.err" "$LOG"; then
   ok "(r) a run output past the argument size is judged: the gap closes"
 else bad "(r) writes=$(head -c 300 "$WRITES") err=$(head -c 300 "$T/r.err") log=$(head -c 300 "$LOG")"; fi
+
+# (s) the mark keeps every field of the gap's latest row: one row, and the repo carry after it writes nothing
+reset "$(row g-repo x src/a.test.ts "$GEN" '["d > old"]' | jq -c '. + {repo: "x", claim: "The test is right: ..."}')"
+summary "(pass) d > new" > "$FAKE/a.test.ts.out"
+close_failing_test_gaps x 1212121212121212 "$DIR"
+S1="$(wc -l < "$WRITES")"; SL="$(tail -n 1 "$WRITES")"
+carry_gap_repo
+if [ "$S1" = 1 ] && [ "$(wc -l < "$WRITES")" = 1 ] && printf '%s' "$SL" | jq -e '.check_runnable == false and .repo == "x" and (.claim | startswith("The test is right"))' >/dev/null; then
+  ok "(s) the mark keeps the gap's repo and claim: one row, and the repo carry adds none"
+else bad "(s) S1=$S1 after-carry=$(wc -l < "$WRITES") SL=$SL log=$(cat "$LOG")"; fi
 
 [ "$FAILS" = 0 ] && { echo "PASS - pull-sync closes a generator gap once its named tests pass alone, and only then"; exit 0; }
 echo "$FAILS FAILED"; exit 1
