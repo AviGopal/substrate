@@ -167,6 +167,8 @@ for _p in 8080 8090 8100 8101 8210 8260 8270 8310 30333; do
 done
 unset _p _a
 TRACE_HOST_PORT="$(host_port_for 8080)"
+# The host port a client reaches this fleet's discovery on: what substrate-connect hands out.
+DISCOVERY_HOST_PORT="$(host_port_for 8100)"
 IS_SPOKE=0; [ -n "$HUB_DISCOVERY" ] && IS_SPOKE=1
 case ",$(envval ENABLED_ROLES)," in *,spoke,*) IS_SPOKE=1 ;; esac
 # gen-env records the composition it settled on as PROFILE_EFFECTIVE; derive it
@@ -881,7 +883,7 @@ verdict_json() {
   jq -nc --argjson levels "$levels_json" --argjson vessels "$vessels_json" \
     --arg target "$TARGET" --arg value "${VAL[$TARGET]}" --arg img "$IMAGE_REVISION" \
     --arg profile "$PROFILE" --arg engine "$ENGINE" --arg prefix "$PORT_PREFIX" \
-    --arg thp "$TRACE_HOST_PORT" --argjson bym "$BY_MANIFEST" --arg aliases "$ALIASES_USED" --arg pending "$PENDING_REPORTS" \
+    --arg thp "$TRACE_HOST_PORT" --arg dhp "$DISCOVERY_HOST_PORT" --argjson bym "$BY_MANIFEST" --arg aliases "$ALIASES_USED" --arg pending "$PENDING_REPORTS" \
     --arg channel "$UPDATE_CHANNEL" --argjson enforced "$CHANNEL_ENFORCED" \
     --arg cref "$CHANNEL_REF" --arg csha "$CHANNEL_SHA" --arg cat "$CHANNEL_AT" --argjson cmiss "$CHANNEL_REF_MISSING" --argjson cstale "$CHANNEL_STALE" \
     --arg fref "$IMAGE_FRESH_REF" --arg fdev "$FRESH_DEV" --arg fstate "$FRESH_STATE" --arg fbehind "$FRESH_BEHIND" --arg fat "$FRESH_AT" --arg fwhy "$FRESH_WHY" --argjson fquick "$([ "$QUICK" = 1 ] && echo true || echo false)" \
@@ -894,7 +896,7 @@ verdict_json() {
         published_revision:(if $fdev=="" then null else $fdev end),
         commits_behind:(if $fbehind=="" then null else ($fbehind|tonumber) end),
         checked_at:(if $fat=="" then null else $fat end), why:(if $fwhy=="" then null else $fwhy end)} end),
-      trace_host_port:$thp, launched_by_manifest:($bym == 1),
+      trace_host_port:$thp, discovery_host_port:$dhp, launched_by_manifest:($bym == 1),
       deprecated_port_aliases:($aliases | split(" ") | map(select(length > 0))),
       pending_reports:($pending | split("\n") | map(select(length > 0) | split(" ") | {type:.[0], id:.[1], file:.[2]})),
       levels:$levels, vessels:$vessels}'

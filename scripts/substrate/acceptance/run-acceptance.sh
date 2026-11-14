@@ -651,23 +651,19 @@ fi
 
 if [ "$(jq -r '.client_config.result' <<<"$checks")" = "pass" ]; then
   # An authenticated read with the key the page handed out, at the endpoint it handed out: the fleet's
-  # discovery (<prefix>100). The same read without the key must be refused, so a pass shows the key was
-  # checked, not that the read is public.
-  disc=""
-  [[ "$endpoint" =~ ^(https?://[^/:]+:[0-9]+100)/?$ ]] && disc="${BASH_REMATCH[1]}"
-  if [ -z "$disc" ]; then
-    set_check auth_request fail "$(jq -nc --arg e "$endpoint" '{endpoint: $e, detail: "the endpoint handed out is not the fleet discovery (<prefix>100)"}')"
-  else
-    read_body='{"pointer":{"type":"vesselRegistry"}}'
-    code="$(curl -sS -m 30 -K <(apikey_cfg "$api_key") -X POST "$disc/resolve" -H 'Content-Type: application/json' -d "$read_body" \
-      -o "$RESULT_DIR/diag/discovery-read.body" -w '%{http_code}' 2>"$RESULT_DIR/diag/discovery-read.err" || true)"
-    bare="$(status_without_key "$disc" "$read_body")"
-    r=fail; [[ "$code" =~ ^2 ]] && [ "$bare" = 401 ] && r=pass
+  # discovery, on whatever host port the launch mapped it to. A discovery answers the keyed read and refuses
+  # the same read without the key, so a pass shows both that the endpoint is the fleet's discovery and that
+  # the key was checked, not that the read is public.
+  disc="${endpoint%/}"
+  read_body='{"pointer":{"type":"vesselRegistry"}}'
+  code="$(curl -sS -m 30 -K <(apikey_cfg "$api_key") -X POST "$disc/resolve" -H 'Content-Type: application/json' -d "$read_body" \
+    -o "$RESULT_DIR/diag/discovery-read.body" -w '%{http_code}' 2>"$RESULT_DIR/diag/discovery-read.err" || true)"
+  bare="$(status_without_key "$disc" "$read_body")"
+  r=fail; [[ "$code" =~ ^2 ]] && [ "$bare" = 401 ] && r=pass
 
-    # The evidence names the discovery the read went to; the route is the one the two requests above call.
-    set_check auth_request "$r" "$(jq -nc --arg d "$disc" --arg c "$code" --arg b "$bare" \
-      '{url: ($d + "/resolve"), read: "vesselRegistry", http_status: $c, http_status_without_key: $b}')"
-  fi
+  # The evidence names the discovery the read went to; the route is the one the two requests above call.
+  set_check auth_request "$r" "$(jq -nc --arg d "$disc" --arg c "$code" --arg b "$bare" \
+    '{url: ($d + "/resolve"), read: "vesselRegistry", http_status: $c, http_status_without_key: $b}')"
 
   # The cockpit itself: the package the page's registration runs (@metabob/mcp),
   # launched from an empty directory so no project-local config can shadow the one

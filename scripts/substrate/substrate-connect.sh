@@ -24,8 +24,9 @@
 # refuses (non-zero exit, no key printed, the verdict on stderr) until that level
 # passes. A placeholder or a key identity has not accepted yet is never printed.
 #
-# The endpoint is this fleet's discovery, published at `<prefix>100` from
-# SUBSTRATE_PORT_PREFIX: every shape the fleet serves, or resolves from its peers, is
+# The endpoint is this fleet's discovery, at the host port the launch manifest maps
+# it to (`<prefix>100` from SUBSTRATE_PORT_PREFIX, or the deprecated DISCOVERY_PORT
+# when the launcher set it, as the verdict computes it): every shape the fleet serves, or resolves from its peers, is
 # reached through it. (It was the trace store's `<prefix>080`; the trace store is
 # retired.) A spoke's own discovery resolves through its hub, so a spoke hands out
 # its own as well.
@@ -85,7 +86,14 @@ if printf '%s' "$VERDICT" | jq -e '.launched_by_manifest == false' >/dev/null 2>
   echo "[connect] WARNING: this container was not launched by the launch manifest, so its host port mapping cannot be seen from here; the endpoint below assumes the default mapping" >&2
 fi
 
-ENDPOINT="http://127.0.0.1:${PREFIX}100"
+# Discovery's host port as the launch manifest maps it, which the verdict computes with the manifest's own precedence:
+# the deprecated DISCOVERY_PORT when the launcher set it, else <prefix>100.
+HOST_PORT="$(printf '%s' "$VERDICT" | jq -r '.discovery_host_port // empty' 2>/dev/null)"
+HOST_PORT="${HOST_PORT:-${PREFIX}100}"
+if printf '%s' "$VERDICT" | jq -e '(.deprecated_port_aliases // []) | index("DISCOVERY_PORT")' >/dev/null 2>&1; then
+  echo "[connect] WARNING: DISCOVERY_PORT is deprecated in favour of SUBSTRATE_PORT_PREFIX; honouring it (host port $HOST_PORT) as the launch manifest does" >&2
+fi
+ENDPOINT="http://127.0.0.1:${HOST_PORT}"
 
 # The gap store a client's pre-commit glue gate reads (run-glue-tests.sh --gap-store client-config):
 # development-vessel's substrateGap resolver, published at <prefix>090. Top-level "substrate", not

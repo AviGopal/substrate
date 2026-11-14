@@ -32,7 +32,7 @@ bad() { echo "FAIL - $*"; FAILS=$((FAILS+1)); }
 
 mkdir -p "$T/s" "$T/stub" "$T/home"
 cp "$ROOT/scripts/substrate/substrate-connect.sh" "$ROOT/scripts/substrate/connect-merge.sh" "$T/s/"
-printf '#!/usr/bin/env bash\necho %s\nexit 0\n' "'{\"port_prefix\":\"18\",\"launched_by_manifest\":true}'" > "$T/s/status-stub"
+printf '#!/usr/bin/env bash\necho %s\nexit 0\n' "'{\"port_prefix\":\"18\",\"discovery_host_port\":\"18100\",\"launched_by_manifest\":true}'" > "$T/s/status-stub"
 printf '#!/usr/bin/env bash\n[ "$1" = is-active ] || exit 0\ncase "$2" in activity-api.service) echo active ;; development-vessel.service) cat %q 2>/dev/null || echo inactive ;; *) echo inactive ;; esac\n' "$T/devvessel" > "$T/stub/systemctl"
 chmod +x "$T/s/status-stub" "$T/stub/systemctl"
 # EP: the fleet discovery the client is handed, <prefix>100 (the trace store it once named is retired).
@@ -131,5 +131,15 @@ printf '{"nested":{"small":12345},"defaults":{"model":"m-1"}}\n' > "$F"
 merge CONNECT_MERGE_JQ="$T/lossy-jq" bash "$T/s/connect-merge.sh" "$F" bash "$T/s/substrate-connect.sh" --values
 [ "$RC" = 0 ] && jq -e '.nested.small == 12345 and .defaults.model == "m-1" and (.metabob.apiKey | length) > 0' "$F" >/dev/null \
   && ok "lossy jq: a config without one still merges" || bad "lossy jq: small-number merge rc $RC"
+
+# ── the endpoint follows the launch: a fleet launched with the deprecated DISCOVERY_PORT ──
+# The verdict computes discovery's host port with the manifest's own precedence; connect hands that out, never a
+# <prefix>100 the launch did not map, and says the alias is deprecated.
+printf '#!/usr/bin/env bash\necho %s\nexit 0\n' "'{\"port_prefix\":\"18\",\"discovery_host_port\":\"28100\",\"deprecated_port_aliases\":[\"DISCOVERY_PORT\"],\"launched_by_manifest\":true}'" > "$T/s/status-stub-alias"
+chmod +x "$T/s/status-stub-alias"
+V="$(env HOME="$T/home" PATH="$T/stub:$PATH" SUBSTRATE_STATUS_BIN="$T/s/status-stub-alias" SUBSTRATE_ENV_FILE="$T/env" bash "$T/s/substrate-connect.sh" --values 2>"$T/alias.err")"
+[ "$(printf '%s' "$V" | jq -r '.endpoint' 2>/dev/null)" = "http://127.0.0.1:28100" ] \
+  && ok "DISCOVERY_PORT: the endpoint is the host port the launch mapped discovery to" || bad "DISCOVERY_PORT: endpoint is $(printf '%s' "$V" | jq -r '.endpoint' 2>/dev/null)"
+grep -q 'DISCOVERY_PORT is deprecated' "$T/alias.err" && ok "DISCOVERY_PORT: connect says the alias is deprecated" || bad "DISCOVERY_PORT: no deprecation warning"
 
 echo; [ "$FAILS" = 0 ] && { echo "PASS"; exit 0; } || { echo "$FAILS FAILED"; exit 1; }
