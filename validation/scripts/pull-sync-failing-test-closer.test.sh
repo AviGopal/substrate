@@ -29,6 +29,8 @@
 #   (o) the other order: marked absent, then a person ruled against it, then back and red: it stays not checkable;
 #   (p) marked absent, then a person's r 1 released it (check_runnable dropped, names_absent kept) while the names are
 #       still absent: it is marked again, once; back and red, it is checkable again (the r 1 path still re-arms);
+#   (r) a run whose output is longer than an argument may be (MBs of output) is judged as any other: no "Argument list too
+#       long", its named test passing alone closes the gap;
 #   (q) a row the store does not take is said not written (no "marked" line for a mark that did not happen) and is
 #       run again by the next run of the closer at the same HEAD (a re-gate; the closer runs only for a gated vessel):
 #       a mark, and a close.
@@ -42,7 +44,7 @@ FAILS=0
 ok()  { echo "ok   - $*"; }
 bad() { echo "FAIL - $*"; FAILS=$((FAILS+1)); }
 {
-  for f in shape_route gap_resolve dev_resolve emit_gap emit_gap_checked close_failing_test_gaps; do sed -n "/^$f() {/,/^}/p" "$SCRIPT"; done
+  for f in shape_route gap_resolve dev_resolve emit_gap emit_gap_checked jq_ao close_failing_test_gaps; do sed -n "/^$f() {/,/^}/p" "$SCRIPT"; done
 } > "$T/fns.sh"
 grep -q '^close_failing_test_gaps()' "$T/fns.sh" && grep -q '^gap_resolve()' "$T/fns.sh" \
   || { echo "FAIL - could not extract close_failing_test_gaps and gap_resolve"; exit 1; }
@@ -278,6 +280,14 @@ C1="$(wc -l < "$WRITES")"; grep -q 'the closed row was NOT written' "$LOG"; CL=$
 if [ "$C1" = 0 ] && [ "$CL" = 0 ] && [ "$(jq -r .status "$WRITES")" = closed ] && ! grep -q 'NOT written' "$LOG"; then
   ok "(q) a close the store did not take is said not written and run again at the same HEAD (a re-gate)"
 else bad "(q) close: C1=$C1 CL=$CL writes=$(cat "$WRITES") log=$(cat "$LOG")"; fi
+
+# (r) a run output past the kernel's argument size is read as any other: the named test passes alone, the gap closes
+reset "$(row g-big x src/a.test.ts "$GEN" '["d > a"]')"
+{ head -c 3000000 /dev/zero | tr '\0' 'x' | fold -w 200; printf '\n(pass) d > a\n 1 pass\n 0 fail\n'; } > "$FAKE/a.test.ts.out"
+close_failing_test_gaps x ffffffffffffffff "$DIR" 2> "$T/r.err"
+if [ "$(jq -r 'select(.gap_id == "g-big") | .status' "$WRITES" 2>/dev/null | tail -1)" = closed ] && ! grep -q 'Argument list too long' "$T/r.err" "$LOG"; then
+  ok "(r) a run output past the argument size is judged: the gap closes"
+else bad "(r) writes=$(head -c 300 "$WRITES") err=$(head -c 300 "$T/r.err") log=$(head -c 300 "$LOG")"; fi
 
 [ "$FAILS" = 0 ] && { echo "PASS - pull-sync closes a generator gap once its named tests pass alone, and only then"; exit 0; }
 echo "$FAILS FAILED"; exit 1

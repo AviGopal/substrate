@@ -818,8 +818,8 @@ gen_failing_test_gaps() {
     # A run that printed no bun summary (unloadable alone, crashed, timed out) proves nothing: neither red nor
     # polluted. A name is red on "(fail) <name>" and polluted only on POSITIVE "(pass) <name>".
     if ! printf '%s\n' "$ao" | command grep -qE '^ *[0-9]+ (pass|fail)$'; then log "$v: failing-test generator: alone run of $tf produced no result; not filing $id, not marking polluted"; continue; fi
-    keep="$(printf '%s' "$p" | jq -c --arg ao "$ao" '($ao | split("\n")) as $L | [.impulse.pointer.gap.classification_metadata.evidence_resolve.input.only_tests[] | select(("(fail) " + .) as $x | $L | index($x))]')"
-    passed="$(printf '%s' "$p" | jq -r --arg ao "$ao" '($ao | split("\n")) as $L | .impulse.pointer.gap.classification_metadata.evidence_resolve.input.only_tests[] | select(("(pass) " + .) as $x | $L | index($x))')"
+    keep="$(printf '%s' "$p" | jq_ao "$ao" -c '($ao | split("\n")) as $L | [.impulse.pointer.gap.classification_metadata.evidence_resolve.input.only_tests[] | select(("(fail) " + .) as $x | $L | index($x))]')"
+    passed="$(printf '%s' "$p" | jq_ao "$ao" -r '($ao | split("\n")) as $L | .impulse.pointer.gap.classification_metadata.evidence_resolve.input.only_tests[] | select(("(pass) " + .) as $x | $L | index($x))')"
     [ -n "$passed" ] && printf '%s\n' "$passed" >> "$poll" 2>/dev/null
     if [ "$keep" = "[]" ] || [ -z "$keep" ]; then
       if [ -n "$passed" ]; then log "$v: failing-test generator: $tf passes when run ALONE (suite-only failure: cross-file mock pollution); not filing $id"
@@ -876,7 +876,7 @@ close_failing_test_gaps() {
       ao="$(cd "$dir" && scrubbed_env "$ar" timeout --kill-after=15 150 "$BUN_BIN" test "./$tf" --timeout 20000 > "$ar.out" 2>&1; cat "$ar.out"; rm -f "$ar.out")"
       ao="$(printf '%s\n' "$ao" | sed 's/\x1b\[[0-9;]*m//g; s/ \[[0-9.]*m*s\]$//; s/[[:space:]]*$//')"
       rm -rf "$ar" 2>/dev/null
-      runs="$(printf '%s' "$runs" | jq -c --arg tf "$tf" --arg ao "$ao" '. + {($tf): $ao}')"
+      runs="$(printf '%s' "$runs" | jq_ao "$ao" -c --arg tf "$tf" '. + {($tf): $ao}')"
     fi
     jq -c --arg id "$id" --arg head "${head:0:10}" --argjson at "$(date +%s%N)" '. + {($id): {head: $head, at: $at}}' "$seen" > "$seen.new" 2>/dev/null && mv "$seen.new" "$seen"
     # A row this run was due to write and the store did not take is not seen: the gap runs again the next time this
@@ -915,7 +915,7 @@ close_failing_test_gaps() {
       else log "$v: failing-test closer: $id names tests absent from $tf at ${head:0:10}; the not-checkable row was NOT written; runs again the next time $v is gated (a new HEAD, or a re-gate of this one)"; unsee; fi
       continue
     fi
-    names="$(printf '%s' "$g" | jq -r --arg ao "$ao" '($ao | split("\n")) as $L
+    names="$(printf '%s' "$g" | jq_ao "$ao" -r '($ao | split("\n")) as $L
       | [.names[] | select(("(pass) " + .) as $x | $L | index($x)) | select(("(fail) " + .) as $x | $L | index($x) | not)] as $ok
       | if ($ok | length) == (.names | length) then "all" else "\($ok | length)/\(.names | length)" end')"
     if [ "$names" != "all" ]; then
@@ -1076,6 +1076,19 @@ lift_held_gaps_each() {
     lift_held_gaps "$v" "$(git -C "$cl/$v" rev-parse HEAD 2>/dev/null)" "$cl/$v" || true
   done
   return 0
+}
+
+# jq with a test run's whole output as $ao, read from a file. An argument is bounded by the kernel's argument size and a
+# run's output is not: passed as --arg, a long one failed with "Argument list too long" (node1, 11-14 01:57, local-tools)
+# and the closer and the generator judged the gap on nothing. The output reaches this function inside bash (no exec), and
+# the file is removed after. stdin passes through to jq.
+jq_ao() { # <run output> <jq args...>
+  local f rc
+  f="$(mktemp "${TMPDIR:-/tmp}/pullsync-ao-XXXXXX")" || return 1
+  printf '%s' "$1" > "$f"; shift
+  jq --rawfile ao "$f" "$@"; rc=$?
+  rm -f "${f:?}"
+  return $rc
 }
 
 # A FAILING-TEST GAP FILED BEFORE ITS ROW NAMED A REPOSITORY gets one row that does. The walk makes a clone for a gap only
