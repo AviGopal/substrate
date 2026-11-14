@@ -858,7 +858,7 @@ close_failing_test_gaps() {
     | select(.classification_metadata.evidence_resolve.shape? == "test_suite")
     | select(((.classification_metadata.evidence_resolve.input.vessel // "") | sub("^repos/"; "")) == $v)
     | {id, tf: .classification_metadata.evidence_resolve.input.test_file, names: (.classification_metadata.evidence_resolve.input.only_tests // []),
-       baseline: .classification_metadata.baseline}
+       baseline: .classification_metadata.baseline, category, severity, meta: .classification_metadata}
     | select((.tf // "") != "" and (.names | length) > 0)
     | . + {last: (($seen[0] // {})[.id] // {at: 0, head: ""})}
     | select(.last.head != $head)]
@@ -880,10 +880,66 @@ close_failing_test_gaps() {
     fi
     jq -c --arg id "$id" --arg head "${head:0:10}" --argjson at "$(date +%s%N)" '. + {($id): {head: $head, at: $at}}' "$seen" > "$seen.new" 2>/dev/null && mv "$seen.new" "$seen"
     if ! printf '%s\n' "$ao" | command grep -qE '^ *[0-9]+ (pass|fail)$'; then log "$v: failing-test closer: alone run of $tf produced no result; $id left open"; continue; fi
+    # A named test the file no longer has (renamed or removed since the gap was filed) neither passes nor fails. Counted
+    # as red, the gap could never close, and the walk was sent to change the source to make a test pass that does not
+    # exist. So the closer says what it found: the gap is not checkable here (check_runnable false, which records'
+    # open-gap read leaves out), with the names it could not find and the HEAD it ran at. A name is absent only when the
+    # run names it in neither "(pass)" nor "(fail)" AND the file's source does not hold its test's title (the part after
+    # the last " > "): a file that fails to load names no test at all, and its gaps are red, not absent. And a run that
+    # broke before its tests (an error summary line, an unhandled error, a hook's "(unnamed)" failure) proves nothing
+    # absent. Written once per set of names.
+    local absent="[]" nm
+    printf '%s\n' "$ao" | command grep -qE '^ *[0-9]+ errors?$|^# Unhandled error|^\(fail\) .*\(unnamed\)$' \
+      || while IFS= read -r nm; do
+      [ -n "$nm" ] || continue
+      printf '%s\n' "$ao" | command grep -qxF -e "(pass) $nm" -e "(fail) $nm" && continue
+      command grep -qF -- "${nm##* > }" "$dir/$tf" && continue
+      absent="$(printf '%s' "$absent" | jq -c --arg n "$nm" '. + [$n]')"
+    done < <(printf '%s' "$g" | jq -r '.names[]')
+    if [ "$absent" != "[]" ]; then
+      # Said once per set of names while the mark holds: a later row that made the gap checkable again (a person's r 1
+      # release drops check_runnable) leaves names_absent as it was, and the names still absent are said again.
+      if [ "$(printf '%s' "$g" | jq -c '.meta.names_absent // null')" = "$absent" ] && [ "$(printf '%s' "$g" | jq -r '.meta.check_runnable')" = false ]; then log "$v: failing-test closer: $id names tests absent from $tf (already said); left open, not checkable"; continue; fi
+      emit_gap "$(printf '%s' "$g" | jq -c --arg v "$v" --arg tf "$tf" --arg head "${head:0:10}" --argjson absent "$absent" \
+        '{impulse:{pointer:{type:"substrateGap_write",gap:{id:.id,category:(.category // "failing_test"),source:"substrate_detected",status:"open",
+          check_runnable:false,
+          summary:("Not checkable here: the tests this gap names (" + ($absent | join("; ")) + ") are not in repos/" + $v + "/" + $tf
+            + " at " + $head + ", so its check can neither pass nor fail. It is not worked until a test that checks it is named; the source is left as it is."),
+          classification_metadata:((.meta // {}) + {check_runnable:false, names_absent:$absent, absent_at_head:$head})}
+          + (if .severity then {severity:.severity} else {} end)}}}')"
+      log "$v: failing-test closer: $id names $(printf '%s' "$absent" | jq length) test(s) absent from $tf at ${head:0:10}; marked not checkable"
+      continue
+    fi
     names="$(printf '%s' "$g" | jq -r --arg ao "$ao" '($ao | split("\n")) as $L
       | [.names[] | select(("(pass) " + .) as $x | $L | index($x)) | select(("(fail) " + .) as $x | $L | index($x) | not)] as $ok
       | if ($ok | length) == (.names | length) then "all" else "\($ok | length)/\(.names | length)" end')"
-    if [ "$names" != "all" ]; then log "$v: failing-test closer: $id still red alone ($names named tests pass); left open"; continue; fi
+    if [ "$names" != "all" ]; then
+      # Every name is there again but not all pass: a gap this closer marked not checkable is worked again, said once
+      # (the mark ends by the closer's own row, so no gap stays out of the walk once its tests are back). Not a gap a
+      # person ruled against (claim_rejected_by, lift_held_gaps): its check_runnable false is the person's, which only a
+      # reviewed test fix ends, and this closer's mark ending does not end it.
+      if [ "$(printf '%s' "$g" | jq -c '.meta.names_absent // null')" != null ] && [ "$(printf '%s' "$g" | jq -c '.meta.claim_rejected_by // null')" != null ]; then
+        emit_gap "$(printf '%s' "$g" | jq -c --arg v "$v" --arg tf "$tf" --arg head "${head:0:10}" \
+          '{impulse:{pointer:{type:"substrateGap_write",gap:{id:.id,category:(.category // "failing_test"),source:"substrate_detected",status:"open",
+            check_runnable:false,
+            summary:("The tests this gap names are in repos/" + $v + "/" + $tf + " again at " + $head + " and do not all pass. A person ruled against its claim, so it stays not checkable until a reviewed test fix."),
+            classification_metadata:((.meta // {}) + {check_runnable:false, names_absent:null, absent_at_head:null})}
+            + (if .severity then {severity:.severity} else {} end)}}}')"
+        log "$v: failing-test closer: $id names its tests again and they are red ($names pass); a person ruled against its claim, so it stays not checkable"
+        continue
+      fi
+      if [ "$(printf '%s' "$g" | jq -c '.meta.names_absent // null')" != null ]; then
+        emit_gap "$(printf '%s' "$g" | jq -c --arg v "$v" --arg tf "$tf" --arg head "${head:0:10}" \
+          '{impulse:{pointer:{type:"substrateGap_write",gap:{id:.id,category:(.category // "failing_test"),source:"substrate_detected",status:"open",
+            check_runnable:true,
+            summary:("The tests this gap names are in repos/" + $v + "/" + $tf + " again at " + $head + " and do not all pass: it is checkable, and worked, again."),
+            classification_metadata:((.meta // {}) + {check_runnable:true, names_absent:null, absent_at_head:null})}
+            + (if .severity then {severity:.severity} else {} end)}}}')"
+        log "$v: failing-test closer: $id names its tests again and they are red ($names pass); checkable again"
+        continue
+      fi
+      log "$v: failing-test closer: $id still red alone ($names named tests pass); left open"; continue
+    fi
     # A gap a person released carries the test file's size when released (lift_held_gaps): green by losing a case or
     # an expect is not a fix, so it stays open.
     if [ "$(printf '%s' "$g" | jq -r '.baseline | type')" = object ]; then

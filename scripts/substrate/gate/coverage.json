@@ -2384,7 +2384,7 @@
     },
     "/usr/local/bin/substrate-pull-sync": {
       "src": "scripts/substrate/substrate-pull-sync.sh",
-      "src_blob": "a3396b70e4ec74c24e717be96b7e2b9d6a8e526f",
+      "src_blob": "94aaaf77012574296b9e132dc7468d5753461eec",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -2393,7 +2393,7 @@
       "evidence": {
         "accepted": "ac413feeaa16e68dde1a169a9d7748fd28d95ce8",
         "mutation": "insert `exit 99` after line 1",
-        "mutated_blob": "ccb52755300cfaae2ba4fda0abadb396c8b31848"
+        "mutated_blob": "12aa091903f2829d5d8716fbb6de0f0a444d85d9"
       }
     },
     "/usr/local/bin/substrate-ready": {
