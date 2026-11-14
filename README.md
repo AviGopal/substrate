@@ -172,7 +172,7 @@ surface at `http://localhost:18310/`.
 | Profile | Runs | Local data | Resolves remotely | Use it for |
 |---|---|---|---|---|
 | `standalone` (root default) | everything: store, control, api, models, compute, ui, transport, autonomy | all of it | nothing | one self-contained substrate |
-| `hub` | registry, identity, trace store + learner, stores, models, transport + relay, plus goal-host, development, local-tools, ribosome, and the self-development loop (autonomy) | the network's learning state and gap store | nothing | the network's home; it dispatches and self-develops next to its posteriors (its landings still need push capability) |
+| `hub` | registry, identity, trace store + learner, stores, models, transport + relay, plus goal-host, development, and the self-development loop (autonomy) | the network's learning state and gap store | nothing | the network's home; it dispatches and self-develops next to its posteriors (its landings still need push capability) |
 | `hub-minimal` | the `hub` role without compute | as `hub` | goal execution (a spoke) | a control-plane or relay-only node |
 | `spoke` (remote-anchor default) | registry (local), compute, ui, transport | the host's files and tools (why the spoke exists) | identity, traces, learning, lessons, LLM arms, from the hub | adding compute or local data to a network |
 | `surface` | registry, transport, human surface | none | everything | a human's local window onto a network |
