@@ -35,7 +35,8 @@ cp "$ROOT/scripts/substrate/substrate-connect.sh" "$ROOT/scripts/substrate/conne
 printf '#!/usr/bin/env bash\necho %s\nexit 0\n' "'{\"port_prefix\":\"18\",\"launched_by_manifest\":true}'" > "$T/s/status-stub"
 printf '#!/usr/bin/env bash\n[ "$1" = is-active ] || exit 0\ncase "$2" in activity-api.service) echo active ;; development-vessel.service) cat %q 2>/dev/null || echo inactive ;; *) echo inactive ;; esac\n' "$T/devvessel" > "$T/stub/systemctl"
 chmod +x "$T/s/status-stub" "$T/stub/systemctl"
-KEY=fixture-not-a-real-key-0001; EP=http://127.0.0.1:18080; GS=http://127.0.0.1:18090
+# EP: the fleet discovery the client is handed, <prefix>100 (the trace store it once named is retired).
+KEY=fixture-not-a-real-key-0001; EP=http://127.0.0.1:18100; GS=http://127.0.0.1:18090
 printf 'METABOB_API_KEY=%s\n' "$KEY" > "$T/env"
 E=(env HOME="$T/home" PATH="$T/stub:$PATH" SUBSTRATE_STATUS_BIN="$T/s/status-stub" SUBSTRATE_ENV_FILE="$T/env")
 

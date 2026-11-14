@@ -24,11 +24,11 @@
 # refuses (non-zero exit, no key printed, the verdict on stderr) until that level
 # passes. A placeholder or a key identity has not accepted yet is never printed.
 #
-# The endpoint is this fleet's published trace-store port, computed by the verdict
-# with the launch manifest's own precedence: the deprecated ACTIVITY_API_PORT when
-# the launcher set it, else `<prefix>080` from SUBSTRATE_PORT_PREFIX. A fleet that
-# runs no trace store of its own (a spoke) points the client at the one it resolves
-# against, its hub's.
+# The endpoint is this fleet's discovery, published at `<prefix>100` from
+# SUBSTRATE_PORT_PREFIX: every shape the fleet serves, or resolves from its peers, is
+# reached through it. (It was the trace store's `<prefix>080`; the trace store is
+# retired.) A spoke's own discovery resolves through its hub, so a spoke hands out
+# its own as well.
 #
 # The client reads its config by one rule (the cockpit's, not ours to change):
 # METABOB_CONFIG_PATH overrides everything; otherwise a `.metabob/config.json` in the
@@ -81,27 +81,11 @@ KEY="$(envval METABOB_API_KEY)"
 [ -n "$KEY" ] || { echo "[connect] refusing: METABOB_API_KEY is empty after seeding" >&2; exit 1; }
 PREFIX="$(printf '%s' "$VERDICT" | jq -r '.port_prefix // empty' 2>/dev/null)"
 PREFIX="${PREFIX:-18}"
-HOST_PORT="$(printf '%s' "$VERDICT" | jq -r '.trace_host_port // empty' 2>/dev/null)"
-HOST_PORT="${HOST_PORT:-${PREFIX}080}"
-if printf '%s' "$VERDICT" | jq -e '(.deprecated_port_aliases // []) | index("ACTIVITY_API_PORT")' >/dev/null 2>&1; then
-  echo "[connect] WARNING: ACTIVITY_API_PORT is deprecated in favour of SUBSTRATE_PORT_PREFIX; honouring it (host port $HOST_PORT) as the launch manifest does" >&2
-fi
 if printf '%s' "$VERDICT" | jq -e '.launched_by_manifest == false' >/dev/null 2>&1; then
   echo "[connect] WARNING: this container was not launched by the launch manifest, so its host port mapping cannot be seen from here; the endpoint below assumes the default mapping" >&2
 fi
 
-if [ "$(systemctl is-active activity-api.service 2>/dev/null || true)" = "active" ]; then
-  ENDPOINT="http://127.0.0.1:${HOST_PORT}"
-else
-  ENDPOINT="$(envval ACTIVITY_API_ENDPOINT)"
-  case "$ENDPOINT" in
-    ""|*://127.0.0.1*|*://localhost*)
-      ENDPOINT="http://127.0.0.1:${HOST_PORT}"
-      echo "[connect] WARNING: this fleet runs no trace store and resolves against none a client can reach; the endpoint below will not answer until one is published" >&2 ;;
-    *)
-      echo "[connect] this fleet runs no trace store of its own; the client is pointed at the one it resolves against: $ENDPOINT" >&2 ;;
-  esac
-fi
+ENDPOINT="http://127.0.0.1:${PREFIX}100"
 
 # The gap store a client's pre-commit glue gate reads (run-glue-tests.sh --gap-store client-config):
 # development-vessel's substrateGap resolver, published at <prefix>090. Top-level "substrate", not
