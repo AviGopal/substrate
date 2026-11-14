@@ -500,11 +500,12 @@ async function proxyToLocalOwner(pointer: any): Promise<any> {
   return proxyToVessel(pointer, t, owner)
 }
 
-// The status an answer is given with when an owning vessel refused it: the owner's own, carried as failure.status by
-// proxyToVessel, wherever the answer sits (bare, or inside a peer's {content} envelope). undefined when no owner refused.
+// The status an answer is given with when an owning vessel refused it: the owner's own, carried as owner_status by
+// proxyToVessel's refusal branch and by nothing else, wherever the answer sits (bare, or inside a peer's {content}
+// envelope). undefined when no owner refused. An answer's own content is never read for it: a 2xx answer whose body
+// holds a failure-shaped row (a failure record, a step result, a tool's refusal object) is an answer, and crosses as 200.
 function ownerStatus(res: any): number | undefined {
-  const f = res?.failure ?? res?.content?.failure
-  const s = Number(f?.status)
+  const s = Number(res?.owner_status ?? res?.content?.owner_status)
   return Number.isInteger(s) && s >= 400 && s <= 599 ? s : undefined
 }
 
@@ -550,11 +551,11 @@ async function proxyToVessel(pointer: any, t: string, owner: any): Promise<any> 
   // The owning vessel refused (a 4xx, or failed with a 5xx): that is carried as its status and its reason, never folded
   // into a body like an answer. Folded, records' 403 ("cross-node writes wait for person marking") reached the remote
   // caller as a 200 whose body held the refusal, and a refused write read as a stored one. Whoever answers the caller
-  // (ownerStatus) answers with this status.
+  // (ownerStatus) answers with this status, read from owner_status, which only this branch sets.
   if (!rr.ok) {
     const said = rj?.failure ?? rj
     const reason = typeof said?.body === 'string' ? said.body : typeof rj?.error === 'string' ? rj.error : JSON.stringify(said).slice(0, 2000)
-    return { shape: t, produced_by: owner.vesselId + '@' + VESSEL_ID, failure: { status: rr.status, body: reason }, note: 'refused by the owning vessel on the peer substrate' }
+    return { shape: t, produced_by: owner.vesselId + '@' + VESSEL_ID, owner_status: rr.status, failure: { status: rr.status, body: reason }, note: 'refused by the owning vessel on the peer substrate' }
   }
   // Normalize the two local envelope styles ({success,shape,body} / {content}) into
   // one content payload so the remote caller's resolve parsing stays uniform.

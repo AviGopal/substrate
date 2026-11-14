@@ -9,7 +9,10 @@
 // with a stub owner that answers one shape normally and refuses another the way records does (403,
 // {failure: {status, body}}). Asserted, for the refused shape: the lpStream ingress answer carries failure {status 403,
 // the reason}; POST /v2/impulses/resolve answers 403 with the reason; /egress/resolve to self answers 403 with the
-// reason. For the answered shape, every path still answers 200 with the owner's body.
+// reason. For the answered shape, every path still answers 200 with the owner's body. And an answer whose content
+// holds a failure-shaped object (a 2xx from the owner with a top-level {failure: {status: 403}}, and a peer whose answer
+// is such a row) still crosses as 200: the status comes from the transport's own mark of an owner's non-2xx, never from
+// what an answer contains.
 //
 // SAFETY and NEEDS: as fed-ingress-log.test.ts (loopback only, stubs in this process, a private state dir, the
 // federation-relay libp2p dependencies or a FAIL, never a skip).
@@ -26,7 +29,7 @@ const DEP_CANDIDATES = [
   '/usr/local/share/substrate/super-repo/scripts/substrate/federation-relay/node_modules',
   join(PKG_DIR, 'node_modules'),
 ]
-const OWNED = new Set(['fedstatus_ok', 'fedstatus_refused'])
+const OWNED = new Set(['fedstatus_ok', 'fedstatus_refused', 'fedstatus_rowlike'])
 const REASON = 'cross-node writes wait for person marking'
 
 let work = ''
@@ -109,6 +112,8 @@ beforeAll(async () => {
       const b: any = await req.json().catch(() => ({}))
       // records' own refusal, as it answers one: {failure: {status, body}} with that status
       if (String(b?.type) === 'fedstatus_refused') return Response.json({ failure: { status: 403, body: REASON } }, { status: 403 })
+      // an answer (200) that happens to be failure-shaped: a failure row, a tool's refusal object
+      if (String(b?.type) === 'fedstatus_rowlike') return Response.json({ failure: { status: 403, body: 'a failure-shaped row' } })
       return Response.json({ success: true, shape: String(b?.type ?? ''), body: { answer: 42 } })
     },
   })
@@ -204,4 +209,28 @@ test('an answered shape still crosses as a 200 with the owner\'s body (a guard)'
     body: JSON.stringify({ impulse: { pointer: { type: 'fedstatus_ok', q: 'self' } } }),
   })
   expect(self.status).toBe(200)
+}, 30_000)
+
+test('an answer holding a failure-shaped object is an answer: 200 on every path (owner and relayed peer)', async () => {
+  const local = await fetch(`http://127.0.0.1:${healthPort}/v2/impulses/resolve`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ impulse: { pointer: { type: 'fedstatus_rowlike', q: 'local' } } }),
+  })
+  expect(local.status).toBe(200)
+  const self = await fetch(`http://127.0.0.1:${healthPort}/egress/resolve?target=${encodeURIComponent(serverPeer)}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ impulse: { pointer: { type: 'fedstatus_rowlike', q: 'self' } } }),
+  })
+  expect(self.status).toBe(200)
+  // A peer (the test's own node) whose answer is a failure-shaped row at the top of its content.
+  await pkg.serveResolve(client, async () => ({ shape: 'fedstatus_peerrow', failure: { status: 403, body: 'a failure-shaped row' } }))
+  const peerAddr = (client.node.getMultiaddrs() as any[]).map(String).find((m: string) => m.startsWith('/ip4/127.0.0.1/tcp/'))
+  expect(peerAddr).toBeDefined()
+  const viaPeer = await fetch(`http://127.0.0.1:${healthPort}/egress/resolve?target=${encodeURIComponent(String(peerAddr))}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ impulse: { pointer: { type: 'fedstatus_peerrow', q: 'peer' } } }),
+  })
+  const vb: any = await viaPeer.json()
+  expect(vb?.content?.failure?.status).toBe(403)
+  expect(viaPeer.status).toBe(200)
 }, 30_000)
