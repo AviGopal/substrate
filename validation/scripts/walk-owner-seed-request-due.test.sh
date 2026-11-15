@@ -86,9 +86,18 @@ server.stop(true);
 let failed = 0;
 const leg = (ok: boolean, what: string) => { console.log(`${ok ? "ok  " : "FAIL"} - ${what}`); if (!ok) failed++; };
 const schema = (t: string) => rows.find((r) => r.shape === "shape_schema" && r.target === t);
-// The few JSON Schema rules these schemas use: type object, required, anyOf of required, number bounds.
+// The few JSON Schema rules these schemas use: type object, required, anyOf of required, number bounds, and (for
+// change_wanted) if/then, a const, a minLength, and a property's type as a list with null.
+const typed = (t: unknown, x: unknown): boolean => [t].flat().some((k) => k === "null" ? x === null : k === "string" ? typeof x === "string" : k === "boolean" ? typeof x === "boolean" : true);
 const fits = (s: Row, v: Row): boolean => {
   if (s.type === "object" && (typeof v !== "object" || v === null)) return false;
+  if (s.if && fits(s.if, v) && s.then && !fits(s.then, v)) return false;
+  for (const [k, sub] of Object.entries((s.properties ?? {}) as Record<string, Row>)) {
+    if (!(k in v)) continue;
+    if (sub.const !== undefined && v[k] !== sub.const) return false;
+    if (sub.type !== undefined && sub.type !== "number" && sub.type !== "object" && sub.type !== "array" && !typed(sub.type, v[k])) return false;
+    if (typeof sub.minLength === "number" && (typeof v[k] !== "string" || v[k].length < sub.minLength)) return false;
+  }
   if ((s.required ?? []).some((k: string) => !(k in v))) return false;
   if (s.anyOf && !s.anyOf.some((alt: Row) => fits(alt, v))) return false;
   for (const [k, sub] of Object.entries((s.properties ?? {}) as Record<string, Row>)) {
@@ -142,13 +151,13 @@ const cw = rows.find((r) => r.shape === "shape_schema" && r.target === "change_w
 const tools = ["git_worktree", "fs_edit", "fs_write", "code_replace_lines", "code_insert_after_line", "code_add_import", "git_commit", "git_land"];
 const pre = (tool: string, needs: string, where: Row) => rows.some((r) => r.shape === "requires" && r.for === tool && r.needs === needs && JSON.stringify(r.where) === JSON.stringify(where)
   && (needs !== "gap" || r.latest_by === "gap_id"));
-leg(!!cw && JSON.stringify(cw.inputs) === JSON.stringify(["world_changed"]) && JSON.stringify(cw.context) === JSON.stringify([{ shape: "repository", latest_by: "repo" }])
+leg(!!cw && JSON.stringify(cw.inputs) === JSON.stringify(["world_changed"]) && JSON.stringify(cw.context) === JSON.stringify([{ shape: "repository", latest_by: "repo" }, { shape: "failure", where: { refused: "schema" } }])
   && cw.schema?.properties?.wanted?.type === "boolean" && (cw.schema?.required ?? []).includes("wanted")
   && tools.every((t) => {
     const repo = t === "git_worktree" ? { repo: { "x-pointer": "repo" } } : {};
     return pre(t, "change_wanted", { wanted: true, ...repo }) && pre(t, "gap", { status: "open", ...repo });
   }),
-  "(m) change_wanted is judged from the ask and the repository rows only, and every change tool requires a wanted change or an open gap, a clone one of its own repo");
+  "(m) change_wanted is judged from the ask and the repository rows only (and its own schema refusals, for a retry), and every change tool requires a wanted change or an open gap, a clone one of its own repo");
 leg(pre("walk_trees_reclaim", "gap", { gap_id: "pull-sync-walk-trees-unreclaimed", status: "open" })
   && !rows.some((r) => r.shape === "requires" && r.for === "walk_trees_reclaim" && r.needs !== "gap"),
   "(n) walk_trees_reclaim is called only for the open walk-trees gap's own root");
@@ -191,6 +200,20 @@ leg(travel.length === 1 && travel[0].w_person === 1 && travel[0].w_lapse === 1 &
 leg(!!answer && fits(answer.schema, { text: "x", next_act: { tool: "fs_edit", target: "src/a.ts" } }) && fits(answer.schema, { text: "x" })
   && !fits(answer.schema, { text: "x", next_act: { tool: "fs_edit" } }),
   "(x) an answer may promise its next act as next_act {tool, target}; leaving it out still fits");
+const ctx = (t: string) => (schema(t)?.context ?? []) as Row[];
+const keeps = (t: string, shape: string) => ctx(t).some((c) => c?.shape === shape && c.keep === true);
+const cwSchema = schema("change_wanted");
+leg(keeps("request", "gitWorktree") && keeps("request", "change_wanted") && keeps("request", "request_acts") && keeps("answer", "request_acts")
+  && ctx("outcome").some((c) => c?.shape === "request_acts" && c.keep === true && typeof c.where === "object")
+  && ["request", "answer", "outcome"].every((t) => typeof schema(t)?.keep_share === "number" && schema(t)!.keep_share > 0 && schema(t)!.keep_share <= 1)
+  && rows.filter((r) => r.shape === "shape_schema").every((r) => r.retries_after_refusal === undefined)
+  && ["outcome", "change_wanted"].every((t) => ctx(t).some((c) => c?.shape === "failure" && c.where?.refused === "schema"))
+  && fits(cwSchema?.schema, { wanted: false, repo: null }) && fits(cwSchema?.schema, { wanted: false }) && fits(cwSchema?.schema, { wanted: true, repo: "human-surface-vessel" })
+  && !fits(cwSchema?.schema, { wanted: true, repo: null }) && !fits(cwSchema?.schema, { wanted: true })
+  && String(answer?.schema?.properties?.next_act?.description ?? "").includes("graded by what happens next"),
+  "(t) a request keeps its clone, change_wanted and acts in view; answer and outcome see its acts (the grader's as given evidence); refused judgments read why (no retry count: the walk never holds them); change_wanted needs a repo only for a change; a next_act is a promise");
+leg(["answer", "request"].every((t) => String(schema(t)?.description ?? "").startsWith("You are one step of the walk.") && String(schema(t)?.description).includes("saying you cannot act is false")),
+  "(v) the answer and request producers are told who is answering: one step of a walk that acts through the gated tools");
 const using = rows.filter((r) => r.shape === "shape_schema" && ["answer", "request", "land_verdict"].includes(String(r.target)));
 leg(using.length === 5 && using.every((r) => JSON.stringify((r.schema as Row)?.properties?.uses) === JSON.stringify({ type: "array", items: { type: "string", "x-shown": true } })
     && !((r.schema as Row)?.required ?? []).includes("uses") && String(r.description).includes("uses lists the id of each row you were shown that this relies on")),

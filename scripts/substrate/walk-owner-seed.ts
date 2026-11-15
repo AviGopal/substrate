@@ -69,10 +69,15 @@ const JSON_ONLY = "Reply with only the JSON object: no prose, no code fence.";
 // credit back past itself.
 const USES = { type: "array", items: { type: "string", "x-shown": true } };
 const USES_WORDS = "uses lists the id of each row you were shown that this relies on, and only those.";
+// Who is answering (the USER: "Both, after promise checks"): the producer is one step of a walk that acts, so "I
+// cannot act" is false while a gated tool is still uncalled. request_acts (in context) says which were called.
+const WHO_ANSWERS = "You are one step of the walk. The walk acts through the tools the owner gates on a wanted change " +
+  "(request_acts lists which were called here and which were not). While a gated tool is still uncalled here, saying " +
+  "you cannot act is false.";
 const SCHEMAS: Row[] = [
   {
     target: "answer",
-    description: "The answer to what the world_changed row's `what` field asks for. An ask that changes something is " +
+    description: `${WHO_ANSWERS} ` + "The answer to what the world_changed row's `what` field asks for. An ask that changes something is " +
       "done only when a hop row shows the change landed (a git_land call that ended). Until then say what you will do " +
       `next, never that it was done. ${USES_WORDS} ${JSON_ONLY}`,
     schema: { type: "object", required: ["text"], properties: {
@@ -82,14 +87,19 @@ const SCHEMAS: Row[] = [
       next_act: {
         type: "object", required: ["tool", "target"],
         description: "Optional. When the ask wants a change that hasn't landed: the next call you will make toward it. tool is " +
-          "the shape you will call; target is what it acts on (the file path, or the clone). Leave it out when no change is wanted.",
+          "the shape you will call; target is what it acts on (the file path, or the clone). Leave it out when no change is wanted. " +
+          "It is a promise, and it is graded by what happens next: if that call starts within the request's next few steps it " +
+          "counts for you, and if it does not, it counts against you. Promise only a call you will actually make next.",
         properties: { tool: { type: "string", minLength: 1 }, target: { type: "string", minLength: 1 } },
       },
     } },
     inputs: ["world_changed"],
     // As the grader sees them: each hop with the tool it called, joined from its started hop, so a change's edit, commit
     // and landing hops are told apart from its reads.
-    context: [{ shape: "hop", join: { on: "call_id", take: ["pointer_type"] } }],
+    // What this request has already done (the walk's request_acts: acts, tools never called here, repeats), kept in view
+    // however much newer context there is: an answer claiming a landing on a request with none is the class it answers.
+    context: [{ shape: "hop", join: { on: "call_id", take: ["pointer_type"] } }, { shape: "request_acts", keep: true }],
+    keep_share: 0.25,
   },
   {
     target: "outcome",
@@ -119,14 +129,20 @@ const SCHEMAS: Row[] = [
     // its started hop), so the grader can see whether a change landed (a git_land call that ended) before grading a
     // claim of one. The walk's own steps (produce and wait hops, started hops) are not given: records reads this same
     // entry to count a grade that saw only these as clean.
-    context: ["answer", "due", { shape: "hop", where: { phase: "ended", kind: ["call", "run"] }, join: { on: "call_id", take: ["pointer_type"] } }],
+    // Besides the answer and deadline: its own schema refusals (a refused grade is offered again, never held, and reads
+    // why), and what the request has done (request_acts) as given
+    // evidence (where: {}), so a grader shown "no gated tool ended ok" cannot honestly say reached, and stays clean.
+    context: ["answer", "due", { shape: "hop", where: { phase: "ended", kind: ["call", "run"] }, join: { on: "call_id", take: ["pointer_type"] } },
+      { shape: "failure", where: { refused: "schema" } }, { shape: "request_acts", where: {}, keep: true }],
+    keep_share: 0.25,
+
     // asks {x-inputs}: described-shape binds it to the world_changed row it was given, so the read names only this
     // request's lapsed deadline, never another request's.
     reads: [{ type: "record_lapsed", deadline_shape: "due", answer_shape: "answer", asks: { "x-inputs": true } }],
   },
   {
     target: "request",
-    description: "The next call toward what the world_changed row's `what` asks, whether it reads something or changes " +
+    description: `${WHO_ANSWERS} ` + "The next call toward what the world_changed row's `what` asks, whether it reads something or changes " +
       "something (a clone made for a change, an edit, a commit, a diff, a landing): pointer.type is the shape to " +
       "resolve, and pointer's other fields are its arguments. The shapes you can call are in reads: shape_descriptions " +
       "says what each does, and shape_inputs gives the JSON Schema of the fields its pointer takes; fill every required " +
@@ -162,7 +178,13 @@ const SCHEMAS: Row[] = [
     // root's context from that root's own episode, so these are this request's, newest per repository; small, and kept
     // when older hops fall out of the context budget.
     context: ["hop", "failure", "answer", "outcome", { shape: "fileContent", whole: true, latest_by: "path", covers: { shape: "hop", on: "call_id" } },
-      { shape: "gitWorktree", latest_by: "repo" }, { shape: "change_wanted", latest_by: "repo" }],
+      { shape: "gitWorktree", latest_by: "repo", keep: true }, { shape: "change_wanted", latest_by: "repo", keep: true },
+      { shape: "request_acts", keep: true }],
+    // keep: true has described-shape fit those rows first, within keep_share of its context budget, so an hour-old
+    // request's clone stays in view (the USER: "Build now, first (Recommended)"); a quarter is room for one small row per
+    // repository each without crowding out the newest failure a retry reads.
+    keep_share: 0.25,
+
     // declared: only shapes whose producer declared their inputs, the ones a request can fill (discovery resolvers.ts).
     // gap: every detector gap row, opening and closing alike, so a closed gap is seen as closed.
     reads: [{ type: "shapeDescriptions", declared: true }, { type: "record_read", shape: "gap" }],
@@ -291,10 +313,15 @@ SCHEMAS.push({
   schema: {
     type: "object",
     required: ["wanted"],
-    properties: { wanted: { type: "boolean" }, what: { type: "string" }, repo: { type: "string" } },
+    // repo may be null or absent when no change is wanted; a wanted change must name its repo. The refusal a judge can
+    // then get is only the true one (a wanted change with no repo), not a stricter-than-meant type error on null.
+    properties: { wanted: { type: "boolean" }, what: { type: "string" }, repo: { type: ["string", "null"] } },
+    if: { properties: { wanted: { const: true } }, required: ["wanted"] },
+    then: { required: ["repo"], properties: { repo: { type: "string", minLength: 1 } } },
   },
   inputs: ["world_changed"],
-  context: [{ shape: "repository", latest_by: "repo" }],
+  // Its own refusals too: the walk offers a refused judgment again (never held), and it reads why.
+  context: [{ shape: "repository", latest_by: "repo" }, { shape: "failure", where: { refused: "schema" } }],
 });
 const asked = SCHEMAS.find((s) => s.target === "request") as Row;
 SCHEMAS.push({ ...asked, variant: "gap", inputs: ["gap"] });

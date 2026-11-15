@@ -25,6 +25,6 @@ mk; echo '{}' > "$T/c/$S/vessels.inventory.json"; red "(b) an inventory replaced
 mk; sed -i '1a exit 99' "$T/c/$S/walk-owner-seed.ts"; red "(c) a seeder that exits 99 after line 1"
 mk; sub '  for (const r of repos) await ensure(r, { repo: r.repo }, `repository ${r.repo}`);' '' && red "(d) a seeder that writes no repository rows"
 mk; sub '    retired: us.every((u) => u.retired === true),' '    retired: false,' && red "(e) a seeder that ignores the retired state"
-mk; sub '  context: [{ shape: "repository", latest_by: "repo" }],' '  context: [],' && red "(f) a change_wanted schema with no repository context"
+mk; sub '  context: [{ shape: "repository", latest_by: "repo" }, { shape: "failure", where: { refused: "schema" } }],' '  context: [{ shape: "failure", where: { refused: "schema" } }],' && red "(f) a change_wanted schema with no repository context"
 mk; sub '      if (named.has(repo) || r.retired === true) continue;' '      continue;' && red "(g) a seeder that keeps a removed repository live"
 echo; [ "$FAILS" = 0 ] && { echo PASS; exit 0; } || { echo "$FAILS failure(s)"; exit 1; }
