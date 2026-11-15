@@ -29,7 +29,7 @@ FAILS=0
 ok()  { echo "ok   - $*"; }
 bad() { echo "FAIL - $*"; FAILS=$((FAILS+1)); }
 
-for fn in seed_units seed_script apply_reseeded_seeds seed_gap check_seed_applies; do
+for fn in seed_units seed_script seed_inputs apply_changed_seeds apply_reseeded_seeds seed_gap check_seed_applies; do
   sed -n "/^$fn() {/,/^}/p" "$SCRIPT" >> "$T/fn.sh"
   grep -q "^$fn() {" "$T/fn.sh" || { echo "FAIL - could not extract $fn"; exit 1; }
 done
@@ -163,36 +163,53 @@ mark b4; state failed exit-code; : > "$T/lose"; reset_run; check_seed_applies
 rm -f "$T/lose"; reset_run; check_seed_applies
 [ "$(gaps)" = '{"status":"open","blob":"b4"}' ] && ok "[MUST-FAIL] next tick the open row is written again" || bad "retried open: $(gaps)"
 
-# THE SCRIPT'S ORDER. pull-sync runs top to bottom, so a seed function called at top level before its definition line
-# does not exist yet ("command not found", the HEAD-moved reseed's first form). Every top-level call of each seed
-# function comes after its definition.
+# THE SCRIPT'S ORDER. pull-sync runs top to bottom, so a function called at top level before its definition line does
+# not exist yet ("command not found": the HEAD-moved reseed called apply_reseeded_seeds about 150 lines too early).
+# Each top-level call of the per-tick seed steps comes after its definition.
 order_ok=1
-for fn in apply_reseeded_seeds check_seed_applies; do
+for fn in apply_changed_seeds check_seed_applies; do
   def="$(grep -n "^$fn() {" "$SCRIPT" | head -1 | cut -d: -f1)"
-  first="$(grep -nE "(^|[[:space:];&|])$fn( |\$|$)" "$SCRIPT" | grep -v "^$def:" | grep -vE ':[[:space:]]*#' | head -1 | cut -d: -f1)"
-  [ -n "$def" ] && [ -n "$first" ] && [ "$first" -gt "$def" ] || { order_ok=0; echo "  $fn: defined at ${def:-?}, first called at ${first:-?}"; }
+  first="$(grep -nE "^$fn\$" "$SCRIPT" | head -1 | cut -d: -f1)"
+  [ -n "$def" ] && [ -n "$first" ] && [ "$first" -gt "$def" ] || { order_ok=0; echo "  $fn: defined at ${def:-?}, called at ${first:-?}"; }
 done
-[ "$order_ok" = 1 ] && ok "[MUST-FAIL] each seed function is called only after the line that defines it" || bad "a seed function is called before it exists"
+! grep -nE "^\[.*\] && apply_reseeded_seeds|^apply_reseeded_seeds( |$)" "$SCRIPT" | grep -q . || order_ok=0
+[ "$order_ok" = 1 ] && ok "[MUST-FAIL] the per-tick seed steps are called after their definitions, and nothing calls apply_reseeded_seeds at top level" \
+  || bad "a seed step is called before it exists"
 
-# A GATED NODE: acceptance comes on a tick with no HEAD move, through reseed_run_dir_on_promote. It must collect the
-# scripts whose accepted copy changed (RESEEDED_SEEDS), so the seed is run again; an accept that changes no seed collects
-# nothing.
-sed -n "/^reseed_run_dir_on_promote() {/,/^}/p" "$SCRIPT" > "$T/promote.sh"
-. "$T/promote.sh"
+# ── 4. every tick, compare-based (heals on its own) ──────────────────────────
+echo enabled > "$STUB_ST/walk-owner-seed.service.enabled"; rm -f "$T/markers"/seed-*
+# a node that never ran this: the seed is run once, which records what it ran over
+reset_run; apply_changed_seeds
+grep -qx "restart --no-block walk-owner-seed.service" "$T/calls" && [ -s "$T/markers/seed-blob.walk-owner-seed.service" ] \
+  && ok "[MUST-FAIL] no record: the seed is run, and what it ran over is recorded" || bad "first tick: $(tr '\n' '|' < "$T/calls")"
+reset_run; apply_changed_seeds
+! grep -q restart "$T/calls" && ok "[MUST-FAIL] the same inputs next tick: not run again" || bad "re-ran unchanged: $(tr '\n' '|' < "$T/calls")"
+# a run-dir copy newer than the record, made by any path (no copy this tick): run on the next tick
+echo "// accepted later" >> "$T/run/walk-owner-seed.ts"
+reset_run; apply_changed_seeds
+grep -qx "restart --no-block walk-owner-seed.service" "$T/calls" && ok "[MUST-FAIL] a run-dir script newer than the record is run on the next tick, with no copy that tick" || bad "newer blob not run"
+# the inventory it reads changed: run again too
+echo '{}' > "$T/run/vessels.inventory.json"; reset_run; apply_changed_seeds
+grep -q "restart --no-block walk-owner-seed.service" "$T/calls" && ok "a changed inventory in the run dir runs it again" || bad "inventory change not run"
+# a restart that could not be queued records nothing: the next tick tries again
+echo "// once more" >> "$T/run/walk-owner-seed.ts"; : > "$STUB_ST/walk-owner-seed.service.norestart"
+reset_run; apply_changed_seeds; rm -f "$STUB_ST/walk-owner-seed.service.norestart"
+reset_run; apply_changed_seeds
+grep -qx "restart --no-block walk-owner-seed.service" "$T/calls" && ok "[MUST-FAIL] a restart not queued records nothing: the next tick runs it" || bad "failed restart marked"
+
+# ── 5. a gated node's accept, end to end ─────────────────────────────────────
+# Acceptance comes on a tick with no HEAD move: reseed_run_dir_on_promote copies the accepted scripts into the run dir.
+# The next compare runs the seed whose copy changed. (3fe10231's test never went through this path; that is how the
+# missing call passed two reviews.)
+sed -n "/^reseed_run_dir_on_promote() {/,/^}/p" "$SCRIPT" > "$T/promote.sh"; . "$T/promote.sh"
 A="$T/accepted"; G="$T/gate"; mkdir -p "$A/scripts/substrate" "$G"
-cp "$T/run/walk-owner-seed.ts" "$A/scripts/substrate/walk-owner-seed.ts"; echo "// other" > "$A/scripts/substrate/other.ts"
-cp "$A/scripts/substrate/other.ts" "$T/run/other.ts"
-PULLSYNC_ACCEPTED_DIR="$A"; PULLSYNC_GATE_DIR="$G"; RUN_DIR="$T/run"
-printf '%040d\n' 1 > "$G/accepted.sha"; RESEEDED_SEEDS=""; reseed_run_dir_on_promote
-[ -z "$(echo $RESEEDED_SEEDS)" ] && ok "an accept that changes no seed collects nothing" || bad "unchanged accept collected: $RESEEDED_SEEDS"
-echo "// accepted change" >> "$A/scripts/substrate/walk-owner-seed.ts"
-printf '%040d\n' 2 > "$G/accepted.sha"; RESEEDED_SEEDS=""; reseed_run_dir_on_promote
-[ "$(echo $RESEEDED_SEEDS)" = "walk-owner-seed.ts" ] && cmp -s "$A/scripts/substrate/walk-owner-seed.ts" "$T/run/walk-owner-seed.ts" \
-  && ok "[MUST-FAIL] a gated accept that changes the seed collects it (and copies it), so the seed is run again" || bad "gated accept: '$RESEEDED_SEEDS'"
-RESEEDED_SEEDS=""; reseed_run_dir_on_promote
-[ -z "$(echo $RESEEDED_SEEDS)" ] && ok "the same accepted sha again: nothing collected" || bad "repeat accept collected: $RESEEDED_SEEDS"
-# and what is collected is run: the same apply the HEAD-moved reseed feeds
-state active success; mark b0; reset_run; apply_reseeded_seeds walk-owner-seed.ts
-grep -q "restart" "$T/calls" 2>/dev/null && ok "the collected seed is run again by apply_reseeded_seeds" || bad "collected seed not run: $(cat "$T/calls" 2>/dev/null)"
+cp "$T/run/"*.ts "$A/scripts/substrate/"; PULLSYNC_ACCEPTED_DIR="$A"; PULLSYNC_GATE_DIR="$G"; RUN_DIR="$T/run"
+printf '%040d\n' 1 > "$G/accepted.sha"; reseed_run_dir_on_promote
+reset_run; apply_changed_seeds
+! grep -q restart "$T/calls" && ok "an accept that changes no seed runs nothing" || bad "unchanged accept ran: $(tr '\n' '|' < "$T/calls")"
+echo "// the accepted change" >> "$A/scripts/substrate/walk-owner-seed.ts"; printf '%040d\n' 2 > "$G/accepted.sha"
+reseed_run_dir_on_promote; reset_run; apply_changed_seeds
+cmp -s "$A/scripts/substrate/walk-owner-seed.ts" "$T/run/walk-owner-seed.ts" && grep -qx "restart --no-block walk-owner-seed.service" "$T/calls" \
+  && ok "[MUST-FAIL] a gated accept that changes the seed: copied by the promote reseed, then run by the next compare" || bad "gated accept: $(tr '\n' '|' < "$T/calls")"
 
 echo; [ "$FAILS" = 0 ] && { echo PASS; exit 0; } || { echo "$FAILS FAILED"; exit 1; }

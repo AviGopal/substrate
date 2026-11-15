@@ -1746,10 +1746,7 @@ reseed_run_dir_on_promote() {
   case "$acc" in *[!0-9a-f]*|'') return 0 ;; esac; [ "${#acc}" = 40 ] || return 0
   have="$(cat "$r/.accepted.sha" 2>/dev/null)"; [ "$have" = "$acc" ] && return 0
   ls "$src"/*.ts >/dev/null 2>&1 || { log "run-dir: !!! accepted/ has no scripts/substrate/*.ts — run dir left as is"; return 0; }
-  # What this reseed changes is what a gated node's accept changed: each script whose accepted copy differs from the run
-  # dir's, applied later this tick (RESEEDED_SEEDS, beside check_seed_applies), as the HEAD-moved reseed's are.
-  for x in "$src"/*.ts; do cmp -s "$x" "$r/$(basename "$x")" 2>/dev/null || RESEEDED_SEEDS="${RESEEDED_SEEDS:-} $(basename "$x")"; done
-  mkdir -p "$r" && cp -f "$src"/*.ts "$r"/ 2>/dev/null || { log "run-dir: !!! could not reseed $r from accepted ${acc:0:12}"; RESEEDED_SEEDS=""; return 0; }
+  mkdir -p "$r" && cp -f "$src"/*.ts "$r"/ 2>/dev/null || { log "run-dir: !!! could not reseed $r from accepted ${acc:0:12}"; return 0; }
   for x in memory-budget-check.sh vessels.inventory.json; do [ -f "$src/$x" ] && cp -f "$src/$x" "$r/" 2>/dev/null; done
   [ -d "$src/units" ] && rm -rf "$r/units.new" && cp -r "$src/units" "$r/units.new" && rm -rf "$r/units" && mv "$r/units.new" "$r/units"
   echo "$acc" > "$r/.accepted.sha.tmp" && mv -f "$r/.accepted.sha.tmp" "$r/.accepted.sha"
@@ -6177,9 +6174,8 @@ if [ "$SUPER_FETCH_OK" = 1 ]; then
         [ "$_rd_all" = 1 ] && [ -d "$_sg_src/units" ] && rm -rf /workspace/active-scripts/units.new \
           && cp -r "$_sg_src/units" /workspace/active-scripts/units.new \
           && rm -rf /workspace/active-scripts/units && mv /workspace/active-scripts/units.new /workspace/active-scripts/units; } || true
-      # A seed the gate just accepted takes effect now, not at the next boot: what was copied is applied later this
-      # tick, beside check_seed_applies (apply_reseeded_seeds is defined below this point; called here it did not exist).
-      [ -n "${_rd_copied:-}" ] && RESEEDED_SEEDS="${RESEEDED_SEEDS:-} $_rd_copied"
+      # A seed this copied is run again later this tick, beside check_seed_applies (apply_changed_seeds compares every
+      # seed's run-dir copy with the one it last ran, whichever path copied it).
       # SUPER-REPO-HOSTED VESSELS — the last thing a convergence changes on disk
       # that nothing then restarts.
       #
@@ -6324,7 +6320,28 @@ seed_units() { # the seed units: oneshot, RemainAfterExit, whose ExecStart runs 
 seed_script() { # <unit>: the run-dir script its ExecStart runs
   grep -E '^ExecStart=' "${PULLSYNC_UNIT_DIR:-/usr/lib/systemd/system}/$1" | grep -oE '(\$\{SUBSTRATE_RUN_DIR\}|/workspace/active-scripts)/[A-Za-z0-9._-]+' | head -1 | sed 's|.*/||'
 }
-apply_reseeded_seeds() { # <copied basename>...: what the reseed copied this tick
+# apply_changed_seeds: the seed self-apply's trigger, compare-based and on every tick, so it heals on its own: a seed
+# unit whose inputs in the run dir (its script, and the inventory it reads: the repositories it writes rows for) are not
+# what it was last run over (seed-blob.<unit>, written only when its restart was queued) is run again. A copy made on
+# any path, or one a past tick failed to run, is caught on the next tick; unchanged inputs never run it again. With no
+# record (a node that never ran this), each seed is run once, which writes the record.
+seed_inputs() { # <unit>: the blobs of what its run reads from the run dir, one line
+  local r="${PULLSYNC_RUN_DIR:-/workspace/active-scripts}" b
+  b="$(seed_script "$1")"; [ -n "$b" ] || return 1
+  printf '%s %s\n' "$(git hash-object "$r/$b" 2>/dev/null || echo none)" "$(git hash-object "$r/vessels.inventory.json" 2>/dev/null || echo none)"
+}
+apply_changed_seeds() {
+  local sc="${PULLSYNC_SYSTEMCTL:-systemctl}" u now was changed=""
+  for u in $(seed_units); do
+    [ "$($sc is-enabled "$u" 2>/dev/null)" = enabled ] || continue
+    now="$(seed_inputs "$u")" || continue
+    was="$(cat "$MARKER_DIR/seed-blob.$u" 2>/dev/null)"
+    [ "$now" = "$was" ] || changed="$changed $(seed_script "$u")"
+  done
+  [ -n "$changed" ] && apply_reseeded_seeds $changed
+  return 0
+}
+apply_reseeded_seeds() { # <changed basename>...: the seeds whose run-dir copy changed
   local sc="${PULLSYNC_SYSTEMCTL:-systemctl}" u b blob inv
   [ $# -gt 0 ] || return 0
   for u in $(seed_units); do
@@ -6338,6 +6355,7 @@ apply_reseeded_seeds() { # <copied basename>...: what the reseed copied this tic
     if $sc restart --no-block "$u" 2>/dev/null; then
       log "seeds: $* copied; $u run again over $b (blob $blob), so the rows it writes follow what was accepted"
       printf '%s %s %s\n' "$b" "$blob" "${inv:--}" > "$MARKER_DIR/seed-apply.$u" 2>/dev/null || true
+      seed_inputs "$u" > "$MARKER_DIR/seed-blob.$u" 2>/dev/null || true
     else
       log "seeds: !!! could not run $u again over $b (blob $blob)"
       seed_gap "$u" "$b" "$blob" open "The accepted $b (blob $blob) could not be run again through $u (the restart was not queued): the rows the walk reads are not those of the accepted script" "" "not-queued" \
@@ -6444,9 +6462,9 @@ revive_failed_timers() {
 # See converge_units for why this must NOT sit inside the marker-gated refresh above.
 converge_units "${SUPER_REPO_DIR:-/workspace/git/super-repo}"
 revive_failed_timers
-# A seed a reseed changed this tick (the HEAD-moved reseed, or a gated node's accept: reseed_run_dir_on_promote) is run
-# again here, after every seed function is defined, then checked.
-[ -n "${RESEEDED_SEEDS:-}" ] && apply_reseeded_seeds $RESEEDED_SEEDS
+# Every tick, after every seed function is defined: a seed whose run-dir copy is not the one it last ran is run again
+# (whatever copied it: the HEAD-moved reseed, a gated node's accept, a boot seed), then checked.
+apply_changed_seeds
 check_seed_applies
 
 # Same reasoning, same cadence: the selector and the fleet definition it reads
