@@ -46,6 +46,42 @@ log() { echo "[apply-inventory] $*" >&2; }
 if [ ! -f "$INV" ]; then log "no inventory at $INV — keeping all units (no-op)"; exit 0; fi
 if ! command -v jq >/dev/null 2>&1; then log "jq missing — keeping all units (no-op)"; exit 0; fi
 
+# A UNIT THE IMAGE NOW BAKES IS PLACED BY THE IMAGE. The volume copy is the substrate's own fleet definition and governs
+# everything else, but it is seeded once and outlives the image it was seeded from: a unit that was dynamic then
+# ("manifest": true, never selected here, so never disabled) and is baked and enabled in this image would run on every
+# profile, whatever role the image now gives it (a hub recreated with an old copy would start a second walk beside the
+# moved records). So for each unit the image's inventory bakes (no "manifest") that the volume copy marks manifest, or
+# does not name while the image gives it a role the copy's role groups don't know (a role newer than the copy), the
+# image's entry is used, and that role takes the image's groups. A unit the copy places, or doesn't name under a role it
+# knows, is the copy's, as before (an old copy leaving out a baked seed unit doesn't start disabling it). The copy on
+# disk is not changed.
+IMAGE_INV="${IMAGE_VESSELS_INVENTORY:-/usr/local/share/substrate/vessels.inventory.json}"
+if [ -f "$IMAGE_INV" ] && [ "$(readlink -f "$INV")" != "$(readlink -f "$IMAGE_INV")" ]; then
+  _taken="$(jq -r --slurpfile img "$IMAGE_INV" '
+    ([.vessels[] | {key: .unit, value: .}] | from_entries) as $mine
+    | ([.roles // {} | .[] | .[]?] | unique) as $known
+    | [$img[0].vessels[] | select((.manifest // false) | not)
+       | select((($mine[.unit] // {}).manifest // false) or ($mine[.unit] == null and (.role as $r | $known | index($r) | not)))
+       | .unit] | join(" ")' "$INV" 2>/dev/null || true)"
+  if [ -n "$_taken" ]; then
+    _merged="$(mktemp "${TMPDIR:-/tmp}/apply-inventory.XXXXXX")"; trap 'rm -f "$_merged"' EXIT
+    if jq --slurpfile img "$IMAGE_INV" --arg taken "$_taken" '
+        ($taken | split(" ")) as $t
+        | ([$img[0].vessels[] | select(.unit as $u | $t | index($u))]) as $baked
+        | .vessels = ([.vessels[] | select(.unit as $u | $t | index($u) | not)] + $baked)
+        | ([.roles // {} | .[] | .[]?] | unique) as $known
+        | ([$baked[].role] | unique | map(select(. as $r | $known | index($r) | not))) as $new
+        | .roles = ((.roles // {}) as $r | reduce ($img[0].roles // {} | to_entries[]) as $g ($r;
+            .[$g.key] = ((.[$g.key] // []) + [$g.value[]? | select(. as $x | $new | index($x))])))
+      ' "$INV" > "$_merged" 2>/dev/null; then
+      log "image-baked unit(s) placed by the image's inventory, not $INV: $_taken"
+      INV="$_merged"
+    else
+      rm -f "$_merged"; log "could not merge the image's baked units into $INV — selecting from it as it is"
+    fi
+  fi
+fi
+
 # No selection env → every manageable unit is desired. FALL THROUGH; do not exit.
 #
 # This branch used to `exit 0` on the theory that "want everything" needs no

@@ -8,7 +8,8 @@
 #   3. installed-replay: a member still in the manifest is restored, one now baked is retired (its /etc copy removed,
 #      dropped from installed.json), one in neither is skipped, and no outcome fails the run;
 #   4. the entrypoint's call of the replay, with the replay absent, logs and carries on.
-#   5. walk and described-shape wait (bounded, never failing the start) for records to answer /health.
+#   5. walk and described-shape wait (bounded, never failing the start) for records to answer /health;
+#   6. a node's older volume inventory doesn't run the walk where the image's roles wouldn't (apply-inventory).
 #
 # usage: validation/scripts/learner-units.test.sh
 set -uo pipefail
@@ -95,5 +96,35 @@ for v in walk-vessel described-shape-vessel; do
   rm -f "$T/n.$v"; OUT="$(UP_AT=3 PATH="$T/bin.$v:$PATH" sh -c "$CMD" 2>&1)"; RC=$?
   [ "$RC" = 0 ] && [ "$(cat "$T/n.$v")" = 3 ] && [ -z "$OUT" ] && ok "$v: records answering on the third try ends the wait there" || bad "$v: answering records: rc $RC, tries $(cat "$T/n.$v" 2>/dev/null), $OUT"
 done
+
+# ── 6. a volume inventory older than the bake doesn't start the walk everywhere ─
+# The volume copy governs selection and outlives the image that seeded it. Each fixture is a real copy a node holds (the
+# inventory before the bake; an older one), byte for byte.
+FX="$ROOT/validation/scripts/fixtures"
+disables() { # inventory profile [image inventory] -> units apply-inventory would disable or mask, sorted, space-separated
+  (cd "$ROOT" && env -i PATH="$PATH" HOME="$T" VESSELS_INVENTORY="$1" IMAGE_VESSELS_INVENTORY="${3:-$INV}" PROFILE="$2" DRY_RUN=1 bash "$S/apply-inventory.sh" 2>&1) \
+    | grep -E "would disable|masked whatever" | sed 's/.*: //' | sort -u | tr '\n' ' '
+}
+# Selecting from the copy alone (the image inventory pointed at the copy: nothing to merge) is how a node selected
+# before; the merge may add only the walk and described-shape to what is turned off.
+newly() { comm -13 <(tr ' ' '\n' <<<"$(disables "$1" "$2" "$1")" | sort -u) <(tr ' ' '\n' <<<"$(disables "$1" "$2")" | sort -u) | tr '\n' ' '; }
+[ "$(newly "$FX/inventory-override-pre-bake.json" hub)" = "described-shape-vessel.service walk-vessel.service " ] \
+  && ok "[MUST-FAIL] a hub holding the pre-bake inventory: the walk and described-shape are newly off, nothing else" \
+  || bad "pre-bake copy, hub: newly disabled '$(newly "$FX/inventory-override-pre-bake.json" hub)'"
+[ -z "$(tr -d ' ' <<<"$(newly "$FX/inventory-override-older.json" standalone)")" ] \
+  && ok "[MUST-FAIL] a standalone node holding an older inventory disables nothing new (units it leaves out under roles it knows stay its own)" \
+  || bad "older copy, standalone: newly disabled '$(newly "$FX/inventory-override-older.json" standalone)'"
+grep -q "records-vessel" <<<"$(disables "$FX/inventory-override-pre-bake.json" hub)" \
+  && bad "a hub holding the pre-bake inventory disables records" || ok "a hub holding the pre-bake inventory keeps records"
+# A fresh install: the volume copy is the image's own, nothing is merged.
+F1="$(cd "$ROOT" && env -i PATH="$PATH" HOME="$T" VESSELS_INVENTORY="$INV" IMAGE_VESSELS_INVENTORY="$INV" PROFILE=hub DRY_RUN=1 bash "$S/apply-inventory.sh" 2>&1)"
+! grep -q "placed by the image" <<<"$F1" && grep -q "would disable: walk-vessel.service" <<<"$F1" && ! grep -q "would disable: records-vessel.service" <<<"$F1" \
+  && ok "a fresh install (the copy is the image's) merges nothing and places them by the image" || bad "fresh install, hub: $(grep -E 'placed|walk-vessel|records-vessel' <<<"$F1" | head -3)"
+# A copy that doesn't name them at all (and doesn't know their roles).
+jq '.vessels |= map(select(.unit as $u | ["records-vessel.service","walk-vessel.service","described-shape-vessel.service"] | index($u) | not))' \
+  "$FX/inventory-override-pre-bake.json" > "$T/no-trio.json"
+D="$(disables "$T/no-trio.json" hub)"
+grep -q "walk-vessel.service" <<<"$D" && grep -q "described-shape-vessel.service" <<<"$D" && ! grep -q "records-vessel.service" <<<"$D" \
+  && ok "[MUST-FAIL] a copy that doesn't name them: the hub runs records and not the walk" || bad "copy without them, hub disables: $D"
 
 echo; [ "$FAILS" = 0 ] && { echo PASS; exit 0; } || { echo "$FAILS FAILED"; exit 1; }
