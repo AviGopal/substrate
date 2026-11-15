@@ -77,7 +77,9 @@ const SCHEMAS: Row[] = [
       `next, never that it was done. ${USES_WORDS} ${JSON_ONLY}`,
     schema: { type: "object", required: ["text"], properties: { text: { type: "string", minLength: 1 }, uses: USES } },
     inputs: ["world_changed"],
-    context: ["hop"],
+    // As the grader sees them: each hop with the tool it called, joined from its started hop, so a change's edit, commit
+    // and landing hops are told apart from its reads.
+    context: [{ shape: "hop", join: { on: "call_id", take: ["pointer_type"] } }],
   },
   {
     target: "outcome",
@@ -129,7 +131,9 @@ const SCHEMAS: Row[] = [
       "with a later row of the same gap_id whose status is closed is already closed. To close an open one, ask for the " +
       "next call toward closing it: first a clone of the repo the gap names. Every later call on that change (an edit, " +
       "a commit, a diff, a landing) works in the clone: its cwd (or a path under it) is the cwd the clone's hop " +
-      "returned, never a repos/ path. " + USES_WORDS + " " + JSON_ONLY,
+      "returned, never a repos/ path. A gitWorktree row is this request's own clone (its cwd is the clone); with none, " +
+      "this request has no clone yet. A change_wanted row is this request's own judgment of which repository a change " +
+      "belongs in. " + USES_WORDS + " " + JSON_ONLY,
     // A request either names the next call or declines (none); the walk reads a request without a pointer as a decline.
     schema: {
       type: "object",
@@ -144,7 +148,11 @@ const SCHEMAS: Row[] = [
     // The answer and its grade are here so the producer can see the ask is done; the hops show whether a change landed.
     // A file read is shown whole (an edit quotes text from it, so a cut copy cannot be quoted), only its newest read per
     // path (a read after an edit replaces the older one), and in place of the hop that fetched it.
-    context: ["hop", "failure", "answer", "outcome", { shape: "fileContent", whole: true, latest_by: "path", covers: { shape: "hop", on: "call_id" } }],
+    // Its own clone (what its own git_worktree call answered with) and its own change_wanted judgment: records builds a
+    // root's context from that root's own episode, so these are this request's, newest per repository; small, and kept
+    // when older hops fall out of the context budget.
+    context: ["hop", "failure", "answer", "outcome", { shape: "fileContent", whole: true, latest_by: "path", covers: { shape: "hop", on: "call_id" } },
+      { shape: "gitWorktree", latest_by: "repo" }, { shape: "change_wanted", latest_by: "repo" }],
     // declared: only shapes whose producer declared their inputs, the ones a request can fill (discovery resolvers.ts).
     // gap: every detector gap row, opening and closing alike, so a closed gap is seen as closed.
     reads: [{ type: "shapeDescriptions", declared: true }, { type: "record_read", shape: "gap" }],
