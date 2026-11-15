@@ -214,6 +214,9 @@ leg(keeps("request", "gitWorktree") && keeps("request", "change_wanted") && keep
   "(t) a request keeps its clone, change_wanted and acts in view; answer and outcome see its acts (the grader's as given evidence); refused judgments read why (no retry count: the walk never holds them); change_wanted needs a repo only for a change; a next_act is a promise");
 leg(["answer", "request"].every((t) => String(schema(t)?.description ?? "").startsWith("You are one step of the walk.") && String(schema(t)?.description).includes("saying you cannot act is false")),
   "(v) the answer and request producers are told who is answering: one step of a walk that acts through the gated tools");
+leg(schema("land_verdict")?.repeat_key === "tree" && schema("land_verdict")?.repeat_value === "r"
+  && rows.filter((r) => r.shape === "shape_schema" && r.target !== "land_verdict").every((r) => r.repeat_key === undefined),
+  "(rk) the land_verdict schema says what makes two verdicts the same judgment (tree, r); no other schema names a repeat key");
 const using = rows.filter((r) => r.shape === "shape_schema" && ["answer", "request", "land_verdict"].includes(String(r.target)));
 leg(using.length === 5 && using.every((r) => JSON.stringify((r.schema as Row)?.properties?.uses) === JSON.stringify({ type: "array", items: { type: "string", "x-shown": true } })
     && !((r.schema as Row)?.required ?? []).includes("uses") && String(r.description).includes("uses lists the id of each row you were shown that this relies on")),

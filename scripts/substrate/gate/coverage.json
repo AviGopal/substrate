@@ -2966,7 +2966,7 @@
     },
     "/usr/local/share/substrate/active-scripts/walk-owner-seed.ts": {
       "src": "scripts/substrate/walk-owner-seed.ts",
-      "src_blob": "ed6f1793a3aad6a496b29c8ab00006dc506a54fd",
+      "src_blob": "ea07da633f4b8f5a35fadc9c4aa72442ef4e65f4",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -2977,12 +2977,12 @@
       "evidence": {
         "accepted": "claimed by hand with walk-owner-seed-rows.sh, walk-owner-seed-repositories.sh and walk-owner-seed-clone-repo.sh; earned by image-coverage-map.check.sh",
         "mutation": "insert `exit 99` after line 1",
-        "mutated_blob": "a6ece31a74f63d305ae66befd3566537a54e7f36"
+        "mutated_blob": "bd3793c99b31fb4036adedef858283f6b38f10e9"
       }
     },
     "/vessels/walk-owner-seed.ts": {
       "src": "scripts/substrate/walk-owner-seed.ts",
-      "src_blob": "ed6f1793a3aad6a496b29c8ab00006dc506a54fd",
+      "src_blob": "ea07da633f4b8f5a35fadc9c4aa72442ef4e65f4",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -2993,7 +2993,7 @@
       "evidence": {
         "accepted": "claimed by hand with walk-owner-seed-rows.sh, walk-owner-seed-repositories.sh and walk-owner-seed-clone-repo.sh; earned by image-coverage-map.check.sh",
         "mutation": "insert `exit 99` after line 1",
-        "mutated_blob": "a6ece31a74f63d305ae66befd3566537a54e7f36"
+        "mutated_blob": "bd3793c99b31fb4036adedef858283f6b38f10e9"
       }
     },
     "/usr/lib/systemd/system/records-vessel.service.d/50-restart-with-deps.conf": {

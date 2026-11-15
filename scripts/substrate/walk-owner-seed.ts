@@ -210,6 +210,10 @@ const SCHEMAS: Row[] = [
   },
   {
     target: "land_verdict",
+    // Two verdicts judge the same thing when they name the same tree, and the same way when their r is equal: the walk's
+    // request_acts counts such a run as a repeat (repeat_key, repeat_value), with no shape named in its code.
+    repeat_key: "tree",
+    repeat_value: "r",
     // git_land (local-tools) pushes a change only on a verdict for its exact tree. A grader's counts only when it was made
     // from exactly the request and the walk's gitDiff of that tree, so this schema reads nothing else: no hop, no answer.
     // What else the grader must know of the tree rides on the gitDiff row, made with the tree: whether it typechecks.
