@@ -11,11 +11,15 @@
 #      only inside a quoted string, and one naming it only in a comment, are not seeds;
 #   2. nothing copied -> nothing run; something copied (the seed's script, or the inventory it reads) -> each enabled
 #      seed reset and run again, without blocking; a disabled one is left alone, and says so;
-#   3. a run that finished well -> no gap; one that failed -> one open gap naming the blob; the same failure next tick
-#      -> none new; a newer blob that fails -> filed again under the same id (it replaces the last); a run that then
-#      finishes well -> the detector's closing row, and the marker is gone.
+#   3. while the unit still shows the run before ours (the same invocation id: the queued restart has not begun), its
+#      old success is not taken for ours; a restart that could not be queued is a gap at once; a run that finished well
+#      -> no gap; one that failed -> one open gap naming the blob; the same failure next tick -> none new; a newer blob
+#      that fails -> filed again under the same id (it replaces the last); a run that then finishes well -> the
+#      detector's closing row, and the marker is gone; a failure after that close -> a new id with recurrence_of; a
+#      row the store did not take (open or closing) -> not marked done, written again next tick.
 # That a seed run again writes nothing new is walk-owner-seed-request-due.test.sh (l).
-# Must-fail: with apply_reseeded_seeds' body emptied, case 2 fails; with check_seed_applies' gap filing removed, case 3.
+# Must-fail: with apply_reseeded_seeds' body emptied, case 2 fails; with check_seed_applies' gap filing removed, case 3;
+# with the invocation-id wait, the recurrence id or the write check removed, their cases fail.
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$HERE/../.."
@@ -39,8 +43,9 @@ case "$1" in
   is-enabled) get "$2" enabled ;;
   show) u="$2"; shift 2; p=""
         while [ $# -gt 0 ]; do case "$1" in -p) p="$2"; shift 2;; *) shift;; esac; done
-        case "$p" in ActiveState) get "$u" active ;; Result) get "$u" result ;; esac ;;
-  reset-failed|restart) : ;;
+        case "$p" in ActiveState) get "$u" active ;; Result) get "$u" result ;; InvocationID) get "$u" inv ;; esac ;;
+  reset-failed) : ;;
+  restart) [ -e "$st/$3.norestart" ] && exit 1 ;;
 esac
 exit 0
 STUB
@@ -50,10 +55,12 @@ mkdir -p "$STUB_ST" "$T/markers" "$T/run" "$T/units"
 MARKER_DIR="$T/markers"; PULLSYNC_RUN_DIR="$T/run"
 cp "$ROOT/scripts/substrate/walk-owner-seed.ts" "$T/run/"
 log() { echo "$*" >> "$T/log"; }
-emit_gap() { echo "$1" >> "$T/gaps"; }
+# The store's answer: taken, unless $T/lose is present (a write the store did not take).
+emit_gap_checked() { [ -e "$T/lose" ] && return 1; echo "$1" >> "$T/gaps"; }
 . "$T/fn.sh"
 reset_run() { : > "$T/log"; : > "$T/calls"; : > "$T/gaps"; }
 gaps() { jq -c '.impulse.pointer.gap | {status, blob: .classification_metadata.blob}' "$T/gaps" 2>/dev/null; }
+gapids() { jq -r '.impulse.pointer.gap | "\(.id) \(.status) \(.recurrence_of // "-")"' "$T/gaps" 2>/dev/null; }
 
 # ── 1. which units are seeds ─────────────────────────────────────────────────
 cp "$ROOT"/scripts/substrate/units/*.service "$T/units/"
@@ -86,7 +93,7 @@ reset_run; apply_reseeded_seeds vessels.inventory.json
 grep -qx "reset-failed walk-owner-seed.service" "$T/calls" && grep -qx "restart --no-block walk-owner-seed.service" "$T/calls" \
   && ok "[MUST-FAIL] the inventory copied: walk-owner-seed reset and run again, without blocking" || bad "calls: $(tr '\n' '|' < "$T/calls")"
 ! grep -qE "restart .*(quoted-mention|comment-mention)" "$T/calls" && ok "a unit that only mentions the script is not run" || bad "a mention was run: $(tr '\n' '|' < "$T/calls")"
-read -r b blob < "$T/markers/seed-apply.walk-owner-seed.service"
+read -r b blob inv < "$T/markers/seed-apply.walk-owner-seed.service"
 [ "$b" = walk-owner-seed.ts ] && [ "$blob" = "$(git hash-object "$T/run/walk-owner-seed.ts")" ] && ok "the run is marked with the script and its blob" || bad "marker: $b $blob"
 echo disabled > "$STUB_ST/walk-owner-seed.service.enabled"; rm -f "$T/markers"/seed-apply.*
 reset_run; apply_reseeded_seeds walk-owner-seed.ts
@@ -94,6 +101,19 @@ reset_run; apply_reseeded_seeds walk-owner-seed.ts
 echo enabled > "$STUB_ST/walk-owner-seed.service.enabled"
 
 # ── 3. whether it worked ─────────────────────────────────────────────────────
+# The queued restart has not begun: the unit still shows the last run (id inv-old), which ended well.
+rm -f "$T/markers"/seed-apply.*; echo inv-old > "$STUB_ST/walk-owner-seed.service.inv"
+echo active > "$STUB_ST/walk-owner-seed.service.active"; echo success > "$STUB_ST/walk-owner-seed.service.result"
+reset_run; apply_reseeded_seeds walk-owner-seed.ts; check_seed_applies
+[ -e "$T/markers/seed-apply.walk-owner-seed.service" ] && ! grep -q "applied" "$T/log" && [ ! -s "$T/gaps" ] \
+  && ok "[MUST-FAIL] the run before ours, still shown, is not taken for ours: no 'applied', marker kept" || bad "old run read as ours: $(tr '\n' '|' < "$T/log")"
+echo inv-new > "$STUB_ST/walk-owner-seed.service.inv"; reset_run; check_seed_applies
+grep -q "applied" "$T/log" && [ ! -e "$T/markers/seed-apply.walk-owner-seed.service" ] && ok "once the unit shows a newer run that ended well: applied" || bad "new run: $(tr '\n' '|' < "$T/log")"
+# A restart that could not be queued: a gap at once, and no marker that a stale state could read as applied.
+: > "$STUB_ST/walk-owner-seed.service.norestart"; rm -f "$T/markers"/seed-apply.*; reset_run; apply_reseeded_seeds walk-owner-seed.ts
+[ "$(jq -r '.impulse.pointer.gap | "\(.status) \(.classification_metadata.result)"' "$T/gaps" 2>/dev/null)" = "open not-queued" ] && [ ! -e "$T/markers/seed-apply.walk-owner-seed.service" ] \
+  && ok "[MUST-FAIL] a restart that could not be queued: a gap at once, no marker" || bad "not queued: gaps $(cat "$T/gaps"); markers $(ls "$T/markers")"
+rm -f "$STUB_ST/walk-owner-seed.service.norestart" "$T/markers"/seed-apply.* "$T/markers"/seed-gap-id.*   # each case below starts with no gap
 mark() { printf 'walk-owner-seed.ts %s\n' "$1" > "$T/markers/seed-apply.walk-owner-seed.service"; }
 state() { echo "$1" > "$STUB_ST/walk-owner-seed.service.active"; echo "$2" > "$STUB_ST/walk-owner-seed.service.result"; }
 mark b1; state active success; reset_run; check_seed_applies
@@ -110,6 +130,21 @@ state active success; reset_run; check_seed_applies
 [ "$(gaps)" = '{"status":"closed","blob":"b2"}' ] && [ ! -e "$T/markers/seed-apply.walk-owner-seed.service" ] && [ ! -e "$T/markers/seed-apply.walk-owner-seed.service.gap" ] \
   && ok "[MUST-FAIL] then finished well: the detector's closing row, markers gone" || bad "closing: $(gaps)"
 ids="$(jq -r '.impulse.pointer.gap.id' "$T/gaps" 2>/dev/null | sort -u)"
-[ "$ids" = "pull-sync-seed-not-applied-walk-owner-seed.service" ] && ok "one gap id per unit" || bad "gap ids: $ids"
+[ "$ids" = "pull-sync-seed-not-applied-walk-owner-seed.service" ] && ok "one gap id while it was open" || bad "gap ids: $ids"
+# A failure after the close is a recurrence: a new id naming the closed one.
+mark b3; state failed exit-code; reset_run; check_seed_applies
+R="$(gapids)"
+case "$R" in "pull-sync-seed-not-applied-walk-owner-seed.service-r"*" open pull-sync-seed-not-applied-walk-owner-seed.service") ok "[MUST-FAIL] a failure after the close: a new id with recurrence_of the closed one" ;;
+  *) bad "recurrence: $R" ;; esac
+# A write the store did not take marks nothing done: the next tick writes it again.
+state active success; : > "$T/lose"; reset_run; check_seed_applies
+[ ! -s "$T/gaps" ] && [ -e "$T/markers/seed-apply.walk-owner-seed.service" ] && ok "a closing row not taken: the marker stays" || bad "lost close: markers $(ls "$T/markers")"
+rm -f "$T/lose"; reset_run; check_seed_applies
+case "$(gapids)" in "pull-sync-seed-not-applied-walk-owner-seed.service-r"*" closed -") [ ! -e "$T/markers/seed-apply.walk-owner-seed.service" ] && ok "[MUST-FAIL] next tick the closing row is written again, and taken" || bad "marker left after the retry" ;;
+  *) bad "retried close: $(gapids)" ;; esac
+mark b4; state failed exit-code; : > "$T/lose"; reset_run; check_seed_applies
+[ ! -e "$T/markers/seed-apply.walk-owner-seed.service.gap" ] && ok "an open row not taken: not marked filed" || bad "lost open marked filed"
+rm -f "$T/lose"; reset_run; check_seed_applies
+[ "$(gaps)" = '{"status":"open","blob":"b4"}' ] && ok "[MUST-FAIL] next tick the open row is written again" || bad "retried open: $(gaps)"
 
 echo; [ "$FAILS" = 0 ] && { echo PASS; exit 0; } || { echo "$FAILS FAILED"; exit 1; }

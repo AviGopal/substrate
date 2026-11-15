@@ -6307,7 +6307,7 @@ fi
 # differs, so running an unchanged seed writes nothing. Which units are seeds is read from the unit files, never a
 # list, and the run-dir is matched as written there (${SUBSTRATE_RUN_DIR} or the path), never expanded from env. A
 # timer tick's service is not RemainAfterExit (it runs the new file on its next tick anyway); a unit not enabled here
-# is left as apply-inventory placed it. Whether it worked is checked a tick later (check_seed_applies).
+# is left as apply-inventory placed it. Whether it worked is checked on later ticks, once the unit shows a run newer than the one before (check_seed_applies).
 seed_units() { # the seed units: oneshot, RemainAfterExit, whose ExecStart runs a script from the run-dir as a word
   local dir="${PULLSYNC_UNIT_DIR:-/usr/lib/systemd/system}" f
   for f in "$dir"/*.service; do
@@ -6321,47 +6321,73 @@ seed_script() { # <unit>: the run-dir script its ExecStart runs
   grep -E '^ExecStart=' "${PULLSYNC_UNIT_DIR:-/usr/lib/systemd/system}/$1" | grep -oE '(\$\{SUBSTRATE_RUN_DIR\}|/workspace/active-scripts)/[A-Za-z0-9._-]+' | head -1 | sed 's|.*/||'
 }
 apply_reseeded_seeds() { # <copied basename>...: what the reseed copied this tick
-  local sc="${PULLSYNC_SYSTEMCTL:-systemctl}" u b blob
+  local sc="${PULLSYNC_SYSTEMCTL:-systemctl}" u b blob inv
   [ $# -gt 0 ] || return 0
   for u in $(seed_units); do
     [ "$($sc is-enabled "$u" 2>/dev/null)" = enabled ] || { log "seeds: $* copied; $u is not enabled here, so not run"; continue; }
     b="$(seed_script "$u")"
     blob="$(git hash-object "${PULLSYNC_RUN_DIR:-/workspace/active-scripts}/$b" 2>/dev/null || echo unknown)"
+    # The run before this one, by its invocation id: until the unit shows another, its state is that run's, not this
+    # one's (the restart is queued, not waited for), so the check does not take an old success for this run.
+    inv="$($sc show "$u" -p InvocationID --value 2>/dev/null)"
     $sc reset-failed "$u" 2>/dev/null || true
     if $sc restart --no-block "$u" 2>/dev/null; then
       log "seeds: $* copied; $u run again over $b (blob $blob), so the rows it writes follow what was accepted"
+      printf '%s %s %s\n' "$b" "$blob" "${inv:--}" > "$MARKER_DIR/seed-apply.$u" 2>/dev/null || true
     else
       log "seeds: !!! could not run $u again over $b (blob $blob)"
+      seed_gap "$u" "$b" "$blob" open "The accepted $b (blob $blob) could not be run again through $u (the restart was not queued): the rows the walk reads are not those of the accepted script" "" "not-queued" \
+        || log "seeds: !!! the gap row for $u was not taken; the next copy runs it again"
     fi
-    printf '%s %s\n' "$b" "$blob" > "$MARKER_DIR/seed-apply.$u" 2>/dev/null || true
   done
 }
 
-# A seed run again (above) that did not finish well is a gap, one per unit: filed once for a script blob, filed again
-# (the same gap id, so it replaces the last) when a newer blob fails too, and closed by this detector when a run
-# finishes well. A run still going waits for the next tick.
-seed_gap() { # <unit> <script> <blob> <status> <summary> [state] [result]
-  emit_gap "$(jq -n -c --arg u "$1" --arg b "$2" --arg blob "$3" --arg status "$4" --arg sum "$5" --arg st "${6:-}" --arg res "${7:-}" \
-    '{impulse:{pointer:{type:"substrateGap_write",gap:{id:("pull-sync-seed-not-applied-" + ($u|gsub("[^A-Za-z0-9._-]";"-"))),category:"service_failure",source:"substrate_detected",status:$status,severity:"high",
-      summary:$sum,classification_metadata:{class:"seed_not_applied",unit:$u,script:$b,blob:$blob,active_state:$st,result:$res}}}}}')"
+# A seed run again (above) that did not finish well is a gap. While it is open, a newer blob that fails too is filed
+# again under the same id (it replaces the last); once a run finishes well the detector writes the closing row; a
+# failure after that is a recurrence, filed under a new id that names the one it recurs (recurrence_of), so a gap that
+# keeps coming back is counted as such. Each write is checked: a row the store did not take is written again next tick
+# (nothing is marked done on a lost write). The unit's current gap id and whether it is open are kept in its id file.
+seed_gap() { # <unit> <script> <blob> <open|closed> <summary> [state] [result] -> 0 when the row was taken
+  local u="$1" base idf cur="" cst="" id rof=""
+  base="pull-sync-seed-not-applied-$(printf '%s' "$u" | sed 's/[^A-Za-z0-9._-]/-/g')"
+  idf="$MARKER_DIR/seed-gap-id.$u"; [ -f "$idf" ] && read -r cur cst < "$idf"
+  if [ "$4" = open ]; then
+    if [ -z "$cur" ]; then id="$base"
+    elif [ "$cst" = closed ]; then id="$base-r$(date -u +%s)"; rof="$cur"
+    else id="$cur"; fi
+  else
+    [ -n "$cur" ] && [ "$cst" = open ] || return 0
+    id="$cur"
+  fi
+  emit_gap_checked "$(jq -n -c --arg id "$id" --arg rof "$rof" --arg u "$u" --arg b "$2" --arg blob "$3" --arg status "$4" --arg sum "$5" --arg st "${6:-}" --arg res "${7:-}" \
+    '{impulse:{pointer:{type:"substrateGap_write",gap:({id:$id,category:"service_failure",source:"substrate_detected",status:$status,severity:"high",
+      summary:$sum,classification_metadata:{class:"seed_not_applied",unit:$u,script:$b,blob:$blob,active_state:$st,result:$res}}
+      + (if $rof == "" then {} else {recurrence_of:$rof} end))}}}')" || return 1
+  printf '%s %s\n' "$id" "$4" > "$idf" 2>/dev/null || true
 }
 check_seed_applies() {
-  local sc="${PULLSYNC_SYSTEMCTL:-systemctl}" f u st res b blob filed
+  local sc="${PULLSYNC_SYSTEMCTL:-systemctl}" f u st res b="" blob="" before="" filed
   for f in "$MARKER_DIR"/seed-apply.*.service; do
     [ -e "$f" ] || continue; u="${f##*/seed-apply.}"
-    read -r b blob < "$f" 2>/dev/null || true
+    read -r b blob before < "$f" 2>/dev/null || true
     filed="$(cat "$f.gap" 2>/dev/null)"
+    # Still the run before ours (the queued restart has not begun): its state says nothing about this one.
+    [ -n "$before" ] && [ "$before" != "-" ] && [ "$($sc show "$u" -p InvocationID --value 2>/dev/null)" = "$before" ] && continue
     st="$($sc show "$u" -p ActiveState --value 2>/dev/null)"; res="$($sc show "$u" -p Result --value 2>/dev/null)"
     case "$st" in activating|reloading) continue ;; esac
     if [ "$st" = active ] && [ "$res" = success ]; then
       log "seeds: $u applied $b (blob $blob)"
-      [ -n "$filed" ] && seed_gap "$u" "$b" "$blob" closed "$u ran $b (blob $blob) to the end: its rows follow the accepted script"
-      rm -f "$f" "$f.gap"; continue
+      seed_gap "$u" "$b" "$blob" closed "$u ran $b (blob $blob) to the end: its rows follow the accepted script" \
+        && rm -f "$f" "$f.gap"
+      continue
     fi
     [ "$filed" = "$blob" ] && continue
-    seed_gap "$u" "$b" "$blob" open "The accepted $b (blob $blob) was run again through $u and did not finish well ($st, $res): the rows the walk reads are not those of the accepted script" "$st" "$res"
-    printf '%s' "$blob" > "$f.gap" 2>/dev/null || true
-    log "seeds: !!! $u did not apply $b (blob $blob): $st, $res; gap filed"
+    if seed_gap "$u" "$b" "$blob" open "The accepted $b (blob $blob) was run again through $u and did not finish well ($st, $res): the rows the walk reads are not those of the accepted script" "$st" "$res"; then
+      printf '%s' "$blob" > "$f.gap" 2>/dev/null || true
+      log "seeds: !!! $u did not apply $b (blob $blob): $st, $res; gap filed"
+    else
+      log "seeds: !!! $u did not apply $b (blob $blob): $st, $res; the gap row was not taken, filed again next tick"
+    fi
   done
 }
 
