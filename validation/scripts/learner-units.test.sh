@@ -127,4 +127,21 @@ D="$(disables "$T/no-trio.json" hub)"
 grep -q "walk-vessel.service" <<<"$D" && grep -q "described-shape-vessel.service" <<<"$D" && ! grep -q "records-vessel.service" <<<"$D" \
   && ok "[MUST-FAIL] a copy that doesn't name them: the hub runs records and not the walk" || bad "copy without them, hub disables: $D"
 
+# Each profile, from the pre-bake copy: the walk and described-shape run on none of hub, hub-minimal and spoke, and
+# records follows its role (learner: hub and hub-minimal, not spoke).
+for pr in "hub on" "hub-minimal on" "spoke off"; do
+  set -- $pr
+  D="$(disables "$FX/inventory-override-pre-bake.json" "$1")"
+  r=on; grep -q "records-vessel.service" <<<"$D" && r=off
+  grep -q "walk-vessel.service" <<<"$D" && grep -q "described-shape-vessel.service" <<<"$D" && [ "$r" = "$2" ] \
+    && ok "[MUST-FAIL] pre-bake copy, PROFILE=$1: no walk, no described-shape, records $2" \
+    || bad "pre-bake copy, PROFILE=$1: records $r (want $2), disables: $D"
+done
+# A unit the copy names under a role no group knows is said, not turned off in silence.
+jq '.vessels += [{"name": "orphan-vessel", "unit": "orphan-vessel.service", "role": "no-such-role"}]' "$FX/inventory-override-pre-bake.json" > "$T/orphan.json"
+O="$(cd "$ROOT" && env -i PATH="$PATH" HOME="$T" VESSELS_INVENTORY="$T/orphan.json" IMAGE_VESSELS_INVENTORY="$INV" PROFILE=hub DRY_RUN=1 bash "$S/apply-inventory.sh" 2>&1)"
+grep -q "no role group names.*orphan-vessel.service (role no-such-role)" <<<"$O" && ok "[MUST-FAIL] a unit under a role no group names is logged" || bad "no line for a unit under an unknown role"
+grep -q "no role group names" <<<"$(cd "$ROOT" && env -i PATH="$PATH" HOME="$T" VESSELS_INVENTORY="$INV" IMAGE_VESSELS_INVENTORY="$INV" PROFILE=hub DRY_RUN=1 bash "$S/apply-inventory.sh" 2>&1)" \
+  && bad "the image's own inventory logs a unit under an unknown role" || ok "the image's own inventory has no unit under an unknown role"
+
 echo; [ "$FAILS" = 0 ] && { echo PASS; exit 0; } || { echo "$FAILS FAILED"; exit 1; }

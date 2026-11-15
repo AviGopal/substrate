@@ -81,6 +81,12 @@ if [ -f "$IMAGE_INV" ] && [ "$(readlink -f "$INV")" != "$(readlink -f "$IMAGE_IN
     fi
   fi
 fi
+# A unit whose role no role group names is never selected by a role-composed profile. Said, so a copy that names a unit
+# under a role the groups don't know (one the image renamed, or a typo) isn't turned off without a word.
+_orphans="$(jq -r '([.roles // {} | .[] | .[]?] | unique) as $known
+  | [.vessels[] | select((.manifest // false) | not) | select(.role as $r | $known | index($r) | not) | "\(.unit) (role \(.role))"]
+  | join(", ")' "$INV" 2>/dev/null || true)"
+[ -n "$_orphans" ] && log "unit(s) under a role no role group names, never selected by a role-composed profile: $_orphans"
 
 # No selection env → every manageable unit is desired. FALL THROUGH; do not exit.
 #
