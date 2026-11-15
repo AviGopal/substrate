@@ -1746,7 +1746,10 @@ reseed_run_dir_on_promote() {
   case "$acc" in *[!0-9a-f]*|'') return 0 ;; esac; [ "${#acc}" = 40 ] || return 0
   have="$(cat "$r/.accepted.sha" 2>/dev/null)"; [ "$have" = "$acc" ] && return 0
   ls "$src"/*.ts >/dev/null 2>&1 || { log "run-dir: !!! accepted/ has no scripts/substrate/*.ts — run dir left as is"; return 0; }
-  mkdir -p "$r" && cp -f "$src"/*.ts "$r"/ 2>/dev/null || { log "run-dir: !!! could not reseed $r from accepted ${acc:0:12}"; return 0; }
+  # What this reseed changes is what a gated node's accept changed: each script whose accepted copy differs from the run
+  # dir's, applied later this tick (RESEEDED_SEEDS, beside check_seed_applies), as the HEAD-moved reseed's are.
+  for x in "$src"/*.ts; do cmp -s "$x" "$r/$(basename "$x")" 2>/dev/null || RESEEDED_SEEDS="${RESEEDED_SEEDS:-} $(basename "$x")"; done
+  mkdir -p "$r" && cp -f "$src"/*.ts "$r"/ 2>/dev/null || { log "run-dir: !!! could not reseed $r from accepted ${acc:0:12}"; RESEEDED_SEEDS=""; return 0; }
   for x in memory-budget-check.sh vessels.inventory.json; do [ -f "$src/$x" ] && cp -f "$src/$x" "$r/" 2>/dev/null; done
   [ -d "$src/units" ] && rm -rf "$r/units.new" && cp -r "$src/units" "$r/units.new" && rm -rf "$r/units" && mv "$r/units.new" "$r/units"
   echo "$acc" > "$r/.accepted.sha.tmp" && mv -f "$r/.accepted.sha.tmp" "$r/.accepted.sha"
@@ -6174,8 +6177,9 @@ if [ "$SUPER_FETCH_OK" = 1 ]; then
         [ "$_rd_all" = 1 ] && [ -d "$_sg_src/units" ] && rm -rf /workspace/active-scripts/units.new \
           && cp -r "$_sg_src/units" /workspace/active-scripts/units.new \
           && rm -rf /workspace/active-scripts/units && mv /workspace/active-scripts/units.new /workspace/active-scripts/units; } || true
-      # A seed the gate just accepted takes effect now, not at the next boot (apply_reseeded_seeds).
-      [ -n "${_rd_copied:-}" ] && apply_reseeded_seeds $_rd_copied
+      # A seed the gate just accepted takes effect now, not at the next boot: what was copied is applied later this
+      # tick, beside check_seed_applies (apply_reseeded_seeds is defined below this point; called here it did not exist).
+      [ -n "${_rd_copied:-}" ] && RESEEDED_SEEDS="${RESEEDED_SEEDS:-} $_rd_copied"
       # SUPER-REPO-HOSTED VESSELS — the last thing a convergence changes on disk
       # that nothing then restarts.
       #
@@ -6440,6 +6444,9 @@ revive_failed_timers() {
 # See converge_units for why this must NOT sit inside the marker-gated refresh above.
 converge_units "${SUPER_REPO_DIR:-/workspace/git/super-repo}"
 revive_failed_timers
+# A seed a reseed changed this tick (the HEAD-moved reseed, or a gated node's accept: reseed_run_dir_on_promote) is run
+# again here, after every seed function is defined, then checked.
+[ -n "${RESEEDED_SEEDS:-}" ] && apply_reseeded_seeds $RESEEDED_SEEDS
 check_seed_applies
 
 # Same reasoning, same cadence: the selector and the fleet definition it reads

@@ -163,4 +163,36 @@ mark b4; state failed exit-code; : > "$T/lose"; reset_run; check_seed_applies
 rm -f "$T/lose"; reset_run; check_seed_applies
 [ "$(gaps)" = '{"status":"open","blob":"b4"}' ] && ok "[MUST-FAIL] next tick the open row is written again" || bad "retried open: $(gaps)"
 
+# THE SCRIPT'S ORDER. pull-sync runs top to bottom, so a seed function called at top level before its definition line
+# does not exist yet ("command not found", the HEAD-moved reseed's first form). Every top-level call of each seed
+# function comes after its definition.
+order_ok=1
+for fn in apply_reseeded_seeds check_seed_applies; do
+  def="$(grep -n "^$fn() {" "$SCRIPT" | head -1 | cut -d: -f1)"
+  first="$(grep -nE "(^|[[:space:];&|])$fn( |\$|$)" "$SCRIPT" | grep -v "^$def:" | grep -vE ':[[:space:]]*#' | head -1 | cut -d: -f1)"
+  [ -n "$def" ] && [ -n "$first" ] && [ "$first" -gt "$def" ] || { order_ok=0; echo "  $fn: defined at ${def:-?}, first called at ${first:-?}"; }
+done
+[ "$order_ok" = 1 ] && ok "[MUST-FAIL] each seed function is called only after the line that defines it" || bad "a seed function is called before it exists"
+
+# A GATED NODE: acceptance comes on a tick with no HEAD move, through reseed_run_dir_on_promote. It must collect the
+# scripts whose accepted copy changed (RESEEDED_SEEDS), so the seed is run again; an accept that changes no seed collects
+# nothing.
+sed -n "/^reseed_run_dir_on_promote() {/,/^}/p" "$SCRIPT" > "$T/promote.sh"
+. "$T/promote.sh"
+A="$T/accepted"; G="$T/gate"; mkdir -p "$A/scripts/substrate" "$G"
+cp "$T/run/walk-owner-seed.ts" "$A/scripts/substrate/walk-owner-seed.ts"; echo "// other" > "$A/scripts/substrate/other.ts"
+cp "$A/scripts/substrate/other.ts" "$T/run/other.ts"
+PULLSYNC_ACCEPTED_DIR="$A"; PULLSYNC_GATE_DIR="$G"; RUN_DIR="$T/run"
+printf '%040d\n' 1 > "$G/accepted.sha"; RESEEDED_SEEDS=""; reseed_run_dir_on_promote
+[ -z "$(echo $RESEEDED_SEEDS)" ] && ok "an accept that changes no seed collects nothing" || bad "unchanged accept collected: $RESEEDED_SEEDS"
+echo "// accepted change" >> "$A/scripts/substrate/walk-owner-seed.ts"
+printf '%040d\n' 2 > "$G/accepted.sha"; RESEEDED_SEEDS=""; reseed_run_dir_on_promote
+[ "$(echo $RESEEDED_SEEDS)" = "walk-owner-seed.ts" ] && cmp -s "$A/scripts/substrate/walk-owner-seed.ts" "$T/run/walk-owner-seed.ts" \
+  && ok "[MUST-FAIL] a gated accept that changes the seed collects it (and copies it), so the seed is run again" || bad "gated accept: '$RESEEDED_SEEDS'"
+RESEEDED_SEEDS=""; reseed_run_dir_on_promote
+[ -z "$(echo $RESEEDED_SEEDS)" ] && ok "the same accepted sha again: nothing collected" || bad "repeat accept collected: $RESEEDED_SEEDS"
+# and what is collected is run: the same apply the HEAD-moved reseed feeds
+state active success; mark b0; reset_run; apply_reseeded_seeds walk-owner-seed.ts
+grep -q "restart" "$T/calls" 2>/dev/null && ok "the collected seed is run again by apply_reseeded_seeds" || bad "collected seed not run: $(cat "$T/calls" 2>/dev/null)"
+
 echo; [ "$FAILS" = 0 ] && { echo PASS; exit 0; } || { echo "$FAILS FAILED"; exit 1; }
