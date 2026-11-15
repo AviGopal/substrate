@@ -3991,6 +3991,11 @@ for d in "${PASS_ORDER[@]}"; do
   # consumer cannot cause a rebuild/revert loop (a new src change clears it).
   DIST_RETRY=""; TG_GATE_ONLY=""
   SELF_UNIT="$(vessel_unit "$v")"
+  # A vessel no inventory names any more (retired since its clone was made) has no unit by the inventory, which reads
+  # as a shared package with no unit of its own, so the masked check below never saw it: its leftover clone was
+  # fetched and its suite run every tick, holding the gate lock. Its unit by name, when that unit is masked, is the
+  # unit the check reads. A shared package has no unit of its own name, so nothing changes for one.
+  [ -z "$SELF_UNIT" ] && [ "$(systemctl is-enabled "$v.service" 2>/dev/null)" = masked ] && SELF_UNIT="$v.service"
   # A MASKED VESSEL MUST NOT BE CONVERGED AT ALL — NOT EVEN TESTED.
   #
   # The re-attempt suppression below already refuses to re-mirror a masked vessel,
