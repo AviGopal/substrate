@@ -96,28 +96,14 @@ fi
 # Idempotent for an already-present unit; DISABLED_VESSELS outranks the record,
 # same as the federation auto-enable below.
 set -a; . /etc/substrate/env 2>/dev/null || true; set +a
-if [ -f "$FLEET_DIR/installed.json" ] && [ -x /usr/local/bin/vessel-ctl ] && command -v jq >/dev/null 2>&1; then
-  _dis=",$(echo "${DISABLED_VESSELS:-}" | tr -d '[:space:]'),"
-  for _v in $(jq -r '.installed[]? // empty' "$FLEET_DIR/installed.json" 2>/dev/null); do
-    case "$_dis" in
-      *,"$_v.service",*|*,"$_v",*)
-        echo "[substrate] installed.json: $_v is in DISABLED_VESSELS — restore skipped" ;;
-      *)
-        if [ ! -f "/etc/systemd/system/$_v.service" ]; then
-          echo "[substrate] installed.json: restoring dynamic vessel $_v"
-          /usr/local/bin/vessel-ctl install "$_v" || \
-            echo "[substrate] installed.json: restore of $_v failed — see the line above; boot continues"
-          # vessel-ctl's `systemctl enable --now` no-ops pre-systemd; the offline
-          # wants-symlink makes boot-start deterministic (same pattern as the
-          # federation auto-enable below).
-          if [ -f "/etc/systemd/system/$_v.service" ]; then
-            mkdir -p /etc/systemd/system/multi-user.target.wants
-            ln -sf "../$_v.service" "/etc/systemd/system/multi-user.target.wants/$_v.service"
-          fi
-        fi
-        ;;
-    esac
-  done
+# The replay itself is installed-replay.sh (restore, retire a vessel that became a baked unit, skip the rest). Called
+# only when it is there and executable: pull-sync converges this entrypoint in place, so it can be newer than the image
+# that installed the replay, and a missing or failing replay must never stop a boot.
+if [ -x /usr/local/bin/installed-replay ]; then
+  FLEET_DIR="$FLEET_DIR" DISABLED_VESSELS="${DISABLED_VESSELS:-}" /usr/local/bin/installed-replay \
+    || echo "[substrate] installed.json: the replay failed — boot continues"
+else
+  echo "[substrate] installed.json: no installed-replay in this image — dynamic vessels not restored; boot continues"
 fi
 
 # Point-and-go spoke federation (folds the former manual spoke-federate.sh into boot):

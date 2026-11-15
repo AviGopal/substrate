@@ -1,0 +1,26 @@
+# described-shape-vessel: a baked unit, selected by role "learner" (vessels.inventory.json). It is the unit render-unit.sh
+# rendered from this vessel's former vessels.manifest.json entry, with that template's comments left out, so a
+# node that ran the rendered unit runs the same directives under this one (validation/scripts/learner-units.test.sh).
+[Unit]
+Description=walk-vessel SPEC-V3 described-shape: produces any shape with a shape_schema row through the channel the walk chose.
+After=network.target discovery-vessel.service
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/substrate/env
+
+Environment=DESCRIBED_VESSEL_ID=described-shape-vessel
+Environment=DESCRIBED_PORT=8520
+Environment=DISCOVERY_URL=http://127.0.0.1:8100
+Environment=DESCRIBED_ENDPOINT=http://127.0.0.1:8520
+WorkingDirectory=/vessels/described-shape-vessel
+ExecStartPre=-/bin/sh -c 'cd /vessels/described-shape-vessel 2>/dev/null || exit 0; [ -f package.json ] || exit 0; [ -n "$(ls -A node_modules 2>/dev/null)" ] || { echo "[render-unit] node_modules absent in /vessels/described-shape-vessel — resolving"; /root/.bun/bin/bun install --silent; }; for d in node_modules/@*/*; do [ -L "$d" ] && continue; [ -d "$d" ] || continue; [ -f "$d/package.json" ] && continue; b=/vessels/$(basename "$d"); [ -f "$b/package.json" ] || continue; echo "[render-unit] $d resolved EMPTY (file: dep into an uninitialised submodule) — populating from $b"; cp -a "$b/." "$d/"; done'
+ExecStart=/root/.bun/bin/bun /vessels/described-shape-vessel/src/index.ts
+ExecStopPost=-/usr/local/bin/discovery-deregister described-shape-vessel
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

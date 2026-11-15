@@ -17,9 +17,15 @@
 PORT                       listen port of the vessel process
 HOST                       bind address of the vessel process
 FED_HEALTH_PORT            listen port of the federation transport health endpoint
+RECORDS_PORT               listen port of records-vessel
+DESCRIBED_PORT             listen port of described-shape-vessel
+WALK_PORT                  listen port of walk-vessel
 
 # ── identity ──
 VESSEL_ID                  the vessel's registered identity
+RECORDS_VESSEL_ID          records-vessel's registered identity
+DESCRIBED_VESSEL_ID        described-shape-vessel's registered identity
+WALK_VESSEL_ID             walk-vessel's registered identity
 GOAL_HOST_VESSEL_ID        goal-host's registered identity
 LIGHT_DISPATCH_VESSEL_ID   light-dispatch's registered identity
 LLM_RESOLVER_VESSEL_ID     llm-resolver's registered identity
@@ -35,12 +41,16 @@ LIGHT_DISPATCH_ENDPOINT    address of light-dispatch
 LLM_VESSEL_ENDPOINT        address of llm-resolver
 CONCEPT_DB_URL             address of concept-db
 DISCOVERY_URL              address of discovery, the routing fixed point
+RECORDS_ENDPOINT           address records-vessel registers with discovery
+DESCRIBED_ENDPOINT         address described-shape-vessel registers with discovery
+WALK_ENDPOINT              address walk-vessel registers with discovery
 OBSIDIAN_LEARN_ENDPOINT    address of the local Obsidian learn bridge
 
 # ── filesystem paths ──
 HOME                       home directory of the process
 WORKSPACE_ROOT             root of the workspace volume
 MITOSIS_PUSH_CLONE_DIR     directory of the push clones
+RECORDS_DATA_DIR           directory of records-vessel's append-only rows file
 MITOSIS_RUNTIME_DIR        directory the vessels run from
 INGEST_MANIFEST            path of the docs-ingest manifest file
 OBSIDIAN_VAULT             path of the vault the desktop opens

@@ -301,6 +301,9 @@ COPY scripts/substrate/apply-llm-arms.sh /usr/local/bin/apply-llm-arms
 # (identity-vessel is internal-only, so the tool lives in-container).
 COPY scripts/substrate/substrate-key.sh /usr/local/bin/substrate-key
 COPY scripts/substrate/render-unit.sh /usr/local/bin/render-unit
+# Run by the entrypoint at boot: restores the dynamic vessels installed.json names, and retires the record of one
+# that is now a baked unit (records, walk, described-shape), so a recreate starts the baked unit.
+COPY scripts/substrate/installed-replay.sh /usr/local/bin/installed-replay
 COPY scripts/substrate/discovery-deregister.sh /usr/local/bin/discovery-deregister
 COPY scripts/substrate/self-recovery-tick.sh /usr/local/bin/self-recovery-tick
 COPY scripts/substrate/secrets.env.sh /usr/local/share/substrate/secrets.env.sh
@@ -438,6 +441,9 @@ RUN chmod +x /usr/local/bin/substrate-entrypoint /usr/local/bin/gen-env /usr/loc
         concept-db-seeder.service \
         stateful-ui-vessel.service \
         human-surface-vessel.service \
+        records-vessel.service \
+        described-shape-vessel.service \
+        walk-vessel.service \
         light-dispatch-vessel.service \
         relevance-sink-vessel.service \
         light-dispatch-healthcheck.timer \

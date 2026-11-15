@@ -504,6 +504,13 @@
         "mutated_blob": "58a9c062b5ba8661e84fe298f664bd660cdf564a"
       }
     },
+    "/usr/lib/systemd/system/described-shape-vessel.service": {
+      "src": "scripts/substrate/units/described-shape-vessel.service",
+      "src_blob": "c3d9fdde1f2c178b92aad03fd8255fe273e1e5c5",
+      "level": "none",
+      "reason": "unreached",
+      "fixtures": []
+    },
     "/usr/lib/systemd/system/described-shape-vessel.service.d/10-secrets-out-of-reach.conf": {
       "src": "scripts/substrate/units/described-shape-vessel.service.d/10-secrets-out-of-reach.conf",
       "src_blob": "07fe2c6e2e78a3a3d33c820403a00dedd1141442",
@@ -1442,6 +1449,13 @@
         "mutated_blob": "2ac08df50293572bf245b241cb1b7551472c330e"
       }
     },
+    "/usr/lib/systemd/system/records-vessel.service": {
+      "src": "scripts/substrate/units/records-vessel.service",
+      "src_blob": "8318b2ecd5068c663eb44364cf3fe2d492b22b3d",
+      "level": "none",
+      "reason": "unreached",
+      "fixtures": []
+    },
     "/usr/lib/systemd/system/records-vessel.service.d/10-secrets-out-of-reach.conf": {
       "src": "scripts/substrate/units/records-vessel.service.d/10-secrets-out-of-reach.conf",
       "src_blob": "07fe2c6e2e78a3a3d33c820403a00dedd1141442",
@@ -2214,6 +2228,13 @@
         "mutated_blob": "8ea86656cb4812cc8f5a7334da6755c3b770eb58"
       }
     },
+    "/usr/lib/systemd/system/walk-vessel.service": {
+      "src": "scripts/substrate/units/walk-vessel.service",
+      "src_blob": "4ed51ee64849fe986bf81f649c66bef4920675c7",
+      "level": "none",
+      "reason": "unreached",
+      "fixtures": []
+    },
     "/usr/local/bin/apply-inventory": {
       "src": "scripts/substrate/apply-inventory.sh",
       "src_blob": "eb6215b394cfa78bda62e5791b044ac463111c77",
@@ -2238,6 +2259,13 @@
     "/usr/local/bin/gen-env": {
       "src": "scripts/substrate/gen-env.sh",
       "src_blob": "aba773ff51980e905a8e68776de6207ade9b4f74",
+      "level": "none",
+      "reason": "unreached",
+      "fixtures": []
+    },
+    "/usr/local/bin/installed-replay": {
+      "src": "scripts/substrate/installed-replay.sh",
+      "src_blob": "5bac79fc2803e191913277a51ada01b138ad81ae",
       "level": "none",
       "reason": "unreached",
       "fixtures": []
