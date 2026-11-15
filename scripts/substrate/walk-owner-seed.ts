@@ -75,7 +75,17 @@ const SCHEMAS: Row[] = [
     description: "The answer to what the world_changed row's `what` field asks for. An ask that changes something is " +
       "done only when a hop row shows the change landed (a git_land call that ended). Until then say what you will do " +
       `next, never that it was done. ${USES_WORDS} ${JSON_ONLY}`,
-    schema: { type: "object", required: ["text"], properties: { text: { type: "string", minLength: 1 }, uses: USES } },
+    schema: { type: "object", required: ["text"], properties: {
+      text: { type: "string", minLength: 1 },
+      uses: USES,
+      // A promise records checks against what the walk does next (records settles it); never read from the text.
+      next_act: {
+        type: "object", required: ["tool", "target"],
+        description: "Optional. When the ask wants a change that hasn't landed: the next call you will make toward it. tool is " +
+          "the shape you will call; target is what it acts on (the file path, or the clone). Leave it out when no change is wanted.",
+        properties: { tool: { type: "string", minLength: 1 }, target: { type: "string", minLength: 1 } },
+      },
+    } },
     inputs: ["world_changed"],
     // As the grader sees them: each hop with the tool it called, joined from its started hop, so a change's edit, commit
     // and landing hops are told apart from its reads.
@@ -357,7 +367,13 @@ await ensure({
 await ensure({ shape: "credits", target: "gap", by_call: "git_land" }, { target: "gap" }, "credits gap");
 // How credit travels to the walk's selections (records' fold): the weight a person's verdict, a lapse and a gap's
 // closing each carry, the discount per step back along what each step used (gamma) and how many steps it goes (depth).
-await ensure({ shape: "credits", target: "selection", w_person: 1, w_lapse: 1, w_close: 1, gamma: 0.7, depth: 12 },
+// w_check and promise_window settle an answer's promised next act (records: kept r 1, broken r 0, at w_check, judged
+// over the request's next promise_window selections; the USER: "Credit kept, penalise broken"). Both values are a
+// starting guess, not a finding: w_check sits below w_close, so an early horizon never outweighs the landing it leads to.
+// prior_count caps how much of its move's coarser record a cell inherits (records' nested levels; the USER: "Cap
+// inheritance"). Uncapped, a move's record from every request swamped a cell's own: the request move fell from .25 to
+// .03 on failures inherited from other requests. The value is the USER's: "4 grades".
+await ensure({ shape: "credits", target: "selection", w_person: 1, w_lapse: 1, w_close: 1, gamma: 0.7, depth: 12, w_check: 0.5, promise_window: 6, prior_count: 4 },
   { target: "selection" }, "credits selection");
 // What a person reads of the rows the surface shows: each description's words name the fields (1 to 4) that say what
 // a row is, so the surface draws them from these rows instead of a list of its own.

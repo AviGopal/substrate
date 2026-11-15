@@ -38,7 +38,9 @@
 #       edit's own pointer.
 #   (s) a gap's closing credits the walk only after a landing: one owner credits row for gap, by_call git_land;
 #   (v) how credit travels to selections is an owner row (credits target selection: w_person, w_lapse, w_close 1,
-#       gamma 0.7, depth 12), written once, so records' fold reads it, not its seeded fallback;
+#       gamma 0.7, depth 12), written once, so records' fold reads it, not its seeded fallback; it carries a promise's
+#       weight (w_check, below w_close) and window, and a cap on inheritance (the USER: "Cap inheritance");
+#   (x) an answer may promise its next act (next_act {tool, target}, optional), which records settles;
 #   (w) the answer, request and land verdict (every variant) may name the rows they used (uses: ids, each held to the
 #       rows shown, x-shown), and are told to name only those;
 #   (r) the request producer is shown a file read whole, only its newest read per path, in place of the hop that
@@ -182,8 +184,13 @@ leg([lv, lvGap].every((v) => !!v && bound(v) && JSON.stringify(v.inputs?.[1]) ==
   "(u) the land verdict judges only the root's newest gitDiff, and what it states of it is bound to that row");
 const travel = rows.filter((r) => r.shape === "credits" && r.target === "selection");
 leg(travel.length === 1 && travel[0].w_person === 1 && travel[0].w_lapse === 1 && travel[0].w_close === 1
-  && travel[0].gamma === 0.7 && travel[0].depth === 12,
-  "(v) how credit travels to selections is one owner credits row: weights 1, gamma 0.7, depth 12");
+  && travel[0].gamma === 0.7 && travel[0].depth === 12
+  && typeof travel[0].w_check === "number" && travel[0].w_check > 0 && travel[0].w_check < travel[0].w_close
+  && Number.isInteger(travel[0].promise_window) && travel[0].promise_window >= 1 && typeof travel[0].prior_count === "number" && travel[0].prior_count > 0,
+  "(v) how credit travels to selections is one owner credits row: weights 1, gamma 0.7, depth 12; a promise's weight below w_close and a window; an inheritance cap");
+leg(!!answer && fits(answer.schema, { text: "x", next_act: { tool: "fs_edit", target: "src/a.ts" } }) && fits(answer.schema, { text: "x" })
+  && !fits(answer.schema, { text: "x", next_act: { tool: "fs_edit" } }),
+  "(x) an answer may promise its next act as next_act {tool, target}; leaving it out still fits");
 const using = rows.filter((r) => r.shape === "shape_schema" && ["answer", "request", "land_verdict"].includes(String(r.target)));
 leg(using.length === 5 && using.every((r) => JSON.stringify((r.schema as Row)?.properties?.uses) === JSON.stringify({ type: "array", items: { type: "string", "x-shown": true } })
     && !((r.schema as Row)?.required ?? []).includes("uses") && String(r.description).includes("uses lists the id of each row you were shown that this relies on")),
