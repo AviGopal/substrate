@@ -6371,8 +6371,20 @@ check_seed_applies() {
     [ -e "$f" ] || continue; u="${f##*/seed-apply.}"
     read -r b blob before < "$f" 2>/dev/null || true
     filed="$(cat "$f.gap" 2>/dev/null)"
-    # Still the run before ours (the queued restart has not begun): its state says nothing about this one.
-    [ -n "$before" ] && [ "$before" != "-" ] && [ "$($sc show "$u" -p InvocationID --value 2>/dev/null)" = "$before" ] && continue
+    # A restart job still pending: wait, whatever the unit shows (its state is the run before ours, or none yet).
+    [ -n "$($sc show "$u" -p Job --value 2>/dev/null)" ] && continue
+    # No job pending, and still the run before ours: the run we asked for was dropped without running (a dependency's
+    # job failed, or it timed out), and nothing will run it, so that is the gap, and the wait ends. The next copy runs
+    # the seed again, and a run that ends well closes the gap.
+    if [ -n "$before" ] && [ "$before" != "-" ] && [ "$($sc show "$u" -p InvocationID --value 2>/dev/null)" = "$before" ]; then
+      if seed_gap "$u" "$b" "$blob" open "The accepted $b (blob $blob) was to be run again through $u, but its job was dropped without running: the rows the walk reads are not those of the accepted script" "" "job_dropped"; then
+        log "seeds: !!! $u's rerun over $b (blob $blob) was dropped without running; gap filed"
+        rm -f "$f" "$f.gap"
+      else
+        log "seeds: !!! $u's rerun over $b (blob $blob) was dropped; the gap row was not taken, filed again next tick"
+      fi
+      continue
+    fi
     st="$($sc show "$u" -p ActiveState --value 2>/dev/null)"; res="$($sc show "$u" -p Result --value 2>/dev/null)"
     case "$st" in activating|reloading) continue ;; esac
     if [ "$st" = active ] && [ "$res" = success ]; then

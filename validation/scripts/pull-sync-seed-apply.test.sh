@@ -11,8 +11,8 @@
 #      only inside a quoted string, and one naming it only in a comment, are not seeds;
 #   2. nothing copied -> nothing run; something copied (the seed's script, or the inventory it reads) -> each enabled
 #      seed reset and run again, without blocking; a disabled one is left alone, and says so;
-#   3. while the unit still shows the run before ours (the same invocation id: the queued restart has not begun), its
-#      old success is not taken for ours; a restart that could not be queued is a gap at once; a run that finished well
+#   3. while the unit still shows the run before ours (the same invocation id) and its restart job is pending, its old
+#      success is not taken for ours; with no job pending, the rerun was dropped: a gap (job_dropped), and the wait ends; a restart that could not be queued is a gap at once; a run that finished well
 #      -> no gap; one that failed -> one open gap naming the blob; the same failure next tick -> none new; a newer blob
 #      that fails -> filed again under the same id (it replaces the last); a run that then finishes well -> the
 #      detector's closing row, and the marker is gone; a failure after that close -> a new id with recurrence_of; a
@@ -43,7 +43,7 @@ case "$1" in
   is-enabled) get "$2" enabled ;;
   show) u="$2"; shift 2; p=""
         while [ $# -gt 0 ]; do case "$1" in -p) p="$2"; shift 2;; *) shift;; esac; done
-        case "$p" in ActiveState) get "$u" active ;; Result) get "$u" result ;; InvocationID) get "$u" inv ;; esac ;;
+        case "$p" in ActiveState) get "$u" active ;; Result) get "$u" result ;; InvocationID) get "$u" inv ;; Job) get "$u" job ;; esac ;;
   reset-failed) : ;;
   restart) [ -e "$st/$3.norestart" ] && exit 1 ;;
 esac
@@ -102,13 +102,29 @@ echo enabled > "$STUB_ST/walk-owner-seed.service.enabled"
 
 # ── 3. whether it worked ─────────────────────────────────────────────────────
 # The queued restart has not begun: the unit still shows the last run (id inv-old), which ended well.
-rm -f "$T/markers"/seed-apply.*; echo inv-old > "$STUB_ST/walk-owner-seed.service.inv"
+rm -f "$T/markers"/seed-apply.*; echo inv-old > "$STUB_ST/walk-owner-seed.service.inv"; echo 7 > "$STUB_ST/walk-owner-seed.service.job"
 echo active > "$STUB_ST/walk-owner-seed.service.active"; echo success > "$STUB_ST/walk-owner-seed.service.result"
 reset_run; apply_reseeded_seeds walk-owner-seed.ts; check_seed_applies
 [ -e "$T/markers/seed-apply.walk-owner-seed.service" ] && ! grep -q "applied" "$T/log" && [ ! -s "$T/gaps" ] \
   && ok "[MUST-FAIL] the run before ours, still shown, is not taken for ours: no 'applied', marker kept" || bad "old run read as ours: $(tr '\n' '|' < "$T/log")"
+# Its restart job still pending on the next tick: still waiting.
+reset_run; check_seed_applies
+[ -e "$T/markers/seed-apply.walk-owner-seed.service" ] && [ ! -s "$T/gaps" ] && ok "the run before ours, its restart job pending: still waiting" || bad "pending job: $(gaps)"
+rm -f "$STUB_ST/walk-owner-seed.service.job"
 echo inv-new > "$STUB_ST/walk-owner-seed.service.inv"; reset_run; check_seed_applies
 grep -q "applied" "$T/log" && [ ! -e "$T/markers/seed-apply.walk-owner-seed.service" ] && ok "once the unit shows a newer run that ended well: applied" || bad "new run: $(tr '\n' '|' < "$T/log")"
+# A unit that had not run this boot (no invocation id before ours), its restart job still queued, shows inactive: waits.
+rm -f "$T/markers"/seed-apply.* "$T/markers"/seed-gap-id.*; : > "$STUB_ST/walk-owner-seed.service.inv"; echo 9 > "$STUB_ST/walk-owner-seed.service.job"
+echo inactive > "$STUB_ST/walk-owner-seed.service.active"; echo success > "$STUB_ST/walk-owner-seed.service.result"
+reset_run; apply_reseeded_seeds walk-owner-seed.ts; check_seed_applies
+[ -e "$T/markers/seed-apply.walk-owner-seed.service" ] && [ ! -s "$T/gaps" ] && ok "[MUST-FAIL] never run this boot, its job queued, inactive: waits (not read as a failure)" || bad "queued first run: $(gaps)"
+rm -f "$STUB_ST/walk-owner-seed.service.job"
+# The job dropped without running: the same run shown and no job pending. A gap, and the wait ends.
+rm -f "$T/markers"/seed-apply.* "$T/markers"/seed-gap-id.*; echo inv-old > "$STUB_ST/walk-owner-seed.service.inv"
+reset_run; apply_reseeded_seeds walk-owner-seed.ts; check_seed_applies
+[ "$(jq -r '.impulse.pointer.gap | "\(.status) \(.classification_metadata.result)"' "$T/gaps" 2>/dev/null)" = "open job_dropped" ] && [ ! -e "$T/markers/seed-apply.walk-owner-seed.service" ] \
+  && ok "[MUST-FAIL] the rerun's job dropped (same run, no job pending): a gap, and the wait ends" || bad "dropped job: gaps $(cat "$T/gaps"); markers $(ls "$T/markers")"
+rm -f "$T/markers"/seed-gap-id.*
 # A restart that could not be queued: a gap at once, and no marker that a stale state could read as applied.
 : > "$STUB_ST/walk-owner-seed.service.norestart"; rm -f "$T/markers"/seed-apply.*; reset_run; apply_reseeded_seeds walk-owner-seed.ts
 [ "$(jq -r '.impulse.pointer.gap | "\(.status) \(.classification_metadata.result)"' "$T/gaps" 2>/dev/null)" = "open not-queued" ] && [ ! -e "$T/markers/seed-apply.walk-owner-seed.service" ] \
