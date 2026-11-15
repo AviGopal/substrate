@@ -3037,6 +3037,27 @@
         "mutation": "insert `exit 99` after line 1",
         "mutated_blob": "b4977226dc4a479643fac3f8520372fbd01f4858"
       }
+    },
+    "/usr/local/bin/identity-keys-dir": {
+      "src": "scripts/substrate/identity-keys-dir.sh",
+      "src_blob": "e3835c949f9645df61dc0c237ffccde5046d9306",
+      "level": "none",
+      "reason": "unreached",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/identity-vessel.service.d/30-identity-keys-bind.conf": {
+      "src": "scripts/substrate/units/identity-vessel.service.d/30-identity-keys-bind.conf",
+      "src_blob": "8184aef5f94fe9569f4d828a41139b6826ab77d5",
+      "level": "none",
+      "reason": "unreached",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/service.d/07-identity-keys-out-of-reach.conf": {
+      "src": "scripts/substrate/units/service.d/07-identity-keys-out-of-reach.conf",
+      "src_blob": "ea05ac05afc26384bd71e615d32e4812e2fd86dd",
+      "level": "none",
+      "reason": "unreached",
+      "fixtures": []
     }
   }
 }

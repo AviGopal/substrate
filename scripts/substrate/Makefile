@@ -348,6 +348,8 @@ recreate: image
 # beside this file) into the named volumes the manifest resolves. Stop the
 # container first so SurrealDB has flushed; the host dirs are left intact as a
 # backup. Idempotent re-run wipes + recopies the volumes.
+# It refuses when either side holds identity's key directory with anything in it (org keys 1a): the org root is never
+# copied (the host dirs are left as a backup, and a backup of the key is as sensitive as the key) and never wiped.
 WORKSPACE    := $(CURDIR)/workspace
 SURREAL_DATA := $(CURDIR)/surreal-data
 migrate-state-to-volumes:
@@ -362,6 +364,11 @@ migrate-state-to-volumes:
 	    -v "$$SR":/dst-surreal \
 	    -v "$$WS":/dst-workspace \
 	    $(IMAGE):$(TAG) -c 'set -e; \
+	      for side in /src-workspace /dst-workspace; do \
+	        if [ -n "$$(ls -A $$side/.substrate-identity-keys 2>/dev/null)" ]; then \
+	          echo "[migrate] REFUSED: $$side holds an org root key: it is never copied (a copy is as sensitive as the key) and never wiped; a lost root is a new generation, by a person"; exit 1; \
+	        fi; \
+	      done; \
 	      find /dst-surreal -mindepth 1 -delete; find /dst-workspace -mindepth 1 -delete; \
 	      cp -a /src-surreal/. /dst-surreal/; cp -a /src-workspace/. /dst-workspace/; \
 	      echo "[migrate] surreal CURRENT=$$(cat /dst-surreal/data.db/CURRENT 2>/dev/null)"; \

@@ -47,6 +47,10 @@ mkdir -p -m 0755 /workspace/.gate-public /workspace/active-scripts
 # this is the belt). It is masked as a DIRECTORY by every unit, so it must exist before the
 # first unit starts and must never be replaced: mkdir -p only, never rm/mv/re-mkdir.
 mkdir -p -m 0700 /etc/substrate/private
+# identity's key directory (org keys 1a): masked as a DIRECTORY for every service, so it too must exist before the
+# first unit starts. The helper refuses a symlink anywhere on its path and creates nothing then (identity's create
+# stays refused); a refusal is said and boot goes on, since key validation does not need it.
+/usr/local/bin/identity-keys-dir || echo "[substrate] identity key directory not made: identity cannot create an org root on this node"
 for f in vessels.inventory.json vessels.manifest.json; do
   if [ ! -f "$FLEET_DIR/$f" ] && [ -f "/usr/local/share/substrate/$f" ]; then
     cp "/usr/local/share/substrate/$f" "$FLEET_DIR/$f"

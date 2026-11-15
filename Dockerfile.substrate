@@ -246,6 +246,8 @@ COPY scripts/substrate/render-secret-scope.sh /usr/local/bin/render-secret-scope
 # Proves by effect that no unit namespace can see /etc/substrate/private (pull-sync runs
 # `check` after every render; install acceptance runs `selftest`).
 COPY scripts/substrate/secret-mask-probe.sh /usr/local/bin/secret-mask-probe
+# Creates identity's key directory before any unit starts, refusing a symlink on its path (org keys 1a).
+COPY scripts/substrate/identity-keys-dir.sh /usr/local/bin/identity-keys-dir
 COPY scripts/substrate/setup-git-push.sh /usr/local/bin/setup-git-push
 COPY scripts/substrate/git-hooks-ledger/ /usr/local/share/substrate/git-hooks-ledger/
 # Self-bootstrap + self-diagnosis: readiness gate, doctor, and the
