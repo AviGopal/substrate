@@ -94,6 +94,8 @@ if printf '%s' "$VERDICT" | jq -e '(.deprecated_port_aliases // []) | index("DIS
   echo "[connect] WARNING: DISCOVERY_PORT is deprecated in favour of SUBSTRATE_PORT_PREFIX; honouring it (host port $HOST_PORT) as the launch manifest does" >&2
 fi
 ENDPOINT="http://127.0.0.1:${HOST_PORT}"
+# The cockpit takes the discovery it resolves substrate shapes through from its own key, metabob.discoveryEndpoint,
+# never from endpoint: without it every substrate tool answers not_configured. Both name this fleet's discovery.
 
 # The gap store a client's pre-commit glue gate reads (run-glue-tests.sh --gap-store client-config):
 # development-vessel's substrateGap resolver, published at <prefix>090. Top-level "substrate", not
@@ -109,12 +111,12 @@ fi
 if [ "$MODE" = values ]; then
   # The values only, straight to stdout (the merge script writes them to a mode-600 file).
   jq -n -c --arg e "$ENDPOINT" --arg k "$KEY" --arg g "$GAP_STORE_EP" \
-    '{endpoint:$e, apiKey:$k} + (if $g == "" then {} else {gapStoreEndpoint:$g} end)' \
+    '{endpoint:$e, discoveryEndpoint:$e, apiKey:$k} + (if $g == "" then {} else {gapStoreEndpoint:$g} end)' \
     || { echo "[connect] jq could not build the values; nothing printed" >&2; exit 2; }
   exit 0
 fi
 jq -n --arg e "$ENDPOINT" --arg k "$KEY" --arg g "$GAP_STORE_EP" \
-  '{metabob:{endpoint:$e, apiKey:$k}} + (if $g == "" then {} else {substrate:{gapStoreEndpoint:$g}} end)' \
+  '{metabob:{endpoint:$e, discoveryEndpoint:$e, apiKey:$k}} + (if $g == "" then {} else {substrate:{gapStoreEndpoint:$g}} end)' \
   || { echo "[connect] jq could not build the config; nothing printed" >&2; exit 2; }
 
 {

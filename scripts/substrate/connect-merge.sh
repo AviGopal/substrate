@@ -10,12 +10,13 @@
 #
 # WHY HOST-SIDE. A client config holds keys this fleet does not own (the cockpit's providers,
 # defaults and their API keys). Nothing of it may enter the container: the container is asked
-# ONLY for the values it owns, `substrate-connect --values` ({endpoint, apiKey, gapStoreEndpoint?}),
+# ONLY for the values it owns, `substrate-connect --values` ({endpoint, discoveryEndpoint?, apiKey, gapStoreEndpoint?}),
 # and the merge runs here, with this host's jq. This is the ONE implementation: README
 # § Installation, ui-only-up's plan and substrate-install all run it.
 #
-# WHAT IT WRITES. Exactly the keys the fleet owns: metabob.endpoint, metabob.apiKey and, when the
-# values carry one, substrate.gapStoreEndpoint (values without it leave an existing one alone).
+# WHAT IT WRITES. Exactly the keys the fleet owns: metabob.endpoint, metabob.apiKey, and, when the
+# values carry them, metabob.discoveryEndpoint and substrate.gapStoreEndpoint (values without one leave
+# an existing one alone).
 # Every other key is kept. A merge that changes nothing leaves the file untouched (byte-identical).
 #
 # SAFETY. The values (they hold the API key) go from the command's stdout straight into a mode-600
@@ -80,7 +81,7 @@ trap 'rm -f "$VALS" "$NEW" "$NEW.err"' EXIT
 if ! "$@" > "$VALS"; then say "refusing: the values command failed ($1 … exited non-zero); $CFG left as it is"; exit 1; fi
 "$JQ" -e 'type == "object" and (.endpoint | type) == "string" and (.endpoint | length) > 0
           and (.apiKey | type) == "string" and (.apiKey | length) > 0
-          and ((.gapStoreEndpoint // "") | type) == "string"' "$VALS" >/dev/null 2>&1 \
+          and ((.gapStoreEndpoint // "") | type) == "string" and ((.discoveryEndpoint // "") | type) == "string"' "$VALS" >/dev/null 2>&1 \
   || { say "refusing: the values command did not print {endpoint, apiKey[, gapStoreEndpoint]} (content not shown: it holds a key); $CFG left as it is"; exit 1; }
 
 # Converge the layout (two default paths only): the values are good, so the move cannot strand a half-done run.
@@ -114,6 +115,7 @@ if ! "$JQ" -s --slurpfile v "$VALS" --argjson lossy "$LOSSY" --arg jqv "$("$JQ" 
       then error("the existing config holds a number beyond 2^53 and this jq (\($jqv)) would rewrite it") else . end
     | $v[0] as $v
     | .metabob = ((.metabob // {}) + {endpoint: $v.endpoint, apiKey: $v.apiKey})
+    | if ($v.discoveryEndpoint // "") != "" then .metabob = (.metabob + {discoveryEndpoint: $v.discoveryEndpoint}) else . end
     | if ($v.gapStoreEndpoint // "") != "" then .substrate = ((.substrate // {}) + {gapStoreEndpoint: $v.gapStoreEndpoint}) else . end' \
     "$EXISTING" > "$NEW" 2> "$NEW.err"; then
   why="$(sed -n -e 's/^jq: error (at [^)]*): //p' "$NEW.err" | head -1 | cut -c1-200)"

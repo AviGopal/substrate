@@ -51,13 +51,13 @@ merge() { # [env...] -- connect-merge.sh directly with a values command -> RC
   ( cd "$T" && "${E[@]}" "$@" ) > "$T/out.txt" 2>&1; RC=$?
 }
 F="$T/home/.metabob/config.json"
-owned='del(.metabob.endpoint, .metabob.apiKey, .substrate.gapStoreEndpoint)'
+owned='del(.metabob.endpoint, .metabob.discoveryEndpoint, .metabob.apiKey, .substrate.gapStoreEndpoint)'
 no_temp() { [ -z "$(find "$(dirname "$F")" "$T/home/.substrate" -maxdepth 1 -name '.connect-*' 2>/dev/null)" ]; }   # temp files sit next to the REAL file, now under ~/.substrate
 
 # ── create ─────────────────────────────────────────────────────────────────────
 echo active > "$T/devvessel"
 emit
-jq -e --arg g "$GS" --arg e "$EP" --arg k "$KEY" '. == {metabob:{endpoint:$e,apiKey:$k},substrate:{gapStoreEndpoint:$g}}' "$F" >/dev/null 2>&1 \
+jq -e --arg g "$GS" --arg e "$EP" --arg k "$KEY" '. == {metabob:{endpoint:$e,discoveryEndpoint:$e,apiKey:$k},substrate:{gapStoreEndpoint:$g}}' "$F" >/dev/null 2>&1 \
   && ok "create: no file and no directory -> created with the three keys" || { bad "create: rc $RC, $(cat "$F" 2>&1)"; sed 's/^/    /' "$T/out.txt"; }
 [ "$(stat -L -c %a "$F" 2>/dev/null)" = 600 ] && ok "create: the file is mode 600" || bad "create: mode $(stat -L -c %a "$F" 2>/dev/null)"
 
@@ -80,7 +80,7 @@ if [ "$(echo 100000000000000000001 | jq . 2>/dev/null)" = 100000000000000000001 
 else
   ok "keep: (host $(jq --version) is lossy: the literal check is the lossy-jq leg's)"
 fi
-jq -e --arg g "$GS" --arg e "$EP" --arg k "$KEY" '.substrate.gapStoreEndpoint == $g and .metabob.endpoint == $e and .metabob.apiKey == $k' "$F" >/dev/null \
+jq -e --arg g "$GS" --arg e "$EP" --arg k "$KEY" '.substrate.gapStoreEndpoint == $g and .metabob.endpoint == $e and .metabob.discoveryEndpoint == $e and .metabob.apiKey == $k' "$F" >/dev/null \
   && ok "keep: gapStoreEndpoint updated, endpoint and apiKey set" || bad "keep: owned keys wrong"
 [ "$(stat -L -c %a "$F")" = 600 ] && no_temp && ok "keep: mode 600, no temp file left" || bad "keep: mode $(stat -L -c %a "$F") or temp left"
 
@@ -91,14 +91,14 @@ grep -qF "provider-secret-placeholder" "$T/out.txt" && bad "secrecy: a provider 
 [ "$MRC" = 64 ] && [ ! -s "$T/m.out" ] && grep -q 'connect-merge\|--merge-script' "$T/m.err" \
   && ok "secrecy: substrate-connect --merge is refused (exit 64), pointing at the host-side merge" || bad "secrecy: --merge rc $MRC"
 V="$("${E[@]}" bash "$T/s/substrate-connect.sh" --values 2>/dev/null)"
-printf '%s' "$V" | jq -e --arg g "$GS" --arg e "$EP" --arg k "$KEY" '. == {endpoint:$e,apiKey:$k,gapStoreEndpoint:$g}' >/dev/null 2>&1 \
+printf '%s' "$V" | jq -e --arg g "$GS" --arg e "$EP" --arg k "$KEY" '. == {endpoint:$e,discoveryEndpoint:$e,apiKey:$k,gapStoreEndpoint:$g}' >/dev/null 2>&1 \
   && ok "secrecy: --values prints only the three owned values" || bad "secrecy: --values printed something else"
 cmp -s <("${E[@]}" bash "$T/s/substrate-connect.sh" --merge-script 2>/dev/null) "$ROOT/scripts/substrate/connect-merge.sh" \
   && ok "one implementation: --merge-script prints scripts/substrate/connect-merge.sh itself" || bad "--merge-script is not connect-merge.sh"
 
 # ── unchanged: no development-vessel, file already up to date ──────────────────
 echo inactive > "$T/devvessel"
-printf '{"metabob": {"apiKey": "%s", "endpoint": "%s"},\n "substrate": {"gapStoreEndpoint": "http://kept.invalid"}, "defaults": {"model": "m-1"}}\n' "$KEY" "$EP" > "$F"
+printf '{"metabob": {"apiKey": "%s", "endpoint": "%s", "discoveryEndpoint": "%s"},\n "substrate": {"gapStoreEndpoint": "http://kept.invalid"}, "defaults": {"model": "m-1"}}\n' "$KEY" "$EP" "$EP" > "$F"
 cp "$F" "$T/before.json"
 emit
 [ "$RC" = 0 ] && cmp -s "$F" "$T/before.json" && no_temp && ok "unchanged: byte-identical (an existing gapStoreEndpoint is not removed)" || { bad "unchanged: rc $RC, file changed"; diff "$T/before.json" "$F" | sed 's/^/    /'; }
