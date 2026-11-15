@@ -43,7 +43,7 @@ case "$1" in
   is-enabled) get "$2" enabled ;;
   show) u="$2"; shift 2; p=""
         while [ $# -gt 0 ]; do case "$1" in -p) p="$2"; shift 2;; *) shift;; esac; done
-        case "$p" in ActiveState) get "$u" active ;; Result) get "$u" result ;; InvocationID) get "$u" inv ;; Job) get "$u" job ;; esac ;;
+        case "$p" in ActiveState) get "$u" active ;; Result) get "$u" result ;; InvocationID) get "$u" inv ;; Job) get "$u" job ;; ConditionResult) get "$u" cond ;; esac ;;
   reset-failed) : ;;
   restart) [ -e "$st/$3.norestart" ] && exit 1 ;;
 esac
@@ -196,6 +196,19 @@ echo "// once more" >> "$T/run/walk-owner-seed.ts"; : > "$STUB_ST/walk-owner-see
 reset_run; apply_changed_seeds; rm -f "$STUB_ST/walk-owner-seed.service.norestart"
 reset_run; apply_changed_seeds
 grep -qx "restart --no-block walk-owner-seed.service" "$T/calls" && ok "[MUST-FAIL] a restart not queued records nothing: the next tick runs it" || bad "failed restart marked"
+
+# ── 4b. a unit whose condition is false here (the hub's walk-owner-seed: records is not installed there) ─────────
+echo "// condition case" >> "$T/run/walk-owner-seed.ts"; echo no > "$STUB_ST/walk-owner-seed.service.cond"
+reset_run; apply_changed_seeds
+! grep -q restart "$T/calls" && ok "[MUST-FAIL] a seed whose condition is false here is not run" || bad "condition-false seed run: $(tr '\n' '|' < "$T/calls")"
+# its condition found false only after the queue: not applicable, no gap
+printf 'walk-owner-seed.ts b9 -\n' > "$T/markers/seed-apply.walk-owner-seed.service"
+echo inactive > "$STUB_ST/walk-owner-seed.service.active"; echo success > "$STUB_ST/walk-owner-seed.service.result"
+reset_run; check_seed_applies
+[ ! -s "$T/gaps" ] && [ ! -e "$T/markers/seed-apply.walk-owner-seed.service" ] && grep -q "not applicable" "$T/log" \
+  && ok "[MUST-FAIL] a run skipped on a false condition files no gap and ends the wait" || bad "condition-false after queue: gaps $(gaps)"
+rm -f "$STUB_ST/walk-owner-seed.service.cond"; rm -f "$T/markers"/seed-apply.*
+reset_run; apply_changed_seeds # the condition true again: the changed seed runs, and its inputs are recorded
 
 # ── 5. a gated node's accept, end to end ─────────────────────────────────────
 # Acceptance comes on a tick with no HEAD move: reseed_run_dir_on_promote copies the accepted scripts into the run dir.

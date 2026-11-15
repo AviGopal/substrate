@@ -6322,9 +6322,12 @@ seed_script() { # <unit>: the run-dir script its ExecStart runs
 }
 # apply_changed_seeds: the seed self-apply's trigger, compare-based and on every tick, so it heals on its own: a seed
 # unit whose inputs in the run dir (its script, and the inventory it reads: the repositories it writes rows for) are not
-# what it was last run over (seed-blob.<unit>, written only when its restart was queued) is run again. A copy made on
-# any path, or one a past tick failed to run, is caught on the next tick; unchanged inputs never run it again. With no
-# record (a node that never ran this), each seed is run once, which writes the record.
+# what it was last run over (seed-blob.<unit>, written when its restart was queued) is run again. A copy made on any
+# path, or one whose restart could not be queued, is caught on the next tick; unchanged inputs never run it again. With
+# no record (a node that never ran this), each seed is run once, which writes the record. The limit, stated: a run that
+# was queued and then failed or was dropped is not run again until its inputs change; check_seed_applies files that as
+# a gap (no retry storm; the open gap is the signal). A unit whose systemd condition is false here (a profile without
+# the store it seeds: the hub's walk-owner-seed) is not applicable: not run, and no gap.
 seed_inputs() { # <unit>: the blobs of what its run reads from the run dir, one line
   local r="${PULLSYNC_RUN_DIR:-/workspace/active-scripts}" b
   b="$(seed_script "$1")"; [ -n "$b" ] || return 1
@@ -6334,6 +6337,7 @@ apply_changed_seeds() {
   local sc="${PULLSYNC_SYSTEMCTL:-systemctl}" u now was changed=""
   for u in $(seed_units); do
     [ "$($sc is-enabled "$u" 2>/dev/null)" = enabled ] || continue
+    [ "$($sc show "$u" -p ConditionResult --value 2>/dev/null)" = no ] && continue
     now="$(seed_inputs "$u")" || continue
     was="$(cat "$MARKER_DIR/seed-blob.$u" 2>/dev/null)"
     [ "$now" = "$was" ] || changed="$changed $(seed_script "$u")"
@@ -6341,7 +6345,7 @@ apply_changed_seeds() {
   [ -n "$changed" ] && apply_reseeded_seeds $changed
   return 0
 }
-apply_reseeded_seeds() { # <changed basename>...: the seeds whose run-dir copy changed
+apply_reseeded_seeds() { # <changed basename>...: what changed (said in the log); it runs every enabled seed unit
   local sc="${PULLSYNC_SYSTEMCTL:-systemctl}" u b blob inv
   [ $# -gt 0 ] || return 0
   for u in $(seed_units); do
@@ -6395,6 +6399,11 @@ check_seed_applies() {
     filed="$(cat "$f.gap" 2>/dev/null)"
     # A restart job still pending: wait, whatever the unit shows (its state is the run before ours, or none yet).
     [ -n "$($sc show "$u" -p Job --value 2>/dev/null)" ] && continue
+    # Its condition is false here (systemd skipped the run): not applicable on this node, not a failure.
+    if [ "$($sc show "$u" -p ConditionResult --value 2>/dev/null)" = no ]; then
+      log "seeds: $u's condition is false here, so $b was not run; not applicable on this node"
+      rm -f "$f" "$f.gap"; continue
+    fi
     # No job pending, and still the run before ours: the run we asked for was dropped without running (a dependency's
     # job failed, or it timed out), and nothing will run it, so that is the gap, and the wait ends. The next copy runs
     # the seed again, and a run that ends well closes the gap.
