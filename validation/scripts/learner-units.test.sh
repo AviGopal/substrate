@@ -8,6 +8,7 @@
 #   3. installed-replay: a member still in the manifest is restored, one now baked is retired (its /etc copy removed,
 #      dropped from installed.json), one in neither is skipped, and no outcome fails the run;
 #   4. the entrypoint's call of the replay, with the replay absent, logs and carries on.
+#   5. walk and described-shape wait (bounded, never failing the start) for records to answer /health.
 #
 # usage: validation/scripts/learner-units.test.sh
 set -uo pipefail
@@ -71,5 +72,28 @@ GUARD="$(awk '/^# The replay itself is installed-replay.sh/{p=1} p{print} p && /
 GOUT="$(bash -euo pipefail -c "FLEET_DIR=$F; $(printf '%s' "$GUARD" | sed "s|/usr/local/bin/installed-replay|$T/absent-installed-replay|g"); echo reached-unit-start" 2>&1)"; GRC=$?
 [ "$GRC" = 0 ] && grep -q reached-unit-start <<<"$GOUT" && grep -q "no installed-replay in this image" <<<"$GOUT" \
   && ok "[MUST-FAIL] with the replay absent the entrypoint says so and carries on" || bad "the entrypoint's call with no replay: rc $GRC, $GOUT"
+
+# ── 5. walk and described-shape wait for records to serve, boundedly ─────────
+# records is Type=simple: After= orders after its process starts, not after it listens. Each waits for records'
+# /health (the port records' unit sets), at most 30 tries, and starts whatever the answer: no Requires= on records.
+RPORT="$(sed -n 's/^Environment=RECORDS_PORT=\([0-9][0-9]*\)$/\1/p' "$S/units/records-vessel.service")"
+for v in walk-vessel described-shape-vessel; do
+  W="$S/units/$v.service.d/45-wait-for-records.conf"
+  [ -f "$W" ] || { bad "$v has no wait-for-records drop-in"; continue; }
+  PRE="$(sed -n 's/^ExecStartPre=//p' "$W")"
+  [ "${PRE:0:1}" = "-" ] && ok "$v: the wait can never fail the start (leading '-')" || bad "$v: the wait's ExecStartPre can fail the start"
+  grep -q "127.0.0.1:$RPORT/health" <<<"$PRE" && ok "$v: it polls records' own port ($RPORT)" || bad "$v: it does not poll records' port $RPORT: $PRE"
+  ! grep -rqE '^Requires=.*records-vessel' "$S/units/$v.service" "$S/units/$v.service.d" && ok "$v: no Requires= on records" || bad "$v requires records"
+  # Run it against a records that never answers and one that answers on the third try (curl and sleep stubbed).
+  CMD="$(sed -n "s/^-\/bin\/sh -c '\(.*\)'$/\1/p" <<<"$PRE")"
+  mkdir -p "$T/bin.$v"; printf '#!/bin/sh\nexit 0\n' > "$T/bin.$v/sleep"
+  printf '#!/bin/sh\nn=$(cat "%s" 2>/dev/null || echo 0); n=$((n+1)); echo $n > "%s"; [ -n "${UP_AT:-}" ] && [ "$n" -ge "$UP_AT" ]\n' "$T/n.$v" "$T/n.$v" > "$T/bin.$v/curl"
+  chmod +x "$T/bin.$v/sleep" "$T/bin.$v/curl"
+  rm -f "$T/n.$v"; OUT="$(PATH="$T/bin.$v:$PATH" sh -c "$CMD" 2>&1)"; RC=$?
+  [ "$RC" = 0 ] && [ "$(cat "$T/n.$v")" = 30 ] && grep -q "starting anyway" <<<"$OUT" \
+    && ok "[MUST-FAIL] $v: records never answering ends the wait after 30 tries, saying so, exit 0" || bad "$v: never-answering records: rc $RC, tries $(cat "$T/n.$v" 2>/dev/null), $OUT"
+  rm -f "$T/n.$v"; OUT="$(UP_AT=3 PATH="$T/bin.$v:$PATH" sh -c "$CMD" 2>&1)"; RC=$?
+  [ "$RC" = 0 ] && [ "$(cat "$T/n.$v")" = 3 ] && [ -z "$OUT" ] && ok "$v: records answering on the third try ends the wait there" || bad "$v: answering records: rc $RC, tries $(cat "$T/n.$v" 2>/dev/null), $OUT"
+done
 
 echo; [ "$FAILS" = 0 ] && { echo PASS; exit 0; } || { echo "$FAILS FAILED"; exit 1; }

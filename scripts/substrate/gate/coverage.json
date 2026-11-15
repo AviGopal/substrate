@@ -2893,6 +2893,13 @@
         "mutated_blob": "2ac08df50293572bf245b241cb1b7551472c330e"
       }
     },
+    "/usr/lib/systemd/system/described-shape-vessel.service.d/45-wait-for-records.conf": {
+      "src": "scripts/substrate/units/described-shape-vessel.service.d/45-wait-for-records.conf",
+      "src_blob": "e56ee0e26b69f7a4d2b50dbafebcb91e5ffcc8f8",
+      "level": "none",
+      "reason": "unreached",
+      "fixtures": []
+    },
     "/usr/lib/systemd/system/described-shape-vessel.service.d/40-after-owner-seed.conf": {
       "src": "scripts/substrate/units/described-shape-vessel.service.d/40-after-owner-seed.conf",
       "level": "behaviour",
@@ -2935,6 +2942,13 @@
         "mutation": "delete every InaccessiblePaths= line",
         "mutated_blob": "2ac08df50293572bf245b241cb1b7551472c330e"
       }
+    },
+    "/usr/lib/systemd/system/walk-vessel.service.d/45-wait-for-records.conf": {
+      "src": "scripts/substrate/units/walk-vessel.service.d/45-wait-for-records.conf",
+      "src_blob": "295f146ab960d15a344048430fda72a3db80ec7c",
+      "level": "none",
+      "reason": "unreached",
+      "fixtures": []
     },
     "/usr/lib/systemd/system/walk-vessel.service.d/40-after-owner-seed.conf": {
       "src": "scripts/substrate/units/walk-vessel.service.d/40-after-owner-seed.conf",
