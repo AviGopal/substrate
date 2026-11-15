@@ -6165,7 +6165,7 @@ if [ "$SUPER_FETCH_OK" = 1 ]; then
           [ -f "$_rd_f" ] || continue
           cmp -s "$_rd_f" "/workspace/active-scripts/$(basename "$_rd_f")" 2>/dev/null && continue
           cov_allows "scripts/substrate/$(basename "$_rd_f")" "$_rd_f" || { cov_skip "scripts/substrate/$(basename "$_rd_f") (active-scripts)"; continue; }
-          cp -f "$_rd_f" /workspace/active-scripts/ 2>/dev/null
+          cp -f "$_rd_f" /workspace/active-scripts/ 2>/dev/null && _rd_copied="${_rd_copied:-} $(basename "$_rd_f")"
         done
         _rd_all=1
         for _rd_u in $(find "$_sg_src/units" -type f 2>/dev/null); do
@@ -6174,6 +6174,8 @@ if [ "$SUPER_FETCH_OK" = 1 ]; then
         [ "$_rd_all" = 1 ] && [ -d "$_sg_src/units" ] && rm -rf /workspace/active-scripts/units.new \
           && cp -r "$_sg_src/units" /workspace/active-scripts/units.new \
           && rm -rf /workspace/active-scripts/units && mv /workspace/active-scripts/units.new /workspace/active-scripts/units; } || true
+      # A seed the gate just accepted takes effect now, not at the next boot (apply_reseeded_seeds).
+      [ -n "${_rd_copied:-}" ] && apply_reseeded_seeds $_rd_copied
       # SUPER-REPO-HOSTED VESSELS — the last thing a convergence changes on disk
       # that nothing then restarts.
       #
@@ -6296,6 +6298,73 @@ fi
 # are all loadable is reset and started, and logged. One whose cause persists is left failed and logged. A
 # timer revived on 3 consecutive ticks keeps failing, so it is filed as a gap (one per timer) instead of
 # looping silently. Disabled or masked timers are never touched: their state is the inventory's decision.
+# A SEED THE GATE ACCEPTED IS APPLIED BY THE SAME CONVERGENCE THAT INSTALLED IT. A seed is a oneshot unit that stays
+# active once it has run (Type=oneshot, RemainAfterExit=yes) over a script in the active-scripts run-dir: it writes the
+# rows the walk reads (channels, schemas, requires). The reseed above copies changed files there, but a oneshot that
+# has run never runs again on its own, so an accepted seed change installed as a file and changed nothing until a
+# person started the unit by hand. So whenever the reseed copied anything, each seed is run again: its script or a
+# file it reads beside itself (the inventory) may be what changed, and a seed writes a row only where the latest one
+# differs, so running an unchanged seed writes nothing. Which units are seeds is read from the unit files, never a
+# list, and the run-dir is matched as written there (${SUBSTRATE_RUN_DIR} or the path), never expanded from env. A
+# timer tick's service is not RemainAfterExit (it runs the new file on its next tick anyway); a unit not enabled here
+# is left as apply-inventory placed it. Whether it worked is checked a tick later (check_seed_applies).
+seed_units() { # the seed units: oneshot, RemainAfterExit, whose ExecStart runs a script from the run-dir as a word
+  local dir="${PULLSYNC_UNIT_DIR:-/usr/lib/systemd/system}" f
+  for f in "$dir"/*.service; do
+    [ -f "$f" ] || continue
+    grep -qx 'Type=oneshot' "$f" && grep -qx 'RemainAfterExit=yes' "$f" || continue
+    grep -E '^ExecStart=' "$f" | grep -qE '(^ExecStart=|[[:space:]])(\$\{SUBSTRATE_RUN_DIR\}|/workspace/active-scripts)/[A-Za-z0-9._-]+([[:space:]]|$)' || continue
+    echo "${f##*/}"
+  done
+}
+seed_script() { # <unit>: the run-dir script its ExecStart runs
+  grep -E '^ExecStart=' "${PULLSYNC_UNIT_DIR:-/usr/lib/systemd/system}/$1" | grep -oE '(\$\{SUBSTRATE_RUN_DIR\}|/workspace/active-scripts)/[A-Za-z0-9._-]+' | head -1 | sed 's|.*/||'
+}
+apply_reseeded_seeds() { # <copied basename>...: what the reseed copied this tick
+  local sc="${PULLSYNC_SYSTEMCTL:-systemctl}" u b blob
+  [ $# -gt 0 ] || return 0
+  for u in $(seed_units); do
+    [ "$($sc is-enabled "$u" 2>/dev/null)" = enabled ] || { log "seeds: $* copied; $u is not enabled here, so not run"; continue; }
+    b="$(seed_script "$u")"
+    blob="$(git hash-object "${PULLSYNC_RUN_DIR:-/workspace/active-scripts}/$b" 2>/dev/null || echo unknown)"
+    $sc reset-failed "$u" 2>/dev/null || true
+    if $sc restart --no-block "$u" 2>/dev/null; then
+      log "seeds: $* copied; $u run again over $b (blob $blob), so the rows it writes follow what was accepted"
+    else
+      log "seeds: !!! could not run $u again over $b (blob $blob)"
+    fi
+    printf '%s %s\n' "$b" "$blob" > "$MARKER_DIR/seed-apply.$u" 2>/dev/null || true
+  done
+}
+
+# A seed run again (above) that did not finish well is a gap, one per unit: filed once for a script blob, filed again
+# (the same gap id, so it replaces the last) when a newer blob fails too, and closed by this detector when a run
+# finishes well. A run still going waits for the next tick.
+seed_gap() { # <unit> <script> <blob> <status> <summary> [state] [result]
+  emit_gap "$(jq -n -c --arg u "$1" --arg b "$2" --arg blob "$3" --arg status "$4" --arg sum "$5" --arg st "${6:-}" --arg res "${7:-}" \
+    '{impulse:{pointer:{type:"substrateGap_write",gap:{id:("pull-sync-seed-not-applied-" + ($u|gsub("[^A-Za-z0-9._-]";"-"))),category:"service_failure",source:"substrate_detected",status:$status,severity:"high",
+      summary:$sum,classification_metadata:{class:"seed_not_applied",unit:$u,script:$b,blob:$blob,active_state:$st,result:$res}}}}}')"
+}
+check_seed_applies() {
+  local sc="${PULLSYNC_SYSTEMCTL:-systemctl}" f u st res b blob filed
+  for f in "$MARKER_DIR"/seed-apply.*.service; do
+    [ -e "$f" ] || continue; u="${f##*/seed-apply.}"
+    read -r b blob < "$f" 2>/dev/null || true
+    filed="$(cat "$f.gap" 2>/dev/null)"
+    st="$($sc show "$u" -p ActiveState --value 2>/dev/null)"; res="$($sc show "$u" -p Result --value 2>/dev/null)"
+    case "$st" in activating|reloading) continue ;; esac
+    if [ "$st" = active ] && [ "$res" = success ]; then
+      log "seeds: $u applied $b (blob $blob)"
+      [ -n "$filed" ] && seed_gap "$u" "$b" "$blob" closed "$u ran $b (blob $blob) to the end: its rows follow the accepted script"
+      rm -f "$f" "$f.gap"; continue
+    fi
+    [ "$filed" = "$blob" ] && continue
+    seed_gap "$u" "$b" "$blob" open "The accepted $b (blob $blob) was run again through $u and did not finish well ($st, $res): the rows the walk reads are not those of the accepted script" "$st" "$res"
+    printf '%s' "$blob" > "$f.gap" 2>/dev/null || true
+    log "seeds: !!! $u did not apply $b (blob $blob): $st, $res; gap filed"
+  done
+}
+
 revive_failed_timers() {
   local sc="${PULLSYNC_SYSTEMCTL:-systemctl}" t svc d why n f revived=" "
   for t in $($sc list-units --type=timer --state=failed --no-legend --plain 2>/dev/null | awk '{print $1}'); do
@@ -6333,6 +6402,7 @@ revive_failed_timers() {
 # See converge_units for why this must NOT sit inside the marker-gated refresh above.
 converge_units "${SUPER_REPO_DIR:-/workspace/git/super-repo}"
 revive_failed_timers
+check_seed_applies
 
 # Same reasoning, same cadence: the selector and the fleet definition it reads
 # must converge on every tick, not only when the super-repo sha advances — a
