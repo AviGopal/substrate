@@ -904,10 +904,10 @@ close_failing_test_gaps() {
     if [ "$absent" != "[]" ]; then
       # Said once per set of names while the mark holds: a later row that made the gap checkable again (a person's r 1
       # release drops check_runnable) leaves names_absent as it was, and the names still absent are said again.
-      if [ "$(printf '%s' "$g" | jq -c '.meta.names_absent // null')" = "$absent" ] && [ "$(printf '%s' "$g" | jq -r '.meta.check_runnable')" = false ]; then log "$v: failing-test closer: $id names tests absent from $tf (already said); left open, not checkable"; continue; fi
+      if [ "$(printf '%s' "$g" | jq -c '.meta.names_absent // null')" = "$absent" ] && [ "$(printf '%s' "$g" | jq -r '.meta.check_runnable')" = false ] && [ "$(printf '%s' "$g" | jq -r '.row.waits_for // empty')" = person ]; then log "$v: failing-test closer: $id names tests absent from $tf (already said); left open, not checkable"; continue; fi
       emit_gap_checked "$(printf '%s' "$g" | jq -c --arg v "$v" --arg tf "$tf" --arg head "${head:0:10}" --argjson absent "$absent" \
         '{impulse:{pointer:{type:"substrateGap_write",gap:((.row // {} | del(.claim)) + {id:.id,category:(.category // "failing_test"),source:"substrate_detected",status:"open",
-          check_runnable:false,
+          check_runnable:false, waits_for:"person",
           summary:("Not checkable here: the tests this gap names (" + ($absent | join("; ")) + ") are not in repos/" + $v + "/" + $tf
             + " at " + $head + ", so its check can neither pass nor fail. It is not worked until a test that checks it is named; the source is left as it is."),
           classification_metadata:((.meta // {}) + {check_runnable:false, names_absent:$absent, absent_at_head:$head})}
@@ -927,7 +927,7 @@ close_failing_test_gaps() {
       if [ "$(printf '%s' "$g" | jq -c '.meta.names_absent // null')" != null ] && [ "$(printf '%s' "$g" | jq -c '.meta.claim_rejected_by // null')" != null ]; then
         emit_gap_checked "$(printf '%s' "$g" | jq -c --arg v "$v" --arg tf "$tf" --arg head "${head:0:10}" \
           '{impulse:{pointer:{type:"substrateGap_write",gap:((.row // {} | del(.claim)) + {id:.id,category:(.category // "failing_test"),source:"substrate_detected",status:"open",
-            check_runnable:false,
+            check_runnable:false, waits_for:"person",
             summary:("The tests this gap names are in repos/" + $v + "/" + $tf + " again at " + $head + " and do not all pass. A person ruled against its claim, so it stays not checkable until a reviewed test fix."),
             classification_metadata:((.meta // {}) + {check_runnable:false, names_absent:null, absent_at_head:null})}
             + (if .severity then {severity:.severity} else {} end))}}}')"
@@ -937,7 +937,7 @@ close_failing_test_gaps() {
       fi
       if [ "$(printf '%s' "$g" | jq -c '.meta.names_absent // null')" != null ]; then
         emit_gap_checked "$(printf '%s' "$g" | jq -c --arg v "$v" --arg tf "$tf" --arg head "${head:0:10}" \
-          '{impulse:{pointer:{type:"substrateGap_write",gap:((.row // {}) + {id:.id,category:(.category // "failing_test"),source:"substrate_detected",status:"open",
+          '{impulse:{pointer:{type:"substrateGap_write",gap:((.row // {} | del(.waits_for)) + {id:.id,category:(.category // "failing_test"),source:"substrate_detected",status:"open",
             check_runnable:true,
             summary:("The tests this gap names are in repos/" + $v + "/" + $tf + " again at " + $head + " and do not all pass: it is checkable, and worked, again."),
             classification_metadata:((.meta // {}) + {check_runnable:true, names_absent:null, absent_at_head:null})}
@@ -1006,6 +1006,11 @@ test_sources() { # <checkout> <test file> <vessel>
 #     level, where the walk's clone precondition reads it, and in its meta). A change must not edit the check that
 #     verifies it, so the walk opens no clone for it: the test is fixed by a reviewed commit to the vessel, which the
 #     failing-test closer then sees pass, closing the gap. A later r 1 clears it.
+# Every row that waits for a person's verdict says so as a top-level fact, waits_for "person" (a held row, from the
+# write below that states its claim; a row marked check_runnable false by a person's r 0 or by the closer), and a row
+# that no longer waits drops it (an r 1 release, the closer's checkable-again row): the page lists "checks waiting for a
+# person" by that field alone and copies no rule. A waiting row without the field is written once more with it, and
+# never again.
 # A verdict decides only if a row it names comes after the closer's latest mark (check_runnable false, names_absent: the
 # named tests are absent): a grade given before the mark judged a check that could run, the mark is newer evidence, and
 # the mark row itself has no claim to judge (a page opened before the mark could still cite it). The order is read from the gap rows alone, all from the one gap read; the outcome read may reach
@@ -1062,12 +1067,13 @@ lift_held_gaps() {
          claim: ("The test is right: the source must change so these tests in " + $file + " pass: "
            + (($m.evidence_resolve.input.only_tests // []) | join(" ; ")))})}
     | ($g.summary | split($held) | join("\u0000") | split($right) | join("\u0000") | split($wrong) | join("\u0000")) as $s
-    | if .by == null then select($was == null and $g.check_runnable != false and $m.check_runnable != false and ($g.claim // "") != .gap.claim)
-      else select(.by.id != $was or (.by.r == 1 and $m.sources == null))
+    | if .by == null then select($was == null and $g.check_runnable != false and $m.check_runnable != false and (($g.claim // "") != .gap.claim or $g.waits_for != "person"))
+        | .gap.waits_for = "person"
+      else select(.by.id != $was or (.by.r == 1 and $m.sources == null) or (.by.r == 0 and $g.waits_for != "person"))
         | .gap.classification_metadata |= del(.operator_hold, .operator_hold_reason, .disposition, .localized_by, .claim_rejected_by, .edit_site, .protected_files, .sources, .check_runnable)
-        | if .by.r == 1 then .gap.classification_metadata += {protected_files: [$file], localized_by: $by.id} | .gap |= del(.check_runnable)
+        | if .by.r == 1 then .gap.classification_metadata += {protected_files: [$file], localized_by: $by.id} | .gap |= del(.check_runnable, .waits_for)
             | .gap.summary = ($s | split("\u0000") | join($right))
-          else .gap.classification_metadata += {protected_files: [$file], claim_rejected_by: $by.id, check_runnable: false} | .gap.check_runnable = false
+          else .gap.classification_metadata += {protected_files: [$file], claim_rejected_by: $by.id, check_runnable: false} | .gap.check_runnable = false | .gap.waits_for = "person"
             | .gap.summary = ($s | split("\u0000") | join($wrong)) end
       end' 2>/dev/null)"
   return 0

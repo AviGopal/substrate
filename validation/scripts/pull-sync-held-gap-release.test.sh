@@ -316,5 +316,36 @@ lift_held_gaps x 0123456789abcdef "$DIR"
 if [ ! -s "$WRITES" ] && grep -q 'gap rows with no seq (g-y)' "$LOG"; then ok "(x4) a gap row with no seq: nothing written, and said"
 else bad "(x4) writes=$(cat "$WRITES") log=$(cat "$LOG")"; fi
 
+# (wf) waits_for "person" is a top-level fact on exactly the rows that wait for a person's verdict
+reset "$(held g-a x src/a.test.ts "$GEN")"
+lift_held_gaps x 0123456789abcdef "$DIR"
+held_wf="$(latest g-a | jq -r '.waits_for // "none"')"
+reset "$(held g-a x src/a.test.ts "$GEN")" "$(outcome 0 r0)"
+lift_held_gaps x 0123456789abcdef "$DIR"
+marked_wf="$(latest g-a | jq -r '.waits_for // "none"')"
+# released from a held row that already says it waits (as every held row does once its claim is stated)
+reset "$(held g-a x src/a.test.ts "$GEN" | jq -c '. + {waits_for: "person"}')" "$(outcome 1 r0)"
+lift_held_gaps x 0123456789abcdef "$DIR"
+released_wf="$(latest g-a | jq -r '.waits_for // "none"')"
+if [ "$held_wf" = person ] && [ "$marked_wf" = person ] && [ "$released_wf" = none ]; then
+  ok "(wf1) a held row and a row a person marked r 0 wait for a person (waits_for top level); an r 1 release does not"
+else bad "(wf1) held=$held_wf marked=$marked_wf released=$released_wf log=$(cat "$LOG")"; fi
+
+# (wf2) a waiting row written before the field (a held row with its claim, a row already marked r 0) is written once
+# more with it, and then never again
+pre_claim="$(held g-a x src/a.test.ts "$GEN" | jq -c '. + {claim: "The test is right: the source must change so these tests in repos/x/src/a.test.ts pass: d > one"}')"
+reset "$pre_claim"
+lift_held_gaps x 0123456789abcdef "$DIR"; n1="$(wc -l < "$WRITES")"; : > "$WRITES"
+lift_held_gaps x 0123456789abcdef "$DIR"; n2="$(wc -l < "$WRITES")"
+wf="$(latest g-a | jq -r '.waits_for // "none"')"
+reset "$(held g-a x src/a.test.ts "$GEN")" "$(outcome 0 r0)"
+lift_held_gaps x 0123456789abcdef "$DIR"
+jq -c 'map(if .shape == "gap" then del(.waits_for) else . end)' "$ROWS" > "$ROWS.new" && mv "$ROWS.new" "$ROWS"; : > "$WRITES"
+lift_held_gaps x 0123456789abcdef "$DIR"; m1="$(wc -l < "$WRITES")"; mwf="$(latest g-a | jq -r '.waits_for // "none"')"; : > "$WRITES"
+lift_held_gaps x 0123456789abcdef "$DIR"; m2="$(wc -l < "$WRITES")"
+if [ "$n1" = 1 ] && [ "$n2" = 0 ] && [ "$wf" = person ] && [ "$m1" = 1 ] && [ "$mwf" = person ] && [ "$m2" = 0 ]; then
+  ok "(wf2) a waiting row without the field is written once with it, then not again (held: $n1/$n2, marked: $m1/$m2)"
+else bad "(wf2) held $n1/$n2 wf=$wf marked $m1/$m2 wf=$mwf log=$(cat "$LOG")"; fi
+
 echo; [ "$FAILS" = 0 ] && { echo "PASS - a person releases a held generator gap, and its fix is held to the test's released size"; exit 0; }
 echo "$FAILS FAILED"; exit 1

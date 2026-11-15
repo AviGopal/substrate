@@ -167,8 +167,9 @@ close_failing_test_gaps x 0123456789abcdef "$DIR"
 L="$(tail -n 1 "$WRITES")"; n1="$(wc -l < "$WRITES")"
 if [ "$n1" = 1 ] && printf '%s' "$L" | jq -e '.gap_id == "g-a" and .status == "open" and .role == "detector" and .check_runnable == false
     and .meta.check_runnable == false and .meta.names_absent == ["d > old"] and .meta.absent_at_head == "0123456789"
-    and (.meta.evidence_resolve.input.only_tests == ["d > old"]) and (.summary | contains("Not checkable here"))' >/dev/null; then
-  ok "(i) a named test the file no longer has: one open row, not checkable, naming it"
+    and (.meta.evidence_resolve.input.only_tests == ["d > old"]) and (.summary | contains("Not checkable here"))
+    and .waits_for == "person"' >/dev/null; then
+  ok "(i) a named test the file no longer has: one open row, not checkable, naming it, waiting for a person (waits_for)"
 else bad "(i) writes=$(cat "$WRITES") log=$(cat "$LOG")"; fi
 : > "$WRITES"; close_failing_test_gaps x fedcba9876543210 "$DIR"
 if [ ! -s "$WRITES" ]; then ok "(i) said once: a later run finding the same names absent writes nothing"
@@ -177,6 +178,16 @@ summary "(pass) d > old" > "$FAKE/a.test.ts.out"
 : > "$WRITES"; close_failing_test_gaps x 1111111111111111 "$DIR"
 if [ "$(wc -l < "$WRITES")" = 1 ] && [ "$(jq -r '.status' "$WRITES")" = closed ]; then ok "(i) the named test back and passing: the gap closes"
 else bad "(i) back: writes=$(cat "$WRITES") log=$(cat "$LOG")"; fi
+
+# (i2) a not-checkable mark written before waits_for existed is written once more with it, then never again
+reset "$(row g-a x src/a.test.ts "$GEN" '["d > old"]')"
+summary "(pass) d > new" > "$FAKE/a.test.ts.out"
+close_failing_test_gaps x 0123456789abcdef "$DIR"
+jq -c 'map(if .shape == "gap" then del(.waits_for) else . end)' "$ROWS" > "$ROWS.new" && mv "$ROWS.new" "$ROWS"
+: > "$WRITES"; close_failing_test_gaps x fedcba9876543210 "$DIR"; m1="$(wc -l < "$WRITES")"; mwf="$(tail -n 1 "$WRITES" | jq -r '.waits_for // "none"')"
+: > "$WRITES"; close_failing_test_gaps x fedcba9876543211 "$DIR"; m2="$(wc -l < "$WRITES")"
+if [ "$m1" = 1 ] && [ "$mwf" = person ] && [ "$m2" = 0 ]; then ok "(i2) a mark without waits_for is written once with it, then not again"
+else bad "(i2) m1=$m1 wf=$mwf m2=$m2 log=$(cat "$LOG")"; fi
 
 # (j) a broken run is red, not absent: the import throws (no named line, an error summary), the setup throws
 # ("(unnamed)"), or the run omits a name whose test title the source still holds. Each on its own gap, each checked.
@@ -204,8 +215,8 @@ printf '(fail) d > old\n 0 pass\n 1 fail\n' > "$FAKE/a.test.ts.out"
 L="$(tail -n 1 "$WRITES")"; n1="$(wc -l < "$WRITES")"
 : > "$WRITES"; close_failing_test_gaps x 4444444444444444 "$DIR"
 if [ "$n1" = 1 ] && [ ! -s "$WRITES" ] && printf '%s' "$L" | jq -e '.status == "open" and .check_runnable == true and .meta.check_runnable == true
-    and .meta.names_absent == null and (.summary | contains("checkable, and worked, again"))' >/dev/null; then
-  ok "(k) names back but red: one checkable row, then left open as any red gap"
+    and .meta.names_absent == null and (.summary | contains("checkable, and worked, again")) and (has("waits_for") | not)' >/dev/null; then
+  ok "(k) names back but red: one checkable row, no longer waiting for a person, then left open as any red gap"
 else bad "(k) n1=$n1 L=$L again=$(cat "$WRITES") log=$(cat "$LOG")"; fi
 
 # (l) re-armed, then the name goes absent again: marked again, once
