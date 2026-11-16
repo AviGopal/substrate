@@ -141,7 +141,9 @@ if [ "$after_rc" = 0 ]; then
   if [ "$v" = true ]; then set_check key_valid_after pass null
   else set_check key_valid_after fail "$(jq -nc --arg v "${v:-}" '{valid: $v, note: "a key issued before the upgrade no longer validates: the effective signing secret changed"}')"; fi
 
-  if eng exec "$C" substrate-status --quick --level seeded >"$RESULT_DIR/diag/status-seeded.txt" 2>&1; then set_check fleet_seeded pass null
+  # A bounded wait, not a snapshot: right after the installer's own wait returns, units can still be queued ("systemd is
+  # still starting"), and a --quick read then fails a fleet that seeds a moment later (agf_c0x5weqjxa8u).
+  if eng exec "$C" substrate-status --wait seeded --timeout 300 >"$RESULT_DIR/diag/status-seeded.txt" 2>&1; then set_check fleet_seeded pass null
   else set_check fleet_seeded fail null; fi
 
   # The re-run reads the fleet's .env, so a declared input survives the upgrade.

@@ -192,7 +192,9 @@ poll() { # <seconds> <command…>: re-run until it succeeds or time runs out
   while :; do "$@" && return 0; [ "$(date +%s)" -ge "$deadline" ] && return 1; sleep 10; done
 }
 if [ "$spoke_rc" = 0 ] || [ "$spoke_rc" = 20 ]; then
-  if eng exec "$SPOKE_C" substrate-status --quick --level seeded >"$RESULT_DIR/diag/spoke-seeded.txt" 2>&1; then
+  # A bounded wait, not a snapshot, as the upgrade run judges fleet_seeded: right after the installer returns, units can
+  # still be queued, and a --quick read then fails a spoke that seeds a moment later (agf_c0x5weqjxa8u).
+  if eng exec "$SPOKE_C" substrate-status --wait seeded --timeout 300 >"$RESULT_DIR/diag/spoke-seeded.txt" 2>&1; then
     set_check spoke_seeded pass "$(jq -nc --arg e "$(sed -n 's/^ *seeded *pass *//p' "$RESULT_DIR/diag/spoke-seeded.txt" | head -1)" '{evidence: $e}')"
   else set_check spoke_seeded fail null; fi
 
