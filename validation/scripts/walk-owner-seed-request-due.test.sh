@@ -144,6 +144,9 @@ const schemaOf = (target: string) => rows.filter((r) => r.shape === "shape_schem
 const tmpl = schemaOf("activity_template");
 leg(JSON.stringify(tmpl?.inputs) === JSON.stringify([{ shape: "outcome", latest_by: "shape" }]),
   "(pt) the template takes only the newest grade (prompt_too_large); the grader's request_acts stays whole (the USER, keep-visibility a2)");
+const gradeSchema = schemaOf("outcome");
+leg(JSON.stringify(gradeSchema?.evidence) === JSON.stringify([{ shape: "answer", deferred_by: "next_act" }]),
+  "(ev) an answer carrying next_act is a promise, as the owner's outcome schema says (records reads it)");
 const holdFact = rows.filter((r) => r.shape === "hold_fact" && r.reason_prefix === "needs_localization").at(-1);
 leg(!!holdFact && JSON.stringify(holdFact.fact) === JSON.stringify({ localized: false }) && holdFact.retired === undefined
   && String(holdFact.description).includes("needs_localization holds as facts"),

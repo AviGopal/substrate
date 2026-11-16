@@ -114,6 +114,10 @@ const SCHEMAS: Row[] = [
   },
   {
     target: "outcome",
+    // Which answers promise rather than claim a result: one carrying next_act (the USER: "Accurate, not done"; "Exempt
+    // until deadline"; its promise is graded by what happens next). records reads it (a person's Right on a promise does
+    // not close the request; the grader's grade of one before its ask's first deadline does not count).
+    evidence: [{ shape: "answer", deferred_by: "next_act" }],
     // records derives the graded cells from the row evidence_refs names, so nothing is copied from a selection.
     // A lapse comes first: reads lists a request's FIRST due row once it has passed with no person's verdict, answered
     // or not (records lapsed()). With answers present the answer branch used to win, so a passed deadline was never
