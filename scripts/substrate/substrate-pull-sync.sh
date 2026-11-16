@@ -282,7 +282,10 @@ gap_resolve() { # <pointer json> [curl args...]: answers as the old store did ({
   }
   # Only a list of rows (bare, or under content) is an answer. An error, a refusal or nothing is a failed read, never an
   # empty store: an empty store would let every tick write the gap again and tell readers nothing is open.
-  _g_rows="$(_g_post '{"pointer":{"type":"record_read","shape":"gap"}}' | jq -c '
+  # Every gap read here asks for rows as stored (stored: true): pull-sync keeps gap rows and writes them back, and records
+  # shows a hold the owner reads as a fact as that fact on a default read, marked read_as_fact, which it refuses to take
+  # back as a row (a view never becomes data).
+  _g_rows="$(_g_post '{"pointer":{"type":"record_read","shape":"gap","stored":true}}' | jq -c '
     (if type == "array" then . elif (.content | type) == "array" then .content else error("not a list of rows") end)
     | map(select(.role == "detector")) | group_by(.gap_id) | map(max_by(.seq))
     | map(del(.shape, .id, .seq, .t, .writer, .role, .input_refs) + {id: .gap_id, classification_metadata: (.meta // {})} | del(.gap_id, .meta))' 2>/dev/null)"
@@ -1022,7 +1025,7 @@ test_sources() { # <checkout> <test file> <vessel>
 lift_held_gaps() {
   local v="$1" head="$2" dir="${3:-}" gaps outs p src
   command -v jq >/dev/null 2>&1 && [ -n "$dir" ] || return 0
-  gaps="$(dev_resolve '{"impulse":{"pointer":{"type":"record_read","shape":"gap"}}}' --max-time 30 2>/dev/null \
+  gaps="$(dev_resolve '{"impulse":{"pointer":{"type":"record_read","shape":"gap","stored":true}}}' --max-time 30 2>/dev/null \
     | jq -c 'if type == "array" then . elif (.content | type) == "array" then .content else error("no rows") end' 2>/dev/null)"
   outs="$(dev_resolve '{"impulse":{"pointer":{"type":"record_read","shape":"outcome","where":{"role":"person"}}}}' --max-time 30 2>/dev/null \
     | jq -c 'if type == "array" then . elif (.content | type) == "array" then .content else error("no rows") end' 2>/dev/null)"
@@ -1118,7 +1121,7 @@ jq_ao() { # <run output> <jq args...>
 carry_gap_repo() {
   local gaps out p
   command -v jq >/dev/null 2>&1 || return 0
-  gaps="$(dev_resolve '{"impulse":{"pointer":{"type":"record_read","shape":"gap"}}}' --max-time 30 2>/dev/null \
+  gaps="$(dev_resolve '{"impulse":{"pointer":{"type":"record_read","shape":"gap","stored":true}}}' --max-time 30 2>/dev/null \
     | jq -c 'if type == "array" then . elif (.content | type) == "array" then .content else error("no rows") end' 2>/dev/null)"
   [ -n "$gaps" ] || { log "gap repo carry: records unreadable; nothing written"; return 0; }
   out="$(printf '%s' "$gaps" | jq -c '
@@ -1147,7 +1150,7 @@ carry_gap_repo() {
 close_passed_regressions() {
   local gaps g id v line vt vh vv
   command -v jq >/dev/null 2>&1 || return 0
-  gaps="$(dev_resolve '{"impulse":{"pointer":{"type":"record_read","shape":"gap"}}}' --max-time 30 2>/dev/null \
+  gaps="$(dev_resolve '{"impulse":{"pointer":{"type":"record_read","shape":"gap","stored":true}}}' --max-time 30 2>/dev/null \
     | jq -c 'if type == "array" then . elif (.content | type) == "array" then .content else error("no rows") end' 2>/dev/null)"
   [ -n "$gaps" ] || { log "regression close: records unreadable; nothing written"; return 0; }
   while IFS= read -r g; do
@@ -1281,7 +1284,7 @@ emit_infra_gap() {
 carry_infra_gaps() {
   local gaps out p
   command -v jq >/dev/null 2>&1 || return 0
-  gaps="$(dev_resolve '{"impulse":{"pointer":{"type":"record_read","shape":"gap"}}}' --max-time 30 2>/dev/null \
+  gaps="$(dev_resolve '{"impulse":{"pointer":{"type":"record_read","shape":"gap","stored":true}}}' --max-time 30 2>/dev/null \
     | jq -c 'if type == "array" then . elif (.content | type) == "array" then .content else error("no rows") end' 2>/dev/null)"
   [ -n "$gaps" ] || { log "infra gap mark: records unreadable; nothing written"; return 0; }
   out="$(printf '%s' "$gaps" | jq -c --argjson pre "$(printf '%s\n' "${INFRA_GAPS[@]}" | jq -R . | jq -s -c .)" '
