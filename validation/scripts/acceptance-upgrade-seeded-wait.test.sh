@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
 # acceptance-upgrade-seeded-wait.test.sh: the upgrade acceptance judges fleet_seeded with a bounded wait for the seeded
 # level, never a --quick snapshot: right after the installer's wait returns, units can still be queued, and a snapshot
-# then failed every run since 3d5e613e (agf_c0x5weqjxa8u). The network run's spoke_seeded is held to the same rule.
+# then failed a fleet that seeded a moment later (agf_c0x5weqjxa8u). The network run's spoke_seeded is held to the same rule.
 # Each check is run against a stand-in substrate-status that answers "still starting" on its first evaluation and
 # seeded on the next, as a wait re-evaluates and a snapshot does not.
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-F="$ROOT/scripts/substrate/acceptance/run-upgrade-acceptance.sh"
 T="$(mktemp -d "${TMPDIR:-/tmp}/acc-upg.XXXXXX")"; trap 'rm -rf "$T"' EXIT
 FAILS=0; ok() { echo "ok   - $*"; }; bad() { echo "FAIL - $*"; FAILS=$((FAILS+1)); }
 # the stand-in: the first evaluation sees units still queued; a --wait evaluates again and sees seeded
