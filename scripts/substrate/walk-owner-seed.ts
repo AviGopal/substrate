@@ -98,7 +98,12 @@ const SCHEMAS: Row[] = [
     // and landing hops are told apart from its reads.
     // What this request has already done (the walk's request_acts: acts, tools never called here, repeats), kept in view
     // however much newer context there is: an answer claiming a landing on a request with none is the class it answers.
-    context: [{ shape: "hop", join: { on: "call_id", take: ["pointer_type"] } }, { shape: "request_acts", keep: true }],
+    // A file this request read whole is shown whole, in place of its cut hop (agf_ydcn9zrw4z8h: answers saw only the
+    // 16 KB cut and kept saying they would read the file). request_acts is one growing row per act: only the newest is
+    // kept (latest_by shape: the single newest row), so it never fills the keep share on its own.
+    context: [{ shape: "hop", join: { on: "call_id", take: ["pointer_type"] } },
+      { shape: "fileContent", whole: true, latest_by: "path", covers: { shape: "hop", on: "call_id" } },
+      { shape: "request_acts", latest_by: "shape", keep: true }],
     keep_share: 0.25,
   },
   {
@@ -179,7 +184,10 @@ const SCHEMAS: Row[] = [
     // when older hops fall out of the context budget.
     context: ["hop", "failure", "answer", "outcome", { shape: "fileContent", whole: true, latest_by: "path", covers: { shape: "hop", on: "call_id" } },
       { shape: "gitWorktree", latest_by: "repo", keep: true }, { shape: "change_wanted", latest_by: "repo", keep: true },
-      { shape: "request_acts", keep: true }],
+      // The request's newest commit (its sha and tree) is kept like its clone: without it a request whose clone row
+      // survived still asked for a new clone (d929). request_acts: only the newest row (latest_by shape), since each
+      // restates every act so far and 76 of them filled the keep share before the clone row could fit (qa, database).
+      { shape: "gitCommitResult", latest_by: "shape", keep: true }, { shape: "request_acts", latest_by: "shape", keep: true }],
     // keep: true has described-shape fit those rows first, within keep_share of its context budget, so an hour-old
     // request's clone stays in view (the USER: "Build now, first (Recommended)"); a quarter is room for one small row per
     // repository each without crowding out the newest failure a retry reads.
@@ -246,6 +254,12 @@ const SCHEMAS: Row[] = [
     description: "A reusable template of the calls that led to the outcome row: sig.in and sig.out are the shapes it " +
       "consumes and produces, and calls lists each call in order: its shape, and in pointer the arguments that call " +
       "takes. Every call's shape must be one of the shapes in reads, and its pointer must fill that shape's shape_inputs. " +
+      "A value that belongs to one request (its clone's cwd, a path inside it) is written as a placeholder, bound anew in " +
+      "every run. \"{{ sig.in[i].field }}\" is a field of the template's own i-th input: the row of shape sig.in[i] that a " +
+      "call recorded for this request. With sig.in [\"gitWorktree\"], \"{{ sig.in[0].cwd }}\" is this request's clone. " +
+      "\"{{ calls.N.output.field }}\" is a field of the answer of this run's call N (from 0): after a first call to " +
+      "git_worktree, \"{{ calls.0.output.cwd }}\". Write a literal only for what is the same in every run (a tool's " +
+      "mode, a fixed flag): a literal copied from the run you saw makes the template fail everywhere else. " +
       JSON_ONLY,
     schema: {
       type: "object",
