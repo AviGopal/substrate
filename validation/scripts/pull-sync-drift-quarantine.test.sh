@@ -35,6 +35,9 @@ bad() { echo "FAIL - $*"; FAILS=$((FAILS+1)); }
 
 # ── the code under test, taken from the script itself ─────────────────────────
 {
+  # the ids of the gaps that record a deployment event, and the helper that marks them (the drift gap is one)
+  grep -E '^INFRA_GAP[A-Z_]*=' "$SCRIPT"
+  sed -n '/^emit_infra_gap() {/,/^}/p' "$SCRIPT"
   sed -n '/^tracked_output_dirs() {/,/^}/p' "$SCRIPT"
   sed -n '/^content_hash() {/,/^}/p' "$SCRIPT"
   sed -n '/^test_only_range() {/,/^}/p' "$SCRIPT"

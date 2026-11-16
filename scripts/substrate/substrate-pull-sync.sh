@@ -1261,6 +1261,45 @@ emit_gap() {
     *) log "emit_gap FAILED http=${code:-000} — gap NOT filed (detector fired but nothing is queryable): $(printf '%s' "${body%$'\n'*}" | tr -d '\n' | cut -c1-200)" ;;
   esac
 }
+# GAPS THAT RECORD AN EVENT IN THE DEPLOYMENT, NOT A DEFECT IN A REPOSITORY'S CODE: a runtime tree pull-sync found
+# collapsed or overwrote from the clone, or a unit namespace that could reach the scoped-secret directory. They are gaps,
+# marked, never offered to the walk as code work (the USER, 11-15: infra gaps are marked, not offered): each is written
+# walkable false (records shows it and never makes it a root) and infra true. A clone and an edit of the repository could
+# not fix any of them. These ids are the only ones built by those emits and the only ones carry_infra_gaps marks.
+INFRA_GAP_TRUNCATED="runtime-source-truncated"
+INFRA_GAP_DRIFT="pull-sync-drift-quarantined"
+INFRA_GAP_MASK="secret-mask-probe"
+INFRA_GAPS=("$INFRA_GAP_TRUNCATED" "$INFRA_GAP_DRIFT" "$INFRA_GAP_MASK")
+emit_infra_gap() {
+  local p="$1"
+  command -v jq >/dev/null 2>&1 && p="$(printf '%s' "$1" | jq -c '.impulse.pointer.gap += {walkable: false, infra: true}' 2>/dev/null || printf '%s' "$1")"
+  emit_gap "$p"
+}
+# The rows of those gaps written before the mark existed are still roots: each open one whose latest row says nothing of
+# walkable gets one row more, the same gap marked, every tick until it is (latest_by keeps it; nothing is rewritten).
+# Only this vessel's own detector rows of the INFRA_GAPS ids; a store that cannot be read writes nothing.
+carry_infra_gaps() {
+  local gaps out p
+  command -v jq >/dev/null 2>&1 || return 0
+  gaps="$(dev_resolve '{"impulse":{"pointer":{"type":"record_read","shape":"gap"}}}' --max-time 30 2>/dev/null \
+    | jq -c 'if type == "array" then . elif (.content | type) == "array" then .content else error("no rows") end' 2>/dev/null)"
+  [ -n "$gaps" ] || { log "infra gap mark: records unreadable; nothing written"; return 0; }
+  out="$(printf '%s' "$gaps" | jq -c --argjson pre "$(printf '%s\n' "${INFRA_GAPS[@]}" | jq -R . | jq -s -c .)" '
+    map(select(.shape == "gap" and .role == "detector")) | group_by(.gap_id)[] | (sort_by(.seq) | last) as $g
+    | select($g.status == "open" and ($g | has("walkable") | not))
+    | select(($g.gap_id | tostring) as $id | any($pre[]; . as $x | $id | startswith($x + "-")))
+    | {impulse: {pointer: {type: "substrateGap_write",
+        gap: (($g | del(.shape, .id, .seq, .t, .writer, .role, .input_refs, .gap_id, .meta)) + {id: $g.gap_id, walkable: false, infra: true}
+          + (if $g.meta then {classification_metadata: $g.meta} else {} end))}}}' 2>&1)" \
+    || { log "infra gap mark: jq failed, nothing written: $(printf '%s' "$out" | tr -d '\n' | cut -c1-200)"; return 0; }
+  while IFS= read -r p; do
+    [ -n "$p" ] || continue
+    emit_gap "$p"
+    log "infra gap mark: $(printf '%s' "$p" | jq -r '.impulse.pointer.gap.id') is an infrastructure event: shown, not worked"
+  done <<< "$out"
+  return 0
+}
+
 # emit_gap, saying whether the gap was filed: non-zero when it was not. For a caller that acts on it (the failing-test
 # closer runs a gap again when its row was not taken); emit_gap itself still answers 0, so no caller changes.
 emit_gap_checked() {
@@ -2316,7 +2355,7 @@ converge_units() {
       log "units: !!! secret-mask-probe rc=$_cu_smp_rc: $(printf '%s' "$_cu_smp_lines" | tr '\n' ';')"
       if command -v jq >/dev/null 2>&1; then
         case "$_cu_smp_rc" in 2) _cu_smp_kind=blind ;; 3) _cu_smp_kind=other-path-leak ;; *) _cu_smp_kind=leak ;; esac
-        emit_gap "$(jq -n -c --arg id "secret-mask-probe-$_cu_smp_kind" --arg l "$_cu_smp_lines" --arg k "$_cu_smp_kind" \
+        emit_infra_gap "$(jq -n -c --arg id "$INFRA_GAP_MASK-$_cu_smp_kind" --arg l "$_cu_smp_lines" --arg k "$_cu_smp_kind" \
           --arg s "secret-mask-probe found the scoped-secrets directory reachable from inside a unit namespace, or could not prove it is not ($_cu_smp_kind). A unit started before the mask existed needs a restart; an UNMASKED unit needs the default-deny drop-in or a declared exemption (units/service.d/EXEMPT). Findings name units and paths only." \
           '{impulse:{pointer:{type:"substrateGap_write",gap:{id:$id,category:"security",source:"substrate_detected",summary:$s,classification_metadata:{kind:$k,findings:$l},status:"open"}}}}')"
       fi
@@ -4316,7 +4355,7 @@ EOF
     if [ -n "$TRUNCATED" ]; then
       SUPPRESS_REATTEMPT=""
       log "$v: RUNTIME SOURCE TRUNCATED — $TRUNCATED — overriding re-attempt suppression to restore it from the clone"
-      emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"runtime-source-truncated-$v\",\"category\":\"systematic_failure\",\"source\":\"substrate_detected\",\"summary\":\"pull-sync found live source under $RUNTIME_DIR/$v collapsed to a fraction of its git content ($TRUNCATED) while the unit was still active. A write tool truncated running vessel source; the vessel kept serving from its in-memory module, so nothing else noticed. Re-mirrored from the clone. Ops are applied against RUNTIME_ROOT (live source) rather than a scratch copy — that is the class to close.\",\"status\":\"open\"}}}}"
+      emit_infra_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"$INFRA_GAP_TRUNCATED-$v\",\"category\":\"systematic_failure\",\"source\":\"substrate_detected\",\"summary\":\"pull-sync found live source under $RUNTIME_DIR/$v collapsed to a fraction of its git content ($TRUNCATED) while the unit was still active. A write tool truncated running vessel source; the vessel kept serving from its in-memory module, so nothing else noticed. Re-mirrored from the clone. Ops are applied against RUNTIME_ROOT (live source) rather than a scratch copy — that is the class to close.\",\"status\":\"open\"}}}}"
     fi
   fi
   if [ -z "$DIST_RETRY" ] && [ -z "${TG_GATE_ONLY:-}" ] && [ -n "$SUPPRESS_REATTEMPT" ] && [ "$LAST" = "$CLONE_HASH" ]; then continue; fi
@@ -5575,7 +5614,7 @@ EOF
       failed=$((failed+1)); continue
     fi
     log "$v: live content ${RUNTIME_HASH:0:10} is not what pull-sync last wrote — QUARANTINED to $DQ_PATH before overwriting it with the clone (${CLONE_HASH:0:10}, git ${HEAD:0:10})"
-    emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-drift-quarantined-$v\",\"category\":\"source_divergence\",\"source\":\"substrate_detected\",\"summary\":\"pull-sync overwrote live content under $RUNTIME_DIR/$v that it had not written (live content $RUNTIME_HASH) with the clone (content $CLONE_HASH, git $HEAD). The live tree was copied first to $DQ_PATH. If it held a change newer than origin (a hand deploy that was never pushed), recover it from there and land it through git; if it was a stray draft, nothing is lost.\",\"classification_metadata\":{\"vessel\":\"$v\",\"quarantine_path\":\"$DQ_PATH\",\"runtime_hash\":\"$RUNTIME_HASH\",\"clone_hash\":\"$CLONE_HASH\",\"clone_head\":\"$HEAD\"},\"status\":\"open\"}}}}"
+    emit_infra_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"$INFRA_GAP_DRIFT-$v\",\"category\":\"source_divergence\",\"source\":\"substrate_detected\",\"summary\":\"pull-sync overwrote live content under $RUNTIME_DIR/$v that it had not written (live content $RUNTIME_HASH) with the clone (content $CLONE_HASH, git $HEAD). The live tree was copied first to $DQ_PATH. If it held a change newer than origin (a hand deploy that was never pushed), recover it from there and land it through git; if it was a stray draft, nothing is lost.\",\"classification_metadata\":{\"vessel\":\"$v\",\"quarantine_path\":\"$DQ_PATH\",\"runtime_hash\":\"$RUNTIME_HASH\",\"clone_hash\":\"$CLONE_HASH\",\"clone_head\":\"$HEAD\"},\"status\":\"open\"}}}}"
   fi
   # Taken BEFORE the mirror: what the running unit's non-test code is, vs the clone's.
   RUNTIME_NONTEST="$(content_hash_nontest "$RUNTIME_DIR/$v")"; CLONE_NONTEST="$(content_hash_nontest "$d")"
@@ -6508,6 +6547,8 @@ done <<< "$GEN_QUEUE"
 lift_held_gaps_each "$CLONE_DIR" || true
 # An open failing-test gap filed before gaps named their repository names it, once (see carry_gap_repo).
 carry_gap_repo || true
+# Deployment events recorded as gaps before they were marked as such stop being worked (carry_infra_gaps).
+carry_infra_gaps || true
 # A test-regression gap whose vessel the gate has passed since, closed (see close_passed_regressions).
 close_passed_regressions || true
 
