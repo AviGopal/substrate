@@ -111,17 +111,40 @@ export async function decideIngress(shape: string, credential: string | null, se
 }
 
 type Fetch = (url: string, init: { method: string; headers: Record<string, string>; body: string; signal: AbortSignal }) => Promise<{ ok: boolean; status: number; json(): Promise<unknown> }>
-export interface ValidatorOptions { identityUrl: () => string; fetchImpl: Fetch; now?: () => number; cacheEnabled?: () => boolean; positiveMs?: number; negativeMs?: number; max?: number; timeoutMs?: number }
+export interface ValidatorOptions { identityUrl: () => string; fetchImpl: Fetch; now?: () => number; cacheEnabled?: () => boolean; positiveMs?: number; negativeMs?: number; max?: number; timeoutMs?: number; log?: (line: string) => void }
+
+// What kind of failure an unreachable validation was, by its class alone: an HTTP status, or the error's name and code.
+// Never anything the request carried (the credential, its hash, a key id).
+const failureClass = (e: unknown): string => {
+  const x = e as { name?: unknown; code?: unknown; cause?: { code?: unknown } } | undefined
+  const code = typeof x?.code === 'string' ? x.code : typeof x?.cause?.code === 'string' ? x.cause.code : ''
+  const name = typeof x?.name === 'string' ? x.name : 'Error'
+  return ('error ' + name + (code ? ' ' + code : '')).replace(/[^A-Za-z0-9 _.-]/g, '').slice(0, 64)
+}
 
 /**
  * identity POST /v1/auth/resolve (nested form) with the audience stated, cached by sha256(credential, audience). Valid
  * only when identity answers an on-behalf-of binding (data.obo): a session JWT identity accepts is still not a federation
  * credential. A 401/403 is invalid; any other non-2xx, or a thrown fetch, is validator_unreachable.
+ * One validation per cache key is in flight at a time (agf_qajrmo2l0szw: a page's burst of reads under one token, its
+ * cached answer just expired, sent one validation each and most failed on the way): a request for a key already being
+ * asked awaits that answer, keyed exactly as the cache is, so two credentials never share one. An unreachable answer is
+ * logged by its class (a status, or the error's name and code; never the credential or its hash), at most once a minute
+ * per class with how many there were, and is never cached, as before.
  */
 export function makeValidator(o: ValidatorOptions): Validate {
   const now = o.now ?? (() => Date.now())
   const pos = o.positiveMs ?? 60_000, neg = o.negativeMs ?? 10_000, max = o.max ?? 512
   const cache = new Map<string, { until: number; v: Validation }>()
+  const inflight = new Map<string, Promise<Validation>>()
+  const log = o.log ?? ((line: string) => console.warn(line))
+  const said = new Map<string, { at: number; count: number }>()
+  const note = (cls: string): void => {
+    const s = said.get(cls)
+    if (s && now() - s.at < 60_000) { s.count++; return }
+    log('[ingress] validator unreachable: ' + cls + (s && s.count > 0 ? ' (' + (s.count + 1) + ' in the last minute)' : ''))
+    said.set(cls, { at: now(), count: 0 })
+  }
   return async (credential: string, audience: Audience): Promise<Validation> => {
     const token = oboToken(credential)
     if (!token) return { valid: false, reason: 'invalid' }
@@ -133,6 +156,17 @@ export function makeValidator(o: ValidatorOptions): Validate {
     }
     const base = o.identityUrl().replace(/\/$/, '')
     if (!base) return { valid: false, reason: 'validator_unreachable' }
+    if (useCache) {
+      const flying = inflight.get(h)
+      if (flying) return flying
+    }
+    const asked = ask(base, token, audience, h, credential, useCache)
+    if (!useCache) return asked
+    const shared = asked.finally(() => inflight.delete(h))
+    inflight.set(h, shared)
+    return shared
+  }
+  async function ask(base: string, token: string, audience: Audience, h: string, credential: string, useCache: boolean): Promise<Validation> {
     let v: Validation
     // How long a positive answer may be reused: never past the token's own expiry (identity answers it), so a token is not
     // accepted after it lapses; with no readable expiry, not at all.
@@ -145,7 +179,7 @@ export function makeValidator(o: ValidatorOptions): Validate {
         signal: AbortSignal.timeout(o.timeoutMs ?? 5_000),
       })
       if (r.status === 401 || r.status === 403) v = { valid: false, reason: 'invalid' }
-      else if (!r.ok) return { valid: false, reason: 'validator_unreachable' }
+      else if (!r.ok) { note('status ' + r.status); return { valid: false, reason: 'validator_unreachable' } }
       else {
         const d = ((await r.json()) as { data?: Record<string, unknown> })?.data ?? {}
         const obo = d.obo as Record<string, unknown> | undefined
@@ -155,7 +189,7 @@ export function makeValidator(o: ValidatorOptions): Validate {
         const e = Date.parse(String(obo?.expires_at ?? ''))
         expires = Number.isFinite(e) ? e : 0
       }
-    } catch { return { valid: false, reason: 'validator_unreachable' } }
+    } catch (e) { note(failureClass(e)); return { valid: false, reason: 'validator_unreachable' } }
     const until = v.valid ? Math.min(now() + pos, expires) : now() + neg
     if (useCache && until > now()) {
       if (cache.size >= max) cache.delete(cache.keys().next().value as string)

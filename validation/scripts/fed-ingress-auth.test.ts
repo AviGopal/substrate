@@ -184,8 +184,63 @@ describe('makeValidator (identity /v1/auth/resolve, audience stated)', () => {
     const g = makeValidator({ identityUrl: () => 'http://identity.invalid', fetchImpl: async () => { off++; return { ok: true, status: 200, json: async () => ({ data: { authenticated: true, obo: { ...obo, expires_at: far } } }) } }, cacheEnabled: () => false, now: () => t })
     await g('Bearer ' + TOKEN, AUD); await g('Bearer ' + TOKEN, AUD); expect(off).toBe(2)
     let down = 0
-    const h = makeValidator({ identityUrl: () => 'http://identity.invalid', fetchImpl: async () => { down++; throw new Error('x') } })
+    const h = makeValidator({ identityUrl: () => 'http://identity.invalid', fetchImpl: async () => { down++; throw new Error('x') }, log: () => {} })
     await h('Bearer ' + TOKEN, AUD); await h('Bearer ' + TOKEN, AUD); expect(down).toBe(2)
+  })
+  // agf_qajrmo2l0szw: a page's burst under one token, its answer just expired, sent one validation each.
+  const slow = (answer: (init: any) => any) => { let calls = 0; let release: () => void = () => {}
+    const gate = new Promise<void>((r) => { release = r })
+    const f = async (_u: string, init: any) => { calls++; await gate; return answer(init) }
+    return { f, calls: () => calls, release: () => release() } }
+  const yes = (init: any) => { const p = JSON.parse(init.body).impulse.pointer
+    return { ok: true, status: 200, json: async () => ({ data: { authenticated: true, orgId: 'o', userId: 'u-' + p.token.slice(-6), obo: { ...p.audience, expires_at: new Date(Date.now() + 30_000).toISOString() } } }) } }
+  test('MUST-FAIL: a burst for one credential and audience asks identity once, and every request gets that answer', async () => {
+    const s = slow(yes)
+    const v = makeValidator({ identityUrl: () => 'http://identity.invalid', fetchImpl: s.f })
+    const all = Array.from({ length: 50 }, () => v('Bearer ' + TOKEN, AUD))
+    s.release()
+    const got = await Promise.all(all)
+    expect([s.calls(), got.every((x) => x.valid), new Set(got.map((x) => JSON.stringify(x))).size]).toEqual([1, true, 1])
+  })
+  test('MUST-FAIL: two credentials of the same audience are two validations; neither gets the other\'s answer', async () => {
+    const s = slow(yes)
+    const v = makeValidator({ identityUrl: () => 'http://identity.invalid', fetchImpl: s.f })
+    const other = TOKEN.slice(0, -6) + 'zzzzzz'
+    const a = v('Bearer ' + TOKEN, AUD), b = v('Bearer ' + other, AUD)
+    s.release()
+    const [ra, rb] = await Promise.all([a, b])
+    expect(s.calls()).toBe(2)
+    expect([(ra as any).principal.user_id, (rb as any).principal.user_id]).toEqual(['u-' + TOKEN.slice(-6), 'u-zzzzzz'])
+  })
+  test('MUST-FAIL: a burst that cannot reach identity asks once; once it settles, the next request asks again (never cached)', async () => {
+    let calls = 0; let release: () => void = () => {}
+    const gate = new Promise<void>((r) => { release = r })
+    const v = makeValidator({ identityUrl: () => 'http://identity.invalid', fetchImpl: async () => { calls++; await gate; throw new Error('down') }, log: () => {} })
+    const all = Array.from({ length: 10 }, () => v('Bearer ' + TOKEN, AUD))
+    release()
+    expect((await Promise.all(all)).every((x) => !x.valid && x.reason === 'validator_unreachable')).toBe(true)
+    expect(calls).toBe(1)
+    await v('Bearer ' + TOKEN, AUD)
+    expect(calls).toBe(2)
+  })
+  test('MUST-FAIL: an unreachable validation is logged by its class only, once a minute per class; nothing of the credential or its hash', async () => {
+    const lines: string[] = []
+    let t = Date.parse('2030-01-01T00:00:00Z')
+    const reset = Object.assign(new Error('socket hang up'), { code: 'ECONNRESET' })
+    let mode = 'reset'
+    const v = makeValidator({ identityUrl: () => 'http://identity.invalid', now: () => t, log: (l) => lines.push(l),
+      fetchImpl: async () => { if (mode === 'reset') throw reset; return { ok: false, status: 502, json: async () => ({}) } } })
+    await v('Bearer ' + TOKEN, AUD); await v('Bearer ' + TOKEN, AUD)
+    mode = '502'; await v('Bearer ' + TOKEN, AUD)
+    t += 61_000; mode = 'reset'; await v('Bearer ' + TOKEN, AUD)
+    expect(lines).toEqual([
+      '[ingress] validator unreachable: error Error ECONNRESET',
+      '[ingress] validator unreachable: status 502',
+      '[ingress] validator unreachable: error Error ECONNRESET (2 in the last minute)',
+    ])
+    const { createHash } = await import('node:crypto')
+    const secrets = ['Bearer ' + TOKEN, createHash('sha256').update('Bearer ' + TOKEN).update('\n' + AUD.node + '/' + AUD.shape).digest('hex')]
+    for (const s of secrets) for (let i = 0; i + 8 <= s.length; i++) expect(lines.join('\n')).not.toContain(s.slice(i, i + 8))
   })
 })
 
