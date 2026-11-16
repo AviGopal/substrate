@@ -386,9 +386,15 @@ jq -c --argjson pad "$(held pad y src/b.test.ts "$GEN" closed)" \
 BIG="$(jq -c 'map(select(.shape == "gap"))' "$ROWS" | wc -c)"
 lift_held_gaps x 0123456789abcdef "$DIR"
 if [ "$BIG" -gt 131072 ] && [ "$(latest g-a | jq -r '.meta.localized_by // "none"')" = r1 ] \
-  && grep -q "x: held-gap release: read 261 gap rows, 1 person marks, decided 1" "$LOG"; then
+  && grep -q "x: held-gap release: read 261 gap rows, 1 person marks, released 1, stated 0" "$LOG"; then
   ok "(y) a gap store over 128 KiB ($BIG bytes) is read: the person's mark releases the gap, and the tick says what it read and decided"
 else bad "(y) store=$BIG bytes latest=$(latest g-a | jq -c "{meta: .meta | del(.evidence_resolve), check_runnable}") log=$(cat "$LOG")"; fi
+# (y1) the count line tells a release from a restated claim: a held gap no mark decides is stated, not released
+reset "$(held g-a x src/a.test.ts "$GEN")"
+lift_held_gaps x 0123456789abcdef "$DIR"
+if grep -q "x: held-gap release: read 1 gap rows, 0 person marks, released 0, stated 1" "$LOG"; then
+  ok "(y1) a claim stated for an undecided gap is counted as stated, not released"
+else bad "(y1) log=$(cat "$LOG")"; fi
 # (y2) input jq cannot read is said as unreadable, never as no marks, and nothing is written
 reset "$(held g-a x src/a.test.ts "$GEN" | jq -c '.summary = 5')" "$(outcome 1 r0)"
 lift_held_gaps x 0123456789abcdef "$DIR"

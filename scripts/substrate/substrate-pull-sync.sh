@@ -1078,7 +1078,12 @@ lift_held_gaps() {
   fi
   ng="$(jq '[.[] | select(.shape == "gap" and .role == "detector")] | length' "$st/gaps.json" 2>/dev/null)"
   nm="$(jq '[.[] | select(.role == "person" and (.r == 0 or .r == 1))] | length' "$st/outs.json" 2>/dev/null)"
-  log "$v: held-gap release: read ${ng:-?} gap rows, ${nm:-?} person marks, decided $(printf '%s' "$decided" | grep -c .)"
+  # released: decided by a person's mark; stated: a claim restated for a gap no mark decides (research: one number hid
+  # the one release among a hundred restatements)
+  local nr ns
+  nr="$(printf '%s\n' "$decided" | grep . | jq -s '[.[] | select(.by != null)] | length' 2>/dev/null)"
+  ns="$(printf '%s\n' "$decided" | grep . | jq -s '[.[] | select(.by == null)] | length' 2>/dev/null)"
+  log "$v: held-gap release: read ${ng:-?} gap rows, ${nm:-?} person marks, released ${nr:-0}, stated ${ns:-0}"
   rm -rf "$st"
   while IFS= read -r p; do
     [ -n "$p" ] || continue
