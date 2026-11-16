@@ -134,8 +134,12 @@ leg(!!req && (req.reads ?? []).some((r: Row) => r.type === "record_read" && r.sh
   && String(req.description).includes("whose status is closed is already closed") && String(req.description).includes("first a clone of the repo the gap names")
   && String(req.description).includes("Edit where the gap's meta.edit_site names (a repos/<repo>/ path: the same path in the clone); with none, the files its meta.sources names (what the check imports), never the check's test file")
   && !String(req.description).includes("not the place to edit")
-  && String(req.description).includes("operator_hold is held: leave it"),
+  && String(req.description).includes("localized false names no edit site yet: find it first"),
   "(h) the request producer sees every gap row, edits where its edit_site names, and is told to ask one next call toward closing one");
+const holdFact = rows.filter((r) => r.shape === "hold_fact" && r.reason_prefix === "needs_localization").at(-1);
+leg(!!holdFact && JSON.stringify(holdFact.fact) === JSON.stringify({ localized: false }) && holdFact.retired === undefined
+  && String(holdFact.description).includes("needs_localization holds as facts"),
+  "(hf) the owner reads the generator's needs_localization hold as the fact localized false (hold_fact)");
 const words = (of: string) => rows.filter((r) => r.shape === "shape_description" && r.of === of).at(-1)?.words;
 leg(JSON.stringify([words("world_changed"), words("answer"), words("outcome")]) === JSON.stringify([["what"], ["text"], ["r"]]),
   "(i) the owner's descriptions name the words a person reads: what, text, r (a stale one superseded by a later row)");

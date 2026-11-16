@@ -347,5 +347,35 @@ if [ "$n1" = 1 ] && [ "$n2" = 0 ] && [ "$wf" = person ] && [ "$m1" = 1 ] && [ "$
   ok "(wf2) a waiting row without the field is written once with it, then not again (held: $n1/$n2, marked: $m1/$m2)"
 else bad "(wf2) held $n1/$n2 wf=$wf marked $m1/$m2 wf=$mwf log=$(cat "$LOG")"; fi
 
+# THE NOT-LOCALIZED FACT (the USER: "Read as facts"): the generator now files localized false and no hold; an older row's
+# hold whose reason is needs_localization reads as the same fact; a hold for any other reason is not the generator's.
+unloc() { held "$@" | jq -c '.meta |= (del(.operator_hold, .operator_hold_reason) + {localized: false})'; }
+reset "$(unloc g-n x src/a.test.ts "$GEN")"
+lift_held_gaps x 0123456789abcdef "$DIR"; L="$(latest g-n)"
+if [ "$(wc -l < "$WRITES")" = 1 ] && printf '%s' "$L" | jq -e '(.claim | startswith("The test is right")) and .waits_for == "person" and .meta.localized == false and (.meta | has("operator_hold") | not)' >/dev/null; then
+  ok "(nf1) a new-form row (localized false, no hold) gets its claim, as a held row did, and no hold"
+else bad "(nf1) writes=$(cat "$WRITES") log=$(cat "$LOG")"; fi
+reset "$(unloc g-n x src/a.test.ts "$GEN")" "$(outcome 1 r0)"
+lift_held_gaps x 0123456789abcdef "$DIR"; L="$(latest g-n)"
+if printf '%s' "$L" | jq -e '.meta.localized_by == "r1" and (.meta | has("localized") or has("operator_hold") | not) and (has("check_runnable") | not) and (.meta.sources | type) == "array"' >/dev/null; then
+  ok "(nf2) a person's r 1 on a new-form row: localized_by, sources, the fact gone, still work"
+else bad "(nf2) $L log=$(cat "$LOG")"; fi
+reset "$(unloc g-n x src/a.test.ts "$GEN")" "$(outcome 0 r0)"
+lift_held_gaps x 0123456789abcdef "$DIR"; L="$(latest g-n)"
+if printf '%s' "$L" | jq -e '.check_runnable == false and .meta.check_runnable == false and .meta.claim_rejected_by == "r1"' >/dev/null; then
+  ok "(nf3) a person's r 0 on a new-form row: check_runnable false (the check is not edited here)"
+else bad "(nf3) $L log=$(cat "$LOG")"; fi
+reset "$(unloc g-n x src/a.test.ts "$GEN")" "$(outcome 0 r0 grader)" "$(outcome 0 r0 model)"
+lift_held_gaps x 0123456789abcdef "$DIR"
+if jq -se 'map(select(.check_runnable == false or .meta.check_runnable == false or .meta.claim_rejected_by != null)) | length == 0' "$WRITES" >/dev/null; then
+  ok "(nf4) an r 0 by a grader or a model on the claim sets no check_runnable false: only a person's does"
+else bad "(nf4) writes=$(cat "$WRITES")"; fi
+other="$(held g-o x src/a.test.ts "$GEN" | jq -c '.meta.operator_hold_reason = "a person is reviewing this gap"')"
+reset "$other" "$(outcome 1 r0)"
+lift_held_gaps x 0123456789abcdef "$DIR"
+if [ ! -s "$WRITES" ] && [ "$(latest g-o | jq -c .meta)" = "$(printf '%s' "$other" | jq -c .meta)" ]; then
+  ok "(nf5) a generator gap held for another reason is not read as the fact: no claim, no release, the hold kept"
+else bad "(nf5) writes=$(cat "$WRITES")"; fi
+
 echo; [ "$FAILS" = 0 ] && { echo "PASS - a person releases a held generator gap, and its fix is held to the test's released size"; exit 0; }
 echo "$FAILS FAILED"; exit 1

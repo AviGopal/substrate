@@ -661,9 +661,9 @@ gtr_try_load || true
 # FAILING-TEST GAP GENERATOR . Its evidence_resolve carries zero_field
 # "requested_not_passing": gap-to-feature admission excludes a class2 check with no measured field as
 # needs_information, so without it every gap filed here was silently inadmissible (found).
-# A non-actionable gap is also filed with operator_hold: admission reads operator_hold but NOT disposition, so a
-# 'needs_information' label alone let an unlocalized assertion gap be picked (12:21); for a stale test its only
-# green is changing src to match an outdated expectation, which op7 cannot see. The pre-land gate (feature-compose
+# A gap no stack localizes is filed with the fact that says so (localized false, no edit_site), never a hold: it is work
+# like any other (records offers it; the walk finds the edit site with the tools it has), and whether the test itself is
+# wrong is a person's verdict on the gap's claim (lift_held_gaps), which keeps the check from being edited if it is. The pre-land gate (feature-compose
 # op5-op7) can only certify a landing for a gap that carries its own test_suite check, and every such gap in
 # the store had been written by an operator: 196 failing activity-api tests yielded one admissible
 # check-backed gap. The missing generator was the gap. This files check-backed failing_test gaps from the
@@ -676,7 +676,7 @@ gtr_try_load || true
 #   - by error CLASS, because op7 cannot catch a CHANGED expected value (equal count, red parent, green
 #     draft): mock/wiring failures (the test's own doubles no longer match the code) edit the TEST;
 #     assertion failures PROTECT the test and point edit_site at the first non-test src frame, or are filed
-#     needs_information for localization when the stack names none; anything else is needs_information;
+#     not localized (localized false) when the stack names none; anything else is not localized either;
 #   - names already in an open gap's only_tests, and files an open gap already checks, are skipped;
 #   - an id already OPEN is skipped; a CLOSED id is never rewritten (the store carries closed fields forward),
 #     a recurrence is filed as <id>-r<stamp> with recurrence_of so durability stays measurable;
@@ -782,8 +782,7 @@ gen_failing_test_gaps() {
           filed_by: "pull-sync failing-test generator", generator_head: $head, failure_class: .cls}
           + (if $mock then {edit_site: ("repos/" + $v + "/" + .file), region: (.t[0].name | split(" > ") | last)}
              elif $located then {edit_site: ("repos/" + $v + "/" + .frame), protected_files: [("repos/" + $v + "/" + .file)]}
-             else {protected_files: [("repos/" + $v + "/" + .file)], disposition: "needs_information",
-                   operator_hold: true, operator_hold_reason: "needs_localization: no source frame (or a source-text guard); release only after the edit site is localized and the test is confirmed correct"}
+             else {protected_files: [("repos/" + $v + "/" + .file)], disposition: "needs_information", localized: false}
                   + (if .guard then {source_text_guard: true} else {} end) end))})}}}' 2>/dev/null || true)"
   rm -f "$st"
   [ -n "$payloads" ] || return 0
@@ -994,15 +993,16 @@ test_sources() { # <checkout> <test file> <vessel>
   printf '%s' "${out:-[]}"
 }
 
-# A HELD GAP IS RELEASED BY A PERSON. The generator holds a gap it cannot localize (operator_hold, needs_localization):
-# whether the test or the source is wrong is not something a stack can say. The person's surface shows gap rows with a
+# A PERSON JUDGES A FAILING TEST'S CLAIM. The generator files a gap no stack localizes as the fact localized false (an
+# older row says it with operator_hold, reason needs_localization, read as the same fact; no hold): it is work while it
+# waits, and whether the test or the source is wrong is not something a stack can say. The person's surface shows gap rows with a
 # grade, which judges a row's claim, so each held row first states one (claim: the test is right and the source must
 # change). Not a row whose check cannot run (the closer's mark: its named tests absent): it has no claim to judge. A person's outcome on any detector row of the gap then releases it, the latest by seq deciding (a later one
 # re-decides a released gap):
-#   - r 1, the claim is right: the hold goes, protected_files stay, no edit_site (the walk fixes the source), and sources
+#   - r 1, the claim is right: the not-localized fact (or an old hold) goes, protected_files stay, no edit_site (the walk fixes the source), and sources
 #     names the files the test imports (test_sources), so the walk edits what the check tests rather than guessing a
 #     file from the test's name; a gap released before sources existed gets them once;
-#   - r 0, the claim is wrong: the hold goes, the test stays protected, and the gap carries check_runnable false (top
+#   - r 0, the claim is wrong: the same fact goes, the test stays protected, and the gap carries check_runnable false (top
 #     level, where the walk's clone precondition reads it, and in its meta). A change must not edit the check that
 #     verifies it, so the walk opens no clone for it: the test is fixed by a reviewed commit to the vessel, which the
 #     failing-test closer then sees pass, closing the gap. A later r 1 clears it.
@@ -1034,7 +1034,7 @@ lift_held_gaps() {
     local tf size
     tf="$(printf '%s' "$p" | jq -r '.tf')"
     if [ "$(printf '%s' "$p" | jq -r '.by.r // empty')" != "" ] && [ "$(printf '%s' "$p" | jq -r '.gap.classification_metadata.baseline | type')" != object ]; then
-      [ -f "$dir/$tf" ] || { log "$v: held-gap release: $tf is not in the checkout; $(printf '%s' "$p" | jq -r .gap.id) stays held"; continue; }
+      [ -f "$dir/$tf" ] || { log "$v: held-gap release: $tf is not in the checkout; $(printf '%s' "$p" | jq -r .gap.id) stays as it was"; continue; }
       size="$(test_size "$dir/$tf")"
       p="$(printf '%s' "$p" | jq -c --argjson s "$size" '.gap.classification_metadata.baseline = $s')"
     fi
@@ -1054,7 +1054,8 @@ lift_held_gaps() {
     | select(all(.[]; (.seq | type) == "number")) | sort_by(.seq) as $all | $all[-1] as $g
     | ($g.meta // {}) as $m
     | ($m.localized_by // $m.claim_rejected_by) as $was
-    | select($g.status == "open" and ($m.operator_hold == true or $was != null) and $m.filed_by == "pull-sync failing-test generator")
+    | ($m.localized == false or ($m.operator_hold == true and (($m.operator_hold_reason // "") | startswith("needs_localization")))) as $unlocalized
+    | select($g.status == "open" and ($unlocalized or $was != null) and $m.filed_by == "pull-sync failing-test generator")
     | select((($m.evidence_resolve.input.vessel // "") | sub("^repos/"; "")) == $v)
     | ($m.evidence_resolve.input.test_file // "") as $tf | select($tf != "")
     | ([$all | to_entries[] | select((.value.check_runnable == false or .value.meta.check_runnable == false) and .value.meta.names_absent != null) | .key] | last) as $mark
@@ -1070,7 +1071,7 @@ lift_held_gaps() {
     | if .by == null then select($was == null and $g.check_runnable != false and $m.check_runnable != false and (($g.claim // "") != .gap.claim or $g.waits_for != "person"))
         | .gap.waits_for = "person"
       else select(.by.id != $was or (.by.r == 1 and $m.sources == null) or (.by.r == 0 and $g.waits_for != "person"))
-        | .gap.classification_metadata |= del(.operator_hold, .operator_hold_reason, .disposition, .localized_by, .claim_rejected_by, .edit_site, .protected_files, .sources, .check_runnable)
+        | .gap.classification_metadata |= del(.operator_hold, .operator_hold_reason, .disposition, .localized, .localized_by, .claim_rejected_by, .edit_site, .protected_files, .sources, .check_runnable)
         | if .by.r == 1 then .gap.classification_metadata += {protected_files: [$file], localized_by: $by.id} | .gap |= del(.check_runnable, .waits_for)
             | .gap.summary = ($s | split("\u0000") | join($right))
           else .gap.classification_metadata += {protected_files: [$file], claim_rejected_by: $by.id, check_runnable: false} | .gap.check_runnable = false | .gap.waits_for = "person"

@@ -157,8 +157,9 @@ const SCHEMAS: Row[] = [
       "git_land call that ended); an answer graded r 1 without that does not do it, so ask for the next call. Gaps " +
       "(reads) are failures detectors found, each naming its repo and the failing check. Edit where the gap's " +
       "meta.edit_site names (a repos/<repo>/ path: the same path in the clone); with none, the files its " +
-      "meta.sources names (what the check imports), never the check's test file. A gap whose row says operator_hold " +
-      "is held: leave it. A gap " +
+      "meta.sources names (what the check imports), never the check's test file. A gap whose row says localized false " +
+      "names no edit site yet: find it first (code_search, code_find_function, code_read_lines, bounded_shell) before " +
+      "an edit; one still held (operator_hold) is left. A gap " +
       "with a later row of the same gap_id whose status is closed is already closed. To close an open one, ask for the " +
       "next call toward closing it: first a clone of the repo the gap names. Every later call on that change (an edit, " +
       "a commit, a diff, a landing) works in the clone: its cwd (or a path under it) is the cwd the clone's hop " +
@@ -420,6 +421,14 @@ await ensure({ shape: "credits", target: "gap", by_call: "git_land" }, { target:
 // .03 on failures inherited from other requests. The value is the USER's: "4 grades".
 await ensure({ shape: "credits", target: "selection", w_person: 1, w_lapse: 1, w_close: 1, gamma: 0.7, depth: 12, w_check: 0.5, promise_window: 6, prior_count: 4 },
   { target: "selection" }, "credits selection");
+// A hold the owner reads as a fact (records' hold_fact; the USER, relayed first-hand: "Read as facts"). pull-sync's
+// failing-test generator once held each gap no stack localizes (operator_hold, its reason "needs_localization: ..."):
+// that hold says only that no source frame names the edit site, so it is read as localized false, and the gap is work
+// (the walk finds the edit site). The generator now files that fact itself and no hold, so this row reads only older
+// rows; once no open gap carries such a hold, the owner may retire it. Any other hold stays a hold.
+await ensure({ shape: "hold_fact", reason_prefix: "needs_localization", fact: { localized: false },
+  description: "The USER: read the failing-test generator's needs_localization holds as facts (not localized), not holds." },
+  { reason_prefix: "needs_localization" }, "hold_fact needs_localization");
 // What a person reads of the rows the surface shows: each description's words name the fields (1 to 4) that say what
 // a row is, so the surface draws them from these rows instead of a list of its own.
 const SHOWN: Array<{ of: string; words: string[]; description: string }> = [

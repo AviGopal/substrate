@@ -2412,7 +2412,7 @@
     },
     "/usr/local/bin/substrate-pull-sync": {
       "src": "scripts/substrate/substrate-pull-sync.sh",
-      "src_blob": "b35465e48655acca21eaaf910c6f9c962850e7b5",
+      "src_blob": "0ac19589a6e2c0e26e0a34a93e223f81a3fcdc4b",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -2421,7 +2421,7 @@
       "evidence": {
         "accepted": "ac413feeaa16e68dde1a169a9d7748fd28d95ce8",
         "mutation": "insert `exit 99` after line 1",
-        "mutated_blob": "834fdc4b1c11328313d10d32f349c6ed660785df"
+        "mutated_blob": "b4d57fe0c5cabfe0db11d8d686b40104932399a2"
       }
     },
     "/usr/local/bin/substrate-ready": {
@@ -2966,7 +2966,7 @@
     },
     "/usr/local/share/substrate/active-scripts/walk-owner-seed.ts": {
       "src": "scripts/substrate/walk-owner-seed.ts",
-      "src_blob": "9c0864429ab96762c00ab492569dc7055a2e93b7",
+      "src_blob": "b184cabef0ce2ecd279449efe8d2d8c037c0d41c",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -2977,12 +2977,12 @@
       "evidence": {
         "accepted": "claimed by hand with walk-owner-seed-rows.sh, walk-owner-seed-repositories.sh and walk-owner-seed-clone-repo.sh; earned by image-coverage-map.check.sh",
         "mutation": "insert `exit 99` after line 1",
-        "mutated_blob": "c36c059e230ddd05c8681ab9e21fff94c6cfd35e"
+        "mutated_blob": "9942b632b233636cff47ca244aa59103dae4d793"
       }
     },
     "/vessels/walk-owner-seed.ts": {
       "src": "scripts/substrate/walk-owner-seed.ts",
-      "src_blob": "9c0864429ab96762c00ab492569dc7055a2e93b7",
+      "src_blob": "b184cabef0ce2ecd279449efe8d2d8c037c0d41c",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -2993,7 +2993,7 @@
       "evidence": {
         "accepted": "claimed by hand with walk-owner-seed-rows.sh, walk-owner-seed-repositories.sh and walk-owner-seed-clone-repo.sh; earned by image-coverage-map.check.sh",
         "mutation": "insert `exit 99` after line 1",
-        "mutated_blob": "c36c059e230ddd05c8681ab9e21fff94c6cfd35e"
+        "mutated_blob": "9942b632b233636cff47ca244aa59103dae4d793"
       }
     },
     "/usr/lib/systemd/system/records-vessel.service.d/50-restart-with-deps.conf": {
