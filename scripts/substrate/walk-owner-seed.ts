@@ -101,9 +101,15 @@ const SCHEMAS: Row[] = [
     // A file this request read whole is shown whole, in place of its cut hop (agf_ydcn9zrw4z8h: answers saw only the
     // 16 KB cut and kept saying they would read the file). request_acts is one growing row per act: only the newest is
     // kept (latest_by shape: the single newest row), so it never fills the keep share on its own.
+    // Why a step could not be taken (the walk's skips: a call whose preconditions were not met, a template that could not
+    // run), kept in view, so an answer does not say it will make a call its request was just told it cannot make yet
+    // (agf_lapiolp0a1wt: answers kept saying "I will call git_land next" over a git_land skip). Bounded: the newest skip
+    // per request call (latest_by request_ref; a template's skip, which names none, is its newest one). Skips only: a
+    // too_big answer and the other failure kinds are agf_buhnyrdqy24o's.
     context: [{ shape: "hop", join: { on: "call_id", take: ["pointer_type"] } },
       { shape: "fileContent", whole: true, latest_by: "path", covers: { shape: "hop", on: "call_id" } },
-      { shape: "request_acts", latest_by: "shape", keep: true }],
+      { shape: "request_acts", latest_by: "shape", keep: true },
+      { shape: "failure", where: { kind: "skip" }, latest_by: "request_ref", keep: true }],
     keep_share: 0.25,
   },
   {

@@ -136,6 +136,10 @@ leg(!!req && (req.reads ?? []).some((r: Row) => r.type === "record_read" && r.sh
   && !String(req.description).includes("not the place to edit")
   && String(req.description).includes("localized false names no edit site yet: find it first"),
   "(h) the request producer sees every gap row, edits where its edit_site names, and is told to ask one next call toward closing one");
+const answerSchema = rows.filter((r) => r.shape === "shape_schema" && r.target === "answer" && (r.variant ?? "") === "").at(-1);
+leg(!!answerSchema && (answerSchema.context ?? []).some((e: Row) => e?.shape === "failure" && JSON.stringify(e.where) === JSON.stringify({ kind: "skip" })
+  && e.latest_by === "request_ref" && e.keep === true),
+  "(sk) the answer producer is shown its request's skips, kept and bounded (newest per request call)");
 const holdFact = rows.filter((r) => r.shape === "hold_fact" && r.reason_prefix === "needs_localization").at(-1);
 leg(!!holdFact && JSON.stringify(holdFact.fact) === JSON.stringify({ localized: false }) && holdFact.retired === undefined
   && String(holdFact.description).includes("needs_localization holds as facts"),
