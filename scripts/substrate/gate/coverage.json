@@ -3058,6 +3058,13 @@
       "level": "none",
       "reason": "unreached",
       "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/owner-infra-window.ts": {
+      "src": "scripts/substrate/owner-infra-window.ts",
+      "src_blob": "9f92d7a03188ade3e2e3b86f8a75d6077db20fd1",
+      "level": "none",
+      "reason": "unreached",
+      "fixtures": []
     }
   }
 }

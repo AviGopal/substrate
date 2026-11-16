@@ -228,6 +228,7 @@ scripts/substrate/memory-budget-check.sh	/usr/local/share/substrate/active-scrip
 scripts/substrate/mirror-memory-note.ts	/usr/local/share/substrate/active-scripts/mirror-memory-note.ts	0644	A
 scripts/substrate/model-reality-audit.ts	/usr/local/share/substrate/active-scripts/model-reality-audit.ts	0644	A
 scripts/substrate/observe-orthogonal-refresh.ts	/usr/local/share/substrate/active-scripts/observe-orthogonal-refresh.ts	0644	A
+scripts/substrate/owner-infra-window.ts	/usr/local/share/substrate/active-scripts/owner-infra-window.ts	0644	A
 scripts/substrate/rhythm-conduct-tick.ts	/usr/local/share/substrate/active-scripts/rhythm-conduct-tick.ts	0644	A
 scripts/substrate/rhythm-seed-tick.ts	/usr/local/share/substrate/active-scripts/rhythm-seed-tick.ts	0644	A
 scripts/substrate/runtime-drift-tick.ts	/usr/local/share/substrate/active-scripts/runtime-drift-tick.ts	0644	A
@@ -421,6 +422,7 @@ scripts/substrate/obsidian-collaborate-tick.sh	/usr/local/share/substrate/super-
 scripts/substrate/obsidian-desktop-launch.sh	/usr/local/share/substrate/super-repo/scripts/substrate/obsidian-desktop-launch.sh	0755	B
 scripts/substrate/obsidian-plugin-reload.sh	/usr/local/share/substrate/super-repo/scripts/substrate/obsidian-plugin-reload.sh	0755	B
 scripts/substrate/obsidian-xorg-launch.sh	/usr/local/share/substrate/super-repo/scripts/substrate/obsidian-xorg-launch.sh	0755	B
+scripts/substrate/owner-infra-window.ts	/usr/local/share/substrate/super-repo/scripts/substrate/owner-infra-window.ts	0644	B
 scripts/substrate/render-llm-arms.sh	/usr/local/share/substrate/super-repo/scripts/substrate/render-llm-arms.sh	0755	B
 scripts/substrate/render-secret-scope.sh	/usr/local/share/substrate/super-repo/scripts/substrate/render-secret-scope.sh	0755	B
 scripts/substrate/render-unit.sh	/usr/local/share/substrate/super-repo/scripts/substrate/render-unit.sh	0755	B
