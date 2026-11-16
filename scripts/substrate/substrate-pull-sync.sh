@@ -6379,22 +6379,23 @@ seed_inputs() { # <unit>: the blobs of what its run reads from the run dir, one 
   b="$(seed_script "$1")"; [ -n "$b" ] || return 1
   printf '%s %s\n' "$(git hash-object "$r/$b" 2>/dev/null || echo none)" "$(git hash-object "$r/vessels.inventory.json" 2>/dev/null || echo none)"
 }
-# A SEED RUNS HERE when its unit is enabled, or active: it ran this boot, pulled in by another unit (node1's
-# walk-owner-seed is disabled and wanted by walk-vessel; agf_85qxo1vj3ajm: keyed on is-enabled alone, a changed seed
-# there was skipped with nothing said, so an accepted seed change never ran on the node that holds records). A changed
-# seed that does not run here is not run, and is filed as a seed gap once for those inputs (seed_skipped), so the skip
-# has a reader, not only a log line.
+# A SEED RUNS HERE when its unit is enabled, or was started this boot: active, or failed (pulled in by another unit;
+# node1's walk-owner-seed is disabled and wanted by walk-vessel; agf_85qxo1vj3ajm: keyed on is-enabled alone, a changed
+# seed there was skipped with nothing said, so an accepted seed change never ran on the node that holds records; qa: a
+# boot run that failed leaves it failed, and it is this node's all the same). A unit neither enabled nor started was not
+# placed here (the inventory left it out: a profile without what it seeds), so a changed one is not run, and nothing is
+# wrong here to file: it is said once for those inputs (seed_skipped), never a gap (qa: there are no rows here to be wrong).
 seed_runs_here() { # <unit>
-  local sc="${PULLSYNC_SYSTEMCTL:-systemctl}"
-  [ "$($sc is-enabled "$1" 2>/dev/null)" = enabled ] || [ "$($sc show "$1" -p ActiveState --value 2>/dev/null)" = active ]
+  local sc="${PULLSYNC_SYSTEMCTL:-systemctl}" st
+  [ "$($sc is-enabled "$1" 2>/dev/null)" = enabled ] && return 0
+  st="$($sc show "$1" -p ActiveState --value 2>/dev/null)"
+  [ "$st" = active ] || [ "$st" = failed ]
 }
-seed_skipped() { # <unit> <inputs>: a changed seed that does not run here, filed once for those inputs
-  local u="$1" b blob
+seed_skipped() { # <unit> <inputs>: a changed seed not placed on this node, said once for those inputs
+  local u="$1"
   [ "$(cat "$MARKER_DIR/seed-skip.$u" 2>/dev/null)" = "$2" ] && return 0
-  b="$(seed_script "$u")"; blob="$(git hash-object "${PULLSYNC_RUN_DIR:-/workspace/active-scripts}/$b" 2>/dev/null || echo unknown)"
-  log "seeds: $b changed; $u neither enabled nor active here, so not run (filed)"
-  seed_gap "$u" "$b" "$blob" open "The accepted $b (blob $blob) changed, but its seed unit $u is neither enabled nor active on this node, so it was not run: the rows it writes are not what the accepted script says" "skipped" "" \
-    && printf '%s\n' "$2" > "$MARKER_DIR/seed-skip.$u"
+  log "seeds: $(seed_script "$u") changed; $u is neither enabled nor started on this node (not placed here), so not run"
+  printf '%s\n' "$2" > "$MARKER_DIR/seed-skip.$u" 2>/dev/null || true
 }
 apply_changed_seeds() {
   local sc="${PULLSYNC_SYSTEMCTL:-systemctl}" u now was changed=""
@@ -6412,7 +6413,7 @@ apply_reseeded_seeds() { # <changed basename>...: what changed (said in the log)
   local sc="${PULLSYNC_SYSTEMCTL:-systemctl}" u b blob inv
   [ $# -gt 0 ] || return 0
   for u in $(seed_units); do
-    seed_runs_here "$u" || { log "seeds: $* copied; $u is not enabled here, nor active, so not run"; continue; }
+    seed_runs_here "$u" || { log "seeds: $* copied; $u is neither enabled nor started here (not placed), so not run"; continue; }
     b="$(seed_script "$u")"
     blob="$(git hash-object "${PULLSYNC_RUN_DIR:-/workspace/active-scripts}/$b" 2>/dev/null || echo unknown)"
     # The run before this one, by its invocation id: until the unit shows another, its state is that run's, not this

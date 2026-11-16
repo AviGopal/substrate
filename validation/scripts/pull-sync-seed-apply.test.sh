@@ -97,7 +97,7 @@ read -r b blob inv < "$T/markers/seed-apply.walk-owner-seed.service"
 [ "$b" = walk-owner-seed.ts ] && [ "$blob" = "$(git hash-object "$T/run/walk-owner-seed.ts")" ] && ok "the run is marked with the script and its blob" || bad "marker: $b $blob"
 echo disabled > "$STUB_ST/walk-owner-seed.service.enabled"; rm -f "$T/markers"/seed-apply.*
 reset_run; apply_reseeded_seeds walk-owner-seed.ts
-! grep -q restart "$T/calls" && grep -q "not enabled here" "$T/log" && ok "a seed not enabled here is left alone, and that is said" || bad "disabled seed: $(tr '\n' '|' < "$T/calls")"
+! grep -q restart "$T/calls" && grep -q "not placed" "$T/log" && ok "a seed not placed here (neither enabled nor started) is left alone, and that is said" || bad "disabled seed: $(tr '\n' '|' < "$T/calls")"
 echo enabled > "$STUB_ST/walk-owner-seed.service.enabled"
 
 # ── 3. whether it worked ─────────────────────────────────────────────────────
@@ -217,19 +217,19 @@ echo disabled > "$STUB_ST/walk-owner-seed.service.enabled"; echo active > "$STUB
 reset_run; apply_changed_seeds
 grep -qx "restart --no-block walk-owner-seed.service" "$T/calls" && [ ! -s "$T/gaps" ] \
   && ok "[MUST-FAIL] disabled but active (pulled in by another unit): a changed seed is run, nothing filed" || bad "disabled+active: calls $(tr '\n' '|' < "$T/calls"); gaps $(cat "$T/gaps")"
-# disabled and not active: not run here; the skip is filed as a seed gap once for those inputs (a reader, not a log line)
-echo "// skipped here" >> "$T/run/walk-owner-seed.ts"; echo inactive > "$STUB_ST/walk-owner-seed.service.active"; : > "$T/gaps"
+# disabled and started this boot but its run failed (qa): still this node's, so a changed seed is run
+echo "// after a failed boot run" >> "$T/run/walk-owner-seed.ts"; echo failed > "$STUB_ST/walk-owner-seed.service.active"; : > "$T/gaps"
 reset_run; apply_changed_seeds
-! grep -q restart "$T/calls" && [ "$(jq -c '.impulse.pointer.gap | {status, class: .classification_metadata.class, state: .classification_metadata.active_state}' "$T/gaps")" = '{"status":"open","class":"seed_not_applied","state":"skipped"}' ] \
-  && ok "[MUST-FAIL] neither enabled nor active: not run, and one open seed gap says it was skipped" || bad "skipped: calls $(tr '\n' '|' < "$T/calls"); gaps $(cat "$T/gaps")"
-: > "$T/gaps"; reset_run; apply_changed_seeds
-[ ! -s "$T/gaps" ] && ok "[MUST-FAIL] the same inputs next tick: filed once, not again" || bad "refiled: $(cat "$T/gaps")"
-echo "// changed again" >> "$T/run/walk-owner-seed.ts"; reset_run; apply_changed_seeds
-[ "$(wc -l < "$T/gaps")" = 1 ] && ok "changed again while still skipped: filed again" || bad "not refiled on change: $(cat "$T/gaps")"
-# a skip row the store did not take is filed again next tick
-echo "// lost" >> "$T/run/walk-owner-seed.ts"; : > "$T/lose"; : > "$T/gaps"; reset_run; apply_changed_seeds; rm -f "$T/lose"
+grep -qx "restart --no-block walk-owner-seed.service" "$T/calls" && [ ! -s "$T/gaps" ] \
+  && ok "[MUST-FAIL] disabled and failed (started here, its run failed): a changed seed is run, never only logged" || bad "disabled+failed: calls $(tr '\n' '|' < "$T/calls"); gaps $(cat "$T/gaps")"
+# disabled and never started here: not placed on this node (a profile without what it seeds); not run, said once, and
+# no gap (qa: there are no rows here to be wrong)
+echo "// not placed here" >> "$T/run/walk-owner-seed.ts"; echo inactive > "$STUB_ST/walk-owner-seed.service.active"; : > "$T/gaps"
 reset_run; apply_changed_seeds
-[ "$(wc -l < "$T/gaps")" = 1 ] && ok "[MUST-FAIL] a skip row not taken is filed again next tick" || bad "lost skip not refiled: $(cat "$T/gaps")"
+! grep -q restart "$T/calls" && [ ! -s "$T/gaps" ] && grep -q "not placed here" "$T/log" \
+  && ok "[MUST-FAIL] neither enabled nor started: not run, said, and no gap filed" || bad "not placed: calls $(tr '\n' '|' < "$T/calls"); gaps $(cat "$T/gaps"); log $(tr '\n' '|' < "$T/log")"
+reset_run; apply_changed_seeds
+! grep -q "not placed here" "$T/log" && ok "the same inputs next tick: said once, not again" || bad "said again: $(tr '\n' '|' < "$T/log")"
 echo enabled > "$STUB_ST/walk-owner-seed.service.enabled"; rm -f "$STUB_ST/walk-owner-seed.service.active" "$T/markers"/seed-*
 reset_run; apply_changed_seeds # enabled again: the changed seed runs, and its inputs are recorded (as section 5 starts from)
 
