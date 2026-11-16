@@ -757,6 +757,21 @@ if [ "$have_container" -eq 1 ]; then
     eng exec "$ACCEPTANCE_CONTAINER" journalctl -u "$_u" -n 80 --no-pager >"$RESULT_DIR/diag/unit-${_u%.*}.log" 2>&1 || true
   done
   eng logs --tail 300 "$ACCEPTANCE_CONTAINER" >"$RESULT_DIR/diag/container.log" 2>&1
+  # A served miss names units that are up but not serving, which is not a failed state, so the loop above keeps
+  # nothing of them. Keep what says why: the job queue (a start held behind another unit's job shows here), each
+  # one's state and restart count, and its journal (redacted).
+  if [ "$(jq -r '.served // empty' <<<"$levels" 2>/dev/null)" = fail ]; then
+    eng exec "$ACCEPTANCE_CONTAINER" systemctl list-jobs --no-pager >"$RESULT_DIR/diag/jobs.txt" 2>&1 || true
+    # The units come from the verdict's own served evidence (status.json; status.txt on the text fallback).
+    for _u in $({ jq -r '.levels | if type == "array" then .[] else to_entries[] | .value + {level: .key} end
+        | select((.level // .name) == "served") | .evidence // empty' "$RESULT_DIR/diag/status.json" 2>/dev/null
+        cat "$RESULT_DIR/diag/status.txt" 2>/dev/null; } | grep -oE 'not serving:.*' | head -1 | grep -oE '[A-Za-z0-9@_.-]+\.service'); do
+      eng exec "$ACCEPTANCE_CONTAINER" systemctl show -p ActiveState,SubState,Result,NRestarts,ActiveEnterTimestamp,InactiveExitTimestamp "$_u" \
+        >"$RESULT_DIR/diag/state-${_u%.*}.txt" 2>&1 || true
+      eng exec "$ACCEPTANCE_CONTAINER" journalctl -u "$_u" --no-pager -n 400 2>&1 \
+        | while IFS= read -r l; do redact "$l"; printf '\n'; done >"$RESULT_DIR/diag/unit-${_u%.*}.log"
+    done
+  fi
   # A usable miss is decided by the known-answer goal's walk, and a fresh install is the
   # one place a walk runs with no learned pathway. The walk's moves and the producers'
   # answers live in the walk's and described-shape's journals, which leave with the
