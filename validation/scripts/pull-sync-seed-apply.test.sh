@@ -29,7 +29,7 @@ FAILS=0
 ok()  { echo "ok   - $*"; }
 bad() { echo "FAIL - $*"; FAILS=$((FAILS+1)); }
 
-for fn in seed_units seed_script seed_inputs apply_changed_seeds apply_reseeded_seeds seed_gap check_seed_applies; do
+for fn in seed_runs_here seed_skipped seed_units seed_script seed_inputs apply_changed_seeds apply_reseeded_seeds seed_gap check_seed_applies; do
   sed -n "/^$fn() {/,/^}/p" "$SCRIPT" >> "$T/fn.sh"
   grep -q "^$fn() {" "$T/fn.sh" || { echo "FAIL - could not extract $fn"; exit 1; }
 done
@@ -209,6 +209,29 @@ reset_run; check_seed_applies
   && ok "[MUST-FAIL] a run skipped on a false condition files no gap and ends the wait" || bad "condition-false after queue: gaps $(gaps)"
 rm -f "$STUB_ST/walk-owner-seed.service.cond"; rm -f "$T/markers"/seed-apply.*
 reset_run; apply_changed_seeds # the condition true again: the changed seed runs, and its inputs are recorded
+
+# ── 4c. a seed that runs here only because another unit pulled it in (node1's walk-owner-seed: disabled, active) ──
+# agf_85qxo1vj3ajm: keyed on is-enabled alone, it was skipped with nothing said, so an accepted seed never ran there.
+rm -f "$T/markers"/seed-* "$STUB_ST/walk-owner-seed.service.cond"; : > "$T/gaps"
+echo disabled > "$STUB_ST/walk-owner-seed.service.enabled"; echo active > "$STUB_ST/walk-owner-seed.service.active"
+reset_run; apply_changed_seeds
+grep -qx "restart --no-block walk-owner-seed.service" "$T/calls" && [ ! -s "$T/gaps" ] \
+  && ok "[MUST-FAIL] disabled but active (pulled in by another unit): a changed seed is run, nothing filed" || bad "disabled+active: calls $(tr '\n' '|' < "$T/calls"); gaps $(cat "$T/gaps")"
+# disabled and not active: not run here; the skip is filed as a seed gap once for those inputs (a reader, not a log line)
+echo "// skipped here" >> "$T/run/walk-owner-seed.ts"; echo inactive > "$STUB_ST/walk-owner-seed.service.active"; : > "$T/gaps"
+reset_run; apply_changed_seeds
+! grep -q restart "$T/calls" && [ "$(jq -c '.impulse.pointer.gap | {status, class: .classification_metadata.class, state: .classification_metadata.active_state}' "$T/gaps")" = '{"status":"open","class":"seed_not_applied","state":"skipped"}' ] \
+  && ok "[MUST-FAIL] neither enabled nor active: not run, and one open seed gap says it was skipped" || bad "skipped: calls $(tr '\n' '|' < "$T/calls"); gaps $(cat "$T/gaps")"
+: > "$T/gaps"; reset_run; apply_changed_seeds
+[ ! -s "$T/gaps" ] && ok "[MUST-FAIL] the same inputs next tick: filed once, not again" || bad "refiled: $(cat "$T/gaps")"
+echo "// changed again" >> "$T/run/walk-owner-seed.ts"; reset_run; apply_changed_seeds
+[ "$(wc -l < "$T/gaps")" = 1 ] && ok "changed again while still skipped: filed again" || bad "not refiled on change: $(cat "$T/gaps")"
+# a skip row the store did not take is filed again next tick
+echo "// lost" >> "$T/run/walk-owner-seed.ts"; : > "$T/lose"; : > "$T/gaps"; reset_run; apply_changed_seeds; rm -f "$T/lose"
+reset_run; apply_changed_seeds
+[ "$(wc -l < "$T/gaps")" = 1 ] && ok "[MUST-FAIL] a skip row not taken is filed again next tick" || bad "lost skip not refiled: $(cat "$T/gaps")"
+echo enabled > "$STUB_ST/walk-owner-seed.service.enabled"; rm -f "$STUB_ST/walk-owner-seed.service.active" "$T/markers"/seed-*
+reset_run; apply_changed_seeds # enabled again: the changed seed runs, and its inputs are recorded (as section 5 starts from)
 
 # ── 5. a gated node's accept, end to end ─────────────────────────────────────
 # Acceptance comes on a tick with no HEAD move: reseed_run_dir_on_promote copies the accepted scripts into the run dir.
