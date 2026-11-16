@@ -377,5 +377,24 @@ if [ ! -s "$WRITES" ] && [ "$(latest g-o | jq -c .meta)" = "$(printf '%s' "$othe
   ok "(nf5) a generator gap held for another reason is not read as the fact: no claim, no release, the hold kept"
 else bad "(nf5) writes=$(cat "$WRITES")"; fi
 
+# (y) a gap store larger than one argument may be (128 KiB): read whole, the mark decides, and the tick says what it read
+# (it was passed to jq as one argument, jq could not start, and every tick read as "no marks")
+reset "$(held g-a x src/a.test.ts "$GEN")" "$(outcome 1 r0)"
+jq -c --argjson pad "$(held pad y src/b.test.ts "$GEN" closed)" \
+  '. + [range(0; 260) as $i | $pad + {gap_id: ("pad-" + ($i | tostring)), id: ("p" + ($i | tostring)), seq: (100 + $i), summary: ($pad.summary + (" filler" * 80))}]' \
+  "$ROWS" > "$ROWS.new" && mv "$ROWS.new" "$ROWS"
+BIG="$(jq -c 'map(select(.shape == "gap"))' "$ROWS" | wc -c)"
+lift_held_gaps x 0123456789abcdef "$DIR"
+if [ "$BIG" -gt 131072 ] && [ "$(latest g-a | jq -r '.meta.localized_by // "none"')" = r1 ] \
+  && grep -q "x: held-gap release: read 261 gap rows, 1 person marks, decided 1" "$LOG"; then
+  ok "(y) a gap store over 128 KiB ($BIG bytes) is read: the person's mark releases the gap, and the tick says what it read and decided"
+else bad "(y) store=$BIG bytes latest=$(latest g-a | jq -c "{meta: .meta | del(.evidence_resolve), check_runnable}") log=$(cat "$LOG")"; fi
+# (y2) input jq cannot read is said as unreadable, never as no marks, and nothing is written
+reset "$(held g-a x src/a.test.ts "$GEN" | jq -c '.summary = 5')" "$(outcome 1 r0)"
+lift_held_gaps x 0123456789abcdef "$DIR"
+if [ ! -s "$WRITES" ] && grep -q "x: held-gap release: input unreadable (jq exit" "$LOG"; then
+  ok "(y2) a release jq cannot compute is said as input unreadable, and nothing is written"
+else bad "(y2) writes=$(cat "$WRITES") log=$(cat "$LOG")"; fi
+
 echo; [ "$FAILS" = 0 ] && { echo "PASS - a person releases a held generator gap, and its fix is held to the test's released size"; exit 0; }
 echo "$FAILS FAILED"; exit 1

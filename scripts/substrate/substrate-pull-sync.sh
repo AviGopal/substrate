@@ -1030,26 +1030,17 @@ lift_held_gaps() {
   outs="$(dev_resolve '{"impulse":{"pointer":{"type":"record_read","shape":"outcome","where":{"role":"person"}}}}' --max-time 30 2>/dev/null \
     | jq -c 'if type == "array" then . elif (.content | type) == "array" then .content else error("no rows") end' 2>/dev/null)"
   [ -n "$gaps" ] && [ -n "$outs" ] || { log "$v: held-gap release: records unreadable; nothing released"; return 0; }
+  # The rows go to jq as files, never as one argument: the gap store passed whole (--argjson) outgrew the kernel's limit
+  # on a single argument (128 KiB), jq could not start, and with its error dropped every tick read as "no marks" for days
+  # (person marks on generator gaps went unread). The same class as jq_ao (--rawfile) for test output.
+  local st decided rc ng nm
+  st="$(mktemp -d "${TMPDIR:-/tmp}/pullsync-held-XXXXXX")" || { log "$v: held-gap release: input unreadable (no scratch dir); nothing decided"; return 0; }
+  printf '%s' "$gaps" > "$st/gaps.json"; printf '%s' "$outs" > "$st/outs.json"
   local unseq; unseq="$(printf '%s' "$gaps" | jq -r '[.[] | select(.shape == "gap" and .role == "detector" and (.seq | type) != "number") | .gap_id] | unique | join(", ")' 2>/dev/null)"
   [ -z "$unseq" ] || log "$v: held-gap release: gap rows with no seq ($unseq); those gaps are neither released nor given a claim"
-  while IFS= read -r p; do
-    [ -n "$p" ] || continue
-    local tf size
-    tf="$(printf '%s' "$p" | jq -r '.tf')"
-    if [ "$(printf '%s' "$p" | jq -r '.by.r // empty')" != "" ] && [ "$(printf '%s' "$p" | jq -r '.gap.classification_metadata.baseline | type')" != object ]; then
-      [ -f "$dir/$tf" ] || { log "$v: held-gap release: $tf is not in the checkout; $(printf '%s' "$p" | jq -r .gap.id) stays as it was"; continue; }
-      size="$(test_size "$dir/$tf")"
-      p="$(printf '%s' "$p" | jq -c --argjson s "$size" '.gap.classification_metadata.baseline = $s')"
-    fi
-    if [ "$(printf '%s' "$p" | jq -r '.by.r // empty')" = 1 ]; then
-      # A test file no longer in the checkout names none: [] rather than nothing, so the release is not made again.
-      src='[]'; [ -f "$dir/$tf" ] && src="$(test_sources "$dir" "$tf" "$v")"
-      p="$(printf '%s' "$p" | jq -c --argjson s "$src" '.gap.classification_metadata.sources = $s')"
-    fi
-    emit_gap "$(printf '%s' "$p" | jq -c '{impulse: {pointer: {type: "substrateGap_write", gap: .gap}}}')"
-    log "$v: held-gap release: $(printf '%s' "$p" | jq -r 'if .by.r == null then "stated the claim of " + .gap.id else "released " + .gap.id + " by outcome " + .by.id + " (r " + (.by.r | tostring) + ")" end')"
-  done <<< "$(jq -cn --arg v "$v" --argjson rows "$gaps" --argjson outs "$outs" '
-    "Not yet localized (no source frame in the stack, or an unclassified error): needs a diagnosis of whether the source or the test is wrong before any compose." as $held
+  decided="$(jq -cn --arg v "$v" --slurpfile rows "$st/gaps.json" --slurpfile outs "$st/outs.json" '
+    $rows[0] as $rows | $outs[0] as $outs
+    | "Not yet localized (no source frame in the stack, or an unclassified error): needs a diagnosis of whether the source or the test is wrong before any compose." as $held
     | "A person judged the test right: fix the source so the named tests pass, keeping every case and expect." as $right
     | "A person judged the test wrong: a change must not edit the check that verifies it, so this gap is not worked here (check_runnable false); the test is fixed by a reviewed commit to the vessel, and the source is left as it is." as $wrong
     | ($outs | map(select(.role == "person" and (.r == 0 or .r == 1) and (.seq | type) == "number"))) as $o
@@ -1079,7 +1070,33 @@ lift_held_gaps() {
             | .gap.summary = ($s | split("\u0000") | join($right))
           else .gap.classification_metadata += {protected_files: [$file], claim_rejected_by: $by.id, check_runnable: false} | .gap.check_runnable = false | .gap.waits_for = "person"
             | .gap.summary = ($s | split("\u0000") | join($wrong)) end
-      end' 2>/dev/null)"
+      end' 2>"$st/err")"; rc=$?
+  # Said every tick, so a reader that reads nothing is seen: what it read and what it decided, or that it could not read.
+  if [ "$rc" -ne 0 ]; then
+    log "$v: held-gap release: input unreadable (jq exit $rc: $(head -c 200 "$st/err" | tr '\n' ' ')); nothing decided"
+    rm -rf "$st"; return 0
+  fi
+  ng="$(jq '[.[] | select(.shape == "gap" and .role == "detector")] | length' "$st/gaps.json" 2>/dev/null)"
+  nm="$(jq '[.[] | select(.role == "person" and (.r == 0 or .r == 1))] | length' "$st/outs.json" 2>/dev/null)"
+  log "$v: held-gap release: read ${ng:-?} gap rows, ${nm:-?} person marks, decided $(printf '%s' "$decided" | grep -c .)"
+  rm -rf "$st"
+  while IFS= read -r p; do
+    [ -n "$p" ] || continue
+    local tf size
+    tf="$(printf '%s' "$p" | jq -r '.tf')"
+    if [ "$(printf '%s' "$p" | jq -r '.by.r // empty')" != "" ] && [ "$(printf '%s' "$p" | jq -r '.gap.classification_metadata.baseline | type')" != object ]; then
+      [ -f "$dir/$tf" ] || { log "$v: held-gap release: $tf is not in the checkout; $(printf '%s' "$p" | jq -r .gap.id) stays as it was"; continue; }
+      size="$(test_size "$dir/$tf")"
+      p="$(printf '%s' "$p" | jq -c --argjson s "$size" '.gap.classification_metadata.baseline = $s')"
+    fi
+    if [ "$(printf '%s' "$p" | jq -r '.by.r // empty')" = 1 ]; then
+      # A test file no longer in the checkout names none: [] rather than nothing, so the release is not made again.
+      src='[]'; [ -f "$dir/$tf" ] && src="$(test_sources "$dir" "$tf" "$v")"
+      p="$(printf '%s' "$p" | jq -c --argjson s "$src" '.gap.classification_metadata.sources = $s')"
+    fi
+    emit_gap "$(printf '%s' "$p" | jq -c '{impulse: {pointer: {type: "substrateGap_write", gap: .gap}}}')"
+    log "$v: held-gap release: $(printf '%s' "$p" | jq -r 'if .by.r == null then "stated the claim of " + .gap.id else "released " + .gap.id + " by outcome " + .by.id + " (r " + (.by.r | tostring) + ")" end')"
+  done <<< "$decided"
   return 0
 }
 
