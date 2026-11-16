@@ -263,6 +263,7 @@ scripts/substrate/acceptance/provider-of-key.sh	/usr/local/share/substrate/super
 scripts/substrate/acceptance/run-acceptance.sh	/usr/local/share/substrate/super-repo/scripts/substrate/acceptance/run-acceptance.sh	0755	B
 scripts/substrate/acceptance/run-network-acceptance.sh	/usr/local/share/substrate/super-repo/scripts/substrate/acceptance/run-network-acceptance.sh	0755	B
 scripts/substrate/acceptance/run-upgrade-acceptance.sh	/usr/local/share/substrate/super-repo/scripts/substrate/acceptance/run-upgrade-acceptance.sh	0755	B
+scripts/substrate/acceptance/scrub-result-dir.sh	/usr/local/share/substrate/super-repo/scripts/substrate/acceptance/scrub-result-dir.sh	0755	B
 scripts/substrate/acceptance/secret-leak-scan.sh	/usr/local/share/substrate/super-repo/scripts/substrate/acceptance/secret-leak-scan.sh	0755	B
 scripts/substrate/apply-inventory.sh	/usr/local/share/substrate/super-repo/scripts/substrate/apply-inventory.sh	0755	B
 scripts/substrate/apply-llm-arms.sh	/usr/local/share/substrate/super-repo/scripts/substrate/apply-llm-arms.sh	0644	B

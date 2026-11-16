@@ -416,10 +416,10 @@ log "coverage map: $cov_r ($(tail -n 1 "$RESULT_DIR/diag/coverage-map.txt" 2>/de
 
 # ── 3–5. Inspect what the page produced ─────────────────────────────────────────
 have_container=0
-# The diag folder is uploaded from a public repo: keep env names, never values.
-eng container inspect "$ACCEPTANCE_CONTAINER" 2>/dev/null \
-  | jq 'map(if .Config.Env then .Config.Env |= map((index("=")) as $i | if $i then .[:$i] + "=<set>" else . end) else . end)' \
-  >"$RESULT_DIR/diag/container-inspect.json" && have_container=1
+# The diag folder is uploaded from a public repo: only the named fields below are written, never the raw inspect
+# (its env, and podman's whole create command line, can carry a key; nothing here reads more than these).
+eng container inspect -f '{"status":"{{.State.Status}}","image":"{{.Image}}","restarts":{{.RestartCount}}}' \
+  "$ACCEPTANCE_CONTAINER" >"$RESULT_DIR/diag/container-inspect.json" 2>/dev/null && have_container=1
 
 # 5a. Manifest format, read from the registry itself (engine-independent).
 registry_manifest() {  # prints "<content-type>\t<body-file>"

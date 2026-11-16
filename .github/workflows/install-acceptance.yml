@@ -235,6 +235,13 @@ jobs:
           COCKPIT_BUN_DIR: ${{ runner.temp }}/cockpit-bun/bin
         run: bash scripts/substrate/acceptance/run-acceptance.sh
 
+      # The result is uploaded from a public repo: a secret's value anywhere in it is replaced, and the job fails.
+      - name: Keep secret values out of the result
+        if: always()
+        env:
+          ACCEPTANCE_PROVIDER_KEY: ${{ secrets.ACCEPTANCE_PROVIDER_KEY }}
+        run: bash scripts/substrate/acceptance/scrub-result-dir.sh "${{ runner.temp }}/acceptance/${{ matrix.engine }}" ACCEPTANCE_PROVIDER_KEY
+
       - name: Keep the result and diagnostics
         if: always()
         uses: actions/upload-artifact@v4
@@ -281,6 +288,13 @@ jobs:
           ACCEPTANCE_PROVIDER_VAR: ${{ vars.ACCEPTANCE_PROVIDER_VAR }}
           RESULT_DIR: ${{ runner.temp }}/network/${{ matrix.engine }}
         run: bash scripts/substrate/acceptance/run-network-acceptance.sh
+
+      # The result is uploaded from a public repo: a secret's value anywhere in it is replaced, and the job fails.
+      - name: Keep secret values out of the result
+        if: always()
+        env:
+          ACCEPTANCE_PROVIDER_KEY: ${{ secrets.ACCEPTANCE_PROVIDER_KEY }}
+        run: bash scripts/substrate/acceptance/scrub-result-dir.sh "${{ runner.temp }}/network/${{ matrix.engine }}" ACCEPTANCE_PROVIDER_KEY
 
       - name: Keep the result and diagnostics
         if: always()
@@ -332,6 +346,13 @@ jobs:
           set -euo pipefail
           export PREVIOUS_IMAGE="${PREVIOUS_IMAGE,,}"
           bash scripts/substrate/acceptance/run-upgrade-acceptance.sh
+
+      # The result is uploaded from a public repo: a secret's value anywhere in it is replaced, and the job fails.
+      - name: Keep secret values out of the result
+        if: always()
+        env:
+          ACCEPTANCE_PROVIDER_KEY: ${{ secrets.ACCEPTANCE_PROVIDER_KEY }}
+        run: bash scripts/substrate/acceptance/scrub-result-dir.sh "${{ runner.temp }}/upgrade/${{ matrix.engine }}" ACCEPTANCE_PROVIDER_KEY
 
       - name: Keep the result and diagnostics
         if: always()
