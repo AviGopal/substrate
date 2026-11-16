@@ -22,7 +22,8 @@ test("[MUST-FAIL] an overlap with a live window, or a live window_id, is refused
   const live = { shape: "infra_window", window_id: "w-old", from_seq: 53000, to_seq: 53200, statuses: [404] };
   expect(why(plan(ok, 60000, [live]))).toContain("overlaps live window w-old");
   expect(why(plan(ok, 60000, [{ ...live, window_id: "outage-1", from_seq: 1, to_seq: 2 }]))).toContain("already live with other fields");
-  expect(plan(ok, 60000, [live, { shape: "infra_window", window_id: "w-old", retracted: true }]).ok).toBe(true);
+  // the retraction keeps the live span, so only the retracted filter can let the new window through (qa)
+  expect(plan(ok, 60000, [live, { ...live, retracted: true }]).ok).toBe(true);
 });
 
 test("arguments parse into the plan's fields; --write is explicit", () => {
