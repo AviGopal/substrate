@@ -133,11 +133,59 @@ R.4 A person's asks are threads. A view entry may name, for each row it draws, o
     1.1a stands: a summary of what the walk did is an activity's output; R.4 draws the raw
     thread. Must-fail: on the live page, a person's ask shows the rows of its episode under
     it, and a newer system row never pushes it out of view.
+    Done: `thread` on a rows entry, bound through `$row`, one level, with its own `show`.
+    The default thread is `record_read {refs_to: "$row", shape: "answer"}`: records filters by
+    shape, the page filters nothing, and without the shape the last three rows of an ask are
+    mostly selection rows. It reads `refs_to` because records serves an episode only for an
+    open root, by the walk's writer id; a per-root episode is a records gap. "Not answered
+    yet." is exercised by the suite only: every ask on the live page has an answer.
+    Debts: each poll reads once more per drawn ask; times show no zone; an answer that claims
+    a change shows no sign of whether one landed, which hop rows can carry once they exist.
 R.5 The default landing is per job. Needs-you first (R.1), then the person's threads (R.4),
     then one line of health, which Phase 5 fills; until it does, the line says no composer
     answers yet. The default stays a view written through `uiView_write`, replaceable by an
     activity. Must-fail: the rendered landing at phone width shows needs-you and the
     person's latest ask without scrolling.
+    Order is the producer's, never the surface's: records answers oldest first, so "the last
+    n" draws today's ask under yesterday's. Newest first is a read argument records serves, or
+    a view entry field the page applies as a declared reversal of the producer's order, never a
+    sort by a field the surface picks.
+    Records serves no order argument, so the view declares it: `newest: true` on an entry
+    reverses the producer's order after `show` has cut the producer's last n, never before.
+    The raw report entries (answers citing no ask, failures, outcomes) leave the landing's
+    body and stay readable folded under the health line, each an entry the view declares
+    `folded`: the answer first, the evidence behind one control. The health line reads
+    records shape `health`, which the composer of 5.1 writes; nothing writes it yet, so the
+    line says "No composer answers yet." Phone: the rail is a band sized to its content, not
+    a fixed share of the screen. Three commits: `newest`, `folded`, then the default landing
+    with the phone band, which carries the must-fail.
+
+R.6 State is a mark the system declares. A row's field may read as a state from the design
+    tokens' closed set (reached, not-reached, running, waiting, accepted, stalled): a dot in the
+    state's colour and the state's own label, never colour alone and never a sentence the page
+    writes about the field. The binding is declared, as R.2's words are: the owner's
+    `shape_description` row for the shape (`marks`) first, else the view entry (`marks`), each a
+    list of up to MAX_WORDS `{field, states: {value: state}}`, where `field` is a field name or a
+    dotted path of up to three, and `value` is the field's value as written (true, false, a
+    number, a string). A value the binding does not name draws no mark; the field itself stays
+    drawn as written, in the row's fold. The page names no field and no shape: it draws a mark
+    wherever a declaration binds one. `uiView_write`'s description and declared inputs carry
+    `marks` (generated from the contract), so a view writer sees it when it writes. Must-fail:
+    with a declaration binding `typecheck.passed` false to not-reached, a change whose typecheck
+    failed shows that mark above its verdict, and the same row with no declaration shows none;
+    a value outside the binding shows none.
+R.7 The walk can use what the surface offers. Every primitive a view may name is reachable by a
+    walk from a person's ask: `uiView_write` declares its inputs (shape_inputs) so the request
+    producer, which reads only shapes with declared inputs, sees the vocabulary when it writes
+    (law 8); nothing gates it behind an owner `requires` row. A surface change that adds a
+    primitive is validated by a walk using it, not only by the suite: a person's ask ("show
+    whether each change compiles") leads to a request whose pointer is `uiView_write` naming
+    the primitive, a hop that ends with a revision, and the page drawing it. Owner
+    declarations (`shape_description` rows) are owner configuration: records takes them from
+    the owner role only, so a walk proposes one and the owner writes it; a walk that must write
+    one itself is a records and walk change, filed, not built here. Must-fail: the registration
+    declares `uiView_write`'s inputs, an entry's declared fields are exactly those a write
+    accepts, and every default view fits them.
 
 ## Phase 2 — work like every vessel (unblocked)
 2.1 Keys by writer: remove the per-vessel key fallback; the surface's own calls use the node's
@@ -225,7 +273,9 @@ R.5 The default landing is per job. Needs-you first (R.1), then the person's thr
 ## Phase 5 — health is answered, not assembled
 5.1 When a composed answer to "how is the system doing" exists as a row, the landing draws it in
     place of the raw reports block. The composer is built as activities, outside the surface.
-    Until then the reports block stays and names its read-only debt.
+    The composer writes records shape `health`, one row per answer; the landing's health line
+    (R.5) reads it. Until it does, the raw report entries stay, folded under that line, and
+    name their read-only debt.
 
 ## Validation
 - Each phase ends with the person using the live page and saying whether it shows what is
