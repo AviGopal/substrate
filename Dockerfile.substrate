@@ -362,6 +362,12 @@ COPY repos/human-surface-vessel/tsconfig*.json /vessels/human-surface-vessel/
 # a plain COPY — without it every fresh image serves /health 200 and / 503.
 COPY repos/human-surface-vessel/ui/dist /vessels/human-surface-vessel/ui/dist
 RUN cd /vessels/human-surface-vessel && bun install || true
+# The ui/ project's own dependencies, installed where the land typecheck (local-tools git-land.ts) looks for a
+# sub-project's modules: <runtime>/<repo>/<dir>/node_modules. Without them every walk-authored ui change is reported
+# "not checked: ui's modules are not installed on this node" (agf_uap6fonvp1kh). Its lockfile pins them; a failed
+# install fails the build rather than ship a node that cannot check ui changes.
+COPY repos/human-surface-vessel/ui/package.json repos/human-surface-vessel/ui/bun.lock repos/human-surface-vessel/ui/tsconfig.json /vessels/human-surface-vessel/ui/
+RUN cd /vessels/human-surface-vessel/ui && bun install --frozen-lockfile
 # bun links a file: dep as a symlink STUB (three symlinks, no src), so the baked
 # relay dir could never resolve @avigopal/libp2p-federation-transport at runtime —
 # the exact crash the falsifier recorded. The install below therefore
