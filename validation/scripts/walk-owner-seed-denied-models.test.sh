@@ -70,6 +70,20 @@ mode = "unreadable";
 const beforeU = writes.length;
 const unreadable = await seed();
 const unreadableWrites = writes.length - beforeU;
+// (h) A first install writes; the owner clears it (null) before the next boot: that boot writes nothing (qa, deployment).
+rows.length = 0; mode = "served"; delete policy.denied_models;
+await seed();
+delete policy.denied_models;
+const beforeH = writes.length;
+const h = await seed();
+const hWrites = writes.length - beforeH;
+// (i) The owner's value is there at the first boot; the owner later clears it: the next boot writes nothing.
+rows.length = 0; policy.denied_models = ["owner-first"];
+await seed();
+delete policy.denied_models;
+const beforeI = writes.length;
+const i = await seed();
+const iWrites = writes.length - beforeI;
 // A first install on an llm-resolver that cannot take the field: the write is tried, refused, logged.
 rows.length = 0;
 mode = "old";
@@ -89,6 +103,8 @@ leg(old === 0 && oldWrites === 1, "(d) an llm-resolver that refuses the field: t
 leg(cleared === 0 && clearedWrites === 0 && clearedValue === "null",
   "(f) the owner's null (deny nothing) survives the next boot: the seed wrote once and never again");
 leg(unreadable === 0 && unreadableWrites === 0, "(g) a policy that cannot be read is not taken as never set: nothing written");
+leg(h === 0 && hWrites === 0, "(h) the owner clears the denial right after the first write: the next boot writes nothing");
+leg(i === 0 && iWrites === 0, "(i) the owner's value was there at the first boot and is cleared later: the next boot writes nothing");
 process.exit(failed === 0 ? 0 : 1);
 TS
 cd "$W" && "$BUN" drive.ts

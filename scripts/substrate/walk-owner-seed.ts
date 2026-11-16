@@ -481,7 +481,11 @@ if (await inventoryFile.exists()) {
 const DENIED_MODELS = [":free"];
 const SEEDED = { shape: "owner_seeded", what: "denied_models" };
 const markSeeded = async (): Promise<void> => {
-  await records("record_write", { row: { ...SEEDED, input_refs: [] }, writer: OWNER, role: OWNER });
+  const m = (await records("record_write", { row: { ...SEEDED, input_refs: [] }, writer: OWNER, role: OWNER })) as Row;
+  // A marker not stored leaves the next boot free to write again: said, so it is seen (qa).
+  if (m.resolved === false || (m.failure as Row | undefined) !== undefined) {
+    console.log(`[walk-owner-seed] model denial: the once-only marker was not stored (${String(m.error ?? JSON.stringify(m.failure ?? "")).slice(0, 200)}); the next boot may write the denial again`);
+  }
 };
 try {
   const once = await read(SEEDED.shape, { what: SEEDED.what });
