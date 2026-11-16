@@ -140,6 +140,10 @@ const answerSchema = rows.filter((r) => r.shape === "shape_schema" && r.target =
 leg(!!answerSchema && (answerSchema.context ?? []).some((e: Row) => e?.shape === "failure" && JSON.stringify(e.where) === JSON.stringify({ kind: "skip" })
   && e.latest_by === "request_ref" && e.keep === true),
   "(sk) the answer producer is shown its request's skips, kept and bounded (newest per request call)");
+const schemaOf = (target: string) => rows.filter((r) => r.shape === "shape_schema" && r.target === target && (r.variant ?? "") === "").at(-1);
+const tmpl = schemaOf("activity_template");
+leg(JSON.stringify(tmpl?.inputs) === JSON.stringify([{ shape: "outcome", latest_by: "shape" }]),
+  "(pt) the template takes only the newest grade (prompt_too_large); the grader's request_acts stays whole (the USER, keep-visibility a2)");
 const holdFact = rows.filter((r) => r.shape === "hold_fact" && r.reason_prefix === "needs_localization").at(-1);
 leg(!!holdFact && JSON.stringify(holdFact.fact) === JSON.stringify({ localized: false }) && holdFact.retired === undefined
   && String(holdFact.description).includes("needs_localization holds as facts"),

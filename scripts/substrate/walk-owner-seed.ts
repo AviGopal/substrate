@@ -290,7 +290,9 @@ const SCHEMAS: Row[] = [
         },
       },
     },
-    inputs: ["outcome"],
+    // The newest grade only (latest_by shape): inputs are shown whole and never fitted to the prompt budget, so every
+    // grade of a long root went into each fill until it passed the model's ceiling (d929, 489: prompt_too_large).
+    inputs: [{ shape: "outcome", latest_by: "shape" }],
     context: ["hop"],
     // The callable shapes and their inputs, as the request reads them (discovery resolvers.ts, declared: true).
     reads: [{ type: "shapeDescriptions", declared: true }],
