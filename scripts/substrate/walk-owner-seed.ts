@@ -470,21 +470,38 @@ if (await inventoryFile.exists()) {
 // The owner's model denial (the USER, 11-15: "No free endpoints"): llm-resolver's shaped llmModelPolicy holds
 // denied_models, and a model whose id contains an entry is never drawn, walked to or called. The policy has no class
 // field, so the class is named by its own marker: the free-tier suffix providers put on those endpoints, not a list of
-// tonight's models. Written only when the policy has never set denied_models (a first install): once the owner has set
-// it, to this value or any other, through llmModelPolicy_write, the seed leaves it, so the policy and not this file is
-// the config (research: a value reasserted every boot is config in code). A node with no llm-resolver, or one that
-// cannot take the field yet, is logged and skipped: the walk's owner rows above do not wait on it.
+// tonight's models. Written once, on a first install, and never again: after its one write (or on finding a value the
+// owner already set) the seed leaves an owner row saying so (owner_seeded, what: denied_models), and on every later boot
+// it finds that row and writes nothing. So the owner's later value stands, whatever it is, including null ("deny
+// nothing", which llm-resolver stores by deleting the field, indistinguishable from never set): the policy and not this
+// file is the config (research: a value reasserted every boot is config in code; deployment and qa: an owner's null was
+// undone at every boot). A policy that cannot be read (llm-resolver answers resolved:false) is not taken as never set:
+// nothing is written and the next boot tries again. A node with no llm-resolver, or one that cannot take the field yet,
+// is logged and skipped: the walk's owner rows above do not wait on it.
 const DENIED_MODELS = [":free"];
+const SEEDED = { shape: "owner_seeded", what: "denied_models" };
+const markSeeded = async (): Promise<void> => {
+  await records("record_write", { row: { ...SEEDED, input_refs: [] }, writer: OWNER, role: OWNER });
+};
 try {
-  const got = (await records("llmModelPolicy", {})) as Row;
-  const body = (got.body ?? (got.content as Row | undefined)?.body ?? got) as Row;
-  if (body.denied_models !== undefined && body.denied_models !== null) {
+  const once = await read(SEEDED.shape, { what: SEEDED.what });
+  const got = once.length > 0 ? undefined : (await records("llmModelPolicy", {})) as Row;
+  const body = got === undefined ? undefined : (got.body ?? (got.content as Row | undefined)?.body ?? got) as Row;
+  if (once.length > 0) {
+    console.log(`[walk-owner-seed] model denial: seeded once before (${String(once[once.length - 1]?.id ?? "")}); the owner's value since stands`);
+  } else if (got?.resolved === false) {
+    console.log(`[walk-owner-seed] model denial: llm-resolver's policy could not be read (${String(got.error ?? "").slice(0, 200)}); nothing written, the next boot tries again`);
+  } else if (body?.denied_models !== undefined && body?.denied_models !== null) {
     console.log(`[walk-owner-seed] model denial: already set by the owner (${JSON.stringify(body.denied_models).slice(0, 120)}); left as it is`);
+    await markSeeded();
   } else {
     const w = (await records("llmModelPolicy_write", { denied_models: DENIED_MODELS })) as Row;
-    console.log(w.resolved === false
-      ? `[walk-owner-seed] model denial: refused by llm-resolver (${String(w.error ?? "").slice(0, 200)})`
-      : `[walk-owner-seed] model denial: written ${JSON.stringify(DENIED_MODELS)}`);
+    if (w.resolved === false) {
+      console.log(`[walk-owner-seed] model denial: refused by llm-resolver (${String(w.error ?? "").slice(0, 200)})`);
+    } else {
+      console.log(`[walk-owner-seed] model denial: written ${JSON.stringify(DENIED_MODELS)}`);
+      await markSeeded();
+    }
   }
 } catch (e) {
   console.log(`[walk-owner-seed] model denial: not set (${String((e as Error)?.message ?? e).slice(0, 200)})`);
