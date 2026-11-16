@@ -456,14 +456,16 @@ if (await inventoryFile.exists()) {
 // The owner's model denial (the USER, 11-15: "No free endpoints"): llm-resolver's shaped llmModelPolicy holds
 // denied_models, and a model whose id contains an entry is never drawn, walked to or called. The policy has no class
 // field, so the class is named by its own marker: the free-tier suffix providers put on those endpoints, not a list of
-// tonight's models. Written only when different (idempotent per boot). A node with no llm-resolver, or one that cannot
-// take the field yet, is logged and skipped: the walk's owner rows above do not wait on it.
+// tonight's models. Written only when the policy has never set denied_models (a first install): once the owner has set
+// it, to this value or any other, through llmModelPolicy_write, the seed leaves it, so the policy and not this file is
+// the config (research: a value reasserted every boot is config in code). A node with no llm-resolver, or one that
+// cannot take the field yet, is logged and skipped: the walk's owner rows above do not wait on it.
 const DENIED_MODELS = [":free"];
 try {
   const got = (await records("llmModelPolicy", {})) as Row;
   const body = (got.body ?? (got.content as Row | undefined)?.body ?? got) as Row;
-  if (JSON.stringify(body.denied_models ?? null) === JSON.stringify(DENIED_MODELS)) {
-    console.log("[walk-owner-seed] model denial: present");
+  if (body.denied_models !== undefined && body.denied_models !== null) {
+    console.log(`[walk-owner-seed] model denial: already set by the owner (${JSON.stringify(body.denied_models).slice(0, 120)}); left as it is`);
   } else {
     const w = (await records("llmModelPolicy_write", { denied_models: DENIED_MODELS })) as Row;
     console.log(w.resolved === false

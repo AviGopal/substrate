@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # walk-owner-seed-denied-models.test.sh: the owner seed writes llm-resolver's denied_models (the USER, 11-15: "No free
-# endpoints") by the class's own marker, only when different (a rerun writes nothing), and a node with no llm-resolver,
-# or one that cannot take the field yet, still seeds (driven against a stand-in discovery; loopback only, no fleet key).
+# endpoints") by the class's own marker only when the policy has never set it; a value the owner set, this or another,
+# is left (a rerun writes nothing); a node with no llm-resolver, or one that cannot take the field yet, still seeds
+# (driven against a stand-in discovery; loopback only, no fleet key).
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 SEED="$ROOT/scripts/substrate/walk-owner-seed.ts"
@@ -47,6 +48,11 @@ const first = await seed();
 const firstWrites = writes.length;
 const again = await seed();
 const againWrites = writes.length;
+// the owner changes the policy through its own write: the next boot must not put the seed's value back (research)
+policy.denied_models = ["owner-chosen"];
+const owned = await seed();
+const ownedWrites = writes.length;
+const ownedValue = JSON.stringify(policy.denied_models); // read now: the legs below change the policy
 mode = "absent";
 const absent = await seed();
 mode = "old"; delete policy.denied_models;
@@ -57,6 +63,8 @@ const leg = (ok: boolean, what: string) => { console.log(`${ok ? "ok  " : "FAIL"
 leg(first === 0 && firstWrites === 1 && JSON.stringify(writes[0]?.denied_models) === JSON.stringify([":free"]),
   "(a) the seed writes the owner's model denial, by its class marker, when the policy lacks it");
 leg(again === 0 && againWrites === 1, "(b) run again, the denial already in force: nothing written (idempotent)");
+leg(owned === 0 && ownedWrites === 1 && ownedValue === JSON.stringify(["owner-chosen"]),
+  "(e) a value the owner set (another one) survives the next boot: the seed writes only when the field was never set");
 leg(absent === 0, "(c) a node with no llm-resolver: the seed still succeeds (the denial is skipped, logged)");
 leg(old === 0 && writes.length === 2, "(d) an llm-resolver that refuses the field: the seed still succeeds (logged)");
 process.exit(failed === 0 ? 0 : 1);
