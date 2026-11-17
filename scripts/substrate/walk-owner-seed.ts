@@ -229,16 +229,35 @@ const SCHEMAS: Row[] = [
     description: "How long the person who asked may take to see the result and grade it: the work still to do (a " +
       "change takes several calls: a clone, edits, a commit, a diff, a verdict, a landing) plus their reading time. " +
       "reads lists the grades people gave before, each with its time (t) and what it judged, which is how long they " +
-      "took. within_ms is a duration in milliseconds, from 60000 (one minute) to 86400000 (a day), and records sets " +
-      `the deadline from its own clock. at may be 0: records replaces it. ${JSON_ONLY}`,
+      "took. The context shows this request's own answer and its grade, what it has done (request_acts), the calls the " +
+      "walk could not make for it and why (failure rows of kind skip), and its ended steps with their times; reads also " +
+      "lists the deadlines this request has already missed. within_ms is a duration in milliseconds, from 60000 (one " +
+      `minute) to 86400000 (a day), and records sets the deadline from its own clock. at may be 0: records replaces it. ${JSON_ONLY}`,
     schema: {
       type: "object",
       required: ["at"],
       properties: { at: { type: "number" }, within_ms: { type: "number", minimum: 60000, maximum: 86400000 } },
     },
     inputs: ["world_changed"],
-    // What people took before: their grades, each with its time and what it judged (the evidence for a deadline).
-    reads: [{ type: "record_read", shape: "outcome", where: { role: "person" } }],
+    // What this request has met so far, so a deadline is set from what the request has done and what stopped it: its
+    // own answer and grade, its acts, the calls refused before they ran (a skip names what the call required and which
+    // row it compared), and its ended steps with their times. The walk builds each root's pool from that root's rows, so
+    // these are this request's alone. Kept, in this order (described fits kept rows entry by entry
+    // as listed): a long-running request has far more ended steps than the context holds, and fitted newest first they
+    // would push its answer and grade out. The grades first, the newest per role (a person's and a grader's), then only
+    // the newest answer (each row is shown cut to its first 8 KB, so these few fit the share), then the acts. Only rows
+    // citing the ask are kept first, so the skips (which cite the call request they held) are not kept: they and the
+    // ended steps are fitted newest first in the rest of the context, the newest steps showing how long steps take.
+    context: [{ shape: "outcome", latest_by: "role", keep: true }, { shape: "answer", latest_by: "shape", keep: true },
+      { shape: "request_acts", latest_by: "shape", keep: true },
+      { shape: "failure", where: { kind: "skip" }, latest_by: "request_ref" },
+      { shape: "hop", where: { phase: "ended", kind: ["call", "run"] }, join: { on: "call_id", take: ["pointer_type"] } }],
+    keep_share: 0.25,
+    // What people took before: their grades, each with its time and what it judged (the evidence for a deadline). And the
+    // deadlines this request already missed: asks {x-inputs} binds the read to the world_changed row given, so it names
+    // only this request's lapses, never another's.
+    reads: [{ type: "record_read", shape: "outcome", where: { role: "person" } },
+      { type: "record_lapsed", deadline_shape: "due", answer_shape: "answer", asks: { "x-inputs": true } }],
   },
   {
     target: "land_verdict",
