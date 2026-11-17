@@ -202,7 +202,16 @@ const SCHEMAS: Row[] = [
       // The request's newest commit (its sha and tree) is kept like its clone: without it a request whose clone row
       // survived still asked for a new clone (d929). request_acts: only the newest row (latest_by shape), since each
       // restates every act so far and 76 of them filled the keep share before the clone row could fit (qa, database).
-      { shape: "gitCommitResult", latest_by: "shape", keep: true }, { shape: "request_acts", latest_by: "shape", keep: true }],
+      { shape: "gitCommitResult", latest_by: "shape", keep: true }, { shape: "request_acts", latest_by: "shape", keep: true },
+      // The clone's newest diff, with what its check said (the drafter-context ruling): an edit drafted after a failing
+      // check is drafted seeing why it failed. Whole, since the check follows the diff text in the row and an 8 KB cut
+      // lost it. Kept, as the clone is: by the time the next edit is drafted, most requests have far more newer rows than
+      // the context holds, so a newest-first fill would rarely reach the diff. The git_diff call's own hop carries the same
+      // row: covered.
+      // ORDER IS KEEP PRIORITY: described fits kept rows entry by entry in the order listed here, so the clone, its
+      // change_wanted, its commit and its acts are fitted before the diff, and a large diff never pushes them out; when
+      // the share is spent, the diff is the one left out, and named, never cut. List a new kept entry where it ranks.
+      { shape: "gitDiff", latest_by: "shape", where: { tree: NEWEST_TREE, role: "walk" }, whole: true, keep: true, covers: { shape: "hop", on: "call_id" } }],
     // keep: true has described-shape fit those rows first, within keep_share of its context budget, so an hour-old
     // request's clone stays in view (the USER: "Build now, first (Recommended)"); a quarter is room for one small row per
     // repository each without crowding out the newest failure a retry reads.
