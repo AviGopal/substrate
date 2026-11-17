@@ -456,19 +456,29 @@ for (const d of SHOWN) await ensure({ shape: "shape_description", ...d }, { of: 
 // inventory no longer names (removal is how this fleet retires most things) gets a row saying it is retired, with no
 // units, so the judge is never shown a repository that is gone as one that is live. With no inventory beside the script,
 // or one that names no repository at all, nothing is written or retired, and the run says so.
+// Each row also names the branch the repository takes landings on (git_land refuses any other: the dev-only push ruling):
+// a unit's own `branch` in the inventory, else the inventory's branch_default; with neither, none is named and git_land
+// refuses that repository's landings by name.
 const repositoryRows = (inventory: unknown): Row[] => {
-  const units = (inventory as { vessels?: unknown } | null)?.vessels;
+  const inv = inventory as { vessels?: unknown; branch_default?: unknown } | null;
+  const fallback = typeof inv?.branch_default === "string" && inv.branch_default !== "" ? inv.branch_default : undefined;
+  const branchOf = (us: Row[]): Row => {
+    const own = us.map((u) => u.branch).find((b) => typeof b === "string" && b !== "");
+    const b = own ?? fallback;
+    return b === undefined ? {} : { branch: b };
+  };
   const by = new Map<string, Row[]>();
-  for (const u of Array.isArray(units) ? (units as Row[]) : []) {
+  for (const u of Array.isArray(inv?.vessels) ? (inv.vessels as Row[]) : []) {
     if (typeof u?.repo !== "string" || u.repo === "" || typeof u.unit !== "string") continue;
     by.set(u.repo, [...(by.get(u.repo) ?? []), u]);
   }
-  return [...by.entries()].sort(([x], [y]) => x.localeCompare(y)).map(([repo, us]) => ({
+  return [...by.entries()].sort(([x], [y]) => x.localeCompare(y)).map(([repo, us]): Row => ({
     shape: "repository",
     repo,
     units: us.map((u) => String(u.unit)).sort(),
     roles: [...new Set(us.map((u) => String(u.role ?? "")).filter((r) => r !== ""))].sort(),
     retired: us.every((u) => u.retired === true),
+    ...branchOf(us),
   }));
 };
 const inventoryFile = Bun.file(new URL("./vessels.inventory.json", import.meta.url));
