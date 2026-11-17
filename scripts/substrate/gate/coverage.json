@@ -507,9 +507,16 @@
     "/usr/lib/systemd/system/described-shape-vessel.service": {
       "src": "scripts/substrate/units/described-shape-vessel.service",
       "src_blob": "c3d9fdde1f2c178b92aad03fd8255fe273e1e5c5",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "2b66880a75ba638136905467bf66ef0b05f0f023",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "e8366e637bc97bda7fe7a185ba7a6657ba2d8113"
+      }
     },
     "/usr/lib/systemd/system/described-shape-vessel.service.d/10-secrets-out-of-reach.conf": {
       "src": "scripts/substrate/units/described-shape-vessel.service.d/10-secrets-out-of-reach.conf",
@@ -1452,9 +1459,16 @@
     "/usr/lib/systemd/system/records-vessel.service": {
       "src": "scripts/substrate/units/records-vessel.service",
       "src_blob": "8318b2ecd5068c663eb44364cf3fe2d492b22b3d",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "2b66880a75ba638136905467bf66ef0b05f0f023",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "36b76109e502c676425d0d98c03c86fce3664b63"
+      }
     },
     "/usr/lib/systemd/system/records-vessel.service.d/10-secrets-out-of-reach.conf": {
       "src": "scripts/substrate/units/records-vessel.service.d/10-secrets-out-of-reach.conf",
@@ -2231,9 +2245,16 @@
     "/usr/lib/systemd/system/walk-vessel.service": {
       "src": "scripts/substrate/units/walk-vessel.service",
       "src_blob": "4ed51ee64849fe986bf81f649c66bef4920675c7",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "2b66880a75ba638136905467bf66ef0b05f0f023",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "3efdfc273fc8b725f7c5aa6789213801c8205bf0"
+      }
     },
     "/usr/local/bin/apply-inventory": {
       "src": "scripts/substrate/apply-inventory.sh",
@@ -2734,10 +2755,17 @@
     },
     "/usr/local/share/substrate/active-scripts/vessels.inventory.json": {
       "src": "scripts/substrate/vessels.inventory.json",
-      "src_blob": "b35ce1b4248b09a1fd1fb4ceb04f81b1fe9e26b4",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
+      "src_blob": "882e63d1da411bc5a7acbcae812dbf81c46b92dc",
+      "level": "behaviour",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "walk-owner-seed-repositories.sh"
+      ],
+      "evidence": {
+        "accepted": "9b5433454e5a68275c661219d06fa31920024a1e",
+        "mutation": "replace with {}",
+        "mutated_blob": "0967ef424bce6791893e9a57bb952f80fd536e93"
+      }
     },
     "/usr/local/share/substrate/active-scripts/watchdog-tick.ts": {
       "src": "scripts/substrate/watchdog-tick.ts",
@@ -2832,10 +2860,17 @@
     },
     "/usr/local/share/substrate/vessels.inventory.json": {
       "src": "scripts/substrate/vessels.inventory.json",
-      "src_blob": "a0d6a23a843d0e2d4423f14a336d12ba01eff7f7",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
+      "src_blob": "882e63d1da411bc5a7acbcae812dbf81c46b92dc",
+      "level": "behaviour",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "walk-owner-seed-repositories.sh"
+      ],
+      "evidence": {
+        "accepted": "9b5433454e5a68275c661219d06fa31920024a1e",
+        "mutation": "replace with {}",
+        "mutated_blob": "0967ef424bce6791893e9a57bb952f80fd536e93"
+      }
     },
     "/usr/local/share/substrate/vessels.manifest.json": {
       "src": "scripts/substrate/vessels.manifest.json",
@@ -2895,10 +2930,17 @@
     },
     "/usr/lib/systemd/system/described-shape-vessel.service.d/45-wait-for-records.conf": {
       "src": "scripts/substrate/units/described-shape-vessel.service.d/45-wait-for-records.conf",
-      "src_blob": "e56ee0e26b69f7a4d2b50dbafebcb91e5ffcc8f8",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
+      "src_blob": "691cf94c9a411e6ebedcf268fb336d72f4cf2c57",
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "2b66880a75ba638136905467bf66ef0b05f0f023",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "c220e3b2df55f441fe7ec206afe902e63eaa6711"
+      }
     },
     "/usr/lib/systemd/system/described-shape-vessel.service.d/40-after-owner-seed.conf": {
       "src": "scripts/substrate/units/described-shape-vessel.service.d/40-after-owner-seed.conf",
@@ -2945,10 +2987,17 @@
     },
     "/usr/lib/systemd/system/walk-vessel.service.d/45-wait-for-records.conf": {
       "src": "scripts/substrate/units/walk-vessel.service.d/45-wait-for-records.conf",
-      "src_blob": "295f146ab960d15a344048430fda72a3db80ec7c",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
+      "src_blob": "b967052df1462bb36f1fa9d0a5f3e41fe156abde",
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "2b66880a75ba638136905467bf66ef0b05f0f023",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "cbe64cb18fdde2b5b3aa56451382ae6d4ad92f21"
+      }
     },
     "/usr/lib/systemd/system/walk-vessel.service.d/40-after-owner-seed.conf": {
       "src": "scripts/substrate/units/walk-vessel.service.d/40-after-owner-seed.conf",
@@ -3048,16 +3097,30 @@
     "/usr/lib/systemd/system/identity-vessel.service.d/30-identity-keys-bind.conf": {
       "src": "scripts/substrate/units/identity-vessel.service.d/30-identity-keys-bind.conf",
       "src_blob": "8184aef5f94fe9569f4d828a41139b6826ab77d5",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "2b66880a75ba638136905467bf66ef0b05f0f023",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "66adc19989798851b332e47a72f1295b40e49102"
+      }
     },
     "/usr/lib/systemd/system/service.d/07-identity-keys-out-of-reach.conf": {
       "src": "scripts/substrate/units/service.d/07-identity-keys-out-of-reach.conf",
       "src_blob": "ea05ac05afc26384bd71e615d32e4812e2fd86dd",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
+      "level": "parse",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "unit-verify.sh"
+      ],
+      "evidence": {
+        "accepted": "2b66880a75ba638136905467bf66ef0b05f0f023",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "2f23b796a29065f2648339bd4b16b8bbd41117de"
+      }
     },
     "/usr/local/share/substrate/active-scripts/owner-infra-window.ts": {
       "src": "scripts/substrate/owner-infra-window.ts",
