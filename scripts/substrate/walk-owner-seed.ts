@@ -190,7 +190,9 @@ const SCHEMAS: Row[] = [
         uses: USES,
       },
     },
-    inputs: ["world_changed"],
+    // ask: true declares what an ask is (records reads it): a person's, the owner's or an operator's row of this shape
+    // opens a root, and every other owner row is configuration the walk is given, so no list of shapes decides it.
+    inputs: [{ shape: "world_changed", ask: true }],
     // The answer and its grade are here so the producer can see the ask is done; the hops show whether a change landed.
     // A file read is shown whole (an edit quotes text from it, so a cut copy cannot be quoted), only its newest read per
     // path (a read after an edit replaces the older one), and in place of the hop that fetched it.
@@ -444,6 +446,15 @@ await ensure({ shape: "requires", for: "fs_edit", needs: "fileContent", where: {
 // check), while that gap is open.
 await ensure({ shape: "requires", for: "walk_trees_reclaim", needs: "gap", where: { gap_id: "pull-sync-walk-trees-unreclaimed", status: "open" }, latest_by: "gap_id" },
   { for: "walk_trees_reclaim", needs: "gap" }, "requires walk_trees_reclaim gap");
+// A root that offers no move is said, as a stall row naming it, once every after_rows store rows it sits (walk loop.ts
+// stalls; its producer is offered again once per row). Counted in store rows, the unit a detector's quiet window uses,
+// sized to about one round of the walk's selections over the open roots.
+await ensure({ shape: "stall_rule", after_rows: 240 }, {}, "stall_rule");
+// What makes a diff news to the root that asked for it: its tree and whether each check ran and passed, not the check's
+// timings (walk applicable.ts repeats, by the owner's news_key). A re-run diff of an unchanged tree is then no news, and
+// the root stops judging the same tree again (544972ef judged one tree r 0 ten times).
+await ensure({ shape: "news_key", of: "gitDiff", fields: ["tree", "check.ran", "check.passed", "typecheck.ran", "typecheck.passed"] },
+  { of: "gitDiff" }, "news_key gitDiff");
 await ensure({ shape: "arm", vessel_id: "walk-vessel", arm: "treated", as_of_seq: MAX_SEQ }, { vessel_id: "walk-vessel" }, "arm walk-vessel");
 // What a detector's gap row is. A description, not a shape_schema: described-shape serves every schema target from a
 // model, and a gap must only ever be an observation a detector made. records holds shape_description as owner

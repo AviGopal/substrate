@@ -161,8 +161,8 @@ leg(!!req && String(req.description).includes("the cwd the clone's hop returned,
 const fromGap = rows.find((r) => r.shape === "shape_schema" && r.target === "request" && r.variant === "gap");
 const sameExcept = (a: Row | undefined, b: Row | undefined): boolean => !!a && !!b && ["description", "schema", "context", "reads"].every((k) => JSON.stringify(a[k]) === JSON.stringify(b[k]));
 leg(!!fromGap && JSON.stringify(fromGap.inputs) === JSON.stringify(["gap"]) && sameExcept(fromGap, req)
-  && JSON.stringify(req?.inputs) === JSON.stringify(["world_changed"]),
-  "(k) a request can be made from a detector's gap: variant gap, inputs [gap], the same words and checks as the plain one");
+  && JSON.stringify(req?.inputs) === JSON.stringify([{ shape: "world_changed", ask: true }]),
+  "(k) a request can be made from a detector's gap: variant gap, inputs [gap], the same words and checks as the plain one, which declares its world_changed the ask");
 leg(again === 0 && schemaRowsAfter === schemaRows, `(l) the seeder run again writes no schema or precondition row (${schemaRows} then ${schemaRowsAfter})`);
 const cw = rows.find((r) => r.shape === "shape_schema" && r.target === "change_wanted");
 const tools = ["git_worktree", "fs_edit", "fs_write", "code_replace_lines", "code_insert_after_line", "code_add_import", "git_commit", "git_land"];
