@@ -62,6 +62,10 @@ async function ensure(row: Row, where: Row | undefined, label: string): Promise<
   console.log(`[walk-owner-seed] ${label}: wrote ${w.id ?? JSON.stringify(w).slice(0, 80)}`);
 }
 
+// The clone's newest tree (the newest-tree landing ruling): the tree of the newest row of these shapes a tool recorded on the
+// request's clone (the same cwd) that names one; a newer moving row naming none leaves it unknown, and unknown meets
+// nothing; a gap opened again takes the clone of the earlier gap with its gap_id. Read by the walk and described alike.
+const NEWEST_TREE = { "x-latest": { shapes: ["gitCommitResult", "gitWorktree", "gitDiff"], moves: ["gitCommitResult", "gitWorktree"], same: "cwd", field: "tree", continues: "gap_id" } };
 const JSON_ONLY = "Reply with only the JSON object: no prose, no code fence.";
 // What a produced row used: the ids of the rows it was shown that it relies on. Credit travels back only through what
 // a step used (records' fold), never through what it was merely shown, so a produce names its own. Each id is held to
@@ -258,7 +262,9 @@ const SCHEMAS: Row[] = [
     },
     // Only the root's newest gitDiff (latest_by over a field every gitDiff shares: one per root): a grader shown an older
     // diff beside it judged that one instead.
-    inputs: ["world_changed", { shape: "gitDiff", latest_by: "shape" }],
+    // The diff judged is of the clone's newest tree, recorded by a tool (x-latest: read by the walk and described alike),
+    // so an older tree's diff is never judged as the change to land (the newest-tree landing ruling).
+    inputs: ["world_changed", { shape: "gitDiff", latest_by: "shape", where: { tree: NEWEST_TREE, role: "walk" } }],
   },
   {
     target: "activity_template",
@@ -363,7 +369,7 @@ const landed = SCHEMAS.find((s) => s.target === "land_verdict") as Row;
 SCHEMAS.push({
   ...landed,
   variant: "gap",
-  inputs: ["gap", { shape: "gitDiff", latest_by: "shape" }],
+  inputs: ["gap", { shape: "gitDiff", latest_by: "shape", where: { tree: NEWEST_TREE, role: "walk" } }],
   description: "Whether the change in the gitDiff row fixes what the gap row says is failing, by changing the code its " +
     "check tests, and nothing it should not: r is 1 when it does, 0 when it does not, and also 0 when the gitDiff's " +
     "truncated is true, because then you were not shown the whole change, when its typecheck did not pass, or when its " +
@@ -395,7 +401,7 @@ for (const tool of CHANGE_TOOLS) {
 // A landing waits for a verdict as well: git_land is called only once the root holds a land_verdict at r 1 (the latest
 // for its tree), so a change is diffed, then judged, then landed. Its own group: it is needed besides a wanted change or
 // an open gap, not instead of one. git_land still decides from the verdict rows themselves.
-await ensure({ shape: "requires", for: "git_land", needs: "land_verdict", where: { r: 1 }, latest_by: "tree", group: "verdict" },
+await ensure({ shape: "requires", for: "git_land", needs: "land_verdict", where: { r: 1, tree: NEWEST_TREE }, latest_by: "tree", group: "verdict" },
   { for: "git_land", needs: "land_verdict" }, "requires git_land land_verdict");
 // An edit waits for a read of the very file it changes: the root's whole-file read (fileContent) of the path the edit
 // names (bound to the edit's own pointer). A clone's files sit under the clone's own directory, so a read made in an
