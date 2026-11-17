@@ -186,7 +186,7 @@ leg(!!lv && JSON.stringify(lv.inputs) === JSON.stringify(["world_changed", newes
   && String(lv.description).includes("0 when its typecheck ran and did not pass") && String(lv.description).includes("truncated is true"),
   "(o) the land verdict's grader reads only the request and the gitDiff, and grades a tree that does not typecheck r 0");
 const lvGap = rows.find((r) => r.shape === "shape_schema" && r.target === "land_verdict" && r.variant === "gap");
-leg(!!lvGap && !!lv && JSON.stringify(lvGap.inputs) === JSON.stringify(["gap", newestDiff]) && JSON.stringify(lvGap.schema) === JSON.stringify(lv.schema)
+leg(!!lvGap && !!lv && JSON.stringify(lvGap.inputs) === JSON.stringify([{ shape: "gap", latest_by: "gap_id" }, newestDiff]) && JSON.stringify(lvGap.schema) === JSON.stringify(lv.schema)
   && String(lvGap.description).includes("check (the gap's own check, run on that tree) did not pass")
   && rows.some((r) => r.shape === "requires" && r.for === "git_land" && r.needs === "land_verdict" && JSON.stringify(r.where) === JSON.stringify({ r: 1, tree: NEWEST_TREE })
     && r.latest_by === "tree" && r.group === "verdict")

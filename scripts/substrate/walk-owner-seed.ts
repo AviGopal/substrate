@@ -369,7 +369,10 @@ const landed = SCHEMAS.find((s) => s.target === "land_verdict") as Row;
 SCHEMAS.push({
   ...landed,
   variant: "gap",
-  inputs: ["gap", { shape: "gitDiff", latest_by: "shape", where: { tree: NEWEST_TREE, role: "walk" } }],
+  // The gap as it stands now (its newest row of the gap_id), as the request's gap variant reads it: a detector rewrites a
+  // gap while it stays open, and a verdict shown every rewrite cites them all, which git_land never takes (a grader's r 1
+  // counts only from exactly the request and the diff).
+  inputs: [{ shape: "gap", latest_by: "gap_id" }, { shape: "gitDiff", latest_by: "shape", where: { tree: NEWEST_TREE, role: "walk" } }],
   description: "Whether the change in the gitDiff row fixes what the gap row says is failing, by changing the code its " +
     "check tests, and nothing it should not: r is 1 when it does, 0 when it does not, and also 0 when the gitDiff's " +
     "truncated is true, because then you were not shown the whole change, when its typecheck did not pass, or when its " +
