@@ -463,6 +463,13 @@ await ensure({ shape: "news_key", of: "gitDiff", fields: ["tree", "check.ran", "
 // edit answers carry `after`: a row naming a field no answer holds would compare every edit of a file as one.
 await ensure({ shape: "news_key", of: "fileEditResult", fields: ["path", "after"] },
   { of: "fileEditResult" }, "news_key fileEditResult");
+// Which clone a request holding clones of more than one repo binds, when a template names no repo (walk applicable.ts,
+// bind.ts inputsOf): the clone of the repo the request's own newest change_wanted names, its judgment of where the change
+// belongs. Without it such a request binds no clone at all and can neither diff, commit nor land (two asks did so, each
+// after its change_wanted switched repos). Only change_wanted is listed: no gap has ever held two clones. A newest
+// change_wanted naming no repo binds nothing.
+await ensure({ shape: "clone_binding", of: "gitWorktree", by: [{ shape: "change_wanted", field: "repo" }] },
+  { of: "gitWorktree" }, "clone_binding gitWorktree");
 await ensure({ shape: "arm", vessel_id: "walk-vessel", arm: "treated", as_of_seq: MAX_SEQ }, { vessel_id: "walk-vessel" }, "arm walk-vessel");
 // What a detector's gap row is. A description, not a shape_schema: described-shape serves every schema target from a
 // model, and a gap must only ever be an observation a detector made. records holds shape_description as owner
