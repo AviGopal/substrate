@@ -87,7 +87,7 @@ describe("what is kept, and for how long", () => {
     const past = { keepYes: true, yesUntil: () => 0 }
     await k("d", ask, past); await k("d", ask, past); expect(asks).toBe(8)
   })
-  test("[MUST-FAIL] a yes whose stated expiry is further off than YES_MS is still kept YES_MS at most", async () => {
+  test("a yes whose stated expiry is further off than YES_MS is still kept YES_MS at most (a guard)", async () => {
     // identity mints tokens for 60 s by default and up to 120 s: the cap, not the token's life, bounds a reused yes
     const c = clock(); const k = keeper<string>(c.now); let asks = 0
     const ask = async (): Promise<Verdict<string>> => { asks++; return { yes: "t" } }
