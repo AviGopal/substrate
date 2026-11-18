@@ -125,6 +125,107 @@ restart_breadcrumb() { # vessel reason [in_flight]
     "$2" "$_rb_if" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
     > "$_rb_dir/$1.json" 2>/dev/null || true
 }
+# A RESTART IS A WINDOW (the USER: "A: outage window"). A call cut while a unit restarts ends as a walk failure of
+# status 0 (the walk's own stop, or "no answer" from a callee mid-restart): its move was stopped, not failed. Each
+# restart this script makes is one span: from the first row written after the store's head just before it, to the head
+# once the unit answers again. The tick writes each span as an owner infra_window row (statuses [0], naming the units),
+# after its span, as records' rule requires; records' fold leaves status-0 walk failures inside it out of every failed
+# move, and the walk failure detector out of every class; the walk offers the move again as it does any cut call. A
+# span covers its restart only, never the tick's other work (a gate suite run between two restarts is outside both).
+# Kept in a file, not a variable, so a restart in a subshell keeps its span too. Best-effort: nothing here may fail a
+# restart or the tick.
+RESTART_WINDOW_FILE="${RESTART_WINDOW_FILE:-/workspace/restart-window.json}"
+# A span ends when its unit answers again: active and its health port answering 200, waited for at most the shaped
+# pull_sync.restart_ready_seconds (read once per tick). The port is the inventory's health_port, or else the one port
+# the unit file declares (a line that is exactly Environment=<NAME>_PORT=<digits>, read from the unit text with its
+# drop-ins; no other line of that text is kept or logged, since a unit can carry its env file's neighbours: records,
+# walk and described carry no health_port in the inventory but each declares its port so and serves /health on it). A
+# unit with neither, or with several declared, ends its span once it is active, and says so: that can end the span before the unit listens, so a call cut while it
+# starts can stay counted as a failure, never the other way. A unit not ready within the bound ends its span there.
+RESTART_READY_S=""
+store_head() { # [max seconds]
+  dev_resolve '{"impulse":{"pointer":{"type":"record_read","head":true}}}' --max-time "${1:-10}" 2>/dev/null \
+    | jq -r '(.at_seq // .content.at_seq // empty) | tostring' 2>/dev/null
+}
+# Every restart this script makes goes through restart_span: a function named systemctl shadows the binary for this
+# script and its subshells, so no restart site can leave its span out. Everything else goes to the binary unchanged.
+systemctl() {
+  if [ "${1:-}" = restart ]; then restart_span "$@"; else command systemctl "$@"; fi
+}
+restart_ready() { # unit -> waits until it is active and answers, within the bound above
+  local _rr_u="${1%.service}.service" _rr_p="" _rr_i=0
+  if [ -z "$RESTART_READY_S" ]; then tuning_param pull_sync.restart_ready_seconds 60; RESTART_READY_S="$TP_VALUE"; fi
+  command -v jq >/dev/null 2>&1 && [ -f "${INV:-}" ] \
+    && _rr_p="$(jq -r --arg u "$_rr_u" '.vessels[] | select(.unit == $u) | .health_port // empty' "$INV" 2>/dev/null | head -1)"
+  if [ -z "$_rr_p" ]; then
+    _rr_p="$(command systemctl cat "$_rr_u" 2>/dev/null | grep -oE '^Environment="?[A-Z][A-Z0-9_]*_PORT=[0-9]+' | grep -oE '[0-9]+$')"
+    case "$_rr_p" in *[!0-9]*) _rr_p="" ;; esac   # several declared: which one answers for the unit is not known
+    [ -n "$_rr_p" ] || log "restart window: $_rr_u declares no single health port (inventory or unit file); its span ends once it is active"
+  fi
+  while [ "$_rr_i" -lt "$RESTART_READY_S" ]; do
+    if command systemctl is-active --quiet "$_rr_u" 2>/dev/null; then
+      [ -z "$_rr_p" ] && return 0
+      healthy "$_rr_p" && return 0
+    fi
+    sleep 1; _rr_i=$((_rr_i + 1))
+  done
+  return 1
+}
+restart_span() { # restart [options] unit... (as systemctl takes it)
+  local _rs_f="$RESTART_WINDOW_FILE" _rs_h _rs_e _rs_rc _rs_us="" _a
+  for _a in "${@:2}"; do case "$_a" in -*) ;; *) _rs_us="$_rs_us ${_a%.service}" ;; esac; done
+  _rs_us="${_rs_us# }"
+  command -v jq >/dev/null 2>&1 || { command systemctl "$@"; return; }
+  _rs_h="$(store_head 3)"   # bounded: it delays the restart by 3 s at most
+  case "$_rs_h" in
+    ''|*[!0-9]*) log "restart window: the store's head could not be read before restarting $_rs_us; no span is kept for it" ;;
+    *) # opened before the restart, with no end: a tick killed during it leaves this, and the next tick drops it
+       { [ -s "$_rs_f" ] && cat "$_rs_f" || echo '[]'; } \
+         | jq -c --argjson from "$((_rs_h + 1))" --arg us "$_rs_us" '. + [{from: $from, units: $us}]' > "$_rs_f.new" 2>/dev/null \
+         && mv "$_rs_f.new" "$_rs_f" ;;
+  esac
+  command systemctl "$@"; _rs_rc=$?
+  case "$_rs_h" in ''|*[!0-9]*) return "$_rs_rc" ;; esac
+  for _a in $_rs_us; do restart_ready "$_a" || log "restart window: $_a was not ready within ${RESTART_READY_S}s; its span ends now"; done
+  _rs_e="$(store_head 3)"
+  case "$_rs_e" in
+    ''|*[!0-9]*) log "restart window: the store's head could not be read after restarting $_rs_us; its span is dropped, not written"
+       jq -c --argjson from "$((_rs_h + 1))" 'map(select(.from != $from or has("to")))' "$_rs_f" > "$_rs_f.new" 2>/dev/null && mv "$_rs_f.new" "$_rs_f" ;;
+    *) jq -c --argjson from "$((_rs_h + 1))" --argjson to "$_rs_e" 'map(if .from == $from and (has("to") | not) then . + {to: $to} else . end)' "$_rs_f" > "$_rs_f.new" 2>/dev/null \
+         && mv "$_rs_f.new" "$_rs_f" ;;
+  esac
+  return "$_rs_rc"
+}
+# Writes every ended span as one owner infra_window row, at the tick's end (the EXIT trap) and at its start (a span a
+# tick could not write). A span with no end (its tick was killed during the restart) is dropped, said, never given an
+# end read later: that would stretch it over every walk failure between the ticks. A span whose end is before its start
+# (nothing written since the restart began, or a store reset) is dropped. A row the store does not take is said, and its
+# span kept, end and all, for the next tick.
+restart_window_close() {
+  local _rw_f="$RESTART_WINDOW_FILE" _rw_n _rw_i _rw_s _rw_from _rw_to _rw_vs _rw_row _rw_out _rw_keep='[]'
+  [ -f "$_rw_f" ] || return 0
+  command -v jq >/dev/null 2>&1 || return 0
+  _rw_n="$(jq 'length' "$_rw_f" 2>/dev/null)"; case "$_rw_n" in ''|*[!0-9]*) _rw_n=0 ;; esac
+  for _rw_i in $(seq 0 $((_rw_n - 1))); do
+    _rw_s="$(jq -c ".[$_rw_i]" "$_rw_f" 2>/dev/null)"
+    _rw_from="$(jq -r '.from // empty' <<<"$_rw_s")"; _rw_to="$(jq -r '.to // empty' <<<"$_rw_s")"; _rw_vs="$(jq -r '.units // ""' <<<"$_rw_s")"
+    case "$_rw_from" in ''|*[!0-9]*) continue ;; esac
+    if [ -z "$_rw_to" ]; then log "restart window: a span from $_rw_from ($_rw_vs) has no end (its tick was killed during the restart); dropped, not written"; continue; fi
+    case "$_rw_to" in *[!0-9]*) continue ;; esac
+    [ "$_rw_to" -lt "$_rw_from" ] && continue   # nothing written since the restart began (or a store reset)
+    _rw_row="$(jq -nc --argjson from "$_rw_from" --argjson to "$_rw_to" --arg vs "$_rw_vs" \
+      '{shape: "infra_window", window_id: ("restart-\($from)-\($to)"), from_seq: $from, to_seq: $to, statuses: [0],
+        reason: ("pull-sync restarted " + $vs + ": a call cut by the restart (status 0) was stopped, not failed"), input_refs: []}')"
+    _rw_out="$(dev_resolve "$(jq -nc --argjson row "$_rw_row" '{impulse: {pointer: {type: "record_write", row: $row, writer: "owner", role: "owner"}}}')" --max-time 15 2>/dev/null)"
+    if [ "$(printf '%s' "$_rw_out" | jq -r '.shape // .content.shape // empty' 2>/dev/null)" = infra_window ]; then
+      log "restart window: wrote infra_window $_rw_from..$_rw_to ($_rw_vs)"
+    else
+      log "restart window: the infra_window row $_rw_from..$_rw_to was NOT written; the next tick's start writes it"
+      _rw_keep="$(jq -c --argjson s "$_rw_s" '. + [$s]' <<<"$_rw_keep")"
+    fi
+  done
+  if [ "$_rw_keep" = '[]' ]; then rm -f "$_rw_f"; else printf '%s\n' "$_rw_keep" > "$_rw_f"; fi
+}
 # DEFER BY AGE, NOT BY COUNT (shared by both restart-deferral sites below).
 # restart_age_defer <port> <deferred_n> — sets RA_INFLIGHT, RA_OLDEST, RA_DEFER (1 = keep
 # deferring) and RA_WHY (log text). A count of busy observations breaks starvation against a
@@ -1687,7 +1788,8 @@ owed_hold_bound() {
     "$(date -Iseconds)" "$1" "${RA_INFLIGHT:-0}" "$_oh_held" "$_oh_max" "${RA_PROGRESS:-null}" "${RA_PROGRESS_ID:-unknown}" >> "$DEFERRAL_LOG" 2>/dev/null || true
   return 0
 }
-trap 'pullsync_glue_cleanup; carry_pass_end; quiesce_release' EXIT
+trap 'pullsync_glue_cleanup; carry_pass_end; quiesce_release; restart_window_close' EXIT
+restart_window_close   # spans the last tick ended but could not write; one it was killed during is dropped
 
 # THE LEAK WATCH'S READER (; law 6). scrubbed_env records each live state file that moved during a scrubbed
 # run in PULL_SYNC_LIVE_STATE_LEDGER, and a ledger nothing reads is hollow. Once per tick (after the vessel loop), the
