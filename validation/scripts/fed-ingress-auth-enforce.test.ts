@@ -108,6 +108,7 @@ beforeAll(async () => {
   for (const f of readdirSync(join(PKG_DIR, 'src')).filter((f) => f.endsWith('.ts') && !f.endsWith('.d.ts'))) cpSync(join(PKG_DIR, 'src', f), join(pkgCopy, 'src', f))
   cpSync(join(FED_DIR, 'federation-transport-server.ts'), join(fed, 'federation-transport-server.ts'))
   cpSync(join(FED_DIR, 'ingress-auth.ts'), join(fed, 'ingress-auth.ts'))
+  cpSync(join(FED_DIR, 'identity-ask.ts'), join(fed, 'identity-ask.ts'))
 
   pkg = await import(join(pkgCopy, 'src/index.ts'))
   multiaddrFn = (await import(Bun.resolveSync('@multiformats/multiaddr', fed))).multiaddr
