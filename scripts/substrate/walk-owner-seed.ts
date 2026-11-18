@@ -213,7 +213,17 @@ const SCHEMAS: Row[] = [
       // ORDER IS KEEP PRIORITY: described fits kept rows entry by entry in the order listed here, so the clone, its
       // change_wanted, its commit and its acts are fitted before the diff, and a large diff never pushes them out; when
       // the share is spent, the diff is the one left out, and named, never cut. List a new kept entry where it ranks.
-      { shape: "gitDiff", latest_by: "shape", where: { tree: NEWEST_TREE, role: "walk" }, whole: true, keep: true, covers: { shape: "hop", on: "call_id" } }],
+      { shape: "gitDiff", latest_by: "shape", where: { tree: NEWEST_TREE, role: "walk" }, whole: true, keep: true, covers: { shape: "hop", on: "call_id" } },
+      // The verdict on that same newest tree, beside the diff it judges: a request drafted after an r 0 verdict sees why the
+      // tree was refused, so it is not drafted toward that tree again. The same x-latest the diff and git_land's requires
+      // use, so all three agree on which tree is meant; newest per tree. The grader's verdict only: a person's mark grades
+      // the page, not the code, and a newer one on the same tree would otherwise take the grader's place.
+      { shape: "land_verdict", latest_by: "tree", where: { tree: NEWEST_TREE, role: "described" }, keep: true },
+      // What came back from each call this root made, success or failure, newest per call: an answer is shown with the
+      // request that made it, whatever its shape, so a new tool's answer needs no entry of its own. Listed last: the named
+      // entries above keep their own rules, and this catches every answer they do not name. described keeps an answer only
+      // until a request is drafted after it; older ones go to the newest-first fill.
+      { answers_a_call: true, latest_by: "call_id", keep: true }],
     // keep: true has described-shape fit those rows first, within keep_share of its context budget, so an hour-old
     // request's clone stays in view (the USER: "Build now, first (Recommended)"); a quarter is room for one small row per
     // repository each without crowding out the newest failure a retry reads.
