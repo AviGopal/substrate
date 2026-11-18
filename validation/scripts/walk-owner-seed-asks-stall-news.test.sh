@@ -43,7 +43,9 @@ const req = last((r) => r.shape === "shape_schema" && r.target === "request" && 
 const asks = rows.filter((r) => r.shape === "shape_schema").flatMap((s) => [s.inputs ?? []].flat().filter((e: any) => e?.ask === true).map((e: any) => `${s.target}|${s.variant ?? ""}|${e.shape}`))
 const written = (of: string) => rows.slice(planted, n1).filter((r) => r.shape === "news_key" && r.of === of).length
 console.log(JSON.stringify({ editWrites: written("fileEditResult"), diffWrites: written("gitDiff"), reqInputs: req?.inputs ?? null, asks: [...new Set(asks)],
-  stall: rows.filter((r) => r.shape === "stall_rule").map((r) => r.after_rows), news: rows.filter((r) => r.shape === "news_key").map((r) => [r.of, r.fields]), again }))
+  stall: rows.filter((r) => r.shape === "stall_rule").map((r) => r.after_rows), news: rows.filter((r) => r.shape === "news_key").map((r) => [r.of, r.fields]),
+  // each news_key row as the seed wrote it, less what the store adds (id, seq, role) and its empty refs
+  newsRows: rows.filter((r) => r.shape === "news_key" && !String(r.id).startsWith("p")).map(({ id: _i, seq: _s, role: _r, input_refs: _x, ...rest }) => rest), again }))
 server.stop(true)
 TS
 OUT="$(TMPDIR="$T" bun "$T/drive.ts" "$ROOT/scripts/substrate/walk-owner-seed.ts" "$ROOT/scripts/substrate/vessels.inventory.json" 2>/dev/null | tail -1)"
@@ -54,8 +56,8 @@ if [ "$(jq -c '.stall' <<<"$OUT")" = '[240]' ]; then ok "(b) one stall_rule, aft
 if [ "$(jq -c '[.news[] | select(.[0] == "gitDiff")]' <<<"$OUT")" = '[["gitDiff",["tree","check.ran","check.passed","typecheck.ran","typecheck.passed"]]]' ]; then
   ok "(c) one news_key for gitDiff: the tree and whether each check ran and passed"
 else bad "(c) news: $(jq -c '.news' <<<"$OUT" | cut -c1-300)"; fi
-if [ "$(jq -c '[.news[] | select(.[0] == "fileEditResult")]' <<<"$OUT")" = '[["fileEditResult",["path","after"]]]' ] && [ "$(jq -c '.news | length' <<<"$OUT")" = 2 ]; then
-  ok "(e) one news_key for fileEditResult: the path and the bytes the edit left (after); no other news_key"
+if [ "$(jq -c '[.newsRows[] | select(.of == "fileEditResult")]' <<<"$OUT")" = '[{"shape":"news_key","of":"fileEditResult","fields":["path","after"]}]' ] && [ "$(jq -c '.news | length' <<<"$OUT")" = 2 ]; then
+  ok "(e) one news_key for fileEditResult, exactly {of, fields: [path, after]} (nothing else on it: not retired); no other news_key"
 else bad "(e) news: $(jq -c '.news' <<<"$OUT" | cut -c1-300)"; fi
 E="$(PRIOR=edit TMPDIR="$T" bun "$T/drive.ts" "$ROOT/scripts/substrate/walk-owner-seed.ts" "$ROOT/scripts/substrate/vessels.inventory.json" 2>/dev/null | tail -1)"
 D="$(PRIOR=diff TMPDIR="$T" bun "$T/drive.ts" "$ROOT/scripts/substrate/walk-owner-seed.ts" "$ROOT/scripts/substrate/vessels.inventory.json" 2>/dev/null | tail -1)"
