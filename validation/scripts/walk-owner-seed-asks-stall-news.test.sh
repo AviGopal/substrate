@@ -5,6 +5,7 @@
 #   (b) one stall_rule: after_rows 240
 #   (c) one news_key for gitDiff: its tree and whether each check ran and passed
 #   (e) one news_key for fileEditResult: the edited path and the bytes it left there (after)
+#   (f) each news_key is found by its own `of`: a store whose newest news_key is another shape's gets no second copy
 #   (d) the seeder run again writes none of them again
 # usage: validation/scripts/walk-owner-seed-asks-stall-news.test.sh
 set -uo pipefail
@@ -16,6 +17,12 @@ cat > "$T/drive.ts" <<'TS'
 type Row = Record<string, any>
 const [seed, inv] = process.argv.slice(2)
 const rows: Row[] = []
+// PRIOR=edit: the fileEditResult key already written, then a newer gitDiff key with other fields; PRIOR=diff: the gitDiff
+// key already written, then a newer fileEditResult key with other fields
+const nk = (id: string, of: string, fields: string[]) => ({ shape: "news_key", of, fields, id, seq: rows.length + 1, role: "owner", input_refs: [] })
+if (process.env.PRIOR === "edit") rows.push(nk("p1", "fileEditResult", ["path", "after"]), nk("p2", "gitDiff", ["tree"]))
+if (process.env.PRIOR === "diff") rows.push(nk("p1", "gitDiff", ["tree", "check.ran", "check.passed", "typecheck.ran", "typecheck.passed"]), nk("p2", "fileEditResult", ["path"]))
+const planted = rows.length
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { "Content-Type": "application/json" } })
 const server = Bun.serve({ hostname: "127.0.0.1", port: 0, fetch: async (req) => {
   const p = (((await req.json().catch(() => ({}))) as Row).pointer ?? {}) as Row
@@ -34,7 +41,8 @@ const again = rows.slice(n1).filter((r) => ["stall_rule", "news_key"].includes(r
 const last = (f: (r: Row) => boolean) => rows.filter(f).at(-1)
 const req = last((r) => r.shape === "shape_schema" && r.target === "request" && !r.variant)
 const asks = rows.filter((r) => r.shape === "shape_schema").flatMap((s) => [s.inputs ?? []].flat().filter((e: any) => e?.ask === true).map((e: any) => `${s.target}|${s.variant ?? ""}|${e.shape}`))
-console.log(JSON.stringify({ reqInputs: req?.inputs ?? null, asks: [...new Set(asks)],
+const written = (of: string) => rows.slice(planted, n1).filter((r) => r.shape === "news_key" && r.of === of).length
+console.log(JSON.stringify({ editWrites: written("fileEditResult"), diffWrites: written("gitDiff"), reqInputs: req?.inputs ?? null, asks: [...new Set(asks)],
   stall: rows.filter((r) => r.shape === "stall_rule").map((r) => r.after_rows), news: rows.filter((r) => r.shape === "news_key").map((r) => [r.of, r.fields]), again }))
 server.stop(true)
 TS
@@ -49,6 +57,11 @@ else bad "(c) news: $(jq -c '.news' <<<"$OUT" | cut -c1-300)"; fi
 if [ "$(jq -c '[.news[] | select(.[0] == "fileEditResult")]' <<<"$OUT")" = '[["fileEditResult",["path","after"]]]' ] && [ "$(jq -c '.news | length' <<<"$OUT")" = 2 ]; then
   ok "(e) one news_key for fileEditResult: the path and the bytes the edit left (after); no other news_key"
 else bad "(e) news: $(jq -c '.news' <<<"$OUT" | cut -c1-300)"; fi
+E="$(PRIOR=edit TMPDIR="$T" bun "$T/drive.ts" "$ROOT/scripts/substrate/walk-owner-seed.ts" "$ROOT/scripts/substrate/vessels.inventory.json" 2>/dev/null | tail -1)"
+D="$(PRIOR=diff TMPDIR="$T" bun "$T/drive.ts" "$ROOT/scripts/substrate/walk-owner-seed.ts" "$ROOT/scripts/substrate/vessels.inventory.json" 2>/dev/null | tail -1)"
+if [ "$(jq -c '[.editWrites, .diffWrites]' <<<"$E")" = '[0,1]' ] && [ "$(jq -c '[.diffWrites, .editWrites]' <<<"$D")" = '[0,1]' ]; then
+  ok "(f) each news_key is found by its own of: no second copy when another shape's key is newer"
+else bad "(f) edit-first $(jq -c '[.editWrites, .diffWrites]' <<<"$E") diff-first $(jq -c '[.diffWrites, .editWrites]' <<<"$D")"; fi
 if [ "$(jq -c '.again' <<<"$OUT")" = 0 ]; then ok "(d) run again, the seeder writes none of them again"; else bad "(d) again: $(jq -c '.again' <<<"$OUT")"; fi
 echo; [ "$FAILS" = 0 ] && { echo PASS; exit 0; }
 echo "$FAILS FAILED"; exit 1
