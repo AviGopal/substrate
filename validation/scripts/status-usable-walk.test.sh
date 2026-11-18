@@ -9,6 +9,10 @@
 #   no outcome within the bound (a walk that is masked, stopped or never answers)
 #                                          -> unknown, exit 3, never a pass
 #   records refuses an owner's ask from another node (a spoke) -> unknown, exit 3, with that reason
+#   the --json verdict's usable level names the ask it polled (ask_id), and install acceptance reads that field (both
+#   level forms; none when usable names none)
+#   and install acceptance's block asks for that ask's rows and keeps them redacted, one JSON row per line, stderr
+#   apart; with no ask_id it writes the line that says so and asks nothing
 # and that the ask written is a world_changed row in the owner's role, under the node's own key; and that on a fleet
 # not declared an acceptance install the ask is not written at all unless --plant-ask names the effect.
 #
@@ -106,6 +110,52 @@ probe r1 "$T/env-live"
 [ "$RC" = 3 ] && grep -q "not asked" <<<"$OUT" && [ "$(writes)" = 0 ] && ok "[MUST-FAIL] an undeclared fleet is not asked (exit 3) and nothing is written" || bad "undeclared: exit $RC, writes $(writes), $OUT"
 probe r1 "$T/env-live" --plant-ask
 [ "$RC" = 0 ] && [ "$(writes)" = 1 ] && ok "--plant-ask names the effect and asks on an undeclared fleet" || bad "--plant-ask: exit $RC, writes $(writes), $OUT"
+
+# The verdict's usable level names the ask it polled as a field (ask_id), and install acceptance reads that field, never
+# the evidence's words. The level builder is taken from the script and run with its inputs stubbed.
+sed -n '/^level_rows() {/,/^}/p' "$STATUS" > "$T/levels.sh"
+LV() { bash -c 'declare -A VAL EVID; LEVELS="live seeded served usable connected"; for l in $LEVELS; do VAL[$l]=pass; EVID[$l]="e $l"; done
+  GOAL_LAST_ID="$1"; . "$2"; level_rows' _ "$1" "$T/levels.sh" 2>/dev/null; }
+GOT="$(LV ask-r0 | jq -c '[.[] | select(has("ask_id")) | [.level, .ask_id]]' 2>/dev/null)"
+[ "$GOT" = '[["usable","ask-r0"]]' ] && ok "[MUST-FAIL] the usable level, and only it, names the ask it polled (ask_id)" || bad "ask_id on levels: $GOT"
+GOT="$(LV "" | jq -c '[.[] | select(has("ask_id"))] | length' 2>/dev/null)"
+[ "$GOT" = 0 ] && ok "no ask polled: no ask_id on any level" || bad "no ask: $GOT"
+READ="$ROOT/scripts/substrate/acceptance/usable-ask-id.jq"
+rd() { printf '%s' "$1" | jq -r -f "$READ" 2>/dev/null; }
+L='{"level":"live","value":"pass","evidence":"x"}'
+A1="$(rd '{"levels":['"$L"',{"level":"usable","value":"fail","evidence":"the walk graded ask feed r 0","ask_id":"ask-9"}]}')"
+A2="$(rd '{"levels":{"live":{"value":"pass"},"usable":{"value":"fail","ask_id":"ask-9"}}}')"
+A3="$(rd '{"levels":['"$L"',{"level":"usable","value":"fail","evidence":"the walk graded ask feed r 0"}]}')"
+A4="$(rd '{"levels":[{"level":"live","value":"pass","ask_id":"not-usable"},{"level":"usable","value":"unknown"}]}')"
+[ "$A1|$A2" = "ask-9|ask-9" ] && ok "[MUST-FAIL] install acceptance reads usable's ask_id, with the levels as a list or keyed by level" || bad "read: list '$A1', keyed '$A2'"
+[ "$A3|$A4" = "|" ] && ok "no ask_id on usable reads as none: never an id from the evidence's words or another level" || bad "no id: words '$A3', other level '$A4'"
+
+# install acceptance's block that keeps the graded ask's rows, taken from the script and run with the container
+# engine and the redaction stubbed: the ask_id the verdict names is asked for, and its rows land redacted, one JSON
+# row per line; stderr is kept apart; no ask_id writes the line that says so, and asks nothing.
+RA="$ROOT/scripts/substrate/acceptance/run-acceptance.sh"
+sed -n '/ask_id="\$(jq -r -f/,/^    fi$/p' "$RA" > "$T/rows-block.sh"
+if grep -q -- '--ask-rows' "$T/rows-block.sh" && tail -1 "$T/rows-block.sh" | grep -q '^    fi$'; then
+  rows_run() { # <status.json> -> $T/res/diag/usable-rows.{jsonl,err}, $T/eng.calls
+    rm -rf "$T/res"; mkdir -p "$T/res/diag"; cp "$1" "$T/res/diag/status.json"; : > "$T/eng.calls"
+    bash -c 'here="$1"; RESULT_DIR="$2"; ACCEPTANCE_CONTAINER=acc-test; calls="$3"
+      eng() { printf "%s\n" "$*" >> "$calls"; printf "%s\n" "{\"id\":\"ask-9\",\"seq\":1}" "{\"why\":\"tok-secret-1\"}"; echo "a warning tok-secret-1" >&2; }
+      redact() { local t="$1"; printf "%s" "${t//tok-secret-1/<redacted>}"; }
+      . "$4"' _ "$ROOT/scripts/substrate/acceptance" "$T/res" "$T/eng.calls" "$T/rows-block.sh" 2>/dev/null
+  }
+  printf '%s' '{"levels":[{"level":"live","value":"pass","evidence":"x"},{"level":"usable","value":"fail","evidence":"e","ask_id":"ask-9"}]}' > "$T/st-id.json"
+  printf '%s' '{"levels":[{"level":"usable","value":"fail","evidence":"the walk graded ask feed r 0"}]}' > "$T/st-none.json"
+  rows_run "$T/st-id.json"
+  J="$(cat "$T/res/diag/usable-rows.jsonl" 2>/dev/null)"; E="$(cat "$T/res/diag/usable-rows.err" 2>/dev/null)"
+  if [ "$(cat "$T/eng.calls")" = "exec acc-test substrate-status --ask-rows ask-9" ] \
+    && [ "$J" = "$(printf '%s\n%s' '{"id":"ask-9","seq":1}' '{"why":"<redacted>"}')" ] && [ "$E" = "a warning <redacted>" ]; then
+    ok "[MUST-FAIL] the named ask's rows are asked for and kept redacted, one JSON row per line; stderr apart, redacted"
+  else bad "rows block with an ask_id: calls '$(cat "$T/eng.calls")' jsonl '$J' err '$E'"; fi
+  rows_run "$T/st-none.json"
+  J="$(cat "$T/res/diag/usable-rows.jsonl" 2>/dev/null)"
+  [ "$J" = "the usable verdict names no graded ask" ] && [ ! -s "$T/eng.calls" ] \
+    && ok "[MUST-FAIL] no ask_id: the file says the verdict names none, and nothing is asked" || bad "rows block, no ask_id: jsonl '$J' calls '$(cat "$T/eng.calls")'"
+else bad "could not take the graded ask's rows block from run-acceptance.sh"; fi
 
 [ "$FAILS" = 0 ] && { echo PASS; exit 0; }
 echo "FAILED ($FAILS)"; exit 1

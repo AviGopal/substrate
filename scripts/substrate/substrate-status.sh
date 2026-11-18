@@ -51,6 +51,12 @@
 #                    not a declared acceptance install (SUBSTRATE_ACCEPTANCE=1); see probe_goal
 #   --probe goal     run only the known-answer goal probe (substrate-doctor --smoke);
 #                    with --json it also names dispatch_id, route and execution_id
+#   --ask-rows <id>  print, one JSON row per line in seq order, the rows records holds for the
+#                    ask <id>'s root: the ask, every row naming it as root (selections, requests,
+#                    answers, outcomes, dues) and its calls (each started hop with its end or
+#                    failure). Reads only. A usable miss is decided by the walk's grade of the
+#                    known-answer ask, and these are the rows that say why (install acceptance
+#                    keeps them).
 #
 # With neither --level nor --wait, all five levels are printed and the exit status
 # reflects `usable`: `connected` is informational until a client has connected.
@@ -73,7 +79,7 @@ LEVELS="live seeded served usable connected"
 KNOWN_ANSWER_GOAL="How many vessels are currently registered in the discovery registry? Report the number."
 OPERATOR_TAG="operator:substrate-status"
 
-REQ_LEVEL=""; WAIT=0; TIMEOUT=900; QUICK=0; JSON=0; SERVICES_ONLY=0; REPORT=0; PROBE=""; PLANT_ASK=0
+REQ_LEVEL=""; WAIT=0; TIMEOUT=900; QUICK=0; JSON=0; SERVICES_ONLY=0; REPORT=0; PROBE=""; PLANT_ASK=0; ASK_ROWS=""
 usage() { sed -n '2,/^set -uo/p' "$0" | sed '$d' | sed 's/^# \{0,1\}//'; }
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -86,6 +92,7 @@ while [ $# -gt 0 ]; do
     --report) REPORT=1; shift ;;
     --probe) PROBE="${2:-}"; shift 2 ;;
     --plant-ask) PLANT_ASK=1; shift ;;
+    --ask-rows) ASK_ROWS="${2:-}"; [ -n "$ASK_ROWS" ] || { echo "[status] --ask-rows needs an ask id" >&2; exit 2; }; shift 2 ;;
     -h|--help) usage; exit 0 ;;
     *) echo "[status] unknown arg: $1" >&2; exit 2 ;;
   esac
@@ -406,6 +413,21 @@ probe_goal() {
       P_VAL=unknown; P_EVID="ask $id has no outcome yet at the poll bound (${GOAL_BOUND}s)" ;;   # keep the id: the next --wait iteration polls the same ask
   esac
 }
+
+# The rows records holds for one ask's root, read through discovery under this node's key as the probe reads, and
+# printed in seq order, each once: the ask itself, every row naming it as root, and its calls. Reads only. A read that
+# answers with no list (refused, unreachable, nothing) is printed first as its own line, {read_failed: <the read>,
+# answer}, so an empty file can never pass for an ask with no rows.
+if [ -n "$ASK_ROWS" ]; then
+  for q in "$(jq -nc --arg id "$ASK_ROWS" '{type:"record_read", ids:[$id]}')" \
+           "$(jq -nc --arg id "$ASK_ROWS" '{type:"record_read", where:{root:$id}}')" \
+           "$(jq -nc --arg id "$ASK_ROWS" '{type:"record_read", root:$id, calls:"all"}')"; do
+    a="$(records_call "$q")"
+    printf '%s\n' "${a:-null}" | jq -c --argjson q "$q" 'if type == "array" then .[] else {read_failed: $q, answer: .} end'
+  done | jq -sc '(.[] | select(type == "object" and has("read_failed"))),
+    (map(select(type == "object" and (has("read_failed") | not))) | unique_by(.id // .call_id) | sort_by(.seq // 0) | .[])'
+  exit 0
+fi
 
 if [ -n "$PROBE" ]; then
   case "$PROBE" in llm) probe_llm ;; goal) probe_goal ;; esac
@@ -916,11 +938,19 @@ pending_reports() { # -> one line per spooled report: "<type> <id> <file>"
 PENDING_REPORTS="$(pending_reports)"
 
 # ── Output ───────────────────────────────────────────────────────────────────
-verdict_json() {
-  local l levels_json="[]" vessels_json
+# Each level's value and evidence. usable also names the known-answer ask it last polled (ask_id), so a reader keeps
+# that ask's rows by a field, never by parsing the evidence's words.
+level_rows() {
+  local l out="[]"
   for l in $LEVELS; do
-    levels_json="$(jq -c --arg l "$l" --arg v "${VAL[$l]}" --arg e "${EVID[$l]}" '. + [{level:$l, value:$v, evidence:$e}]' <<<"$levels_json")"
+    out="$(jq -c --arg l "$l" --arg v "${VAL[$l]}" --arg e "${EVID[$l]}" --arg a "${GOAL_LAST_ID:-}" \
+      '. + [{level:$l, value:$v, evidence:$e} + (if $l == "usable" and $a != "" then {ask_id:$a} else {} end)]' <<<"$out")"
   done
+  printf '%s' "$out"
+}
+verdict_json() {
+  local levels_json vessels_json
+  levels_json="$(level_rows)"
   vessels_json="$(printf '%s' "$VESSEL_ROWS" | jq -R -s -c 'split("\n") | map(select(length>0) | split("|")
       | {vessel:.[0], running:(if .[1]=="image" then "image" elif .[1]=="moved" then "moved" else "unknown" end),
          unknown_because:(if .[1]=="nomarker" then "image predates the build-time marker"

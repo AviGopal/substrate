@@ -781,6 +781,18 @@ if [ "$have_container" -eq 1 ]; then
       eng exec "$ACCEPTANCE_CONTAINER" journalctl -u "$_u" --no-pager -n 2000 2>&1 \
         | while IFS= read -r l; do redact "$l"; printf '\n'; done >"$RESULT_DIR/diag/$_u.log"
     done
+    # The journals say little of why: the walk's grade is a row. Keep the rows records holds for the known-answer ask
+    # the verdict names (its usable level's ask_id: the ask, its selections, requests, answers, outcomes, dues and
+    # calls), redacted, so a miss can be read after the throwaway fleet is gone.
+    ask_id="$(jq -r -f "$here/usable-ask-id.jq" "$RESULT_DIR/diag/status.json" 2>/dev/null)"
+    if [ -n "$ask_id" ]; then
+      # one JSON row per line; what the read said on stderr is kept beside them, redacted the same way, never among them
+      eng exec "$ACCEPTANCE_CONTAINER" substrate-status --ask-rows "$ask_id" 2>"$RESULT_DIR/diag/usable-rows.err" \
+        | while IFS= read -r l; do redact "$l"; printf '\n'; done >"$RESULT_DIR/diag/usable-rows.jsonl"
+      redact "$(cat "$RESULT_DIR/diag/usable-rows.err" 2>/dev/null)" >"$RESULT_DIR/diag/usable-rows.err"
+    else
+      echo "the usable verdict names no graded ask" >"$RESULT_DIR/diag/usable-rows.jsonl"
+    fi
   fi
   # Pull-sync on a cold image is an environment no operator node reproduces (every live
   # node is warm), so the run keeps its evidence: one tick's journal, and the test-gate
