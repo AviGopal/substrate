@@ -20,6 +20,7 @@
 //     transport asks identity for an on-behalf-of token bound to the destination's peer id (the /p2p/ id the dial
 //     authenticates) and to the one shape, and only that token goes in the pointer.
 import { createHash } from 'node:crypto'
+import { keeper, type Verdict } from './identity-ask'
 
 export type Mode = 'off' | 'log' | 'enforce'
 // PUBLIC needs no key. substrateBootstrap: a node joins knowing only a multiaddr. federation_probe and federation_echo:
@@ -462,6 +463,22 @@ export async function runReservationProbes(d: ProbeScheduleDeps): Promise<void> 
 
 /** How long a token the sending transport asks for lives: one dial and one identity round trip at the far end. */
 export const OBO_TTL_SECONDS = 30
+/**
+ * How long before its stated expiry a minted token stops being reused: a dial that starts with it must reach the far
+ * end's check while it still holds, and a call forwarded over the overlay is bounded at 10 s.
+ */
+export const OBO_REUSE_MARGIN_MS = 10_000
+
+/**
+ * Shapes that write: a `_write` suffix, or one of the shapes that write without it (the same rule concept-db's
+ * write-shapes.ts refuses a write by); a doubtful shape (empty, or not a string) counts as a write. oboAudience never
+ * hands one on (it mints for no pointer without a string type), so that clause holds for a direct caller only. identity checks the caller's key only when it mints, so a token reused for a
+ * write would let a key it has since revoked, or narrowed, go on writing until the token expired: a write mints afresh,
+ * still joining a mint in flight, and only a read rides a token minted earlier.
+ */
+const UNSUFFIXED_WRITE_SHAPES: readonly string[] = ['impulseSignatureConcept']
+export const writesShape = (shape: unknown): boolean =>
+  typeof shape !== 'string' || shape === '' || shape.endsWith('_write') || UNSUFFIXED_WRITE_SHAPES.includes(shape)
 
 /**
  * The audience a token for this dial is bound to: the peer id in the DIALED address (the one the libp2p handshake
@@ -470,7 +487,9 @@ export const OBO_TTL_SECONDS = 30
  */
 export function oboAudience(address: string, pointer: unknown): Audience | null {
   const node = destinationPeer(address)
-  const shape = pointer && typeof pointer === 'object' ? String((pointer as Record<string, unknown>).type ?? '') : ''
+  // a type that is not a string names no shape: no token is minted for it (a dial with no credential is refused as absent)
+  const type = pointer && typeof pointer === 'object' ? (pointer as Record<string, unknown>).type : undefined
+  const shape = typeof type === 'string' ? type : ''
   return node && shape ? { node, shape } : null
 }
 
@@ -486,9 +505,15 @@ export interface MinterOptions { identityUrl: () => string; actorKey: () => stri
  * answer), no_identity (no identity URL or no key of its own), or no_token (an answer with no usable token). Without
  * it a refused mint and a caller with no key both read only as "absent" at the far end. The line names the shape and
  * the destination peer's tail, never a key or a token.
+ *
+ * A burst of dials for one caller, peer and shape mints once (identity-ask.ts): a dial arriving while a mint is in
+ * flight waits for its token; for a read, a token is reused until OBO_REUSE_MARGIN_MS before the expiry identity states
+ * for it (one with no stated expiry is not reused), while a write mints afresh (writesShape); a 401/403 refusal is kept
+ * 5 s; a 429, a 5xx or no answer is not kept.
  */
 export function makeOboMinter(o: MinterOptions): Mint {
   const now = o.now ?? (() => Date.now())
+  const minted = keeper<{ token: string; until?: number }>(now)
   const said = new Map<string, number>()
   const refused = (status: string, audience: Audience): null => {
     const t = now()
@@ -504,18 +529,29 @@ export function makeOboMinter(o: MinterOptions): Mint {
     const actor = o.actorKey()
     if (!callerKey) return null
     if (!base || !actor) return refused('no_identity', audience)
-    try {
-      const r = await o.fetchImpl(base + '/v1/auth/on-behalf-of', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: 'ApiKey ' + actor },
-        body: JSON.stringify({ caller: 'ApiKey ' + callerKey, audience, ttl_seconds: OBO_TTL_SECONDS }),
-        signal: AbortSignal.timeout(o.timeoutMs ?? 5_000),
-      })
-      if (!r.ok) return refused(String(r.status), audience)
-      // An answer that is not JSON is identity answering, not identity unreachable.
-      const token = ((await r.json().catch(() => null)) as { data?: { token?: unknown } } | null)?.data?.token
-      return typeof token === 'string' && token && token !== callerKey ? token : refused('no_token', audience)
-    } catch { return refused('unreachable', audience) }
+    const mint = async (): Promise<Verdict<{ token: string; until?: number }>> => {
+      try {
+        const r = await o.fetchImpl(base + '/v1/auth/on-behalf-of', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: 'ApiKey ' + actor },
+          body: JSON.stringify({ caller: 'ApiKey ' + callerKey, audience, ttl_seconds: OBO_TTL_SECONDS }),
+          signal: AbortSignal.timeout(o.timeoutMs ?? 5_000),
+        })
+        if (!r.ok) {
+          refused(String(r.status), audience)
+          return r.status === 401 || r.status === 403 ? { no: true } : { transient: true }
+        }
+        // An answer that is not JSON is identity answering, not identity unreachable.
+        const data = ((await r.json().catch(() => null)) as { data?: { token?: unknown; expires_at?: unknown } } | null)?.data
+        const token = data?.token
+        if (typeof token !== 'string' || !token || token === callerKey) { refused('no_token', audience); return { no: true } }
+        const expires = Date.parse(String(data?.expires_at ?? ''))
+        return { yes: { token, ...(Number.isFinite(expires) ? { until: expires - OBO_REUSE_MARGIN_MS } : {}) } }
+      } catch { refused('unreachable', audience); return { transient: true } }
+    }
+    const key = createHash('sha256').update(callerKey).digest('hex') + '\n' + audience.node + '\n' + audience.shape
+    const v = await minted(key, mint, { keepYes: true, yesUntil: (m) => m.until, fresh: writesShape(audience.shape) })
+    return 'yes' in v ? v.yes.token : null
   }
 }
 
