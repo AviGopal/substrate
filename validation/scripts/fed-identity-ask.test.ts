@@ -87,6 +87,15 @@ describe("what is kept, and for how long", () => {
     const past = { keepYes: true, yesUntil: () => 0 }
     await k("d", ask, past); await k("d", ask, past); expect(asks).toBe(8)
   })
+  test("[MUST-FAIL] a yes whose stated expiry is further off than YES_MS is still kept YES_MS at most", async () => {
+    // identity mints tokens for 60 s by default and up to 120 s: the cap, not the token's life, bounds a reused yes
+    const c = clock(); const k = keeper<string>(c.now); let asks = 0
+    const ask = async (): Promise<Verdict<string>> => { asks++; return { yes: "t" } }
+    const long = { keepYes: true, yesUntil: () => 1_000_000 + 60_000 }
+    await k("e", ask, long)
+    c.at(YES_MS - 1); await k("e", ask, long); expect(asks).toBe(1)
+    c.at(YES_MS); await k("e", ask, long); expect(asks).toBe(2)
+  })
   test("[MUST-FAIL] a fresh ask reads nothing kept, but joins an ask in flight", async () => {
     const c = clock(); const k = keeper<string>(c.now); const h = held<string>()
     const first = k("key:a", h.ask); h.answer({ no: true }); await first
