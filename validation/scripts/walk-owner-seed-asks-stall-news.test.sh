@@ -4,6 +4,7 @@
 #   (a) the plain request schema's input is {shape: world_changed, ask: true}, and no other schema declares an ask
 #   (b) one stall_rule: after_rows 240
 #   (c) one news_key for gitDiff: its tree and whether each check ran and passed
+#   (e) one news_key for fileEditResult: the edited path and the bytes it left there (after)
 #   (d) the seeder run again writes none of them again
 # usage: validation/scripts/walk-owner-seed-asks-stall-news.test.sh
 set -uo pipefail
@@ -42,9 +43,12 @@ if [ "$(jq -c '.reqInputs' <<<"$OUT")" = '[{"shape":"world_changed","ask":true}]
   ok "(a) the request schema declares world_changed the ask, and no other schema declares one"
 else bad "(a) $(jq -c '[.reqInputs, .asks]' <<<"$OUT" | cut -c1-300)"; fi
 if [ "$(jq -c '.stall' <<<"$OUT")" = '[240]' ]; then ok "(b) one stall_rule, after_rows 240"; else bad "(b) stall: $(jq -c '.stall' <<<"$OUT")"; fi
-if [ "$(jq -c '.news' <<<"$OUT")" = '[["gitDiff",["tree","check.ran","check.passed","typecheck.ran","typecheck.passed"]]]' ]; then
+if [ "$(jq -c '[.news[] | select(.[0] == "gitDiff")]' <<<"$OUT")" = '[["gitDiff",["tree","check.ran","check.passed","typecheck.ran","typecheck.passed"]]]' ]; then
   ok "(c) one news_key for gitDiff: the tree and whether each check ran and passed"
 else bad "(c) news: $(jq -c '.news' <<<"$OUT" | cut -c1-300)"; fi
+if [ "$(jq -c '[.news[] | select(.[0] == "fileEditResult")]' <<<"$OUT")" = '[["fileEditResult",["path","after"]]]' ] && [ "$(jq -c '.news | length' <<<"$OUT")" = 2 ]; then
+  ok "(e) one news_key for fileEditResult: the path and the bytes the edit left (after); no other news_key"
+else bad "(e) news: $(jq -c '.news' <<<"$OUT" | cut -c1-300)"; fi
 if [ "$(jq -c '.again' <<<"$OUT")" = 0 ]; then ok "(d) run again, the seeder writes none of them again"; else bad "(d) again: $(jq -c '.again' <<<"$OUT")"; fi
 echo; [ "$FAILS" = 0 ] && { echo PASS; exit 0; }
 echo "$FAILS FAILED"; exit 1

@@ -455,6 +455,14 @@ await ensure({ shape: "stall_rule", after_rows: 240 }, {}, "stall_rule");
 // the root stops judging the same tree again (544972ef judged one tree r 0 ten times).
 await ensure({ shape: "news_key", of: "gitDiff", fields: ["tree", "check.ran", "check.passed", "typecheck.ran", "typecheck.passed"] },
   { of: "gitDiff" }, "news_key gitDiff");
+// What makes an edit news: the file it edited and the bytes it left there (local-tools answers every ok edit with
+// `after`, the sha256 of the file on disk after the call), not the rest of its answer. Every ok edit of one file
+// otherwise answers alike, so a different edit, a revert included, read as a repeat and was never diffed or judged
+// (90b4); and an edit already made says so in its answer, so compared whole it would read as news once. Keyed on these
+// two, an edit that leaves different bytes is news and one that leaves the same bytes is not. Seeded only once live
+// edit answers carry `after`: a row naming a field no answer holds would compare every edit of a file as one.
+await ensure({ shape: "news_key", of: "fileEditResult", fields: ["path", "after"] },
+  { of: "fileEditResult" }, "news_key fileEditResult");
 await ensure({ shape: "arm", vessel_id: "walk-vessel", arm: "treated", as_of_seq: MAX_SEQ }, { vessel_id: "walk-vessel" }, "arm walk-vessel");
 // What a detector's gap row is. A description, not a shape_schema: described-shape serves every schema target from a
 // model, and a gap must only ever be an observation a detector made. records holds shape_description as owner
