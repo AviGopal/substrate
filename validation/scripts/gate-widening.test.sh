@@ -8,6 +8,7 @@
 #               a base policy with no classifier calls only an added fixture ordinary: an edited one is a widening
 #   must fail   the head's ordinary list adding a status, dropped (with or without its classifier), or not strings -> widening
 #   control     the head's ordinary list kept, emptied (read as A) over a base of A, or A under a base with no classifier -> none
+#   control     under a base whose list is [] (read as A), a head keeping [] or writing A -> none
 #   must fail   with a gate manifest, a path its "!" globs exclude, or no glob names, is not judged as a fixture
 #   must fail   a head policy key of the wrong type (a string for a list, a list for an object, a string for a number)
 #               -> widening naming the key; the same on the base -> cannot judge (exit 2); so a classifier that is not an
@@ -94,6 +95,15 @@ OUT="$(bash "$W" --policy "$T/base-nocls.json" --super "$R" --base "$BASE" --hea
 H2="$(head_with ord-nobase-m "pol '.classifier.fixture_ordinary_status = [\"A\",\"M\"]'")"
 OUT="$(bash "$W" --policy "$T/base-nocls.json" --super "$R" --base "$BASE" --head "$H2" 2>&1)"; RC=$?
 [ "$RC" = 1 ] && grep -qx "$PREL widens classifier.fixture_ordinary_status \\[\"A\"\\] -> \\[\"A\",\"M\"\\]" <<<"$OUT" && ok "[MUST-FAIL] under a base with no classifier (read as A), a head adding M is a widening" || bad "ord no base M: rc $RC, $OUT"
+# The base's list is read as the classifier reads it too: an accepted [] means A, so a head that keeps [] or writes A
+# over it changes nothing. A base read by a plain default instead would refuse a plain keep as "widens [] -> [A]".
+jq '.classifier.fixture_ordinary_status = []' "$T/base-policy.json" > "$T/base-empty.json"
+for c in 'keep|[]' 'a|["A"]'; do
+  IFS='|' read -r label h <<<"$c"
+  H8="$(head_with "ord-on-empty-$label" "pol '.classifier.fixture_ordinary_status = $h'")"
+  OUT="$(bash "$W" --policy "$T/base-empty.json" --super "$R" --base "$BASE" --head "$H8" 2>&1)"; RC=$?
+  [ "$RC" = 0 ] && [ -z "$OUT" ] && ok "under a base whose list is [] (read as A), a head of $h is not a widening" || bad "ord on empty base $h: rc $RC, $OUT"
+done
 jq '.classifier.fixture_ordinary_status = ["M"]' "$T/base-policy.json" > "$T/base-m.json"
 H3="$(head_with ord-empty "pol '.classifier.fixture_ordinary_status = []'")"
 OUT="$(bash "$W" --policy "$T/base-m.json" --super "$R" --base "$BASE" --head "$H3" 2>&1)"; RC=$?
