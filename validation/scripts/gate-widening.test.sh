@@ -11,6 +11,7 @@
 #   must fail   with a gate manifest, a path its "!" globs exclude, or no glob names, is not judged as a fixture
 #   must fail   an unreadable base policy, or a base or head that is no commit -> cannot judge (exit 2), never "none"
 #   control     a fixture added, a gate_paths entry added, the soak floor raised, a non-gate file changed -> none (exit 0)
+#   control     a fixture edited under a base policy that lists M as ordinary -> none
 # candidate.sh, run from a scratch accepted gate (gate-test-lib):
 #   must fail   no widening.sh beside it, or an accepted policy it cannot read -> verdict refused, a
 #               gate_candidate_refused gap, no promote.request (never judged as having no widening)
@@ -48,6 +49,7 @@ for c in "gate_paths|.gate_paths -= [\"validation/scripts/*\"]|drops gate_paths 
          "non_root|.non_root_paths += [\"scripts/substrate/x.sh\"]|adds non_root_paths entry 'scripts/substrate/x.sh'" \
          "soak-floor|.soak_ticks.default = 0|lowers soak_ticks.default 1 -> 0" \
          "soak-cap|.soak_ticks.max = 99|raises soak_ticks.max 12 -> 99" \
+         "soak-cap-by-one|.soak_ticks.max = 13|raises soak_ticks.max 12 -> 13" \
          "soak-type|.soak_ticks.default = \"1\"|lowers soak_ticks.default 1 -> 1"; do
   IFS='|' read -r label expr want <<<"$c"
   wide "$(head_with "$label" "pol '$expr'")"
@@ -63,6 +65,10 @@ jq 'del(.classifier)' "$T/base-policy.json" > "$T/base-nocls.json"
 H0="$(head_with nocls "echo '# edited' >> $FX/two.sh")"
 OUT="$(bash "$W" --policy "$T/base-nocls.json" --super "$R" --base "$BASE" --head "$H0" 2>&1)"; RC=$?
 [ "$RC" = 1 ] && grep -qx "M $FX/two.sh (accepted fixture edited or removed)" <<<"$OUT" && ok "a base policy with no classifier still calls an edited fixture a widening" || bad "no classifier: rc $RC, $OUT"
+jq '.classifier.fixture_ordinary_status = ["A","M"]' "$T/base-policy.json" > "$T/base-am.json"
+H4="$(head_with am-edit "echo '# edited' >> $FX/two.sh")"
+OUT="$(bash "$W" --policy "$T/base-am.json" --super "$R" --base "$BASE" --head "$H4" 2>&1)"; RC=$?
+[ "$RC" = 0 ] && ok "a base policy listing M as ordinary makes an edited fixture ordinary: the base's list is read, not a default" || bad "base A,M: rc $RC, $OUT"
 for c in 'adds-M|.classifier.fixture_ordinary_status = ["A","M"]|widens classifier.fixture_ordinary_status \["A"\] -> \["A","M"\]' \
          'adds-MD|.classifier.fixture_ordinary_status = ["A","M","D"]|widens classifier.fixture_ordinary_status \["A"\] -> \["A","M","D"\]' \
          'drops-classifier|del(.classifier)|widens classifier.fixture_ordinary_status \["A"\] -> null (not a list of statuses)' \
