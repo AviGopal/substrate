@@ -141,10 +141,11 @@ if grep -q -- '--ask-rows' "$T/rows-block.sh" && tail -1 "$T/rows-block.sh" | gr
   # Key-shaped values no run variable holds, one for each rule of the mask, built here so no file carries one: an API
   # key, a session token in plain form and as base64, and a model key.
   UUID="$(printf '%s' 0123abcd-4567-89ef-0123-456789abcdef)"
-  MINTED="mb_$(printf 'f%.0s' $(seq 1 40))"
+  # each at the shortest length its rule names, so a mask narrower than the scan's rule leaves one
+  MINTED="mb_$(printf 'f%.0s' $(seq 1 32))"
   SESS="$(printf 'session%s:%s:' s "$UUID")"
   SESS64="$(printf '%sorg:user' "$SESS" | base64 -w0 | tr -d '=')"
-  MODEL="$(printf 'sk-%s-' ant)$(printf 'q%.0s' $(seq 1 30))"
+  MODEL="$(printf 'sk-%s-' ant)$(printf 'q%.0s' $(seq 1 20))"
   rows_run() { # <status.json> -> $T/res/diag/usable-rows.{jsonl,err}, $T/eng.calls
     rm -rf "$T/res"; mkdir -p "$T/res/diag"; cp "$1" "$T/res/diag/status.json"; : > "$T/eng.calls"
     MINTED="$MINTED" SESS="$SESS" SESS64="$SESS64" MODEL="$MODEL" bash -c 'here="$1"; RESULT_DIR="$2"; ACCEPTANCE_CONTAINER=acc-test; calls="$3"

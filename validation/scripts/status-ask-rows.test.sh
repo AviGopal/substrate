@@ -64,7 +64,8 @@ const s = Bun.serve({ port: 0, async fetch(r) {
       wide: { input_refs: Array.from({ length: 250 }, (_, i) => `w-${i}`) },
       fields: { uses: ["k-uses"], evidence_refs: ["k-ev"], event_ref: "k-event", selection_ref: "k-sel" },
       // a citing field records accepts as one id, not a list (it reads every one as [x].flat())
-      strings: { input_refs: "hop-1", uses: "k-uses", evidence_refs: "k-ev" },
+      // and an empty id, which names no row
+      strings: { input_refs: "hop-1", uses: "k-uses", evidence_refs: "k-ev", event_ref: "" },
       malformed: { input_refs: ["bad-1"], uses: ["bad-2"] },
     }
     const mode = existsSync(`${dir}/mode`) ? readFileSync(`${dir}/mode`, "utf8").trim() : ""
@@ -111,10 +112,11 @@ if [ "$RC" = 0 ] && [ "$GOT" = '[["ids",null],["where",null],["root",null]]' ]; 
 else bad "(e) rc=$RC got=$GOT"; fi
 
 # The cited rows: one run per mode, the ids reads it made kept apart.
-cited() { # <mode> -> OUT, RC, IDS (every id the ids reads asked, in order, one per line)
+cited() { # <mode> -> OUT, RC, IDS (every id the ids reads asked, in order, one per line), EMPTY (reads of no id, or of "")
   echo "$1" > "$T/mode"; : > "$T/seen.jsonl"
   OUT="$(SUBSTRATE_ENV_FILE="$T/env" timeout 60 bash "$STATUS" --ask-rows ask-1 2>/dev/null)"; RC=$?
   IDS="$(jq -r 'select(.pointer.ids) | .pointer.ids[]' "$T/seen.jsonl")"
+  EMPTY="$(jq -s '[.[] | select(.pointer.ids) | select(.pointer.ids == [] or any(.pointer.ids[]; . == ""))] | length' "$T/seen.jsonl")"
   rm -f "$T/mode"
 }
 cited cite
@@ -134,9 +136,9 @@ if [ "$RC" = 0 ] && [ "$GOT" = '[1]' ] && [ "$CH" = '["n-1","n-2","n-3"]' ]; the
 else bad "(g) rc=$RC unread=$GOT chain=$CH"; fi
 cited wide
 GOT="$(printf '%s\n' "$OUT" | jq -sc '[.[] | select(has("cited_unread")) | .cited_unread]' 2>/dev/null)"
-if [ "$RC" = 0 ] && [ "$GOT" = '[50]' ] && [ "$(printf '%s\n' "$IDS" | grep -c '^w-')" = 200 ]; then
-  ok "(h) at most 200 cited ids are read in all (beyond the three root reads); the 50 left are counted, not dropped silently"
-else bad "(h) rc=$RC unread=$GOT w-ids asked=$(printf '%s\n' "$IDS" | grep -c '^w-')"; fi
+if [ "$RC" = 0 ] && [ "$GOT" = '[50]' ] && [ "$(printf '%s\n' "$IDS" | grep -c '^w-')" = 200 ] && [ "$EMPTY" = 0 ]; then
+  ok "(h) at most 200 cited ids are read in all (beyond the three root reads); the 50 left are counted, not dropped silently; no read asks for nothing"
+else bad "(h) rc=$RC unread=$GOT w-ids asked=$(printf '%s\n' "$IDS" | grep -c '^w-') empty reads=$EMPTY"; fi
 cited fields
 GOT="$(printf '%s\n' "$OUT" | jq -sc '[.[] | .id // empty | select(startswith("k-"))]' 2>/dev/null)"
 [ "$RC" = 0 ] && [ "$GOT" = '["k-uses","k-ev","k-event","k-sel"]' ] \
@@ -144,8 +146,8 @@ GOT="$(printf '%s\n' "$OUT" | jq -sc '[.[] | .id // empty | select(startswith("k
 
 cited strings
 GOT="$(printf '%s\n' "$OUT" | jq -sc 'map(.id // empty)' 2>/dev/null)"
-[ "$RC" = 0 ] && [ "$GOT" = '["deep-1","ask-1","sel-1","hop-1","out-1","k-uses","k-ev"]' ] \
-  && ok "(k) input_refs, uses and evidence_refs holding one id each are read as records reads them, and printed" || bad "(k) rc=$RC rows=$GOT"
+[ "$RC" = 0 ] && [ "$GOT" = '["deep-1","ask-1","sel-1","hop-1","out-1","k-uses","k-ev"]' ] && [ "$EMPTY" = 0 ] \
+  && ok "(k) input_refs, uses and evidence_refs holding one id each are read as records reads them, and printed; an empty id is not asked" || bad "(k) rc=$RC rows=$GOT empty reads=$EMPTY"
 cited malformed
 GOT="$(printf '%s\n' "$OUT" | jq -sc 'map(.id // .call_id // (if has("read_failed") then "F:" + (.answer | tostring) else keys[0] end))' 2>/dev/null)"
 [ "$RC" = 0 ] && [ "$GOT" = '["F:not rows","ask-1","sel-1","c-1","c-2","out-1"]' ] \
