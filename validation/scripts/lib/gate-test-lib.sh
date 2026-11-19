@@ -2,7 +2,7 @@
 #
 # A scratch "super-repo": a bare origin, a seed worktree that commits and pushes, and the
 # node's clone ($T/super) that the gate runner stages from. The seed carries the REAL gate
-# pieces under test (gate-runner.sh, candidate.sh, shadow-eval.sh, the parses fixture), a
+# pieces under test (gate-runner.sh, candidate.sh, widening.sh, shadow-eval.sh, the parses fixture), a
 # policy with the soak lowered for the test, and a STUB gate body that records each run to
 # $GT_RUNS (its own path and PULLSYNC_ACCEPTED_DIR) and exits $GT_BODY_RC. No container, no
 # root, no live state: every path is under $T.
@@ -26,7 +26,7 @@ gt_repo() { # [soak] -> $T/o (origin), $T/seed (author), $T/super (the node's cl
   rm -rf "$T/o" "$T/seed" "$T/super" "$G"; : > "$GT_RUNS"
   git init -q --bare "$T/o/super.git"; git -C "$T/o/super.git" symbolic-ref HEAD refs/heads/dev
   mkdir -p "$T/seed/scripts/substrate/gate" "$T/seed/validation/scripts/gate/fixtures"
-  cp "$GT_ROOT"/scripts/substrate/gate/{gate-runner.sh,candidate.sh,shadow-eval.sh} "$T/seed/scripts/substrate/gate/"
+  cp "$GT_ROOT"/scripts/substrate/gate/{gate-runner.sh,candidate.sh,widening.sh,shadow-eval.sh} "$T/seed/scripts/substrate/gate/"
   jq --argjson n "$soak" '.soak_ticks.default=$n' "$GT_ROOT/scripts/substrate/gate/gate-policy.json" > "$T/seed/scripts/substrate/gate/gate-policy.json"
   cp "$GT_ROOT/validation/scripts/gate/fixtures/parses.sh" "$T/seed/validation/scripts/gate/fixtures/"
   gt_stub_body > "$T/seed/scripts/substrate/substrate-pull-sync.sh"

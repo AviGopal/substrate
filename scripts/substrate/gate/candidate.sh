@@ -50,10 +50,6 @@ verdict() { # verdict reason [passes]
   [ "$before" = "$CAND $1 ${3:-0}" ] || jq -c '{at, kind:("candidate_"+.verdict), sha, reason, passes}' "$STATE" >> "$G/notices.jsonl" 2>/dev/null || true
   echo "verdict $1 ${c12}: $2"
 }
-in_globs() { # path globs... -> 0 when any glob matches ('*' crosses '/')
-  local p="$1" g; shift
-  for g in "$@"; do [[ "$p" == $g ]] && return 0; done; return 1
-}
 is_gate() { # path -> a MANIFEST gate glob matches and no "!" exclusion does
   local p="$1" g hit=1
   for g in "${GATE[@]}"; do
@@ -62,9 +58,6 @@ is_gate() { # path -> a MANIFEST gate glob matches and no "!" exclusion does
   return $hit
 }
 mapfile -t GATE < <(jq -r '.gate_paths[]?' "$ACC_DIR/MANIFEST.json" 2>/dev/null)
-mapfile -t FIX < <(jq -r '.fixture_paths[]?' "$POL" 2>/dev/null)
-mapfile -t ORD < <(jq -r '.classifier.fixture_ordinary_status[]? // empty' "$POL" 2>/dev/null)
-[ "${#ORD[@]}" -gt 0 ] || ORD=(A)
 
 [ "$CAND" = "$ACC" ] && { rm -f "$STATE"; echo "verdict none: candidate is the accepted sha"; exit 0; }
 if ! git -C "$SUPER" cat-file -e "$ACC^{commit}" 2>/dev/null; then
@@ -73,12 +66,11 @@ if ! git -C "$SUPER" cat-file -e "$ACC^{commit}" 2>/dev/null; then
   exit 0
 fi
 mapfile -t CHANGED < <(git -C "$SUPER" diff --name-status --no-renames "$ACC" "$CAND" 2>/dev/null)
-GATE_CHANGED=(); WIDEN=()
+GATE_CHANGED=()
 for line in "${CHANGED[@]}"; do
   st="${line%%$'\t'*}"; p="${line#*$'\t'}"
   is_gate "$p" || continue
   GATE_CHANGED+=("$st $p")
-  if in_globs "$p" "${FIX[@]}"; then in_globs "$st" "${ORD[@]}" || WIDEN+=("$st $p (accepted fixture edited or removed)"); fi
 done
 [ "${#GATE_CHANGED[@]}" -gt 0 ] || { rm -f "$STATE"; echo "verdict none: no gate path differs from ${ACC:0:12}"; exit 0; }
 echo "gate paths changed vs ${ACC:0:12}: ${GATE_CHANGED[*]}"
@@ -86,27 +78,18 @@ git -C "$SUPER" merge-base --is-ancestor "$ACC" "$CAND" 2>/dev/null || {
   verdict refused "does not descend from the accepted sha"
   gap "gate-candidate-refused-$c12" gate_candidate_refused "Gate candidate $CAND does not descend from the accepted gate $ACC; it is not judged and not promoted."
   exit 0; }
-# Dropping a protected or fixture glob, or ADDING a non-root exclusion, is a widening,
-# whatever the files say: a candidate policy may only grow the gated set.
-cand_pol="$(git -C "$SUPER" show "$CAND:$POLICY_REL" 2>/dev/null || echo '{}')"
-for key in gate_paths fixture_paths; do
-  while IFS= read -r dropped; do [ -n "$dropped" ] && WIDEN+=("$POLICY_REL drops $key entry '$dropped'"); done < <(
-    jq -r --argjson c "$cand_pol" --arg k "$key" '(.[$k] // []) - ($c[$k] // []) | .[]' "$POL" 2>/dev/null)
-done
-while IFS= read -r added; do [ -n "$added" ] && WIDEN+=("$POLICY_REL adds non_root_paths entry '$added'"); done < <(
-  jq -r --argjson c "$cand_pol" '($c.non_root_paths // []) - (.non_root_paths // []) | .[]' "$POL" 2>/dev/null)
-# The soak may only get STRICTER through a candidate: lowering the floor (soak_ticks.default) or raising the cap the
-# shaped row may reach (soak_ticks.max) relaxes or re-delegates the gate, so either is a widening, held for review.
-# A candidate policy that is not a JSON object cannot be compared, so it is a widening too (never read as "no change").
-if ! jq -e 'type == "object"' >/dev/null 2>&1 <<< "$cand_pol"; then
-  WIDEN+=("$POLICY_REL is not a JSON object, so its soak_ticks cannot be compared")
-else
-  while IFS= read -r w; do [ -n "$w" ] && WIDEN+=("$POLICY_REL $w"); done < <(
-    jq -r --argjson c "$cand_pol" '
-      (.soak_ticks.default // 3) as $ad | (.soak_ticks.max // 12) as $am
-      | ($c.soak_ticks.default // 3) as $cd | ($c.soak_ticks.max // 12) as $cm
-      | (if ($cd | type) != "number" or $cd < $ad then "lowers soak_ticks.default \($ad) -> \($cd)" else empty end),
-        (if ($cm | type) != "number" or $cm > $am then "raises soak_ticks.max \($am) -> \($cm)" else empty end)' "$POL" 2>/dev/null)
+# What counts as a widening is stated once, in widening.sh beside this script (a land onto super asks it too). It is
+# asked with the ACCEPTED policy and manifest; an answer it cannot give (exit 2, or no widening.sh here) refuses: a
+# candidate is never promoted on a widening check that did not run.
+WIDEN=(); wout="$(bash "$HERE/widening.sh" --policy "$POL" --super "$SUPER" --base "$ACC" --head "$CAND" \
+  --gate-manifest "$ACC_DIR/MANIFEST.json" 2>&1)"; wrc=$?
+if [ "$wrc" = 1 ]; then
+  mapfile -t WIDEN <<< "$wout"
+elif [ "$wrc" != 0 ]; then
+  why="$(printf '%s' "$wout" | head -1)"
+  verdict refused "the widening check could not judge it (exit $wrc): $why"
+  gap "gate-candidate-refused-$c12" gate_candidate_refused "Gate candidate $CAND could not be checked for widening against the accepted gate (${ACC:0:12}): $why"
+  exit 0
 fi
 if [ "${#WIDEN[@]}" -gt 0 ]; then
   verdict widening "$(printf '%s; ' "${WIDEN[@]}")"
