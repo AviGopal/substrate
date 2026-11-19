@@ -429,28 +429,34 @@ ASK_ROWS_IDS=200
 if [ -n "$ASK_ROWS" ]; then
   read_lines() { # <pointer-json> -> one JSON line per row, or one {read_failed, answer} line
     local a; a="$(records_call "$1")"
-    printf '%s\n' "${a:-null}" | jq -c --argjson q "$1" 'if type == "array" then .[] else {read_failed: $q, answer: .} end'
+    printf '%s\n' "${a:-null}" | jq -c --argjson q "$1" 'if type == "array" then .[] else {read_failed: $q, answer: .} end' 2>/dev/null \
+      || jq -nc --argjson q "$1" --arg a "${a:0:200}" '{read_failed: $q, answer_unparsed: $a}'
   }
   rows="$(for q in "$(jq -nc --arg id "$ASK_ROWS" '{type:"record_read", ids:[$id]}')" \
                    "$(jq -nc --arg id "$ASK_ROWS" '{type:"record_read", where:{root:$id}}')" \
                    "$(jq -nc --arg id "$ASK_ROWS" '{type:"record_read", root:$id, calls:"all"}')"; do read_lines "$q"; done)"
-  asked='[]'; unread=0
+  # A citing field is read as records reads it: one id or a list of them ([x] | flatten). A step of the closure that
+  # fails ends it with a line naming the step, and the rows already read are printed all the same.
+  asked='[]'; unread=0; failed=""
   for round in $(seq 1 "$ASK_ROWS_ROUNDS") cut; do
     want="$(printf '%s\n' "$rows" | jq -sc --argjson asked "$asked" '
       map(select(type == "object" and (has("read_failed") | not))) as $r
-      | [$r[] | ((.input_refs // [])[], (.uses // [])[], (.evidence_refs // [])[], .event_ref, .selection_ref)
-          | select(type == "string" and length > 0)] | unique - ($r | map(.id // empty)) - $asked')"
+      | [$r[] | (([.input_refs] | flatten | .[]), ([.uses] | flatten | .[]), ([.evidence_refs] | flatten | .[]), .event_ref, .selection_ref)
+          | select(type == "string" and length > 0)] | unique - ($r | map(.id // empty)) - $asked' 2>/dev/null)" \
+      || { failed="the cited ids could not be taken from the rows read"; break; }
     [ "$want" = '[]' ] && break
     room=$(( ASK_ROWS_IDS - $(jq 'length' <<<"$asked") ))
     if [ "$round" = cut ] || [ "$room" -le 0 ]; then unread="$(jq 'length' <<<"$want")"; break; fi
-    take="$(jq -c --argjson n "$room" '.[:$n]' <<<"$want")"
-    asked="$(jq -c --argjson t "$take" '. + $t' <<<"$asked")"
+    take="$(jq -c --argjson n "$room" '.[:$n]' <<<"$want")" && asked="$(jq -c --argjson t "$take" '. + $t' <<<"$asked")" \
+      || { failed="the cited ids to read could not be listed"; break; }
     rows="$rows
 $(read_lines "$(jq -nc --argjson ids "$take" '{type:"record_read", ids:$ids}')")"
   done
-  printf '%s\n' "$rows" | jq -sc --argjson u "$unread" '(.[] | select(type == "object" and has("read_failed"))),
+  printf '%s\n' "$rows" | jq -sc --argjson u "${unread:-0}" --arg f "$failed" '(.[] | select(type == "object" and has("read_failed"))),
+    (if $f != "" then {closure_failed: $f} else empty end),
     (if $u > 0 then {cited_unread: $u} else empty end),
-    (map(select(type == "object" and (has("read_failed") | not))) | unique_by(.id // .call_id) | sort_by(.seq // 0) | .[])'
+    (map(select(type == "object" and (has("read_failed") | not))) | unique_by(.id // .call_id) | sort_by(.seq // 0) | .[])' \
+    || { printf '%s\n' "$rows"; printf '%s\n' '{"closure_failed": "the rows read could not be ordered: printed as read"}'; }
   exit 0
 fi
 

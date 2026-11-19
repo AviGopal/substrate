@@ -15,6 +15,10 @@
 #   (h) MUST-FAIL: at most ASK_ROWS_IDS cited ids are read in all; the rest are counted in that line
 #   (i) an id already printed or already asked is never asked again (a row citing back to one is no loop)
 #   (j) each of uses, evidence_refs, event_ref and selection_ref is a citation as input_refs is
+#   (k) MUST-FAIL: a citing field that holds one id, not a list (a form records accepts), is read as records reads it, and
+#       its rows are printed; it never empties the output
+#   (l) GUARD: a cited read answered with something that is not a list of rows is a read_failed line, the rows already
+#       read are printed, and the output is never empty
 # usage: validation/scripts/status-ask-rows.test.sh
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -38,6 +42,9 @@ const s = Bun.serve({ port: 0, async fetch(r) {
   appendFileSync(`${dir}/seen.jsonl`, JSON.stringify({ auth: r.headers.get("authorization"), pointer: p }) + "\n")
   if (p.type !== "record_read") return Response.json({ failure: { status: 400, body: "unexpected" } }, { status: 400 })
   if (Array.isArray(p.ids)) {
+    // a cited read answered with something that is not a list of rows: one answer not a list, one a list of non-rows
+    if (p.ids.includes("bad-1")) return Response.json({ body: "not rows" })
+    if (p.ids.includes("bad-2")) return Response.json({ body: [7, "x", null, ["nested"]] })
     // rows that name no root: a tool call's answer (hop-1) and what it was made from (deep-1, which cites back),
     // a chain that never ends (n-N cites n-N+1), and rows cited only by one field each (k-*)
     const by: Record<string, any> = {
@@ -56,6 +63,9 @@ const s = Bun.serve({ port: 0, async fetch(r) {
       cite: { input_refs: ["hop-1"] }, chain: { input_refs: ["n-1"] },
       wide: { input_refs: Array.from({ length: 250 }, (_, i) => `w-${i}`) },
       fields: { uses: ["k-uses"], evidence_refs: ["k-ev"], event_ref: "k-event", selection_ref: "k-sel" },
+      // a citing field records accepts as one id, not a list (it reads every one as [x].flat())
+      strings: { input_refs: "hop-1", uses: "k-uses", evidence_refs: "k-ev" },
+      malformed: { input_refs: ["bad-1"], uses: ["bad-2"] },
     }
     const mode = existsSync(`${dir}/mode`) ? readFileSync(`${dir}/mode`, "utf8").trim() : ""
     return Response.json({ body: [{ ...out, ...(cites[mode] ?? {}) }, sel] })            // newest first: printed by seq
@@ -131,6 +141,15 @@ cited fields
 GOT="$(printf '%s\n' "$OUT" | jq -sc '[.[] | .id // empty | select(startswith("k-"))]' 2>/dev/null)"
 [ "$RC" = 0 ] && [ "$GOT" = '["k-uses","k-ev","k-event","k-sel"]' ] \
   && ok "(j) uses, evidence_refs, event_ref and selection_ref each cite a row that is read" || bad "(j) rc=$RC rows=$GOT"
+
+cited strings
+GOT="$(printf '%s\n' "$OUT" | jq -sc 'map(.id // empty)' 2>/dev/null)"
+[ "$RC" = 0 ] && [ "$GOT" = '["deep-1","ask-1","sel-1","hop-1","out-1","k-uses","k-ev"]' ] \
+  && ok "(k) input_refs, uses and evidence_refs holding one id each are read as records reads them, and printed" || bad "(k) rc=$RC rows=$GOT"
+cited malformed
+GOT="$(printf '%s\n' "$OUT" | jq -sc 'map(.id // .call_id // (if has("read_failed") then "F:" + (.answer | tostring) else keys[0] end))' 2>/dev/null)"
+[ "$RC" = 0 ] && [ "$GOT" = '["F:not rows","ask-1","sel-1","c-1","c-2","out-1"]' ] \
+  && ok "(l) a cited read that answers no list of rows is a read_failed line; the rows already read are printed" || bad "(l) rc=$RC rows=$GOT"
 
 echo; [ "$FAILS" = 0 ] && { echo PASS; exit 0; }
 echo "$FAILS FAILED"; exit 1
