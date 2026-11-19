@@ -3,7 +3,7 @@
 # widening.sh, between a base and a head of a scratch super-repo, judged by the BASE's policy:
 #   must fail   an accepted fixture edited, or removed -> widening (exit 1), naming the path
 #   must fail   the head's policy dropping a gate_paths or a fixture_paths entry, adding a non_root_paths entry, lowering
-#               soak_ticks.default, raising soak_ticks.max, not being a JSON object, or missing -> widening
+#               soak_ticks.default, raising soak_ticks.max, not being a JSON object (or not JSON at all), or missing -> widening
 #   must fail   the head's own policy never judges the head: a head that also calls an edit ordinary is still a widening
 #               a base policy with no classifier calls only an added fixture ordinary: an edited one is a widening
 #   must fail   the head's ordinary list adding a status, dropped (with or without its classifier), or not strings -> widening
@@ -63,6 +63,9 @@ for c in "gate_paths|.gate_paths -= [\"validation/scripts/*\"]|drops gate_paths 
 done
 wide "$(head_with notjson "echo '[1]' > $PREL")"
 [ "$RC" = 1 ] && grep -q "is not a JSON object" <<<"$OUT" && ok "[MUST-FAIL] a head policy that is not a JSON object is a widening" || bad "not json: rc $RC, $OUT"
+# Text jq cannot parse at all takes the other branch: it is still a widening, never "nothing changed".
+wide "$(head_with unparseable "printf '%s' '{\"gate' > $PREL")"
+[ "$RC" = 1 ] && grep -q "is not a JSON object, so nothing in it can be compared" <<<"$OUT" && ok "[MUST-FAIL] a head policy jq cannot parse is a widening" || bad "unparseable: rc $RC, $OUT"
 wide "$(head_with nopolicy "rm $PREL")"
 [ "$RC" = 1 ] && grep -q "drops gate_paths entry" <<<"$OUT" && ok "[MUST-FAIL] a head with no policy drops every entry: a widening" || bad "no policy: rc $RC, $OUT"
 wide "$(head_with selfjudge "pol '.classifier.fixture_ordinary_status = [\"A\",\"M\"]'; echo '# edited' >> $FX/one.sh")"
