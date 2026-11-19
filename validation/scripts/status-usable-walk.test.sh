@@ -138,13 +138,19 @@ A4="$(rd '{"levels":[{"level":"live","value":"pass","ask_id":"not-usable"},{"lev
 RA="$ROOT/scripts/substrate/acceptance/run-acceptance.sh"
 { grep '^mask_key_shapes() {' "$RA"; sed -n '/ask_id="\$(jq -r -f/,/^    fi$/p' "$RA"; } > "$T/rows-block.sh"
 if grep -q -- '--ask-rows' "$T/rows-block.sh" && tail -1 "$T/rows-block.sh" | grep -q '^    fi$'; then
-  # A key-shaped value no run variable holds, built here so no file carries one: the shape the scan's
-  # substrate-api-key rule names.
+  # Key-shaped values no run variable holds, one for each rule of the mask, built here so no file carries one: an API
+  # key, a session token in plain form and as base64, and a model key.
+  UUID="$(printf '%s' 0123abcd-4567-89ef-0123-456789abcdef)"
   MINTED="mb_$(printf 'f%.0s' $(seq 1 40))"
+  SESS="$(printf 'session%s:%s:' s "$UUID")"
+  SESS64="$(printf '%sorg:user' "$SESS" | base64 -w0 | tr -d '=')"
+  MODEL="$(printf 'sk-%s-' ant)$(printf 'q%.0s' $(seq 1 30))"
   rows_run() { # <status.json> -> $T/res/diag/usable-rows.{jsonl,err}, $T/eng.calls
     rm -rf "$T/res"; mkdir -p "$T/res/diag"; cp "$1" "$T/res/diag/status.json"; : > "$T/eng.calls"
-    MINTED="$MINTED" bash -c 'here="$1"; RESULT_DIR="$2"; ACCEPTANCE_CONTAINER=acc-test; calls="$3"
-      eng() { printf "%s\n" "$*" >> "$calls"; printf "%s\n" "{\"id\":\"ask-9\",\"seq\":1}" "{\"why\":\"tok-secret-1\"}" "{\"output\":\"key=$MINTED;\"}"; echo "a warning tok-secret-1 $MINTED" >&2; }
+    MINTED="$MINTED" SESS="$SESS" SESS64="$SESS64" MODEL="$MODEL" bash -c 'here="$1"; RESULT_DIR="$2"; ACCEPTANCE_CONTAINER=acc-test; calls="$3"
+      eng() { printf "%s\n" "$*" >> "$calls"; printf "%s\n" "{\"id\":\"ask-9\",\"seq\":1}" "{\"why\":\"tok-secret-1\"}" \
+        "{\"output\":\"key=$MINTED;\"}" "{\"output\":\"key=${SESS}org:user;\"}" "{\"output\":\"key=$SESS64;\"}" "{\"output\":\"key=$MODEL;\"}"
+        echo "a warning tok-secret-1 $MINTED ${SESS}org:user $SESS64 $MODEL" >&2; }
       redact() { local t="$1"; printf "%s" "${t//tok-secret-1/<redacted>}"; }
       . "$4"' _ "$ROOT/scripts/substrate/acceptance" "$T/res" "$T/eng.calls" "$T/rows-block.sh" 2>/dev/null
   }
@@ -154,13 +160,15 @@ if grep -q -- '--ask-rows' "$T/rows-block.sh" && tail -1 "$T/rows-block.sh" | gr
   J="$(cat "$T/res/diag/usable-rows.jsonl" 2>/dev/null)"; E="$(cat "$T/res/diag/usable-rows.err" 2>/dev/null)"
   if [ "$(cat "$T/eng.calls")" = "exec acc-test substrate-status --ask-rows ask-9" ] \
     && [ "$(printf '%s\n' "$J" | head -2)" = "$(printf '%s\n%s' '{"id":"ask-9","seq":1}' '{"why":"<redacted>"}')" ] \
-    && [ "$(printf '%s\n' "$E" | sed 's/ <redacted>$//')" = "a warning <redacted>" ]; then
+    && [ "$(printf '%s\n' "$E" | cut -d' ' -f1-3)" = "a warning <redacted>" ]; then
     ok "[MUST-FAIL] the named ask's rows are asked for and kept redacted, one JSON row per line; stderr apart, redacted"
   else bad "rows block with an ask_id: calls '$(cat "$T/eng.calls")' jsonl '$J' err '$E'"; fi
-  if [ "$(printf '%s\n' "$J" | tail -1)" = '{"output":"key=<redacted>;"}' ] && [ "$E" = "a warning <redacted> <redacted>" ] \
-    && ! grep -qF "$MINTED" "$T/res/diag/usable-rows.jsonl" "$T/res/diag/usable-rows.err"; then
-    ok "[MUST-FAIL] a key-shaped value the run was never given is masked in the kept rows and their stderr"
-  else bad "key-shaped value: last row '$(printf '%s\n' "$J" | tail -1)' err '$E'"; fi
+  # each rule masks its own shape (the plain session token's rule masks its prefix and id, the rest is not a key)
+  WANT="$(printf '%s\n' '{"output":"key=<redacted>;"}' '{"output":"key=<redacted>org:user;"}' '{"output":"key=<redacted>;"}' '{"output":"key=<redacted>;"}')"
+  leaked=""; for k in "$MINTED" "$SESS" "$SESS64" "$MODEL"; do grep -qF -- "$k" "$T/res/diag/usable-rows.jsonl" "$T/res/diag/usable-rows.err" && leaked="$leaked ${k:0:6}…"; done
+  if [ "$(printf '%s\n' "$J" | tail -4)" = "$WANT" ] && [ "$E" = "a warning <redacted> <redacted> <redacted>org:user <redacted> <redacted>" ] && [ -z "$leaked" ]; then
+    ok "[MUST-FAIL] key-shaped values the run was never given (an API key, a session token plain and as base64, a model key) are masked in the kept rows and their stderr"
+  else bad "key-shaped values: last rows '$(printf '%s\n' "$J" | tail -4)' err '$E' leaked:$leaked"; fi
   rows_run "$T/st-none.json"
   J="$(cat "$T/res/diag/usable-rows.jsonl" 2>/dev/null)"
   [ "$J" = "the usable verdict names no graded ask" ] && [ ! -s "$T/eng.calls" ] \
