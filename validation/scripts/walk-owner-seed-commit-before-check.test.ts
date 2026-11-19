@@ -11,7 +11,9 @@
 //   behaviour: the seeded owner rows go through the walk's own applicable (repos/walk-vessel) with a root's rows in the
 //     forms the walk records them (a clean clone handed out on a refresh, an applied edit, an edit found already made),
 //     with values made up: a clean clone is diffed as before; after an applied edit the diff waits and git_commit is
-//     offered; a commit newer than the edit opens the diff again; an edit found already made changes nothing.
+//     offered; a commit newer than the edit opens the diff again; an edit found already made changes nothing. Each
+//     kind of applied edit moves the clone; each clone's own newest row is read; a gap opened again reads the clone of
+//     the gap it continues; a refused commit waits for news (a refresh, or a diff leaving other files uncommitted).
 //
 // SAFETY and NEEDS: loopback only (the stub store), a private temp dir; reads repos/walk-vessel (run-glue-tests NEEDS).
 import { afterAll, beforeAll, describe, expect, test } from "bun:test"
@@ -137,12 +139,14 @@ describe("the walk reading them", () => {
     const { committed_tree: _c, ...rest } = handout(root, seq, t)
     return { ...rest, carried: "uncommitted" }
   }
-  const applied = (root: string, seq: number) => from(root, "fileEditResult", seq, { cwd, path: `${cwd}/src/x.ts`, ok: true, after: "a".repeat(64) })
+  const applied = (root: string, seq: number, shape = "fileEditResult") => from(root, shape, seq, { cwd, path: `${cwd}/src/x.ts`, ok: true, after: "a".repeat(64) })
   const already = (root: string, seq: number) => from(root, "fileEditResult", seq, { path: `${cwd}/src/x.ts`, ok: true, applied: false, after: "a".repeat(64) })
   // a commit as the walk records it: no root, ok, repo or branch key; what it changed, what waits on a person, its scan
   const commit = (root: string, seq: number, t: string) => from(root, "gitCommitResult", seq, { cwd, base: tree(7), sha: tree(4), tree: t,
     committed_tree: t, changed: ["src/x.ts", "src/y.ts"], needs_person: ["src/x.ts (protected)"], scan: "clean" })
-  const request = (root: string, type: string, seq: number) => ({ shape: "request", id: `rq-${type}`, seq, role: "described", pointer: { type, cwd }, input_refs: [root] })
+  // a clone is asked for by its repository (the one the root wants changed), every other call by the clone
+  const request = (root: string, type: string, seq: number) => ({ shape: "request", id: `rq-${type}`, seq, role: "described",
+    pointer: { type, cwd, ...(type === "git_worktree" ? { repo: "some-vessel" } : {}) }, input_refs: [root] })
   // an edit request as a drafter writes one: the file it edits, and the read of that file it is made from
   const editOf = (root: string, seq: number) => ({ shape: "request", id: "rq-edit-x", seq, role: "described",
     pointer: { type: "fs_edit", cwd, path: `${cwd}/src/x.ts`, old_string: "a", new_string: "b" }, input_refs: [root] })
@@ -156,6 +160,21 @@ describe("the walk reading them", () => {
   // a template whose one call is git_diff on the clone (as a described template holding git_diff runs it)
   const diffTemplate = (seq: number) => ({ shape: "activity_template", id: "tpl-diff", seq, role: "described", input_refs: [],
     sig: { in: ["gitWorktree"], out: ["gitDiff"] }, calls: [{ shape: "git_diff", pointer: { cwd } }] })
+  // another clone: the root's earlier one, or another root's
+  const cwd2 = "/trees/walk-trees/some-vessel-fixture-0002"
+  const elsewhere = (r: Row): Row => ({ ...r, cwd: cwd2 })
+  // the walk's own record of a call made for a request: the request, its selection (for the root), and its hops; a call
+  // the vessel refused ends in a failure blaming the request, one it answered in an ended hop carrying its answer
+  const called = (root: string, n: number, type: string, output?: Row): Row[] => [
+    { shape: "request", id: `rq-${type}-${n}`, seq: n, role: "described", pointer: { type, cwd }, input_refs: [root] },
+    { shape: "selection", id: `sel-${n}`, seq: n + 1, role: "walk", a: `call/${type}`, from: `rq-${type}-${n}`, root, input_refs: [root] },
+    { shape: "hop", id: `hop-s${n}`, seq: n + 2, role: "walk", phase: "started", kind: "call", call_id: `h${n}`, pointer_type: type, args: { cwd }, selection_ref: `sel-${n}`, input_refs: [root] },
+    output === undefined
+      ? { shape: "failure", id: `fail-${n}`, seq: n + 3, role: "walk", blames: "request", call_id: `h${n}`, selection_ref: `sel-${n}`, input_refs: [root] }
+      : { shape: "hop", id: `hop-e${n}`, seq: n + 3, role: "walk", phase: "ended", kind: "call", call_id: `h${n}`, pointer_type: type, output, selection_ref: `sel-${n}`, input_refs: [root] },
+  ]
+  const diffed = (uncommitted: string[]): Row => ({ shape: "gitDiff", cwd, tree: tree(1), check: { ran: true, passed: true },
+    typecheck: { ran: true, passed: true }, uncommitted })
   const run = async (root: Row, extra: Row[], also: string[] = []) => {
     const skipped: Row[] = []
     const base = root.id === "root-ask" ? [root, wanted] : [root]
@@ -227,5 +246,56 @@ describe("the walk reading them", () => {
     test(`an edit found already made on a clean clone changes nothing: diffed as before (${root.shape} root)`, async () => {
       expect((await run(root, [handout(id, 20, tree(1)), already(id, 35)])).diff).toBe(true)
     })
+
+    // every kind of applied edit moves the clone off its commit, not only an edit of a span
+    for (const shape of EDITS) {
+      test(`[MUST-FAIL] after an applied ${shape} the diff waits and git_commit is offered; a commit after it opens the diff (${root.shape} root)`, async () => {
+        const r = await run(root, [handout(id, 20, tree(1)), commit(id, 25, tree(2)), applied(id, 30, shape)])
+        expect([r.diff, r.commit]).toEqual([false, true])
+        expect((await run(root, [handout(id, 20, tree(1)), commit(id, 25, tree(2)), applied(id, 30, shape), commit(id, 40, tree(3))])).diff).toBe(true)
+      })
+    }
+
+    // Each clone's own newest row is read (latest_by cwd): another clone's newer row never hides this clone's. An
+    // unknown committed tree meets nothing either way, so what tells the reading apart is a clone that IS committed.
+    test(`[MUST-FAIL] this clone committed, then the root's other clone committed another tree later: this clone's diff is offered (${root.shape} root)`, async () => {
+      const r = await run(root, [elsewhere(handout(id, 15, tree(8))), handout(id, 20, tree(1)), commit(id, 30, tree(2)), elsewhere(commit(id, 40, tree(3)))])
+      expect(r.diff).toBe(true)
+      expect((await run(root, [elsewhere(handout(id, 15, tree(8))), handout(id, 20, tree(1)), commit(id, 30, tree(2)), applied(id, 35), elsewhere(commit(id, 40, tree(3)))])).diff).toBe(false)
+    })
+
+    test(`[MUST-FAIL] a clean clone handed out, then another root's clone handed out later: this clone's diff is offered (${root.shape} root)`, async () => {
+      expect((await run(root, [handout(id, 20, tree(1)), elsewhere(handout("root-other", 30, tree(9)))])).diff).toBe(true)
+    })
+
+    // What ends the wait when the commit has nothing to commit (an edit that put back the committed tree): git_commit,
+    // refused, is not made again until something new comes; a refresh handing the clone out clean names its committed
+    // tree, and the diff runs on it. Until then the refresh stays offered.
+    test(`[MUST-FAIL] an applied edit whose commit was refused: the diff and git_commit wait, git_worktree is offered; a clean refresh after the edit opens the diff (${root.shape} root)`, async () => {
+      const waiting = [handout(id, 20, tree(1)), applied(id, 30), ...called(id, 40, "git_commit")]
+      const r = await run(root, waiting, ["git_worktree"])
+      expect([r.diff, r.commit, r.worktree]).toEqual([false, false, true])
+      expect((await run(root, [...waiting, handout(id, 50, tree(1))])).diff).toBe(true)
+    })
+
+    // A diff of the same tree that leaves other files uncommitted is news (gitDiff's news_key names uncommitted): a
+    // refused commit is offered again over it. The same diff again is not news, and the commit stays refused.
+    test(`[MUST-FAIL] a refused git_commit is offered again after a diff whose uncommitted files differ, not after the same diff again (${root.shape} root)`, async () => {
+      const before = [handout(id, 20, tree(1)), ...called(id, 30, "git_diff", diffed(["src/x.ts"])), ...called(id, 40, "git_commit")]
+      expect((await run(root, [...before, ...called(id, 50, "git_diff", diffed(["src/y.ts"]))])).commit).toBe(true)
+      expect((await run(root, [...before, ...called(id, 50, "git_diff", diffed(["src/x.ts"]))])).commit).toBe(false)
+    })
   }
+
+  // A gap opened again (the same gap_id, a newer root) has no handout of its own: it reads the clone of the root it
+  // continues (continues gap_id), so a clone that root committed clean is diffed, and one it edited since waits.
+  const again = { ...gap, id: "root-gap-again", seq: 1500 }
+  test("[MUST-FAIL] a gap opened again reads the clone of the gap it continues: committed clean, the diff is offered", async () => {
+    expect((await run(again, [gap, handout(gap.id, 20, tree(1)), commit(gap.id, 30, tree(2))])).diff).toBe(true)
+  })
+
+  test("a gap opened again whose continued clone was edited after its commit: the diff waits, git_commit is offered", async () => {
+    const r = await run(again, [gap, handout(gap.id, 20, tree(1)), commit(gap.id, 30, tree(2)), applied(gap.id, 35)])
+    expect([r.diff, r.commit]).toEqual([false, true])
+  })
 })
