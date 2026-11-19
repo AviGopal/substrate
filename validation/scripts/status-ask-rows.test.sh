@@ -8,6 +8,13 @@
 #   (d) MUST-FAIL: a read records refuses is printed first as its own line ({read_failed, answer}), and the other reads'
 #       rows still follow: an empty file is never what a failed read leaves
 #   (e) discovery unreachable: each of the three reads is a read_failed line, answer null, exit 0
+#   (f) MUST-FAIL: a row the printed ones cite (input_refs) that names no root (a tool call's answer) is read by id and
+#       printed, and so is what it cites in turn, each once, in seq order
+#   (g) MUST-FAIL: cited rows are read for at most ASK_ROWS_ROUNDS rounds; what the bound leaves unread is said in a
+#       line ({cited_unread: n}), never dropped silently
+#   (h) MUST-FAIL: at most ASK_ROWS_IDS cited ids are read in all; the rest are counted in that line
+#   (i) an id already printed or already asked is never asked again (a row citing back to one is no loop)
+#   (j) each of uses, evidence_refs, event_ref and selection_ref is a citation as input_refs is
 # usage: validation/scripts/status-ask-rows.test.sh
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -20,7 +27,7 @@ command -v bun >/dev/null 2>&1 || { echo "FAIL - bun is not on PATH (the stand-i
 
 KEY=fixture-node-key-0001
 cat > "$T/disc.ts" <<'EOF'
-import { appendFileSync, existsSync } from "node:fs"
+import { appendFileSync, existsSync, readFileSync } from "node:fs"
 const dir = process.argv[2]
 const ask = { id: "ask-1", seq: 10, shape: "world_changed", role: "owner" }
 const sel = { id: "sel-1", seq: 11, shape: "selection", root: "ask-1" }
@@ -30,9 +37,29 @@ const s = Bun.serve({ port: 0, async fetch(r) {
   const p = b?.pointer ?? {}
   appendFileSync(`${dir}/seen.jsonl`, JSON.stringify({ auth: r.headers.get("authorization"), pointer: p }) + "\n")
   if (p.type !== "record_read") return Response.json({ failure: { status: 400, body: "unexpected" } }, { status: 400 })
-  if (Array.isArray(p.ids)) return Response.json({ body: p.ids.includes("ask-1") ? [ask] : [] })
+  if (Array.isArray(p.ids)) {
+    // rows that name no root: a tool call's answer (hop-1) and what it was made from (deep-1, which cites back),
+    // a chain that never ends (n-N cites n-N+1), and rows cited only by one field each (k-*)
+    const by: Record<string, any> = {
+      "ask-1": ask,
+      "hop-1": { id: "hop-1", seq: 12.5, shape: "vesselList", input_refs: ["deep-1", "ask-1"] },
+      "deep-1": { id: "deep-1", seq: 9, shape: "registry_read", input_refs: ["hop-1"] },
+      "k-uses": { id: "k-uses", seq: 20, shape: "x" }, "k-ev": { id: "k-ev", seq: 21, shape: "x" },
+      "k-event": { id: "k-event", seq: 22, shape: "x" }, "k-sel": { id: "k-sel", seq: 23, shape: "x" },
+    }
+    const row = (i: string) => by[i] ?? (/^n-[0-9]+$/.test(i) ? { id: i, seq: 30 + Number(i.slice(2)), shape: "x", input_refs: [`n-${Number(i.slice(2)) + 1}`] } : undefined)
+    return Response.json({ body: p.ids.map(row).filter(Boolean) })
+  }
   if (p.where?.root === "ask-1" && existsSync(`${dir}/refuse`)) return Response.json({ failure: { status: 403, body: "refused" } }, { status: 403 })
-  if (p.where?.root === "ask-1") return Response.json({ body: [out, sel] })               // newest first: printed by seq
+  if (p.where?.root === "ask-1") {
+    const cites: Record<string, object> = {
+      cite: { input_refs: ["hop-1"] }, chain: { input_refs: ["n-1"] },
+      wide: { input_refs: Array.from({ length: 250 }, (_, i) => `w-${i}`) },
+      fields: { uses: ["k-uses"], evidence_refs: ["k-ev"], event_ref: "k-event", selection_ref: "k-sel" },
+    }
+    const mode = existsSync(`${dir}/mode`) ? readFileSync(`${dir}/mode`, "utf8").trim() : ""
+    return Response.json({ body: [{ ...out, ...(cites[mode] ?? {}) }, sel] })            // newest first: printed by seq
+  }
   // calls carry a call_id and no id, as records' calls do
   if (p.root === "ask-1" && p.calls === "all") return Response.json({ body: [{ call_id: "c-2", seq: 13, state: "ended", type: "record_read" }, { call_id: "c-1", seq: 12, state: "failed", type: "answer" }, sel] })
   return Response.json({ body: [] })
@@ -72,5 +99,38 @@ GOT="$(printf '%s\n' "$OUT" | jq -sc 'map([(.read_failed | keys_unsorted | map(s
 if [ "$RC" = 0 ] && [ "$GOT" = '[["ids",null],["where",null],["root",null]]' ]; then
   ok "(e) discovery unreachable: each read is a read_failed line, answer null"
 else bad "(e) rc=$RC got=$GOT"; fi
+
+# The cited rows: one run per mode, the ids reads it made kept apart.
+cited() { # <mode> -> OUT, RC, IDS (every id the ids reads asked, in order, one per line)
+  echo "$1" > "$T/mode"; : > "$T/seen.jsonl"
+  OUT="$(SUBSTRATE_ENV_FILE="$T/env" timeout 60 bash "$STATUS" --ask-rows ask-1 2>/dev/null)"; RC=$?
+  IDS="$(jq -r 'select(.pointer.ids) | .pointer.ids[]' "$T/seen.jsonl")"
+  rm -f "$T/mode"
+}
+cited cite
+GOT="$(printf '%s\n' "$OUT" | jq -sc 'map(.id // .call_id // (keys | join(",")))' 2>/dev/null)"
+if [ "$RC" = 0 ] && [ "$GOT" = '["deep-1","ask-1","sel-1","c-1","hop-1","c-2","out-1"]' ]; then
+  ok "(f) a cited row with no root, and what it cites, are read by id and printed, each once, in seq order"
+else bad "(f) rc=$RC rows=$GOT"; fi
+if [ "$(printf '%s\n' "$IDS" | sort | uniq -d)" = "" ] && [ "$(printf '%s\n' "$IDS" | grep -c '^ask-1$')" = 1 ] \
+  && ! grep -q '"record_write"' "$T/seen.jsonl" && [ "$(jq -r '.auth' "$T/seen.jsonl" | sort -u)" = "ApiKey $KEY" ]; then
+  ok "(i) no id is asked twice, a row citing back is no loop, and every read is a read under the node's own key"
+else bad "(i) ids asked: $(printf '%s ' $IDS)"; fi
+cited chain
+GOT="$(printf '%s\n' "$OUT" | jq -sc '[.[] | select(has("cited_unread")) | .cited_unread]' 2>/dev/null)"
+CH="$(printf '%s\n' "$OUT" | jq -sc '[.[] | .id // empty | select(startswith("n-"))]' 2>/dev/null)"
+if [ "$RC" = 0 ] && [ "$GOT" = '[1]' ] && [ "$CH" = '["n-1","n-2","n-3"]' ]; then
+  ok "(g) cited rows are read for three rounds, and the one the bound leaves unread is said ({cited_unread: 1})"
+else bad "(g) rc=$RC unread=$GOT chain=$CH"; fi
+cited wide
+GOT="$(printf '%s\n' "$OUT" | jq -sc '[.[] | select(has("cited_unread")) | .cited_unread]' 2>/dev/null)"
+if [ "$RC" = 0 ] && [ "$GOT" = '[50]' ] && [ "$(printf '%s\n' "$IDS" | grep -c '^w-')" = 200 ]; then
+  ok "(h) at most 200 cited ids are read in all (beyond the three root reads); the 50 left are counted, not dropped silently"
+else bad "(h) rc=$RC unread=$GOT w-ids asked=$(printf '%s\n' "$IDS" | grep -c '^w-')"; fi
+cited fields
+GOT="$(printf '%s\n' "$OUT" | jq -sc '[.[] | .id // empty | select(startswith("k-"))]' 2>/dev/null)"
+[ "$RC" = 0 ] && [ "$GOT" = '["k-uses","k-ev","k-event","k-sel"]' ] \
+  && ok "(j) uses, evidence_refs, event_ref and selection_ref each cite a row that is read" || bad "(j) rc=$RC rows=$GOT"
+
 echo; [ "$FAILS" = 0 ] && { echo PASS; exit 0; }
 echo "$FAILS FAILED"; exit 1

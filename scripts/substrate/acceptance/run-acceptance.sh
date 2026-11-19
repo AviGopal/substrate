@@ -314,6 +314,10 @@ redact() {
   done
   printf '%s' "$t"
 }
+# What a usable miss keeps of its rows carries what tools answered (a shell's output, a file read), which can hold a
+# credential this run was never given, such as a key minted inside the container: every value shaped as one the
+# secrets scan's rules name is masked there as well.
+mask_key_shapes() { sed -E 's/\bmb[-_][A-Za-z0-9_-]{32,}/<redacted>/g; s/\bsk-ant-[A-Za-z0-9_-]{20,}/<redacted>/g; s/sessions:[0-9a-fA-F-]{36}:/<redacted>/g; s/c2Vzc2lvbnM[6][A-Za-z0-9+\/=_-]*/<redacted>/g'; }
 fence_rc=0; fence_failed_index=""; fence_failed_line=""; fence_failed_cmd=""; fences_ran=0
 if [ "$extract_rc" -ne 0 ]; then
   set_check extraction fail "$(jq -nc --arg e "$(cat "$RESULT_DIR/diag/extract.err")" --argjson rc "$extract_rc" '{exit: $rc, detail: $e}')"
@@ -788,8 +792,9 @@ if [ "$have_container" -eq 1 ]; then
     if [ -n "$ask_id" ]; then
       # one JSON row per line; what the read said on stderr is kept beside them, redacted the same way, never among them
       eng exec "$ACCEPTANCE_CONTAINER" substrate-status --ask-rows "$ask_id" 2>"$RESULT_DIR/diag/usable-rows.err" \
-        | while IFS= read -r l; do redact "$l"; printf '\n'; done >"$RESULT_DIR/diag/usable-rows.jsonl"
-      redact "$(cat "$RESULT_DIR/diag/usable-rows.err" 2>/dev/null)" >"$RESULT_DIR/diag/usable-rows.err"
+        | while IFS= read -r l; do redact "$l"; printf '\n'; done | mask_key_shapes >"$RESULT_DIR/diag/usable-rows.jsonl"
+      redact "$(cat "$RESULT_DIR/diag/usable-rows.err" 2>/dev/null)" | mask_key_shapes >"$RESULT_DIR/diag/usable-rows.err.m"
+      mv "$RESULT_DIR/diag/usable-rows.err.m" "$RESULT_DIR/diag/usable-rows.err"
     else
       echo "the usable verdict names no graded ask" >"$RESULT_DIR/diag/usable-rows.jsonl"
     fi

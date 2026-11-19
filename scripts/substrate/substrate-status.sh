@@ -418,13 +418,38 @@ probe_goal() {
 # printed in seq order, each once: the ask itself, every row naming it as root, and its calls. Reads only. A read that
 # answers with no list (refused, unreachable, nothing) is printed first as its own line, {read_failed: <the read>,
 # answer}, so an empty file can never pass for an ask with no rows.
+#
+# A row the walk's answers were made from need not name the root (a tool call's answer, a row of another root), and
+# without it a miss cannot be read: so the rows the printed ones cite (input_refs, uses, evidence_refs, event_ref,
+# selection_ref) and that are not among them are read by id, and again for what those cite, at most ASK_ROWS_ROUNDS
+# times and ASK_ROWS_IDS ids in all. When the bound leaves a cited id unread, a line says so ({cited_unread: n}), so a
+# cut export is never read as a whole one.
+ASK_ROWS_ROUNDS=3
+ASK_ROWS_IDS=200
 if [ -n "$ASK_ROWS" ]; then
-  for q in "$(jq -nc --arg id "$ASK_ROWS" '{type:"record_read", ids:[$id]}')" \
-           "$(jq -nc --arg id "$ASK_ROWS" '{type:"record_read", where:{root:$id}}')" \
-           "$(jq -nc --arg id "$ASK_ROWS" '{type:"record_read", root:$id, calls:"all"}')"; do
-    a="$(records_call "$q")"
-    printf '%s\n' "${a:-null}" | jq -c --argjson q "$q" 'if type == "array" then .[] else {read_failed: $q, answer: .} end'
-  done | jq -sc '(.[] | select(type == "object" and has("read_failed"))),
+  read_lines() { # <pointer-json> -> one JSON line per row, or one {read_failed, answer} line
+    local a; a="$(records_call "$1")"
+    printf '%s\n' "${a:-null}" | jq -c --argjson q "$1" 'if type == "array" then .[] else {read_failed: $q, answer: .} end'
+  }
+  rows="$(for q in "$(jq -nc --arg id "$ASK_ROWS" '{type:"record_read", ids:[$id]}')" \
+                   "$(jq -nc --arg id "$ASK_ROWS" '{type:"record_read", where:{root:$id}}')" \
+                   "$(jq -nc --arg id "$ASK_ROWS" '{type:"record_read", root:$id, calls:"all"}')"; do read_lines "$q"; done)"
+  asked='[]'; unread=0
+  for round in $(seq 1 "$ASK_ROWS_ROUNDS") cut; do
+    want="$(printf '%s\n' "$rows" | jq -sc --argjson asked "$asked" '
+      map(select(type == "object" and (has("read_failed") | not))) as $r
+      | [$r[] | ((.input_refs // [])[], (.uses // [])[], (.evidence_refs // [])[], .event_ref, .selection_ref)
+          | select(type == "string" and length > 0)] | unique - ($r | map(.id // empty)) - $asked')"
+    [ "$want" = '[]' ] && break
+    room=$(( ASK_ROWS_IDS - $(jq 'length' <<<"$asked") ))
+    if [ "$round" = cut ] || [ "$room" -le 0 ]; then unread="$(jq 'length' <<<"$want")"; break; fi
+    take="$(jq -c --argjson n "$room" '.[:$n]' <<<"$want")"
+    asked="$(jq -c --argjson t "$take" '. + $t' <<<"$asked")"
+    rows="$rows
+$(read_lines "$(jq -nc --argjson ids "$take" '{type:"record_read", ids:$ids}')")"
+  done
+  printf '%s\n' "$rows" | jq -sc --argjson u "$unread" '(.[] | select(type == "object" and has("read_failed"))),
+    (if $u > 0 then {cited_unread: $u} else empty end),
     (map(select(type == "object" and (has("read_failed") | not))) | unique_by(.id // .call_id) | sort_by(.seq // 0) | .[])'
   exit 0
 fi

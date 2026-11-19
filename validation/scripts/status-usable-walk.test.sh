@@ -13,6 +13,8 @@
 #   level forms; none when usable names none)
 #   and install acceptance's block asks for that ask's rows and keeps them redacted, one JSON row per line, stderr
 #   apart; with no ask_id it writes the line that says so and asks nothing
+#   and a value shaped as a credential the secrets scan names, which the run was never given (a key minted inside the
+#   container, in a tool's answer), is masked in those rows and their stderr too
 # and that the ask written is a world_changed row in the owner's role, under the node's own key; and that on a fleet
 # not declared an acceptance install the ask is not written at all unless --plant-ask names the effect.
 #
@@ -134,12 +136,15 @@ A4="$(rd '{"levels":[{"level":"live","value":"pass","ask_id":"not-usable"},{"lev
 # engine and the redaction stubbed: the ask_id the verdict names is asked for, and its rows land redacted, one JSON
 # row per line; stderr is kept apart; no ask_id writes the line that says so, and asks nothing.
 RA="$ROOT/scripts/substrate/acceptance/run-acceptance.sh"
-sed -n '/ask_id="\$(jq -r -f/,/^    fi$/p' "$RA" > "$T/rows-block.sh"
+{ grep '^mask_key_shapes() {' "$RA"; sed -n '/ask_id="\$(jq -r -f/,/^    fi$/p' "$RA"; } > "$T/rows-block.sh"
 if grep -q -- '--ask-rows' "$T/rows-block.sh" && tail -1 "$T/rows-block.sh" | grep -q '^    fi$'; then
+  # A key-shaped value no run variable holds, built here so no file carries one: the shape the scan's
+  # substrate-api-key rule names.
+  MINTED="mb_$(printf 'f%.0s' $(seq 1 40))"
   rows_run() { # <status.json> -> $T/res/diag/usable-rows.{jsonl,err}, $T/eng.calls
     rm -rf "$T/res"; mkdir -p "$T/res/diag"; cp "$1" "$T/res/diag/status.json"; : > "$T/eng.calls"
-    bash -c 'here="$1"; RESULT_DIR="$2"; ACCEPTANCE_CONTAINER=acc-test; calls="$3"
-      eng() { printf "%s\n" "$*" >> "$calls"; printf "%s\n" "{\"id\":\"ask-9\",\"seq\":1}" "{\"why\":\"tok-secret-1\"}"; echo "a warning tok-secret-1" >&2; }
+    MINTED="$MINTED" bash -c 'here="$1"; RESULT_DIR="$2"; ACCEPTANCE_CONTAINER=acc-test; calls="$3"
+      eng() { printf "%s\n" "$*" >> "$calls"; printf "%s\n" "{\"id\":\"ask-9\",\"seq\":1}" "{\"why\":\"tok-secret-1\"}" "{\"output\":\"key=$MINTED;\"}"; echo "a warning tok-secret-1 $MINTED" >&2; }
       redact() { local t="$1"; printf "%s" "${t//tok-secret-1/<redacted>}"; }
       . "$4"' _ "$ROOT/scripts/substrate/acceptance" "$T/res" "$T/eng.calls" "$T/rows-block.sh" 2>/dev/null
   }
@@ -148,9 +153,14 @@ if grep -q -- '--ask-rows' "$T/rows-block.sh" && tail -1 "$T/rows-block.sh" | gr
   rows_run "$T/st-id.json"
   J="$(cat "$T/res/diag/usable-rows.jsonl" 2>/dev/null)"; E="$(cat "$T/res/diag/usable-rows.err" 2>/dev/null)"
   if [ "$(cat "$T/eng.calls")" = "exec acc-test substrate-status --ask-rows ask-9" ] \
-    && [ "$J" = "$(printf '%s\n%s' '{"id":"ask-9","seq":1}' '{"why":"<redacted>"}')" ] && [ "$E" = "a warning <redacted>" ]; then
+    && [ "$(printf '%s\n' "$J" | head -2)" = "$(printf '%s\n%s' '{"id":"ask-9","seq":1}' '{"why":"<redacted>"}')" ] \
+    && [ "$(printf '%s\n' "$E" | sed 's/ <redacted>$//')" = "a warning <redacted>" ]; then
     ok "[MUST-FAIL] the named ask's rows are asked for and kept redacted, one JSON row per line; stderr apart, redacted"
   else bad "rows block with an ask_id: calls '$(cat "$T/eng.calls")' jsonl '$J' err '$E'"; fi
+  if [ "$(printf '%s\n' "$J" | tail -1)" = '{"output":"key=<redacted>;"}' ] && [ "$E" = "a warning <redacted> <redacted>" ] \
+    && ! grep -qF "$MINTED" "$T/res/diag/usable-rows.jsonl" "$T/res/diag/usable-rows.err"; then
+    ok "[MUST-FAIL] a key-shaped value the run was never given is masked in the kept rows and their stderr"
+  else bad "key-shaped value: last row '$(printf '%s\n' "$J" | tail -1)' err '$E'"; fi
   rows_run "$T/st-none.json"
   J="$(cat "$T/res/diag/usable-rows.jsonl" 2>/dev/null)"
   [ "$J" = "the usable verdict names no graded ask" ] && [ ! -s "$T/eng.calls" ] \
