@@ -16,6 +16,7 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { AsyncLocalStorage } from 'node:async_hooks'
 import { RELAY_V2_HOP_CODEC } from '@libp2p/circuit-relay-v2'
 import { callerKeyFromHeader, decideIngress, echoRefusal, forwardAddresses, isRelayRefusal, makeEchoRateGate, makeOboMinter, makeValidator, oboAudience, pointerForDial, probeReservationOnce, reservationProbeMs, runReservationProbes, policyFromRecordsRows, resolveMode, stripCredentials, withoutFedAuth, type Decision, type Mode, type Policy } from './ingress-auth'
+import { discoveryLocalShapes, mirrorRows } from './mirror-rows'
 import { multiaddr } from '@multiformats/multiaddr'
 
 // RESILIENCE: libp2p internals emit 'error' events on streams/sockets that have no
@@ -322,17 +323,13 @@ async function proxyToLocalOwner(pointer: any): Promise<any> {
   //
   // The generic passthrough below already forwards any shape to whichever local vessel owns
   // it, so in principle discovery is already reachable this way. In practice it is not:
-  // DISCOVERY-VESSEL DOES NOT REGISTER ITSELF into its own registry (verified — there is no
-  // self-registration in repos/discovery-vessel/src/index.ts), so a vesselCapability lookup
-  // for `vesselRegistry` finds no owner and the proxy answers `unknown shape`. The one
-  // vessel every joiner must reach is the one vessel that cannot be found by the mechanism
-  // used to find vessels.
+  // discovery's own row is not a route to it: discovery answers its own shapes itself, and
+  // it keeps that row registered by an in-process refresh, not through its own HTTP, so the
+  // registry's liveness never depends on the registry. A joiner still cannot use the row,
+  // though: it names discovery by an endpoint the joiner has no way to reach yet.
   //
-  // Short-circuit rather than "fix" discovery to self-register: self-registration would put
-  // discovery in its own TTL/heartbeat cycle and make the registry's liveness depend on the
-  // registry, which is the circularity this whole subsystem keeps tripping over. Answering
-  // these four shapes directly is the smaller, non-circular change, and it lives in
-  // scripts/ rather than a gated vessel.
+  // So these four shapes are answered here directly: the non-circular path for a joiner
+  // that holds nothing but a multiaddr. It lives in scripts/ rather than a gated vessel.
   //
   // substrateBootstrap is deliberately UNAUTHENTICATED, matching discovery's own
   // PUBLIC_PATHS treatment of GET /bootstrap: a joiner has not yet been told the identity
@@ -1200,25 +1197,12 @@ const HUB_VESSEL_ID = VESSEL_ID.endsWith(`@${SUBSTRATE_ID}`) ? VESSEL_ID : `${VE
 // lets DUPLICATE vessels (two activity-apis, two goal-hosts) coexist as distinct rows
 // instead of colliding on one blob mirror. A remote caller dials the circuit and names
 // its target via pointer._fedTargetVessel (the ingress proxy routes to that vessel).
+// Which rows are mirrored, and why the others are not, is mirror-rows.ts. A row whose only endpoint is cross-host-dead
+// (host.docker.internal) is never mirrored: its circuit would re-proxy to an unreachable HTTP owner, a poison producer
+// that outlives discovery's TTL and shadows the vessel's real circuit row.
 async function localVesselRows(): Promise<Array<{ vesselId: string; shapes: string[] }>> {
   const vessels = await localDiscoveryResolve({ type: 'vesselRegistry' })
-  const rows: Array<{ vesselId: string; shapes: string[] }> = []
-  for (const v of vessels) {
-    const id = String(v?.vesselId ?? '')
-    // Skip ourselves, our own mirror row, any libp2p-protocol entry (another
-    // substrate's mirror — re-exporting mirrored shapes would ping-pong namespaces),
-    // and already-qualified rows (a `x@substrate` id is some substrate's mirror).
-    if (!id || id.startsWith(VESSEL_ID) || v?.protocol === 'libp2p' || id.includes('@')) continue
-    // Liveness gate: never mirror a vessel whose only endpoint is cross-host-dead
-    // (host.docker.internal), else the hub namespace grows a `<id>@<substrate>` row
-    // whose circuit re-proxies to an unreachable HTTP owner — a poison producer that
-    // outlives discovery's TTL and shadows the vessel's real circuit row.
-    if (HOST_LOCAL_UNREACHABLE.test(String(v?.endpoint ?? ''))) continue
-    const shapes = (v?.shapes ?? []).filter((s: any) => typeof s === 'string' && s)
-    if (shapes.length === 0) continue
-    rows.push({ vesselId: id, shapes })
-  }
-  return rows
+  return mirrorRows(vessels, VESSEL_ID, HOST_LOCAL_UNREACHABLE, await discoveryLocalShapes(DISCOVERY))
 }
 
 // A lost reservation must degrade OBSERVABLY, not silently: warn loudly when the hub

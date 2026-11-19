@@ -109,6 +109,7 @@ beforeAll(async () => {
   cpSync(join(FED_DIR, 'federation-transport-server.ts'), join(fed, 'federation-transport-server.ts'))
   cpSync(join(FED_DIR, 'ingress-auth.ts'), join(fed, 'ingress-auth.ts'))
   cpSync(join(FED_DIR, 'identity-ask.ts'), join(fed, 'identity-ask.ts'))
+  cpSync(join(FED_DIR, 'mirror-rows.ts'), join(fed, 'mirror-rows.ts'))
 
   pkg = await import(join(pkgCopy, 'src/index.ts'))
   multiaddrFn = (await import(Bun.resolveSync('@multiformats/multiaddr', fed))).multiaddr
