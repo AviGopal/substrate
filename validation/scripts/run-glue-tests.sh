@@ -78,6 +78,7 @@ declare -A NEEDS=(
   [fed-owner-status.test.ts]="repos/libp2p-federation-transport"
   [fed-hub-mirror.test.ts]="repos/libp2p-federation-transport"
   [write-containment-copies.test.ts]="repos/local-tools-vessel"
+  [walk-owner-seed-commit-before-check.test.ts]="repos/walk-vessel"
 )
 
 FAST=0; LIST=0; ROOT=""; LOG_DIR=""; GAP_STORE=""

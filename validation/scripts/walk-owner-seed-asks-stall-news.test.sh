@@ -3,7 +3,7 @@
 # what makes a diff news (asks are the kind the owner declares; every other owner row is a setting the walk is given):
 #   (a) the plain request schema's input is {shape: world_changed, ask: true}, and no other schema declares an ask
 #   (b) one stall_rule: after_rows 240
-#   (c) one news_key for gitDiff: its tree and whether each check ran and passed
+#   (c) one news_key for gitDiff: its tree, whether each check ran and passed, and what the clone held uncommitted
 #   (e) one news_key for fileEditResult: the edited path and the bytes it left there (after)
 #   (f) each news_key is found by its own `of`: a store whose newest news_key is another shape's gets no second copy
 #   (d) the seeder run again writes none of them again
@@ -21,7 +21,7 @@ const rows: Row[] = []
 // key already written, then a newer fileEditResult key with other fields
 const nk = (id: string, of: string, fields: string[]) => ({ shape: "news_key", of, fields, id, seq: rows.length + 1, role: "owner", input_refs: [] })
 if (process.env.PRIOR === "edit") rows.push(nk("p1", "fileEditResult", ["path", "after"]), nk("p2", "gitDiff", ["tree"]))
-if (process.env.PRIOR === "diff") rows.push(nk("p1", "gitDiff", ["tree", "check.ran", "check.passed", "typecheck.ran", "typecheck.passed"]), nk("p2", "fileEditResult", ["path"]))
+if (process.env.PRIOR === "diff") rows.push(nk("p1", "gitDiff", ["tree", "check.ran", "check.passed", "typecheck.ran", "typecheck.passed", "uncommitted"]), nk("p2", "fileEditResult", ["path"]))
 const planted = rows.length
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { "Content-Type": "application/json" } })
 const server = Bun.serve({ hostname: "127.0.0.1", port: 0, fetch: async (req) => {
@@ -53,8 +53,8 @@ if [ "$(jq -c '.reqInputs' <<<"$OUT")" = '[{"shape":"world_changed","ask":true}]
   ok "(a) the request schema declares world_changed the ask, and no other schema declares one"
 else bad "(a) $(jq -c '[.reqInputs, .asks]' <<<"$OUT" | cut -c1-300)"; fi
 if [ "$(jq -c '.stall' <<<"$OUT")" = '[240]' ]; then ok "(b) one stall_rule, after_rows 240"; else bad "(b) stall: $(jq -c '.stall' <<<"$OUT")"; fi
-if [ "$(jq -c '[.news[] | select(.[0] == "gitDiff")]' <<<"$OUT")" = '[["gitDiff",["tree","check.ran","check.passed","typecheck.ran","typecheck.passed"]]]' ]; then
-  ok "(c) one news_key for gitDiff: the tree and whether each check ran and passed"
+if [ "$(jq -c '[.news[] | select(.[0] == "gitDiff")]' <<<"$OUT")" = '[["gitDiff",["tree","check.ran","check.passed","typecheck.ran","typecheck.passed","uncommitted"]]]' ]; then
+  ok "(c) one news_key for gitDiff: the tree, whether each check ran and passed, and what the clone held uncommitted"
 else bad "(c) news: $(jq -c '.news' <<<"$OUT" | cut -c1-300)"; fi
 if [ "$(jq -c '[.newsRows[] | select(.of == "fileEditResult")]' <<<"$OUT")" = '[{"shape":"news_key","of":"fileEditResult","fields":["path","after"]}]' ] && [ "$(jq -c '.news | length' <<<"$OUT")" = 2 ]; then
   ok "(e) one news_key for fileEditResult, exactly {of, fields: [path, after]} (nothing else on it: not retired); no other news_key"

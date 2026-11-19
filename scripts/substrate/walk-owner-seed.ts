@@ -66,6 +66,16 @@ async function ensure(row: Row, where: Row | undefined, label: string): Promise<
 // request's clone (the same cwd) that names one; a newer moving row naming none leaves it unknown, and unknown meets
 // nothing; a gap opened again takes the clone of the earlier gap with its gap_id. Read by the walk and described alike.
 const NEWEST_TREE = { "x-latest": { shapes: ["gitCommitResult", "gitWorktree", "gitDiff"], moves: ["gitCommitResult", "gitWorktree"], same: "cwd", field: "tree", continues: "gap_id" } };
+// The clone's newest COMMITTED tree: what a diff can judge, since a diff reads commits only. The tree some commit names
+// (committed_tree: a commit's tree, or a clean clone's as handed out), on the newest row of these shapes a tool recorded
+// on the request's clone. An edit that changed a file there (its answer names the clone, cwd) moves the clone without
+// naming one, so after an edit newer than every commit the value is unknown and meets nothing. The clone is located by
+// its handout (at: gitWorktree), so a clone handed out before its answers named a committed tree still finds its clone
+// and takes its newest commit's. Read for requirements only; NEWEST_TREE stays what a landing and its verdict read.
+// committed_tree is advisory: it orders the steps, and the landing and its verdict still judge from their own reading.
+const EDIT_RESULTS = ["fileEditResult", "fileWriteResult", "codeInsertResult", "codeReplaceResult", "codeAddImportResult"];
+const COMMITTED_TREE = { "x-latest": { shapes: ["gitCommitResult", "gitWorktree", ...EDIT_RESULTS], moves: ["gitCommitResult", ...EDIT_RESULTS],
+  at: ["gitWorktree"], same: "cwd", field: "committed_tree", continues: "gap_id" } };
 const JSON_ONLY = "Reply with only the JSON object: no prose, no code fence.";
 // What a produced row used: the ids of the rows it was shown that it relies on. Credit travels back only through what
 // a step used (records' fold), never through what it was merely shown, so a produce names its own. Each id is held to
@@ -446,6 +456,16 @@ for (const tool of CHANGE_TOOLS) {
 // an open gap, not instead of one. git_land still decides from the verdict rows themselves.
 await ensure({ shape: "requires", for: "git_land", needs: "land_verdict", where: { r: 1, tree: NEWEST_TREE }, latest_by: "tree", group: "verdict" },
   { for: "git_land", needs: "land_verdict" }, "requires git_land land_verdict");
+// A diff waits for a commit of the clone's newest edit, since it reads commits only: git_diff is called only once
+// the clone's newest committed tree is known, from a commit newer than every edit there, or a clean clone handed out and
+// not edited since. So after an edit the step named is git_commit, and planning puts the existing commit before the
+// check. Alternatives in their own group (either row meets it), needed besides a wanted change or an open gap; each
+// counts the newest row per clone (latest_by cwd), so another clone's newer row never hides this one's. Nothing about
+// what git_diff answers or how it is graded changes.
+await ensure({ shape: "requires", for: "git_diff", needs: "gitCommitResult", where: { committed_tree: COMMITTED_TREE }, latest_by: "cwd", group: "committed" },
+  { for: "git_diff", needs: "gitCommitResult" }, "requires git_diff gitCommitResult");
+await ensure({ shape: "requires", for: "git_diff", needs: "gitWorktree", where: { committed_tree: COMMITTED_TREE }, latest_by: "cwd", group: "committed" },
+  { for: "git_diff", needs: "gitWorktree" }, "requires git_diff gitWorktree");
 // An edit waits for a read of the very file it changes: the root's whole-file read (fileContent) of the path the edit
 // names (bound to the edit's own pointer). A clone's files sit under the clone's own directory, so a read made in an
 // older clone, or none, does not open an edit in a fresh one. A line-range read does not count: an edit's old text must
@@ -460,10 +480,11 @@ await ensure({ shape: "requires", for: "walk_trees_reclaim", needs: "gap", where
 // stalls; its producer is offered again once per row). Counted in store rows, the unit a detector's quiet window uses,
 // sized to about one round of the walk's selections over the open roots.
 await ensure({ shape: "stall_rule", after_rows: 240 }, {}, "stall_rule");
-// What makes a diff news to the root that asked for it: its tree and whether each check ran and passed, not the check's
-// timings (walk applicable.ts repeats, by the owner's news_key). A re-run diff of an unchanged tree is then no news, and
-// the root stops judging the same tree again (544972ef judged one tree r 0 ten times).
-await ensure({ shape: "news_key", of: "gitDiff", fields: ["tree", "check.ran", "check.passed", "typecheck.ran", "typecheck.passed"] },
+// What makes a diff news to the root that asked for it: its tree, whether each check ran and passed, and what the clone
+// held uncommitted, not the check's timings (walk applicable.ts repeats, by the owner's news_key). A re-run diff of an
+// unchanged tree is then no news, and the root stops judging the same tree again (544972ef judged one tree r 0 ten
+// times); a diff of the same tree whose uncommitted files differ is news, since what is left to commit changed.
+await ensure({ shape: "news_key", of: "gitDiff", fields: ["tree", "check.ran", "check.passed", "typecheck.ran", "typecheck.passed", "uncommitted"] },
   { of: "gitDiff" }, "news_key gitDiff");
 // What makes an edit news: the file it edited and the bytes it left there (local-tools answers every ok edit with
 // `after`, the sha256 of the file on disk after the call), not the rest of its answer. Every ok edit of one file
