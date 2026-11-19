@@ -84,7 +84,8 @@ else
   # What counts as ordinary may only narrow: a head that adds a status would let the NEXT candidate, judged under it, edit
   # or remove accepted fixtures as ordinary, so the gate could loosen itself in two steps. Compared as the classifier reads
   # each list (an empty one reads as A, above); the head's must be there and be strings, since an absent list hands its
-  # meaning to the default in code the same change could edit.
+  # meaning to the default in code the same change could edit. So no list says "nothing ordinary": reading [] as none
+  # here would change what the classifier itself does with [], so the two change together or not at all.
   while IFS= read -r w; do [ -n "$w" ] && WIDEN+=("$POLICY_REL $w"); done < <(
     jq -r --argjson c "$head_pol" '
       def reads: if type == "array" and length > 0 then . else ["A"] end;
