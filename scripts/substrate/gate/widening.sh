@@ -15,7 +15,9 @@
 #     an accepted fixture edited or removed;
 #   - the head's policy dropping a gate_paths or fixture_paths entry the base names;
 #   - the head's policy adding a non_root_paths entry;
-#   - the head's policy lowering soak_ticks.default or raising soak_ticks.max, or not being a JSON object.
+#   - the head's policy lowering soak_ticks.default or raising soak_ticks.max, or not being a JSON object;
+#   - the head's policy calling more fixture changes ordinary than the base's: classifier.fixture_ordinary_status may
+#     stay as it is or get shorter; a status the base does not list, a list that is not strings, or no list is a widening.
 #
 # stdout: one line per widening. Exit 0: none. Exit 1: at least one. Exit 2: it cannot be judged (an unreadable policy,
 # a base or head that is not a commit in the clone): a caller refuses on 2 as on 1, never reads it as no widening.
@@ -79,6 +81,17 @@ else
       | ($c.soak_ticks.default // 3) as $cd | ($c.soak_ticks.max // 12) as $cm
       | (if ($cd | type) != "number" or $cd < $ad then "lowers soak_ticks.default \($ad) -> \($cd)" else empty end),
         (if ($cm | type) != "number" or $cm > $am then "raises soak_ticks.max \($am) -> \($cm)" else empty end)' "$POL" 2>/dev/null)
+  # What counts as ordinary may only narrow: a head that adds a status would let the NEXT candidate, judged under it, edit
+  # or remove accepted fixtures as ordinary, so the gate could loosen itself in two steps. Compared as the classifier reads
+  # each list (an empty one reads as A, above); the head's must be there and be strings, since an absent list hands its
+  # meaning to the default in code the same change could edit.
+  while IFS= read -r w; do [ -n "$w" ] && WIDEN+=("$POLICY_REL $w"); done < <(
+    jq -r --argjson c "$head_pol" '
+      def reads: if type == "array" and length > 0 then . else ["A"] end;
+      (.classifier.fixture_ordinary_status | reads) as $b | ($c.classifier.fixture_ordinary_status) as $h
+      | if ($h | type) != "array" or ($h | any(type != "string")) then "widens classifier.fixture_ordinary_status \($b) -> \($h | tojson) (not a list of statuses)"
+        elif (($h | reads) - $b | length) > 0 then "widens classifier.fixture_ordinary_status \($b) -> \($h)"
+        else empty end' "$POL" 2>/dev/null)
 fi
 [ "${#WIDEN[@]}" -gt 0 ] || exit 0
 printf '%s\n' "${WIDEN[@]}"

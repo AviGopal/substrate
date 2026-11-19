@@ -6,6 +6,8 @@
 #               soak_ticks.default, raising soak_ticks.max, not being a JSON object, or missing -> widening
 #   must fail   the head's own policy never judges the head: a head that also calls an edit ordinary is still a widening
 #               a base policy with no classifier calls only an added fixture ordinary: an edited one is a widening
+#   must fail   the head's ordinary list adding a status, dropped (with or without its classifier), or not strings -> widening
+#   control     the head's ordinary list kept, emptied (read as A) over a base of A, or A under a base with no classifier -> none
 #   must fail   with a gate manifest, a path its "!" globs exclude, or no glob names, is not judged as a fixture
 #   must fail   an unreadable base policy, or a base or head that is no commit -> cannot judge (exit 2), never "none"
 #   control     a fixture added, a gate_paths entry added, the soak floor raised, a non-gate file changed -> none (exit 0)
@@ -61,6 +63,30 @@ jq 'del(.classifier)' "$T/base-policy.json" > "$T/base-nocls.json"
 H0="$(head_with nocls "echo '# edited' >> $FX/two.sh")"
 OUT="$(bash "$W" --policy "$T/base-nocls.json" --super "$R" --base "$BASE" --head "$H0" 2>&1)"; RC=$?
 [ "$RC" = 1 ] && grep -qx "M $FX/two.sh (accepted fixture edited or removed)" <<<"$OUT" && ok "a base policy with no classifier still calls an edited fixture a widening" || bad "no classifier: rc $RC, $OUT"
+for c in 'adds-M|.classifier.fixture_ordinary_status = ["A","M"]|widens classifier.fixture_ordinary_status \["A"\] -> \["A","M"\]' \
+         'adds-MD|.classifier.fixture_ordinary_status = ["A","M","D"]|widens classifier.fixture_ordinary_status \["A"\] -> \["A","M","D"\]' \
+         'drops-classifier|del(.classifier)|widens classifier.fixture_ordinary_status \["A"\] -> null (not a list of statuses)' \
+         'drops-key|del(.classifier.fixture_ordinary_status)|widens classifier.fixture_ordinary_status \["A"\] -> null (not a list of statuses)' \
+         'not-array|.classifier.fixture_ordinary_status = "A"|widens classifier.fixture_ordinary_status \["A"\] -> "A" (not a list of statuses)' \
+         'not-strings|.classifier.fixture_ordinary_status = [1]|widens classifier.fixture_ordinary_status \["A"\] -> \[1\] (not a list of statuses)'; do
+  IFS='|' read -r label expr want <<<"$c"
+  wide "$(head_with "$label" "pol '$expr'")"
+  [ "$RC" = 1 ] && grep -qx "$PREL $want" <<<"$OUT" && ok "[MUST-FAIL] the head's ordinary list: $label is a widening" || bad "$label: rc $RC, $OUT"
+done
+wide "$(head_with ord-keep "pol '.classifier.fixture_ordinary_status = [\"A\"] | .gate_paths += [\"packages/*\"]'")"
+[ "$RC" = 0 ] && ok "the head's ordinary list kept is not a widening" || bad "ord keep: rc $RC, $OUT"
+wide "$(head_with ord-narrow "pol '.classifier.fixture_ordinary_status = []'")"
+[ "$RC" = 0 ] && ok "an empty head list reads as A, so under a base of A it is not a widening" || bad "ord narrow: rc $RC, $OUT"
+H1="$(head_with ord-nobase "pol '.classifier.fixture_ordinary_status = [\"A\"]'")"
+OUT="$(bash "$W" --policy "$T/base-nocls.json" --super "$R" --base "$BASE" --head "$H1" 2>&1)"; RC=$?
+[ "$RC" = 0 ] && ok "under a base with no classifier, a head listing A is not a widening" || bad "ord no base: rc $RC, $OUT"
+H2="$(head_with ord-nobase-m "pol '.classifier.fixture_ordinary_status = [\"A\",\"M\"]'")"
+OUT="$(bash "$W" --policy "$T/base-nocls.json" --super "$R" --base "$BASE" --head "$H2" 2>&1)"; RC=$?
+[ "$RC" = 1 ] && grep -qx "$PREL widens classifier.fixture_ordinary_status \\[\"A\"\\] -> \\[\"A\",\"M\"\\]" <<<"$OUT" && ok "[MUST-FAIL] under a base with no classifier (read as A), a head adding M is a widening" || bad "ord no base M: rc $RC, $OUT"
+jq '.classifier.fixture_ordinary_status = ["M"]' "$T/base-policy.json" > "$T/base-m.json"
+H3="$(head_with ord-empty "pol '.classifier.fixture_ordinary_status = []'")"
+OUT="$(bash "$W" --policy "$T/base-m.json" --super "$R" --base "$BASE" --head "$H3" 2>&1)"; RC=$?
+[ "$RC" = 1 ] && grep -qx "$PREL widens classifier.fixture_ordinary_status \\[\"M\"\\] -> \\[\\]" <<<"$OUT" && ok "[MUST-FAIL] an empty head list reads as A, so it widens a base of M alone" || bad "ord empty over M: rc $RC, $OUT"
 
 H="$(head_with manifest "echo '# edited' >> $FX/one.sh")"
 jq -n --arg f "$FX/one.sh" '{gate_paths:["validation/scripts/*", ("!" + $f)]}' > "$T/m-excl.json"
