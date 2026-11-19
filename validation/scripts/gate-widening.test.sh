@@ -5,6 +5,7 @@
 #   must fail   the head's policy dropping a gate_paths or a fixture_paths entry, adding a non_root_paths entry, lowering
 #               soak_ticks.default, raising soak_ticks.max, not being a JSON object, or missing -> widening
 #   must fail   the head's own policy never judges the head: a head that also calls an edit ordinary is still a widening
+#               a base policy with no classifier calls only an added fixture ordinary: an edited one is a widening
 #   must fail   with a gate manifest, a path its "!" globs exclude, or no glob names, is not judged as a fixture
 #   must fail   an unreadable base policy, or a base or head that is no commit -> cannot judge (exit 2), never "none"
 #   control     a fixture added, a gate_paths entry added, the soak floor raised, a non-gate file changed -> none (exit 0)
@@ -56,6 +57,10 @@ wide "$(head_with nopolicy "rm $PREL")"
 [ "$RC" = 1 ] && grep -q "drops gate_paths entry" <<<"$OUT" && ok "[MUST-FAIL] a head with no policy drops every entry: a widening" || bad "no policy: rc $RC, $OUT"
 wide "$(head_with selfjudge "pol '.classifier.fixture_ordinary_status = [\"A\",\"M\"]'; echo '# edited' >> $FX/one.sh")"
 [ "$RC" = 1 ] && grep -q "M $FX/one.sh" <<<"$OUT" && ok "[MUST-FAIL] the head's own policy never makes its edit ordinary (the base's is read)" || bad "self-judge: rc $RC, $OUT"
+jq 'del(.classifier)' "$T/base-policy.json" > "$T/base-nocls.json"
+H0="$(head_with nocls "echo '# edited' >> $FX/two.sh")"
+OUT="$(bash "$W" --policy "$T/base-nocls.json" --super "$R" --base "$BASE" --head "$H0" 2>&1)"; RC=$?
+[ "$RC" = 1 ] && grep -qx "M $FX/two.sh (accepted fixture edited or removed)" <<<"$OUT" && ok "a base policy with no classifier still calls an edited fixture a widening" || bad "no classifier: rc $RC, $OUT"
 
 H="$(head_with manifest "echo '# edited' >> $FX/one.sh")"
 jq -n --arg f "$FX/one.sh" '{gate_paths:["validation/scripts/*", ("!" + $f)]}' > "$T/m-excl.json"
