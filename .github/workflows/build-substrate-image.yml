@@ -20,13 +20,18 @@ on:
     # `substrate-manifest`), so a manifest edit must publish or the baked copy goes
     # stale. README.md is the install page: install-acceptance.yml judges each published
     # digest against the page at the commit it was built from, so an install page edit
-    # publishes too, and the edited page is judged with no later push needed.
+    # publishes too, and the edited page is judged with no later push needed. The same run
+    # judges the glue tests of that commit (validation/scripts), so a glue-test-only edit
+    # publishes too: a fixed or newly red glue test is judged on its push, not at the next
+    # unrelated build. Only validation/scripts: the rest of validation/ (reports, findings,
+    # workspaces) is read by no acceptance step, and a build for it would judge nothing new.
     paths:
       - 'Dockerfile.substrate'
       - 'docker-compose.yml'
       - 'README.md'
       - 'repos/**'
       - 'scripts/substrate/**'
+      - 'validation/scripts/**'
       - '.github/workflows/build-substrate-image.yml'
   workflow_dispatch: {}
   # A scheduled submodule bump pushes its gitlink commit with the default GITHUB_TOKEN,
