@@ -94,11 +94,18 @@ describe("bootstrap-seeder --pool-policy", () => {
 });
 
 // THE PERSON-ONLY SET HAS A FLOOR. git_commit and git_land read person_only from this file at the base of every change,
-// in place of lists in their own code, so an edit that empties a part of it, or drops a gate directory or the hooks,
-// would let the lane land a change to what judges it on a grader's verdict alone. The file names itself in
-// excluded_paths, so such an edit needs a person when the lane makes it; this floor catches an operator's edit, which
-// no landing judges.
-const GATE_FLOOR = ["scripts/git-hooks/**", ".git-hooks/**", "scripts/substrate/gate/**", "validation/scripts/gate/**"];
+// in place of lists in their own code, so an edit that empties a part of it, or drops what judges a change, would let
+// the lane land a change to its own judge on a grader's verdict alone. The floor is the judge itself: the gate
+// directories, the hooks, the owner seed that writes the walk's owner rows, local-tools' landing files and its two
+// containment files, and records' src (where grades, closes and credit are computed). The file names itself in
+// excluded_paths, so an edit to it needs a person when the lane makes it; this floor catches an operator's edit, which
+// no landing judges. A ruling that narrows these lists changes this floor in the same change.
+const EVERY_REPO_FLOOR = ["scripts/git-hooks/**", ".git-hooks/**", "scripts/substrate/gate/**", "validation/scripts/gate/**",
+  "scripts/substrate/walk-owner-seed.ts"];
+const BY_REPO_FLOOR: Record<string, string[]> = {
+  "local-tools-vessel": ["src/git-*.ts", "src/write-containment.ts", "src/shell-containment.ts"],
+  "records-vessel": ["src/**"],
+};
 const globs = (v: unknown): boolean => Array.isArray(v) && v.length > 0
   && v.every((g) => typeof g === "string" && g.trim() === g && g.length > 0) && new Set(v).size === v.length;
 function personOnlyFaults(po: unknown): string[] {
@@ -106,30 +113,51 @@ function personOnlyFaults(po: unknown): string[] {
   if (o === null || typeof o !== "object") return ["person_only is not an object"];
   const out: string[] = [];
   if (!globs(o.every_repo)) out.push("every_repo is not a non-empty list of distinct trimmed globs");
-  else for (const g of GATE_FLOOR) if (!(o.every_repo as string[]).includes(g)) out.push(`every_repo lacks ${g}`);
+  else for (const g of EVERY_REPO_FLOOR) if (!(o.every_repo as string[]).includes(g)) out.push(`every_repo lacks ${g}`);
   if (o.by_repo === null || typeof o.by_repo !== "object" || Array.isArray(o.by_repo) || Object.keys(o.by_repo).length === 0) out.push("by_repo names no repository");
-  else for (const [repo, v] of Object.entries(o.by_repo)) if (!globs(v)) out.push(`by_repo.${repo} is not a non-empty list of distinct trimmed globs`);
+  else {
+    const by = o.by_repo as Record<string, unknown>;
+    for (const [repo, v] of Object.entries(by)) if (!globs(v)) out.push(`by_repo.${repo} is not a non-empty list of distinct trimmed globs`);
+    for (const [repo, floor] of Object.entries(BY_REPO_FLOOR)) {
+      if (!(repo in by)) out.push(`by_repo lacks ${repo}`);
+      else if (globs(by[repo])) for (const g of floor) if (!(by[repo] as string[]).includes(g)) out.push(`by_repo.${repo} lacks ${g}`);
+    }
+  }
   if (!globs(o.fixtures_without_gate_policy)) out.push("fixtures_without_gate_policy is not a non-empty list of distinct trimmed globs");
   return out;
 }
 describe("the person-only set", () => {
-  it("is present, well formed, and keeps the gate directories and hooks", () => {
+  it("is present, well formed, and keeps what judges a change", () => {
     const d = JSON.parse(readFileSync(SCOPE_FILE, "utf8"));
     expect(personOnlyFaults(d.autonomyScope.person_only)).toEqual([]);
   });
   it("control: each kind of fault is reported", () => {
-    const ok = { every_repo: [...GATE_FLOOR], by_repo: { r: ["src/**"] }, fixtures_without_gate_policy: ["validation/**"] };
+    const by = (): Record<string, string[]> => ({ ...Object.fromEntries(Object.entries(BY_REPO_FLOOR).map(([r, g]) => [r, [...g]])), r: ["src/**"] });
+    const ok = { every_repo: [...EVERY_REPO_FLOOR], by_repo: by(), fixtures_without_gate_policy: ["validation/**"] };
+    const not = "is not a non-empty list of distinct trimmed globs";
     expect(personOnlyFaults(ok)).toEqual([]);
     expect(personOnlyFaults(undefined)).toEqual(["person_only is not an object"]);
-    expect(personOnlyFaults({ ...ok, every_repo: GATE_FLOOR.slice(1) })).toEqual(["every_repo lacks scripts/git-hooks/**"]);
-    expect(personOnlyFaults({ ...ok, every_repo: [] })).toEqual(["every_repo is not a non-empty list of distinct trimmed globs"]);
-    expect(personOnlyFaults({ ...ok, every_repo: [...GATE_FLOOR, " x"] })).toEqual(["every_repo is not a non-empty list of distinct trimmed globs"]);
-    expect(personOnlyFaults({ ...ok, every_repo: [...GATE_FLOOR, ""] })).toEqual(["every_repo is not a non-empty list of distinct trimmed globs"]);
-    expect(personOnlyFaults({ ...ok, every_repo: [...GATE_FLOOR, 5] })).toEqual(["every_repo is not a non-empty list of distinct trimmed globs"]);
+    for (const g of EVERY_REPO_FLOOR) {
+      expect(personOnlyFaults({ ...ok, every_repo: EVERY_REPO_FLOOR.filter((x) => x !== g) })).toEqual([`every_repo lacks ${g}`]);
+    }
+    expect(personOnlyFaults({ ...ok, every_repo: [] })).toEqual([`every_repo ${not}`]);
+    expect(personOnlyFaults({ ...ok, every_repo: [...EVERY_REPO_FLOOR, " x"] })).toEqual([`every_repo ${not}`]);
+    expect(personOnlyFaults({ ...ok, every_repo: [...EVERY_REPO_FLOOR, ""] })).toEqual([`every_repo ${not}`]);
+    expect(personOnlyFaults({ ...ok, every_repo: [...EVERY_REPO_FLOOR, 5] })).toEqual([`every_repo ${not}`]);
+    for (const [repo, floor] of Object.entries(BY_REPO_FLOOR)) {
+      for (const g of floor) {
+        const b = by(); b[repo] = [...floor.filter((x) => x !== g), "src/other.ts"];
+        expect(personOnlyFaults({ ...ok, by_repo: b })).toEqual([`by_repo.${repo} lacks ${g}`]);
+      }
+      const b = by(); delete b[repo];
+      expect(personOnlyFaults({ ...ok, by_repo: b })).toEqual([`by_repo lacks ${repo}`]);
+      const e = by(); e[repo] = [];
+      expect(personOnlyFaults({ ...ok, by_repo: e })).toEqual([`by_repo.${repo} ${not}`]);
+    }
     expect(personOnlyFaults({ ...ok, by_repo: {} })).toEqual(["by_repo names no repository"]);
     expect(personOnlyFaults({ ...ok, by_repo: ["src/**"] })).toEqual(["by_repo names no repository"]);
-    expect(personOnlyFaults({ ...ok, by_repo: { r: [] } })).toEqual(["by_repo.r is not a non-empty list of distinct trimmed globs"]);
-    expect(personOnlyFaults({ ...ok, by_repo: { r: ["a", "a"] } })).toEqual(["by_repo.r is not a non-empty list of distinct trimmed globs"]);
-    expect(personOnlyFaults({ ...ok, fixtures_without_gate_policy: "validation/**" })).toEqual(["fixtures_without_gate_policy is not a non-empty list of distinct trimmed globs"]);
+    expect(personOnlyFaults({ ...ok, by_repo: { ...by(), r: [] } })).toEqual([`by_repo.r ${not}`]);
+    expect(personOnlyFaults({ ...ok, by_repo: { ...by(), r: ["a", "a"] } })).toEqual([`by_repo.r ${not}`]);
+    expect(personOnlyFaults({ ...ok, fixtures_without_gate_policy: "validation/**" })).toEqual([`fixtures_without_gate_policy ${not}`]);
   });
 });
