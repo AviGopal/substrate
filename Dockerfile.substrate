@@ -468,7 +468,6 @@ RUN chmod +x /usr/local/bin/substrate-entrypoint /usr/local/bin/gen-env /usr/loc
         db-maintenance.timer \
         coherence-recover.timer \
         auto-describe-resolvers.timer \
-        surgical-gap-scan.timer \
         ingest-docs.timer \
         obsidian-collaborate.timer && \
     : "Valkey is the cache; redis-server is a vestigial apt transitive that the" \

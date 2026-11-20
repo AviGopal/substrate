@@ -1652,62 +1652,6 @@
         "mutated_blob": "e4fb9cfc3ec6e5eade5be4cf5713c57a6cd5d833"
       }
     },
-    "/usr/lib/systemd/system/surgical-gap-scan.service": {
-      "src": "scripts/substrate/units/surgical-gap-scan.service",
-      "src_blob": "cda0b626cbc02c9af05c7f9e8ba553c38d20b03a",
-      "level": "behaviour",
-      "reason": "mutation-proven",
-      "fixtures": [
-        "unit-semantics.sh"
-      ],
-      "evidence": {
-        "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
-        "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "4e1eb32e8aad288ab78c4f53478eb0dfee98ad89"
-      }
-    },
-    "/usr/lib/systemd/system/surgical-gap-scan.service.d/run-dir.conf": {
-      "src": "scripts/substrate/units/surgical-gap-scan.service.d/run-dir.conf",
-      "src_blob": "e401faa15f5f96e157f2b3f9605d34df0c3713a8",
-      "level": "behaviour",
-      "reason": "mutation-proven",
-      "fixtures": [
-        "unit-semantics.sh"
-      ],
-      "evidence": {
-        "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
-        "mutation": "rewrite ExecStart= to /bin/true",
-        "mutated_blob": "fc0abe4bf2f997b5b5c8740a2864d6bf9a596f11"
-      }
-    },
-    "/usr/lib/systemd/system/surgical-gap-scan.timer": {
-      "src": "scripts/substrate/units/surgical-gap-scan.timer",
-      "src_blob": "c3c6b16b9eb16f30e730a0b2a5d1d56f619d2d11",
-      "level": "behaviour",
-      "reason": "mutation-proven",
-      "fixtures": [
-        "unit-verify.sh"
-      ],
-      "evidence": {
-        "accepted": "claimed by coverage-claim-units.sh; earned by image-coverage-map.check.sh",
-        "mutation": "delete every On*= trigger line",
-        "mutated_blob": "1ad1b971450369d17ed21b8e3367229a423cdaf2"
-      }
-    },
-    "/usr/lib/systemd/system/surgical-gap-scan.timer.d/ready-gate.conf": {
-      "src": "scripts/substrate/units/surgical-gap-scan.timer.d/ready-gate.conf",
-      "src_blob": "cf4fdb9c64f1fd103585893dce07ca6ace960524",
-      "level": "parse",
-      "reason": "mutation-proven",
-      "fixtures": [
-        "unit-verify.sh"
-      ],
-      "evidence": {
-        "accepted": "7ff4bdbb20a275deec3073e438bc5bf55d4f3908",
-        "mutation": "insert `exit 99` after line 1",
-        "mutated_blob": "98dc39373afb7ac4ead0e2550fbb66343fe893df"
-      }
-    },
     "/usr/lib/systemd/system/surrealdb.service": {
       "src": "scripts/substrate/units/surrealdb.service",
       "src_blob": "13eb9c17511c3c820aacd08c14b7a0991b5feee8",
@@ -2256,13 +2200,6 @@
       "reason": "unreached",
       "fixtures": []
     },
-    "/usr/local/share/substrate/active-scripts/surgical-gap-scan.ts": {
-      "src": "scripts/substrate/surgical-gap-scan.ts",
-      "src_blob": "77af40427e102490d64dc7a9328268cf4a3ca6ef",
-      "level": "none",
-      "reason": "unreached",
-      "fixtures": []
-    },
     "/usr/local/share/substrate/active-scripts/typecheck-scenario-gen.ts": {
       "src": "scripts/substrate/typecheck-scenario-gen.ts",
       "src_blob": "0f2670c88e1f30c9189456a87c54b4d446e7fd10",
@@ -2286,7 +2223,7 @@
     },
     "/usr/local/share/substrate/active-scripts/vessels.inventory.json": {
       "src": "scripts/substrate/vessels.inventory.json",
-      "src_blob": "99c40ff00dd3fc70f30e5924ba27068899bad338",
+      "src_blob": "9fc9877984f1e93cbc5a2e598e2177387bd4cd17",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -2391,7 +2328,7 @@
     },
     "/usr/local/share/substrate/vessels.inventory.json": {
       "src": "scripts/substrate/vessels.inventory.json",
-      "src_blob": "99c40ff00dd3fc70f30e5924ba27068899bad338",
+      "src_blob": "9fc9877984f1e93cbc5a2e598e2177387bd4cd17",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [

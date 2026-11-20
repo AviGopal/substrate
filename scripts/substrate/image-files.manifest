@@ -127,10 +127,6 @@ scripts/substrate/units/substrate-pull-sync.service.d/07-run-dir-read-only.conf	
 scripts/substrate/units/substrate-pull-sync.timer	/usr/lib/systemd/system/substrate-pull-sync.timer	0644	A
 scripts/substrate/units/substrate-pull-sync.timer.d/ready-gate.conf	/usr/lib/systemd/system/substrate-pull-sync.timer.d/ready-gate.conf	0644	A
 scripts/substrate/units/substrate-ready.service	/usr/lib/systemd/system/substrate-ready.service	0644	A
-scripts/substrate/units/surgical-gap-scan.service	/usr/lib/systemd/system/surgical-gap-scan.service	0644	A
-scripts/substrate/units/surgical-gap-scan.service.d/run-dir.conf	/usr/lib/systemd/system/surgical-gap-scan.service.d/run-dir.conf	0644	A
-scripts/substrate/units/surgical-gap-scan.timer	/usr/lib/systemd/system/surgical-gap-scan.timer	0644	A
-scripts/substrate/units/surgical-gap-scan.timer.d/ready-gate.conf	/usr/lib/systemd/system/surgical-gap-scan.timer.d/ready-gate.conf	0644	A
 scripts/substrate/units/surrealdb.service	/usr/lib/systemd/system/surrealdb.service	0644	A
 scripts/substrate/units/typecheck-scenario-gen.service	/usr/lib/systemd/system/typecheck-scenario-gen.service	0644	A
 scripts/substrate/units/typecheck-scenario-gen.service.d/run-dir.conf	/usr/lib/systemd/system/typecheck-scenario-gen.service.d/run-dir.conf	0644	A
@@ -201,7 +197,6 @@ scripts/substrate/seed-identity.ts	/usr/local/share/substrate/active-scripts/see
 scripts/substrate/self-development-trend.ts	/usr/local/share/substrate/active-scripts/self-development-trend.ts	0644	A
 scripts/substrate/self-repair-operational.ts	/usr/local/share/substrate/active-scripts/self-repair-operational.ts	0644	A
 scripts/substrate/spectral-gap.ts	/usr/local/share/substrate/active-scripts/spectral-gap.ts	0644	A
-scripts/substrate/surgical-gap-scan.ts	/usr/local/share/substrate/active-scripts/surgical-gap-scan.ts	0644	A
 scripts/substrate/typecheck-scenario-gen.ts	/usr/local/share/substrate/active-scripts/typecheck-scenario-gen.ts	0644	A
 scripts/substrate/validate-build.ts	/usr/local/share/substrate/active-scripts/validate-build.ts	0644	A
 scripts/substrate/validator-liveness-tick.ts	/usr/local/share/substrate/active-scripts/validator-liveness-tick.ts	0644	A
@@ -417,10 +412,6 @@ scripts/substrate/substrate-manifest.sh	/usr/local/share/substrate/super-repo/sc
 scripts/substrate/substrate-pull-sync.sh	/usr/local/share/substrate/super-repo/scripts/substrate/substrate-pull-sync.sh	0755	B
 scripts/substrate/substrate-ready.sh	/usr/local/share/substrate/super-repo/scripts/substrate/substrate-ready.sh	0755	B
 scripts/substrate/substrate-status.sh	/usr/local/share/substrate/super-repo/scripts/substrate/substrate-status.sh	0755	B
-scripts/substrate/surgical-gap-scan.d.ts.map	/usr/local/share/substrate/super-repo/scripts/substrate/surgical-gap-scan.d.ts.map	0644	B
-scripts/substrate/surgical-gap-scan.js	/usr/local/share/substrate/super-repo/scripts/substrate/surgical-gap-scan.js	0644	B
-scripts/substrate/surgical-gap-scan.js.map	/usr/local/share/substrate/super-repo/scripts/substrate/surgical-gap-scan.js.map	0644	B
-scripts/substrate/surgical-gap-scan.ts	/usr/local/share/substrate/super-repo/scripts/substrate/surgical-gap-scan.ts	0644	B
 scripts/substrate/typecheck-scenario-gen.d.ts.map	/usr/local/share/substrate/super-repo/scripts/substrate/typecheck-scenario-gen.d.ts.map	0644	B
 scripts/substrate/typecheck-scenario-gen.js	/usr/local/share/substrate/super-repo/scripts/substrate/typecheck-scenario-gen.js	0644	B
 scripts/substrate/typecheck-scenario-gen.js.map	/usr/local/share/substrate/super-repo/scripts/substrate/typecheck-scenario-gen.js.map	0644	B
@@ -549,10 +540,6 @@ scripts/substrate/units/substrate-pull-sync.service.d/07-run-dir-read-only.conf	
 scripts/substrate/units/substrate-pull-sync.timer	/usr/local/share/substrate/super-repo/scripts/substrate/units/substrate-pull-sync.timer	0644	B
 scripts/substrate/units/substrate-pull-sync.timer.d/ready-gate.conf	/usr/local/share/substrate/super-repo/scripts/substrate/units/substrate-pull-sync.timer.d/ready-gate.conf	0644	B
 scripts/substrate/units/substrate-ready.service	/usr/local/share/substrate/super-repo/scripts/substrate/units/substrate-ready.service	0644	B
-scripts/substrate/units/surgical-gap-scan.service	/usr/local/share/substrate/super-repo/scripts/substrate/units/surgical-gap-scan.service	0644	B
-scripts/substrate/units/surgical-gap-scan.service.d/run-dir.conf	/usr/local/share/substrate/super-repo/scripts/substrate/units/surgical-gap-scan.service.d/run-dir.conf	0644	B
-scripts/substrate/units/surgical-gap-scan.timer	/usr/local/share/substrate/super-repo/scripts/substrate/units/surgical-gap-scan.timer	0644	B
-scripts/substrate/units/surgical-gap-scan.timer.d/ready-gate.conf	/usr/local/share/substrate/super-repo/scripts/substrate/units/surgical-gap-scan.timer.d/ready-gate.conf	0644	B
 scripts/substrate/units/surrealdb.service	/usr/local/share/substrate/super-repo/scripts/substrate/units/surrealdb.service	0644	B
 scripts/substrate/units/typecheck-scenario-gen.service	/usr/local/share/substrate/super-repo/scripts/substrate/units/typecheck-scenario-gen.service	0644	B
 scripts/substrate/units/typecheck-scenario-gen.service.d/run-dir.conf	/usr/local/share/substrate/super-repo/scripts/substrate/units/typecheck-scenario-gen.service.d/run-dir.conf	0644	B

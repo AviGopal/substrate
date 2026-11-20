@@ -113,7 +113,7 @@ fi
 # successfully. Their unit files are gone, but an image built before still ships them, so the real inventory must
 # plan each one off with no selection and under the hub and standalone profiles.
 TIMERS="efficiency-failure-tick trace-store-health-check db-contention-check funnel-drain composition-edge-reconcile
-  autonomy-metrics gap-compose self-operational-health"
+  autonomy-metrics gap-compose self-operational-health surgical-gap-scan"
 REAL="$ROOT/scripts/substrate/vessels.inventory.json"
 for sel in "no selection" PROFILE=hub PROFILE=standalone; do
   if [ "$sel" = "no selection" ]; then plan real VESSELS_INVENTORY="$REAL"; else plan real VESSELS_INVENTORY="$REAL" "$sel"; fi

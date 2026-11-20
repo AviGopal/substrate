@@ -27,6 +27,5 @@ PEER_FANOUT_MODE                   federation mode switch
 RECOVER_CAP                        cap
 REPAIR                             on/off switch
 SELF_DEV_TREND                     on/off switch
-SURGICAL_SCAN_CAP                  cap
 SURREAL_ROCKSDB_BLOCK_CACHE_SIZE   database cache tuning
 VESSEL_DRAIN_MS                    drain timeout
