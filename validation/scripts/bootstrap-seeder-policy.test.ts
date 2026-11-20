@@ -93,46 +93,43 @@ describe("bootstrap-seeder --pool-policy", () => {
   });
 });
 
-// THE SEED COVERS THE PINS. A fresh pool (a new install, or a recreate that loses the live record) is seeded from the
-// committed file above, so an entry every node's live record carries but the seed lacks is lane-editable on that pool.
-// The live records are pinned per node in scripts/substrate/self-facts.json (autonomy_scope_pinned), so the comparison
-// runs against those pins and needs no node: every entry that EVERY pinned value carries must be in the committed seed.
-// A path opened on one node only is absent from that node's pin, so it is in no intersection and never asserted here;
-// the reverse direction (seed entries a pin lacks: per-node openings, per-file names of a pinned test directory) is
-// allowed by the seed's own description. NOT_SEEDED names the pinned entries that are deliberately absent from the
-// seed, each with its reason: a live, expiring tightening hold, or a test pull-sync's protected gate cannot count.
-const SELF_FACTS = join(SUPER, "scripts", "substrate", "self-facts.json");
-const NOT_SEEDED: Record<string, string> = {
-  "repos/concept-db/tests/write-shapes.test.ts": "a scope-earn-in tightening hold (lineage-scoped and expiring); the seed carries no holds, so seeding it would make it permanent with no lineage exception",
-  "repos/goal-host-vessel/test/command-egress-loop.test.ts": "skips every case where /workspace exists (its hermetic harness runs on a host checkout only), so pull-sync's protected gate, which runs each seeded .test.ts alone in the container and needs a pass count above zero, would refuse every goal-host candidate",
-};
-function pinnedValues(selfFacts: { rows?: Array<{ id?: string; expected_by_node?: Record<string, { excluded_paths?: string[] }> }> }): string[][] {
-  const row = (selfFacts.rows ?? []).find((r) => r.id === "autonomy_scope_pinned");
-  return Object.values(row?.expected_by_node ?? {}).map((v) => v.excluded_paths ?? []);
+// THE PERSON-ONLY SET HAS A FLOOR. git_commit and git_land read person_only from this file at the base of every change,
+// in place of lists in their own code, so an edit that empties a part of it, or drops a gate directory or the hooks,
+// would let the lane land a change to what judges it on a grader's verdict alone. The file names itself in
+// excluded_paths, so such an edit needs a person when the lane makes it; this floor catches an operator's edit, which
+// no landing judges.
+const GATE_FLOOR = ["scripts/git-hooks/**", ".git-hooks/**", "scripts/substrate/gate/**", "validation/scripts/gate/**"];
+const globs = (v: unknown): boolean => Array.isArray(v) && v.length > 0
+  && v.every((g) => typeof g === "string" && g.trim() === g && g.length > 0) && new Set(v).size === v.length;
+function personOnlyFaults(po: unknown): string[] {
+  const o = po as { every_repo?: unknown; by_repo?: unknown; fixtures_without_gate_policy?: unknown } | null;
+  if (o === null || typeof o !== "object") return ["person_only is not an object"];
+  const out: string[] = [];
+  if (!globs(o.every_repo)) out.push("every_repo is not a non-empty list of distinct trimmed globs");
+  else for (const g of GATE_FLOOR) if (!(o.every_repo as string[]).includes(g)) out.push(`every_repo lacks ${g}`);
+  if (o.by_repo === null || typeof o.by_repo !== "object" || Array.isArray(o.by_repo) || Object.keys(o.by_repo).length === 0) out.push("by_repo names no repository");
+  else for (const [repo, v] of Object.entries(o.by_repo)) if (!globs(v)) out.push(`by_repo.${repo} is not a non-empty list of distinct trimmed globs`);
+  if (!globs(o.fixtures_without_gate_policy)) out.push("fixtures_without_gate_policy is not a non-empty list of distinct trimmed globs");
+  return out;
 }
-function missingFromSeed(seedPaths: string[], pins: string[][], notSeeded: Record<string, string>): string[] {
-  if (pins.length === 0) return [];
-  const seedSet = new Set(seedPaths);
-  return pins[0]!.filter((p) => pins.every((pin) => pin.includes(p)) && !seedSet.has(p) && !(p in notSeeded));
-}
-describe("the committed seed covers every pinned live entry", () => {
-  it("every entry all pinned autonomy_scope_pinned values carry is in autonomy-scope.json (NOT_SEEDED aside)", () => {
-    const seedPaths: string[] = JSON.parse(readFileSync(SCOPE_FILE, "utf8")).autonomyScope.excluded_paths;
-    const pins = pinnedValues(JSON.parse(readFileSync(SELF_FACTS, "utf8")));
-    expect(pins.length).toBeGreaterThan(0);
-    expect(missingFromSeed(seedPaths, pins, NOT_SEEDED)).toEqual([]);
+describe("the person-only set", () => {
+  it("is present, well formed, and keeps the gate directories and hooks", () => {
+    const d = JSON.parse(readFileSync(SCOPE_FILE, "utf8"));
+    expect(personOnlyFaults(d.autonomyScope.person_only)).toEqual([]);
   });
-  it("NOT_SEEDED entries are absent from the seed (a listed entry the seed carries is a stale exemption)", () => {
-    const seedPaths: string[] = JSON.parse(readFileSync(SCOPE_FILE, "utf8")).autonomyScope.excluded_paths;
-    expect(Object.keys(NOT_SEEDED).filter((p) => seedPaths.includes(p))).toEqual([]);
-  });
-  it("must-fail: an entry planted into every pin and not into the seed is reported; one pin lacking it is not", () => {
-    const seedPaths = ["repos/a/src/x.ts", "repos/a/test/dir/"];
-    const plant = "repos/a/src/planted.ts";
-    expect(missingFromSeed(seedPaths, [[...seedPaths, plant], [...seedPaths, plant]], {})).toEqual([plant]);
-    expect(missingFromSeed(seedPaths, [[...seedPaths, plant], [...seedPaths]], {})).toEqual([]);
-    expect(missingFromSeed(seedPaths, [[...seedPaths, plant], [...seedPaths, plant]], { [plant]: "named" })).toEqual([]);
-    // control: a seed entry the pins lack (a per-node opening) is not a failure
-    expect(missingFromSeed([...seedPaths, "repos/a/src/opened.ts"], [[...seedPaths], [...seedPaths]], {})).toEqual([]);
+  it("control: each kind of fault is reported", () => {
+    const ok = { every_repo: [...GATE_FLOOR], by_repo: { r: ["src/**"] }, fixtures_without_gate_policy: ["validation/**"] };
+    expect(personOnlyFaults(ok)).toEqual([]);
+    expect(personOnlyFaults(undefined)).toEqual(["person_only is not an object"]);
+    expect(personOnlyFaults({ ...ok, every_repo: GATE_FLOOR.slice(1) })).toEqual(["every_repo lacks scripts/git-hooks/**"]);
+    expect(personOnlyFaults({ ...ok, every_repo: [] })).toEqual(["every_repo is not a non-empty list of distinct trimmed globs"]);
+    expect(personOnlyFaults({ ...ok, every_repo: [...GATE_FLOOR, " x"] })).toEqual(["every_repo is not a non-empty list of distinct trimmed globs"]);
+    expect(personOnlyFaults({ ...ok, every_repo: [...GATE_FLOOR, ""] })).toEqual(["every_repo is not a non-empty list of distinct trimmed globs"]);
+    expect(personOnlyFaults({ ...ok, every_repo: [...GATE_FLOOR, 5] })).toEqual(["every_repo is not a non-empty list of distinct trimmed globs"]);
+    expect(personOnlyFaults({ ...ok, by_repo: {} })).toEqual(["by_repo names no repository"]);
+    expect(personOnlyFaults({ ...ok, by_repo: ["src/**"] })).toEqual(["by_repo names no repository"]);
+    expect(personOnlyFaults({ ...ok, by_repo: { r: [] } })).toEqual(["by_repo.r is not a non-empty list of distinct trimmed globs"]);
+    expect(personOnlyFaults({ ...ok, by_repo: { r: ["a", "a"] } })).toEqual(["by_repo.r is not a non-empty list of distinct trimmed globs"]);
+    expect(personOnlyFaults({ ...ok, fixtures_without_gate_policy: "validation/**" })).toEqual(["fixtures_without_gate_policy is not a non-empty list of distinct trimmed globs"]);
   });
 });
