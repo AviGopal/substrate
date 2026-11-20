@@ -504,9 +504,10 @@ await ensure({ shape: "clone_binding", of: "gitWorktree", by: [{ shape: "change_
 await ensure({ shape: "arm", vessel_id: "walk-vessel", arm: "treated", as_of_seq: MAX_SEQ }, { vessel_id: "walk-vessel" }, "arm walk-vessel");
 // What a detector's gap row is. A description, not a shape_schema: described-shape serves every schema target from a
 // model, and a gap must only ever be an observation a detector made. records holds shape_description as owner
-// configuration, never a request.
+// configuration, never a request. Its words name the field that says what a gap is, so the surface draws a gap row by
+// its summary, as it draws every shown row by its owner's words (below), never by its shape's name alone.
 await ensure({
-  shape: "shape_description", of: "gap", written_by_role: "detector",
+  shape: "shape_description", of: "gap", written_by_role: "detector", words: ["summary"],
   description: "A check a detector made failed (or, with status closed, has stopped failing). gap_id names the failure " +
     "and stays the same while it lasts; status is open or closed; category and severity say what kind and how bad; " +
     "summary says what failed, in at most 2 KiB; repo, when the check belongs to one repository, names it (a " +
