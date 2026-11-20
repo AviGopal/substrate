@@ -56,7 +56,7 @@ arms are self-contained. A staging copy would validate a different system.
   selftest is condition-driven work like any other.
 - A red assertion is filed as a gap **carrying a falsifier** (edit site +
   expected literal, or an evidence-resolve predicate), which drops it into the
-  ordinary gap-compose repair lane. Falsifier anchors are immutable once
+  ordinary gap repair lane. Falsifier anchors are immutable once
   filed: a lane touching the record must not be able to re-aim the
   measurement.
 - The selftest reads raw stores over deterministic resolvers — no LLM in the

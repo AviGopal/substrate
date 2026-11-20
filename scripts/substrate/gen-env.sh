@@ -1663,7 +1663,7 @@ TRACE_RETENTION_DRY_RUN=false
 TRACE_RETENTION_DEFAULT_SUCCESS_CAP=600
 TRACE_RETENTION_DEFAULT_FAILURE_CAP=2000
 # Episodic reconcile (reconcile_trace_store, fired condition-driven by
-# trace-store-health-check -> trace_store_health_observer on cap overage).
+# trace_store_health_observer on cap overage).
 # Global hard bound + a SHORT full-history window. 14d of full history at the
 # ~30s trace cadence is itself a bloat source; 3d keeps ample recent debugging
 # context. All Thompson posteriors (variant_performance_metrics /

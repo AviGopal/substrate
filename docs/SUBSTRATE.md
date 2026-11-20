@@ -55,8 +55,8 @@ selection to name when an obsidian image must keep its surface.
 > ⚠ **The role group `hub` is not the profile `hub`.** Neither the `hub` nor the
 > `spoke` role *group* includes `autonomy`, so a selection written as
 > `ENABLED_ROLES=hub` or `ENABLED_ROLES=spoke` runs none of the autonomy units
-> (`gap-compose`, `operator-goal-generator`, `surgical-gap-scan`, `m1-trainer`,
-> `compose-teacher`, `funnel-drain`, …); only `full` carries them. The *profile*
+> (`operator-goal-generator`, `surgical-gap-scan`, `m1-trainer`,
+> `compose-teacher`, …); only `full` carries them. The *profile*
 > `PROFILE=hub` is a composition defined separately in the inventory's
 > `composed_profiles`: the `hub` group plus the `autonomy` role, plus the compute
 > services a hub needs to dispatch (goal-host, development, local-tools, ribosome,

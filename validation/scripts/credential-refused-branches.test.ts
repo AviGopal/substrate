@@ -8,9 +8,6 @@
 // DISTINCT PATTERN, by running or importing the real script against a Bun.serve listener on
 // 127.0.0.1 that answers 401 to everything:
 //
-//   A  tick record      db-contention-check, trace-store-health-check, gap-compose-tick, funnel-drain
-//                       print a JSON record with verdict "unknown" and exit 0; efficiency-failure-tick
-//                       reports err=<the line> and exits 0 (spawned, DEV_VESSEL_ENDPOINT at the stub)
 //   B  watchdog         the lease read fails open (as it always did) with the line; the restart
 //                       dispatch stops after ONE attempt and records the environment fault (spawned
 //                       with a WORKSPACE_ROOT holding one open intent and no activity)
@@ -69,23 +66,6 @@ const lastJson = (s: string): Record<string, unknown> => {
   const l = s.trim().split("\n").filter((x) => x.startsWith("{")).pop() ?? "{}";
   return JSON.parse(l) as Record<string, unknown>;
 };
-
-describe("A — a tick reports a refused key as an unknown verdict, not a failure", () => {
-  for (const s of ["db-contention-check", "trace-store-health-check", "gap-compose-tick", "funnel-drain"]) {
-    it(`${s}: verdict unknown, the line, exit 0`, async () => {
-      const r = await run(`scripts/substrate/${s}.ts`);
-      expect(r.err).toContain(LINE);
-      expect(lastJson(r.out).verdict).toBe("unknown");
-      expect(r.code).toBe(0);
-    });
-  }
-  it("efficiency-failure-tick: each step reports err=<the line>, exit 0", async () => {
-    const r = await run("scripts/substrate/efficiency-failure-tick.ts");
-    expect(r.err).toContain(LINE);
-    expect(r.out).toContain(`err=${LINE}`);
-    expect(r.code).toBe(0);
-  });
-});
 
 describe("B — the watchdog: lease fails open with the line; the restart stops after one refused attempt", () => {
   it("records the environment fault on the restart, attempts 1, exit 0", async () => {

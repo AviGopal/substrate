@@ -422,11 +422,8 @@ observe-and-drain half firing) is an operational fact, not an architectural one.
 - **Self-development (the S1→S2 lift).** *Owner:* §4 (durability) — the lift is
   *defined* as the substrate beginning to write **authored-durable** state (MDP §5/§11
   reads it as active model expansion; FLEET §4/§6 as the cross-container form behind
-  quorum ratification). *Units:* `gap-compose` (route an open `substrateGap`
-  toward a code change: detect→spec→author→verify→stage), the authoring and
-  patch-apply steps, the **mitosis cutover**
-  (commit→push origin/dev→restart with typecheck-evidence), `funnel-drain` (fires the
-  funnel entry on a steady cadence so the boredom selector doesn't starve it).
+  quorum ratification). *Units:* the authoring and patch-apply steps, the
+  **mitosis cutover** (commit→push origin/dev→restart with typecheck-evidence).
   Before a gap is drafted, an own-check baseline activity runs the gap's own check at
   the vessel's origin/dev and labels it `green_at_parent`, `red_code_reachable`,
   `red_environmental` or `unrunnable`. Admission consumes the label: it holds back a
@@ -443,8 +440,7 @@ observe-and-drain half firing) is an operational fact, not an architectural one.
   growth operation, with new cells at `Beta(1,1)`; MDP §7–§9 gives the three scales
   (within-dispatch / within-substrate / cross-substrate). *Units:*
   `compose-teacher` (bootstraps organic producer→consumer composites to break the star
-  topology, gated on headroom `λ₂·(1−star_ratio) ≥ 0.35`), `composition-edge-reconcile`
-  (derives `activity_composition_graph` edges from traces so they become measurable).
+  topology, gated on headroom `λ₂·(1−star_ratio) ≥ 0.35`).
 - **Failure-recovery (the immune system).** *Owner:*
   [`IMPULSE_ACTIVITY_FOUNDATION.md`](IMPULSE_ACTIVITY_FOUNDATION.md) "Adaptive Immune
   System" — IDS/IPS/SIEM/SOAR collapsed into one mechanism ("detection and resolution
@@ -481,7 +477,7 @@ observe-and-drain half firing) is an operational fact, not an architectural one.
 - **Improvement (convergence).** *Owner:* MDP §2 (per-cell Beta-Bernoulli; conjugate
   update = natural gradient, §2.1; regret `O(√(T log T))`), DEC §4.1 (the master rate
   `R_conv ∼ λ₁(L)·ρ_sample·κ(⋆)⁻¹`), DYNAMICS §3.1 (inertial acceleration capped by
-  `λ₁`). *Units:* `autonomy-metrics` + `model-reality-audit` (track whether the rate factors are
+  `λ₁`). *Units:* `model-reality-audit` (tracks whether the rate factors are
   rising). The MRR / lift-gate instrumentation lives here.
 - **Topology exploration.** *Owner:* DYNAMICS §3–§4 (the master inequality
   `λ₁(L(t)) ≳ ρ_grow` as a stay-sub-critical / normal-hyperbolicity threshold; growth

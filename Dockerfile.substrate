@@ -457,21 +457,15 @@ RUN chmod +x /usr/local/bin/substrate-entrypoint /usr/local/bin/gen-env /usr/loc
         light-dispatch-healthcheck.timer \
         self-recovery.timer \
         journald-stdout-forwarder.service \
-        funnel-drain.timer \
-        composition-edge-reconcile.timer \
         model-reality-audit.timer \
         observe-orthogonal-refresh.timer \
         spectral-gap.timer \
-        autonomy-metrics.timer \
-        self-operational-health.timer \
         self-repair-operational.timer \
         joint-liveness.timer \
         validator-liveness.timer \
         memory-budget-check.timer \
-        trace-store-health-check.timer \
         runtime-drift.timer \
         db-maintenance.timer \
-        db-contention-check.timer \
         coherence-recover.timer \
         auto-describe-resolvers.timer \
         surgical-gap-scan.timer \

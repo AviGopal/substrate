@@ -12,9 +12,8 @@
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"; U="$ROOT/scripts/substrate/units"; DF="$ROOT/Dockerfile.substrate"
 FAILS=0; ok() { echo "ok   - $*"; }; bad() { echo "FAIL - $*"; FAILS=$((FAILS+1)); }
-RECOVERY="self-recovery self-operational-health self-repair-operational light-dispatch-healthcheck joint-liveness
-  validator-liveness memory-budget-check trace-store-health-check runtime-drift db-maintenance db-contention-check
-  coherence-recover"
+RECOVERY="self-recovery self-repair-operational light-dispatch-healthcheck joint-liveness
+  validator-liveness memory-budget-check runtime-drift db-maintenance coherence-recover"
 miss=""; for f in "$U"/*.timer; do grep -qE '^(OnBootSec|OnCalendar|OnStartupSec|OnActiveSec)=' "$f" || miss="$miss ${f##*/}"; done
 [ -z "$miss" ] && ok "(a) every timer has a first-run trigger" || bad "(a) OnUnitActiveSec alone (no first run on a fresh boot):$miss"
 enabled="$(awk '/systemctl enable \\$/{on=1; next} on{print} on && !/\\$/{on=0}' "$DF" | tr -d ' \\' | grep -E '\.(timer|service)$')"

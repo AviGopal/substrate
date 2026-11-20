@@ -262,12 +262,15 @@
       "role": "infra"
     },
     {
+      "_comment": "RETIRED autonomy timers and their services. Each called a vessel the fleet no longer runs (the development-vessel or activity-api endpoints, or a discovery route that answers nothing), so every run failed or reported from an empty sample while its unit still exited successfully, and nothing read what it wrote. Their unit files are gone from this tree; an image built before that still ships them, and a shipped unit the inventory does not name runs in every profile, so these entries stay with retired=true and apply-inventory masks them on such an image whatever the selection.",
       "unit": "funnel-drain.timer",
-      "role": "autonomy"
+      "role": "autonomy",
+      "retired": true
     },
     {
       "unit": "composition-edge-reconcile.timer",
-      "role": "autonomy"
+      "role": "autonomy",
+      "retired": true
     },
     {
       "unit": "model-reality-audit.timer",
@@ -287,11 +290,13 @@
     },
     {
       "unit": "autonomy-metrics.timer",
-      "role": "infra"
+      "role": "infra",
+      "retired": true
     },
     {
       "unit": "self-operational-health.timer",
-      "role": "infra"
+      "role": "infra",
+      "retired": true
     },
     {
       "unit": "self-repair-operational.timer",
@@ -317,18 +322,18 @@
     { "unit": "coherence-metric.service", "role": "store" },
     { "unit": "coherence-recover.timer", "role": "store" },
     { "unit": "coherence-recover.service", "role": "store" },
-    { "unit": "efficiency-failure-tick.timer", "role": "autonomy" },
-    { "unit": "efficiency-failure-tick.service", "role": "autonomy" },
-    { "unit": "gap-compose.timer", "role": "autonomy" },
-    { "unit": "gap-compose.service", "role": "autonomy" },
+    { "unit": "efficiency-failure-tick.timer", "role": "autonomy", "retired": true },
+    { "unit": "efficiency-failure-tick.service", "role": "autonomy", "retired": true },
+    { "unit": "gap-compose.timer", "role": "autonomy", "retired": true },
+    { "unit": "gap-compose.service", "role": "autonomy", "retired": true },
     { "unit": "self-development-trend.timer", "role": "infra" },
     { "unit": "self-development-trend.service", "role": "infra" },
     { "unit": "typecheck-scenario-gen.timer", "role": "autonomy" },
     { "unit": "typecheck-scenario-gen.service", "role": "autonomy" },
     { "unit": "memory-budget-check.timer", "role": "infra" },
     { "unit": "memory-budget-check.service", "role": "infra" },
-    { "unit": "db-contention-check.timer", "role": "store" },
-    { "unit": "db-contention-check.service", "role": "store" },
+    { "unit": "db-contention-check.timer", "role": "store", "retired": true },
+    { "unit": "db-contention-check.service", "role": "store", "retired": true },
     { "unit": "db-maintenance.timer", "role": "store" },
     { "unit": "db-maintenance.service", "role": "store" },
     { "unit": "metric-collector-vessel.service", "role": "compute", "retired": true },
@@ -351,8 +356,8 @@
     { "unit": "compose-drift.service", "role": "store" },
     { "unit": "validator-liveness.timer", "role": "store" },
     { "unit": "validator-liveness.service", "role": "store" },
-    { "unit": "trace-store-health-check.timer", "role": "api" },
-    { "unit": "trace-store-health-check.service", "role": "api" },
+    { "unit": "trace-store-health-check.timer", "role": "api", "retired": true },
+    { "unit": "trace-store-health-check.service", "role": "api", "retired": true },
     { "unit": "novnc.service", "role": "desktop" },
     { "unit": "obsidian-desktop.service", "role": "desktop", "repo": "obsidian-vessel" },
     { "unit": "obsidian-xorg.service", "role": "desktop", "repo": "obsidian-vessel" },
@@ -361,15 +366,15 @@
       "unit": "auto-describe-resolvers.service",
       "role": "autonomy"
     },
-    { "unit": "autonomy-metrics.service", "role": "infra" },
-    { "unit": "composition-edge-reconcile.service", "role": "autonomy" },
-    { "unit": "funnel-drain.service", "role": "autonomy" },
+    { "unit": "autonomy-metrics.service", "role": "infra", "retired": true },
+    { "unit": "composition-edge-reconcile.service", "role": "autonomy", "retired": true },
+    { "unit": "funnel-drain.service", "role": "autonomy", "retired": true },
     { "unit": "ingest-docs.service", "role": "autonomy" },
     { "unit": "light-dispatch-healthcheck.service", "role": "infra", "retired": true },
     { "unit": "model-reality-audit.service", "role": "store" },
     { "unit": "observe-orthogonal-refresh.service", "role": "autonomy" },
     { "unit": "obsidian-collaborate.service", "role": "ui", "repo": "obsidian-vessel" },
-    { "unit": "self-operational-health.service", "role": "infra" },
+    { "unit": "self-operational-health.service", "role": "infra", "retired": true },
     { "unit": "self-recovery.service", "role": "infra" },
     { "unit": "self-repair-operational.service", "role": "infra" },
     { "unit": "runtime-drift.service", "role": "compute" },

@@ -30,7 +30,3 @@ SELF_DEV_TREND                     on/off switch
 SURGICAL_SCAN_CAP                  cap
 SURREAL_ROCKSDB_BLOCK_CACHE_SIZE   database cache tuning
 VESSEL_DRAIN_MS                    drain timeout
-WATCHDOG_RELEVANT_SHAPE            what a watchdog counts as progress
-WATCHDOG_RESTART_IMPULSE           what a watchdog dispatches on a stall
-WATCHDOG_ROUTE_FILTER              route filter
-WATCHDOG_STALL_MIN                 stall threshold

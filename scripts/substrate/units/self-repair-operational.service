@@ -1,7 +1,6 @@
 [Unit]
 Description=Operational self-repair — re-enable inactive allowlisted self-correction/measurement timers
-# Corrective half of the operational-health loop (paired with
-# self-operational-health.service, the detector). Re-enables ONLY a hardcoded
+# Re-enables ONLY a hardcoded
 # allowlist of known-good measurement/self-correction timers that have gone
 # inactive at runtime — idempotent, reversible, never arbitrary units. Closes
 # the detect→repair loop so the substrate self-heals the timer-death class

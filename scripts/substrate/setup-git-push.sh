@@ -11,7 +11,7 @@
 #      regardless of HOME.
 #   2. Idempotent super-repo clone at /workspace/git/super-repo, on dev, tracking
 #      the canonical AviGopal/substrate. The cutover diff-baseline + unit-file
-#      source and the landed-truth reads (docs-align-scan, self-operational-health)
+#      source and the landed-truth read (docs-align-scan)
 #      all read this tree, so it MUST track substrate.git/dev — not the stale
 #      metabob-devbob.git/snapshot-branch a persistent volume artifact used to leave it on.
 #   3. The vessel inventory, derived from that clone's .gitmodules, then

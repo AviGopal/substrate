@@ -1,7 +1,5 @@
-// self-repair-operational.ts — the CORRECTIVE half of the operational-health
-// loop. `self-operational-health.ts` DETECTS deployment-boundary faults and
-// lifts them into the substrateGap ontology (visible in S). This script CLOSES
-// exactly one safe, bounded class of them autonomously: a required
+// self-repair-operational.ts — closes one safe, bounded class of
+// deployment-boundary fault autonomously: a required
 // measurement/self-correction TIMER that has gone inactive at runtime (crash,
 // drift, or a container recreate that dropped runtime-only enablement).
 //
@@ -26,19 +24,14 @@ const KEY = process.env.METABOB_API_KEY ?? "";
 const DEV = (process.env.DEV_VESSEL_ENDPOINT || "http://127.0.0.1:8090").replace(/\/$/, "") + "/v2/impulses/resolve";
 const REPAIR = process.env.REPAIR === "1";
 
-// The ONLY units this script will ever act on. Must mirror the detector's
-// REQUIRED_TIMERS. Re-enabling any of these is safe (read-only collectors /
+// The ONLY units this script will ever act on. Re-enabling any of these is safe (read-only collectors /
 // self-correction loops) and idempotent. Editing this list is the sole lever
 // for what the substrate may self-repair — keep it conservative.
 const ALLOWLIST = [
-  "autonomy-metrics.timer",
   "model-reality-audit.timer",
-  "composition-edge-reconcile.timer",
-  "funnel-drain.timer",
   "spectral-gap.timer",
   "observe-orthogonal-refresh.timer",
-  "self-operational-health.timer",
-  // The immune system's own timers (mirrors the detector's REQUIRED_TIMERS):
+  // The immune system's own timers:
   // re-enabling a dropped self-recovery/pull-sync/self-repair timer restores
   // every downstream repair loop at once — same safe, idempotent action class.
   "self-recovery.timer",

@@ -22,6 +22,8 @@
 #      rosters: docker-compose.yml, scripts/substrate/substrate-status.sh, scripts/substrate/gen-env.sh,
 #      scripts/substrate/deploy-hub.sh, scripts/substrate/reseed-restart.sh. Prose outside README tables
 #      may say a vessel is retired. A negative fixture tree proves each of those is detected.
+#   3. The real inventory plans each retired timer and its service off, with no selection and
+#      under PROFILE=hub and PROFILE=standalone.
 # Exit 0 = all pass.
 set -uo pipefail
 ROOT="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
@@ -105,6 +107,23 @@ if [ -z "$hits" ]; then
 else
   while IFS= read -r h; do bad "$h"; done <<< "$hits"
 fi
+
+# ── 3. the retired timers stay masked under the real inventory ──────────────────
+# Each called a vessel the fleet no longer runs, so its runs failed or reported nothing while its unit exited
+# successfully. Their unit files are gone, but an image built before still ships them, so the real inventory must
+# plan each one off with no selection and under the hub and standalone profiles.
+TIMERS="efficiency-failure-tick trace-store-health-check db-contention-check funnel-drain composition-edge-reconcile
+  autonomy-metrics gap-compose self-operational-health"
+REAL="$ROOT/scripts/substrate/vessels.inventory.json"
+for sel in "no selection" PROFILE=hub PROFILE=standalone; do
+  if [ "$sel" = "no selection" ]; then plan real VESSELS_INVENTORY="$REAL"; else plan real VESSELS_INVENTORY="$REAL" "$sel"; fi
+  miss=""
+  for t in $TIMERS; do for k in timer service; do
+    grep -q "would disable: $t\.$k\$" "$T/real.log" || miss="$miss $t.$k"
+  done; done
+  [ -z "$miss" ] && ok "$sel: every retired timer and its service is planned for disable+mask" \
+    || bad "$sel: not planned for disable:$miss $(grep -E 'FATAL' "$T/real.log" | tr '\n' ';')"
+done
 
 if [ "$fails" -eq 0 ]; then echo "PASSED"; exit 0; fi
 echo "FAILED ($fails)"; exit 1
