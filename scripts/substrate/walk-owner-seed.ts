@@ -229,6 +229,12 @@ const SCHEMAS: Row[] = [
       // use, so all three agree on which tree is meant; newest per tree. The grader's verdict only: a person's mark grades
       // the page, not the code, and a newer one on the same tree would otherwise take the grader's place.
       { shape: "land_verdict", latest_by: "tree", where: { tree: NEWEST_TREE, role: "described" }, keep: true },
+      // Every explanation of this root's refused attempts, whatever tree it was of: what failed, in the check's own words,
+      // and what the next attempt must do. A verdict is shown only beside the newest tree's diff, so after the next
+      // commit the refusal it carried drops out of view and the drafter tries the same fix again. Listed after the
+      // request's own rows: a root refused many times has more explanations than the share holds, and listed first they
+      // would push out its clone and diff; here they take what share is left, newest first.
+      { shape: "attempt_explanation", keep: true },
       // What came back from each call this root made, success or failure, newest per call: an answer is shown with the
       // request that made it, whatever its shape, so a new tool's answer needs no entry of its own. Listed last: the named
       // entries above keep their own rules, and this catches every answer they do not name. described keeps an answer only
@@ -415,6 +421,42 @@ SCHEMAS.push({ ...asked, variant: "gap", inputs: ["gap"] });
 // A change made for a gap is judged from the gap row in place of an ask: whether it fixes what the gap's check says is
 // failing. git_land takes a grader's r 1 on a gap's change only when the gap's own check passed on the tree (the
 // gitDiff row carries it, made with the tree), so the words here are the grader's hint, not the gate.
+// The "An explanation shape is required" ruling: a refused attempt is explained in a row of its own, which the request
+// keeps in view (above) after the verdict it explains has dropped out with its tree. Made from the newest tree's diff and
+// the grader's r 0 verdict on that tree; what_failed quotes the diff's own words (x-quotes: its check's and typecheck's
+// output, or why each did not run), never the verdict's why, which is a reading of them. Its earlier explanations and its
+// acts are in view, so next_must can say what this change already did and what it did not. The acts are listed first: a
+// root refused many times has more explanations than the share holds, and listed first they would push out the one row
+// saying what the change did. The kept rows are fitted first only with a share; the explainer reads no other rows, so
+// its size decides how many explanations are fitted first, not which are shown.
+const EXPLAINED = [{ shape: "gitDiff", latest_by: "shape", where: { tree: NEWEST_TREE, role: "walk" } },
+  { shape: "land_verdict", latest_by: "tree", where: { tree: NEWEST_TREE, r: 0, role: "described" } }];
+const explained: Row = {
+  target: "attempt_explanation",
+  description: "Why the attempt in the gitDiff row was refused, for whoever drafts the next one. The land_verdict row " +
+    "says it was refused (r 0) and why, in the grader's reading. what_failed copies, character for character, the lines " +
+    "of the gitDiff row that show the failure: from its check.out or typecheck.out (a failing assertion, an error with " +
+    "its file and line), or, when the check or typecheck did not run, its check.why or typecheck.why; at least 20 " +
+    "characters copied exactly, and never the verdict's words. next_must says what the next attempt must do that this " +
+    "one did not, and what this change already did on its clone that the next attempt must not redo or undo (the " +
+    "request_acts row lists it); the earlier attempt_explanation rows say what earlier attempts tried, so do not send the " +
+    `next one back to a fix already refused. tree is copied from the gitDiff row. ${USES_WORDS} ${JSON_ONLY}`,
+  schema: {
+    type: "object",
+    required: ["tree", "what_failed", "next_must"],
+    properties: {
+      tree: { type: "string", pattern: "^[0-9a-f]{40}$", "x-equals": { shape: "gitDiff", path: "tree" } },
+      what_failed: { type: "string", minLength: 20, maxLength: 1200,
+        "x-quotes": { shape: "gitDiff", paths: ["check.out", "typecheck.out", "check.why", "typecheck.why"], min: 20 } },
+      next_must: { type: "string", minLength: 1, maxLength: 800 },
+      uses: USES,
+    },
+  },
+  inputs: ["world_changed", ...EXPLAINED],
+  context: [{ shape: "request_acts", latest_by: "shape", keep: true }, { shape: "attempt_explanation", keep: true }],
+  keep_share: 0.25,
+};
+SCHEMAS.push(explained, { ...explained, variant: "gap", inputs: [{ shape: "gap", latest_by: "gap_id" }, ...EXPLAINED] });
 const landed = SCHEMAS.find((s) => s.target === "land_verdict") as Row;
 SCHEMAS.push({
   ...landed,

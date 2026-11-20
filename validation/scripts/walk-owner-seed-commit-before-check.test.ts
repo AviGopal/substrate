@@ -32,8 +32,9 @@ const COMMITTED = { "x-latest": { shapes: ["gitCommitResult", "gitWorktree", ...
   at: ["gitWorktree"], same: "cwd", field: "committed_tree", continues: "gap_id" } }
 const NEWEST = { "x-latest": { shapes: ["gitCommitResult", "gitWorktree", "gitDiff"], moves: ["gitCommitResult", "gitWorktree"],
   same: "cwd", field: "tree", continues: "gap_id" } }
-// how many places the seed wrote the newest-tree value before this change: it is left in each of them
-const NEWEST_PLACES = 7
+// how many places the seed writes the newest-tree value: the 7 before this change, each left as it was, and the 4 of
+// attempt_explanation (both variants read the newest tree's diff and the verdict on it)
+const NEWEST_PLACES = 11
 
 const T = mkdtempSync(join(tmpdir(), "wos-commit-"))
 let seeded: Row[] = []
