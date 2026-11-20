@@ -11,7 +11,6 @@
       "repos/boredom-vessel/test/ratchet/",
       "scripts/substrate/autonomy-scope.json",
       "scripts/git-hooks/",
-      ".claude/",
       "validation/scripts/gate/fixtures/env-ratchet-units.sh",
       "repos/ias-executor-ts/src/templates/lifecycle/verdict-corpus-runner.json",
       "repos/ias-executor-ts/test/verdict-corpus-runner-registered.test.ts",
