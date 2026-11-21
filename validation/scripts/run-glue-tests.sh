@@ -79,6 +79,7 @@ declare -A NEEDS=(
   [fed-hub-mirror.test.ts]="repos/libp2p-federation-transport"
   [write-containment-copies.test.ts]="repos/local-tools-vessel"
   [walk-owner-seed-commit-before-check.test.ts]="repos/walk-vessel"
+  [walk-owner-seed-write-in-clone.test.ts]="repos/walk-vessel"
   [walk-owner-seed-attempt-explanation.test.ts]="repos/walk-vessel repos/described-shape-vessel"
   [walk-owner-seed-gap-words.test.ts]="repos/human-surface-vessel"
 )

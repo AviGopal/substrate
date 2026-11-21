@@ -566,6 +566,14 @@ await ensure({ shape: "requires", for: "git_diff", needs: "gitWorktree", where: 
 // come from the file as it is. Its own group: needed besides a wanted change or an open gap.
 await ensure({ shape: "requires", for: "fs_edit", needs: "fileContent", where: { path: { "x-pointer": "path" } }, latest_by: "path", group: "read" },
   { for: "fs_edit", needs: "fileContent" }, "requires fs_edit fileContent");
+// A change is written in its clone: a tool that writes a file is called only once the root holds a clone git_worktree
+// handed out (a gitWorktree row), so a root that wants a change asks for its clone first, and no write is offered while
+// the only paths it could name are the live checkout's. Its own group: needed besides a wanted change or an open gap.
+const WRITERS = CHANGE_TOOLS.filter((t) => !t.startsWith("git_"));
+for (const tool of WRITERS) {
+  await ensure({ shape: "requires", for: tool, needs: "gitWorktree", where: {}, latest_by: "cwd", group: "clone" },
+    { for: tool, needs: "gitWorktree" }, `requires ${tool} gitWorktree`);
+}
 // walk_trees_reclaim removes clones: it is called only for the root of the gap whose work it is (pull-sync's walk-trees
 // check), while that gap is open.
 await ensure({ shape: "requires", for: "walk_trees_reclaim", needs: "gap", where: { gap_id: "pull-sync-walk-trees-unreclaimed", status: "open" }, latest_by: "gap_id" },
