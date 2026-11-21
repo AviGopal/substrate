@@ -418,6 +418,46 @@ SCHEMAS.push({
 });
 const asked = SCHEMAS.find((s) => s.target === "request") as Row;
 SCHEMAS.push({ ...asked, variant: "gap", inputs: ["gap"] });
+// Where a gap's change belongs, when no stack named it (the "The system finds it" ruling): the gap names its repo and
+// failing tests, and its row says localized false. The walk's own calls find the source file (code search and reads),
+// and this judgment names it, citing the answers that show it; the held-gap release reads it as the gap's edit site.
+// It is made only once a code search answered on the root (an input), so "cannot find it" is never said before
+// anything was searched. Saying it hands the gap to a person, with why.
+SCHEMAS.push({
+  target: "change_wanted",
+  variant: "gap",
+  description: "Where the change that makes the gap row's failing tests pass belongs. The gap names its repo and its " +
+    "failing tests, and no stack named the source file to change (localized false). The codeSearchResult row and the " +
+    "call answers shown are what this request's own calls found. When they show the source file the failure comes " +
+    "from, wanted is true, repo is the gap's repo, edit_site is that file as repos/<repo>/<its path in the repo> " +
+    "(never the gap's test file: a change must not edit the check that verifies it), and evidence_refs lists the ids of " +
+    "the shown rows that show it. When they show that no file of the repo can be the place (searched, and the failure " +
+    "comes from no source file there), wanted is false, why says what was searched and what was found, and " +
+    "evidence_refs lists those rows: the gap then waits for a person. When they show neither yet, still name the " +
+    "likeliest file they point to: the walk's next calls on that file check it. A change_wanted row shown already " +
+    "naming an edit_site is answered the same unless the answers shown since say otherwise. " +
+    `${USES_WORDS} ${JSON_ONLY}`,
+  schema: {
+    type: "object",
+    required: ["wanted", "evidence_refs"],
+    properties: {
+      wanted: { type: "boolean" },
+      repo: { type: ["string", "null"] },
+      edit_site: { type: "string", pattern: "^repos/[^/]+/.+" },
+      why: { type: "string", minLength: 1, maxLength: 800 },
+      evidence_refs: { type: "array", minItems: 1, items: { type: "string", "x-shown": true } },
+      uses: USES,
+    },
+    if: { properties: { wanted: { const: true } }, required: ["wanted"] },
+    then: { required: ["repo", "edit_site"], properties: { repo: { type: "string", minLength: 1 } } },
+    else: { required: ["why"] },
+  },
+  // localized false is the row's top-level fact (the held-gap release writes it there, where the walk's input where reads)
+  inputs: [{ shape: "gap", latest_by: "gap_id", where: { localized: false } }, { shape: "codeSearchResult", latest_by: "shape" }],
+  context: [{ answers_a_call: true, latest_by: "call_id", keep: true }, "hop", { shape: "change_wanted", keep: true },
+    { shape: "failure", where: { refused: "schema" } }],
+  keep_share: 0.25,
+});
 // A change made for a gap is judged from the gap row in place of an ask: whether it fixes what the gap's check says is
 // failing. git_land takes a grader's r 1 on a gap's change only when the gap's own check passed on the tree (the
 // gitDiff row carries it, made with the tree), so the words here are the grader's hint, not the gate.
