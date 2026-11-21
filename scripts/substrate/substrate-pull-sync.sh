@@ -135,13 +135,22 @@ restart_breadcrumb() { # vessel reason [in_flight]
 # Kept in a file, not a variable, so a restart in a subshell keeps its span too. Best-effort: nothing here may fail a
 # restart or the tick.
 RESTART_WINDOW_FILE="${RESTART_WINDOW_FILE:-/workspace/restart-window.json}"
-# A span ends when its unit answers again: active and its health port answering 200, waited for at most the shaped
-# pull_sync.restart_ready_seconds (read once per tick). The port is the inventory's health_port, or else the one port
+# A span ends when every unit the restart restarted answers again: active and its health port answering 200. Those are
+# the units named and, transitively, every unit PartOf one of them (systemd's ConsistsOf, read from systemd, since it
+# restarts them with the named unit): records restarted alone takes walk and described down with it, and a call cut
+# while they start is cut by the same restart. systemd passes a restart on to them as a try-restart, so a member not
+# active when the restart begins stays down: it is read once before the restart, named in the log, and not waited for
+# (waiting would stretch the span over the whole bound, excusing cuts the restart did not make). All of them, and the head read that ends the span, share one bound, the
+# shaped pull_sync.restart_ready_seconds (read once per tick, before the restart), counted from the restart: each health
+# check and head read is cut at the time the bound leaves, and one made once it is spent takes a second at most. So a
+# span outlasts its restart by the bound plus a second for each unit reached after it is spent and one for the head.
+# The port is the inventory's health_port, or else the one port
 # the unit file declares (a line that is exactly Environment=<NAME>_PORT=<digits>, read from the unit text with its
 # drop-ins; no other line of that text is kept or logged, since a unit can carry its env file's neighbours: records,
 # walk and described carry no health_port in the inventory but each declares its port so and serves /health on it). A
 # unit with neither, or with several declared, ends its span once it is active, and says so: that can end the span before the unit listens, so a call cut while it
-# starts can stay counted as a failure, never the other way. A unit not ready within the bound ends its span there.
+# starts can stay counted as a failure, never the other way. A unit not ready within the bound ends its span there, and
+# the log names it. A unit reached after the bound is spent is still checked once.
 RESTART_READY_S=""
 store_head() { # [max seconds]
   dev_resolve '{"impulse":{"pointer":{"type":"record_read","head":true}}}' --max-time "${1:-10}" 2>/dev/null \
@@ -152,9 +161,24 @@ store_head() { # [max seconds]
 systemctl() {
   if [ "${1:-}" = restart ]; then restart_span "$@"; else command systemctl "$@"; fi
 }
-restart_ready() { # unit -> waits until it is active and answers, within the bound above
-  local _rr_u="${1%.service}.service" _rr_p="" _rr_i=0
-  if [ -z "$RESTART_READY_S" ]; then tuning_param pull_sync.restart_ready_seconds 60; RESTART_READY_S="$TP_VALUE"; fi
+# restart_closure unit... -> the units, then every unit PartOf one of them, transitively, each once (services only: a
+# unit of another type serves no call)
+restart_closure() {
+  local -a _cl_q=("$@"); local _cl_seen=" $* " _cl_m _cl_i=0
+  while [ "$_cl_i" -lt "${#_cl_q[@]}" ]; do
+    for _cl_m in $(command systemctl show -p ConsistsOf --value "${_cl_q[$_cl_i]}.service" 2>/dev/null); do
+      case "$_cl_m" in *.service) _cl_m="${_cl_m%.service}" ;; *) continue ;; esac
+      case "$_cl_seen" in *" $_cl_m "*) ;; *) _cl_seen="$_cl_seen$_cl_m "; _cl_q+=("$_cl_m") ;; esac
+    done
+    _cl_i=$((_cl_i + 1))
+  done
+  echo "${_cl_q[*]}"
+}
+# restart_left end -> RL: the seconds left before end, a second at least (a wait with no time left still asks once)
+restart_left() { RL=$(( $1 - SECONDS )); [ "$RL" -ge 1 ] || RL=1; }
+restart_ready() { # unit end -> waits until it is active and answers, while SECONDS is before end (checked once at least,
+                  # with no wait once end has passed; each health check cut at the time left)
+  local _rr_u="${1%.service}.service" _rr_p="" _rr_once=1
   command -v jq >/dev/null 2>&1 && [ -f "${INV:-}" ] \
     && _rr_p="$(jq -r --arg u "$_rr_u" '.vessels[] | select(.unit == $u) | .health_port // empty' "$INV" 2>/dev/null | head -1)"
   if [ -z "$_rr_p" ]; then
@@ -162,20 +186,27 @@ restart_ready() { # unit -> waits until it is active and answers, within the bou
     case "$_rr_p" in *[!0-9]*) _rr_p="" ;; esac   # several declared: which one answers for the unit is not known
     [ -n "$_rr_p" ] || log "restart window: $_rr_u declares no single health port (inventory or unit file); its span ends once it is active"
   fi
-  while [ "$_rr_i" -lt "$RESTART_READY_S" ]; do
+  while [ "$_rr_once" = 1 ] || [ "$SECONDS" -lt "$2" ]; do
+    _rr_once=0
     if command systemctl is-active --quiet "$_rr_u" 2>/dev/null; then
       [ -z "$_rr_p" ] && return 0
-      healthy "$_rr_p" && return 0
+      restart_left "$2"; healthy "$_rr_p" "$RL" && return 0
     fi
-    sleep 1; _rr_i=$((_rr_i + 1))
+    [ "$SECONDS" -lt "$2" ] && sleep 1
   done
   return 1
 }
 restart_span() { # restart [options] unit... (as systemctl takes it)
-  local _rs_f="$RESTART_WINDOW_FILE" _rs_h _rs_e _rs_rc _rs_us="" _a
+  local _rs_f="$RESTART_WINDOW_FILE" _rs_h _rs_e _rs_rc _rs_us="" _rs_n _rs_w _rs_end _a
   for _a in "${@:2}"; do case "$_a" in -*) ;; *) _rs_us="$_rs_us ${_a%.service}" ;; esac; done
-  _rs_us="${_rs_us# }"
   command -v jq >/dev/null 2>&1 || { command systemctl "$@"; return; }
+  _rs_n=" $_rs_us "; _rs_w=""
+  for _a in $(restart_closure $_rs_us); do
+    case "$_rs_n" in *" $_a "*) _rs_w="$_rs_w $_a"; continue ;; esac
+    if command systemctl is-active --quiet "$_a.service" 2>/dev/null; then _rs_w="$_rs_w $_a"
+    else log "restart window: $_a was not active before the restart, so the restart leaves it down; it is not waited for"; fi
+  done
+  _rs_us="${_rs_w# }"
   _rs_h="$(store_head 3)"   # bounded: it delays the restart by 3 s at most
   case "$_rs_h" in
     ''|*[!0-9]*) log "restart window: the store's head could not be read before restarting $_rs_us; no span is kept for it" ;;
@@ -184,12 +215,15 @@ restart_span() { # restart [options] unit... (as systemctl takes it)
          | jq -c --argjson from "$((_rs_h + 1))" --arg us "$_rs_us" '. + [{from: $from, units: $us}]' > "$_rs_f.new" 2>/dev/null \
          && mv "$_rs_f.new" "$_rs_f" ;;
   esac
+  if [ -z "$RESTART_READY_S" ]; then tuning_param pull_sync.restart_ready_seconds 60; RESTART_READY_S="$TP_VALUE"; fi
   command systemctl "$@"; _rs_rc=$?
   case "$_rs_h" in ''|*[!0-9]*) return "$_rs_rc" ;; esac
-  for _a in $_rs_us; do restart_ready "$_a" || log "restart window: $_a was not ready within ${RESTART_READY_S}s; its span ends now"; done
-  _rs_e="$(store_head 3)"
+  _rs_end=$((SECONDS + RESTART_READY_S))
+  for _a in $_rs_us; do restart_ready "$_a" "$_rs_end" || log "restart window: $_a was not ready within ${RESTART_READY_S}s; its span ends now"; done
+  restart_left "$_rs_end"; _rs_e="$(store_head "$RL")"   # the store may be one of the units still starting: read again until it answers, within the bound
+  while case "$_rs_e" in ''|*[!0-9]*) [ "$SECONDS" -lt "$_rs_end" ] ;; *) false ;; esac; do sleep 1; restart_left "$_rs_end"; _rs_e="$(store_head "$RL")"; done
   case "$_rs_e" in
-    ''|*[!0-9]*) log "restart window: the store's head could not be read after restarting $_rs_us; its span is dropped, not written"
+    ''|*[!0-9]*) log "restart window: the store's head could not be read after restarting $_rs_us (within ${RESTART_READY_S}s); its span is dropped, not written"
        jq -c --argjson from "$((_rs_h + 1))" 'map(select(.from != $from or has("to")))' "$_rs_f" > "$_rs_f.new" 2>/dev/null && mv "$_rs_f.new" "$_rs_f" ;;
     *) jq -c --argjson from "$((_rs_h + 1))" --argjson to "$_rs_e" 'map(if .from == $from and (has("to") | not) then . + {to: $to} else . end)' "$_rs_f" > "$_rs_f.new" 2>/dev/null \
          && mv "$_rs_f.new" "$_rs_f" ;;
@@ -2382,8 +2416,8 @@ restart_siblings() { # vessel primary-unit — restart every other active unit t
     sleep "$STAGGER_SECONDS"
   done
 }
-healthy() { # port -> 0 if 200
-  curl -s -o /dev/null -w '%{http_code}' --max-time 5 "http://127.0.0.1:$1/health" 2>/dev/null | grep -q '^200$'
+healthy() { # port [max seconds] -> 0 if 200
+  curl -s -o /dev/null -w '%{http_code}' --max-time "${2:-5}" "http://127.0.0.1:$1/health" 2>/dev/null | grep -q '^200$'
 }
 
 # converge_units <super-repo-dir> — mirror scripts/substrate/units/ into the systemd

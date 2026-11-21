@@ -10,12 +10,13 @@
 #   (b) two restarts with work between are two spans, the work in neither; a unit with no port ends its span once
 #       active; a restart answers its own status;
 #   (c) a head that cannot be read before a restart keeps no span, says so, and the restart still runs, its status kept;
-#   (d) a head that cannot be read after it drops the span, said, nothing written;
+#   (d) a head that cannot be read after it is read again until the bound, each read cut at the time left (a second at
+#       least), then drops the span, said, nothing written;
 #   (e) a row the store does not take is said, and its span kept with its end: the next tick's start writes exactly it;
 #   (f) a span with no end (its tick was killed during the restart) is dropped at the next start, said, not written;
 #   (g) nothing written during the restart writes nothing; one row is a one-row span;
-#   (h) a unit not ready within the shaped bound (pull_sync.restart_ready_seconds, read once per tick) ends its span
-#       there, said;
+#   (h) a unit not ready within the shaped bound (pull_sync.restart_ready_seconds, read once per tick, before the
+#       restart) ends its span there, said;
 #   (i) every other systemctl goes to the binary unchanged and keeps no span; the EXIT trap and the tick's start call
 #       restart_window_close; no restart in the script reaches the binary past the function;
 #   (j) a unit the inventory gives no health_port, whose unit file declares one Environment=<NAME>_PORT=<digits> line,
@@ -24,7 +25,19 @@
 #       other line of the unit text reaches the log;
 #   (k) a unit inactive for its first checks ends its span only once it is active (with no port, at active);
 #   (l) a restart with an option (--no-block) spans the unit alone: the option is no unit, never asked about;
-#   (m) the env file a unit references is never opened (a sentinel FIFO records any reader).
+#   (m) the env file a unit references is never opened (a sentinel FIFO records any reader);
+#   (n) a restart's units are the named one and, transitively, every service PartOf one of them (ConsistsOf, as systemd
+#       reports it): each is waited for once (a unit reached twice, or by a cycle back to the one restarted, is asked about once), the span names
+#       them all, one row; a member of another type is not asked about;
+#   (o) a head that answers only on a later read after the restart is read again within the bound, and the span written;
+#   (p) units of the closure that never answer health end the span by ONE bound for the whole restart, not one each;
+#       each is named in the log, and a unit reached after the bound is spent is still checked once, its check and the
+#       head read cut to a second; the span is written;
+#   (q) a unit PartOf the restarted one that was not active before the restart (systemd's try-restart leaves it down)
+#       is not waited for, and the log names it; the span names the others;
+#   (r) the script's own health check is given the time the bound leaves as its max time (5 s when given none);
+#   (w) no wait runs on past 120 s of the script's clock, and (x) the closure's ConsistsOf reads end: the test fails a
+#       wait or a closure with no end itself (each leg's clock is the script's own; a hang is a FAIL, not a timeout).
 # usage: validation/scripts/pull-sync-restart-window.test.sh [path/to/substrate-pull-sync.sh]
 set -uo pipefail
 SCRIPT="${1:-$(cd "$(dirname "$0")/../.." && pwd)/scripts/substrate/substrate-pull-sync.sh}"
@@ -33,18 +46,21 @@ FAILS=0
 ok()  { echo "ok   - $*"; }
 bad() { echo "FAIL - $*"; FAILS=$((FAILS+1)); }
 command -v jq >/dev/null || { echo "FAIL - no jq: cannot judge"; exit 1; }
-FNS="shape_route dev_resolve store_head systemctl restart_ready restart_span restart_window_close"
+FNS="shape_route dev_resolve store_head systemctl restart_closure restart_left restart_ready restart_span restart_window_close"
 for f in $FNS; do sed -n "/^$f() {/,/^}/p" "$SCRIPT"; done > "$T/fns.sh"
 for f in $FNS; do grep -q "^$f()" "$T/fns.sh" || { echo "FAIL - could not extract $f"; exit 1; }; done
 LOG="$T/log.txt"; log() { echo "$*" >> "$LOG"; }
 gap_resolve() { return 7; }
-sleep() { :; }
+T0=$SECONDS
+sleep() { SECONDS=$((SECONDS + ${1%%.*}))   # a second passes on the script's clock, at once
+  [ $((SECONDS - T0)) -le 120 ] || { echo "FAIL - (w) a wait ran past 120 s of the script's clock: it has no bound"; exit 1; }; }
 ROWS="$T/rows.json"; export HEAD="$T/head"; WRITES="$T/writes.txt"; export CALLS="$T/calls.txt"
 DISCOVERY=http://discovery.test; SHAPE_ROUTES=" "; SR_ROUTE=""; DEV_VESSEL=""
 export METABOB_API_KEY=""
 export RESTART_WINDOW_FILE="$T/restart-window.json"
 RESTART_READY_S=""
-tuning_param() { TP_VALUE=5; echo "$1" >> "$T/tp.txt"; }   # the shaped bound, as tuning_param sets it
+tuning_param() { TP_VALUE=5; echo "$1" >> "$T/tp.txt"; [ -s "$RESTARTED" ] && echo late >> "$T/tp-late"; }   # the shaped bound, as tuning_param sets it
+export RESTARTED="$T/restarted" SHOWS="$T/shows" SHOWCAP="$T/showcap"
 INV="$T/inv.json"
 echo '{"vessels":[{"repo":"walk-vessel","unit":"walk-vessel.service","health_port":8500},{"repo":"records-vessel","unit":"records-vessel.service"},{"repo":"described-shape-vessel","unit":"described-shape-vessel.service"}]}' > "$INV"
 # the systemctl binary: a restart moves the head by $MOVE (the rows the cut calls write) and answers $RC; is-active
@@ -54,19 +70,23 @@ cat > "$T/bin/systemctl" <<'EOF'
 #!/usr/bin/env bash
 echo "$*" >> "$CALLS"
 case "${1:-}" in
-  restart) echo $(( $(cat "$HEAD") + ${MOVE:-0} )) > "$HEAD"; exit "${RC:-0}" ;;
-  is-active) n="$(cat "$ISACT" 2>/dev/null || echo 0)"; echo $((n + 1)) > "$ISACT"
+  restart) echo x > "$RESTARTED"; echo $(( $(cat "$HEAD") + ${MOVE:-0} )) > "$HEAD"; exit "${RC:-0}" ;;
+  is-active) case " ${DOWN:-} " in *" $3 "*) exit 3 ;; esac   # a unit down before the restart stays down
+    n="$(cat "$ISACT" 2>/dev/null || echo 0)"; echo $((n + 1)) > "$ISACT"
     if [ "$n" -lt "${INACTIVE_FOR:-0}" ]; then echo $(( $(cat "$HEAD") + 1 )) > "$HEAD"; exit 3; fi   # starting: a check moves the head
     [ "${ACTIVE:-1}" = 1 ] ;;
   cat) printf '%s\n' "${UNIT_TEXT:-}" ;;
+  show) n="$(cat "$SHOWS" 2>/dev/null || echo 0)"; echo $((n + 1)) > "$SHOWS"; [ "$n" -lt 50 ] || { echo cap > "$SHOWCAP"; exit 0; }
+    [ "$2 $3 $4" = "-p ConsistsOf --value" ] && [ -f "${CONSISTS:-}" ] && { grep -m1 "^$5 " "$CONSISTS" | cut -d' ' -f2- || true; } ;;
   *) exit 0 ;;
 esac
 EOF
 chmod +x "$T/bin/systemctl"; export PATH="$T/bin:$PATH"
 # the health port: answers 200 from its $HEALTH_AFTER-th check on; each check before that moves the head by one (a
 # caller's "no answer" while the unit starts)
+# a port in $NEVER_PORT never answers: each check of it costs its whole max time on the script's clock
 healthy() { local n; n="$(cat "$T/hc" 2>/dev/null || echo 0)"; echo $((n + 1)) > "$T/hc"; echo "$1" >> "$T/ports"
-  [ "$n" -ge "${HEALTH_AFTER:-0}" ] && return 0; echo $(( $(cat "$HEAD") + 1 )) > "$HEAD"; return 1; }
+  case " ${NEVER_PORT:-} " in *" $1 "*) SECONDS=$((SECONDS + ${2:-5})) ;; *) [ "$n" -ge "${HEALTH_AFTER:-0}" ] && return 0 ;; esac; echo $(( $(cat "$HEAD") + 1 )) > "$HEAD"; return 1; }
 curl() {
   cat > /dev/null
   local d="" a prev=""; for a in "$@"; do case "$prev" in -d) d="$a" ;; esac; prev="$a"; done
@@ -75,6 +95,7 @@ curl() {
     vesselCapability) printf '{"content":{"vessels":[{"vesselId":"v"}]}}' ;;
     record_read)
       if [ "$(printf '%s' "$d" | jq -r '.pointer.head // false')" = true ]; then
+        prev=""; for a in "$@"; do [ "$prev" = --max-time ] && echo "$a" >> "$T/head-mt"; prev="$a"; done
         [ -n "${NOHEAD:-}" ] && { printf '{}'; return 0; }
         printf '{"at_seq":%s}' "$(cat "$HEAD")"
       else jq -c --arg s "$(printf '%s' "$d" | jq -r .pointer.shape)" 'map(select(.shape == $s))' "$ROWS"; fi ;;
@@ -91,7 +112,7 @@ curl() {
 source "$T/fns.sh"
 export ISACT="$T/isact"
 fresh() { echo '[]' > "$ROWS"; : > "$WRITES"; : > "$LOG"; : > "$CALLS"; rm -f "$RESTART_WINDOW_FILE" "$T/hc" "$T/ports" "$ISACT"; echo "$1" > "$HEAD"
-  unset NOHEAD WFAIL; MOVE=0; RC=0; ACTIVE=1; HEALTH_AFTER=0; UNIT_TEXT=""; INACTIVE_FOR=0; export MOVE RC ACTIVE UNIT_TEXT INACTIVE_FOR; }
+  unset NOHEAD WFAIL NEVER_PORT; rm -f "$T/consists" "$T/reads" "$RESTARTED" "$SHOWS" "$T/head-mt"; T0=$SECONDS; export CONSISTS="$T/consists"; MOVE=0; RC=0; ACTIVE=1; HEALTH_AFTER=0; UNIT_TEXT=""; INACTIVE_FOR=0; export MOVE RC ACTIVE UNIT_TEXT INACTIVE_FOR; }
 spans() { jq -c '[.[] | select(.shape == "infra_window") | {from_seq, to_seq}]' "$ROWS"; }
 gone() { [ -f "$RESTART_WINDOW_FILE" ] && echo kept || echo gone; }
 
@@ -102,7 +123,8 @@ restart_window_close
 W="$(jq -c '[.[] | select(.shape == "infra_window")]' "$ROWS")"
 if [ "$A_RC" = 0 ] && [ "$(jq length <<<"$W")" = 1 ] \
   && [ "$(jq -c '.[0] | {window_id, from_seq, to_seq, statuses, writer, role}' <<<"$W")" = '{"window_id":"restart-101-107","from_seq":101,"to_seq":107,"statuses":[0],"writer":"owner","role":"owner"}' ] \
-  && jq -e '.[0].reason | test("walk-vessel")' <<<"$W" >/dev/null && jq -e '.[0].seq > .[0].to_seq' <<<"$W" >/dev/null && [ "$(gone)" = gone ]; then
+  && jq -e '.[0].reason | test("walk-vessel")' <<<"$W" >/dev/null && jq -e '.[0].seq > .[0].to_seq' <<<"$W" >/dev/null && [ "$(gone)" = gone ] \
+  && [ -s "$T/tp.txt" ] && [ ! -s "$T/tp-late" ]; then
   ok "(a) a restart is one owner span, from the row after the head before it to the head once its health answers; the tick's later work outside"
 else bad "(a) rc=$A_RC windows: $(printf '%s' "$W" | cut -c1-400) file:$(gone)"; fi
 
@@ -122,13 +144,18 @@ if [ "$C_RC" = 4 ] && grep -q '^restart walk-vessel.service' "$CALLS" && [ ! -s 
   ok "(c) an unreadable head before a restart keeps no span and says so; the restart still runs, its status kept"
 else bad "(c) rc=$C_RC calls=$(tr '\n' ';' < "$CALLS") wrote=$(cat "$WRITES") file:$(gone)"; fi
 
+# the max times of the head reads around one restart: 3 before it, then the time the bound leaves (the whole bound, or a
+# second less once the script's real clock ticks), never rising, a second at the last
+cut_reads() { awk 'NR == 1 { ok = ($1 == 3) } NR == 2 { ok = ok && ($1 == 5 || $1 == 4) } NR > 2 { ok = ok && ($1 <= p) }
+  { p = $1; l = $1 } END { exit !(ok && NR > 2 && l == 1) }' "$1"; }
 fresh 100; MOVE=2
-store_head() { if [ -s "$T/second" ]; then printf ''; else echo x > "$T/second"; printf '%s' "$(cat "$HEAD")"; fi; }
-systemctl restart walk-vessel.service
+store_head() { echo "$1" >> "$T/reads"; if [ -s "$T/second" ]; then printf ''; else echo x > "$T/second"; printf '%s' "$(cat "$HEAD")"; fi; }
+D0=$SECONDS; systemctl restart walk-vessel.service; D_S=$((SECONDS - D0)); D_R="$(wc -l < "$T/reads")"
 source "$T/fns.sh"; rm -f "$T/second"   # the real store_head back
 restart_window_close
-if [ ! -s "$WRITES" ] && [ "$(gone)" = gone ] && grep -q 'could not be read after restarting walk-vessel' "$LOG"; then ok "(d) an unreadable head after a restart drops its span, said, nothing written"
-else bad "(d) wrote=$(cat "$WRITES") file:$(gone)"; fi
+if [ ! -s "$WRITES" ] && [ "$(gone)" = gone ] && grep -q 'could not be read after restarting walk-vessel' "$LOG" && [ "$D_R" -gt 2 ] && [ "$D_S" -le 7 ] && cut_reads "$T/reads"; then
+  ok "(d) an unreadable head after a restart is read again until the bound, then its span is dropped, said, nothing written"
+else bad "(d) wrote=$(cat "$WRITES") file:$(gone) reads=$D_R [$(tr '\n' ' ' < "$T/reads")] seconds=$D_S"; fi
 
 fresh 100; MOVE=10
 systemctl restart walk-vessel.service
@@ -159,7 +186,8 @@ else bad "(g) unmoved:[$G1] one-row:$G2"; fi
 fresh 100; MOVE=2; HEALTH_AFTER=99
 systemctl restart walk-vessel.service; restart_window_close
 H="$(spans)"
-if [ "$H" = '[{"from_seq":101,"to_seq":107}]' ] && grep -q 'walk-vessel was not ready within 5s' "$LOG" && [ "$(sort -u "$T/tp.txt")" = pull_sync.restart_ready_seconds ]; then ok "(h) a unit not ready within the bound ends its span there, said"
+# a check a second while the bound lasts, each moving the head: five or six, as the script's real clock ticks
+if case "$H" in '[{"from_seq":101,"to_seq":106}]'|'[{"from_seq":101,"to_seq":107}]') true ;; *) false ;; esac && grep -q 'walk-vessel was not ready within 5s' "$LOG" && [ "$(sort -u "$T/tp.txt")" = pull_sync.restart_ready_seconds ]; then ok "(h) a unit not ready within the bound ends its span there, said"
 else bad "(h) spans: $H log: $(tr '\n' ';' < "$LOG" | cut -c1-200)"; fi
 
 fresh 100; MOVE=2; HEALTH_AFTER=3; UNIT_TEXT="$(printf '[Service]\nType=simple\nEnvironment=DESCRIBED_VESSEL_ID=described\nEnvironment=DESCRIBED_PORT=8520\n# Environment=OLD_PORT=1\nPassEnvironment=PROXY_PORT=3128\nEnvironment=NEIGHBOUR_TOKEN=placeholder-not-a-port EXTRA_PORT=9\nExecStart=/bin/true')"
@@ -213,6 +241,60 @@ kill "$SENT" 2>/dev/null; wait "$SENT" 2>/dev/null
 if [ "$M_OPENED" = closed ] && [ "$(spans)" = '[{"from_seq":101,"to_seq":101}]' ] && ! grep -q 'sentinel' "$LOG"; then
   ok "(m) the env file a unit references is never opened, nor named in the log"
 else bad "(m) sentinel $M_OPENED, spans $(spans), log: $(grep -c sentinel "$LOG")"; fi
+
+fresh 100; MOVE=3
+printf '%s\n' 'discovery-vessel.service records-vessel.service described-shape-vessel.service discovery-relay.timer' \
+  'records-vessel.service walk-vessel.service described-shape-vessel.service' 'walk-vessel.service records-vessel.service discovery-vessel.service' > "$CONSISTS"
+systemctl restart discovery-vessel.service; N_RC=$?; restart_window_close
+N_ASKED="$(sed -n '/^restart /,$p' "$CALLS" | grep '^is-active' | awk '{print $3}' | uniq | tr '\n' ' ')"
+N_WHY="$(jq -r '[.[] | select(.shape == "infra_window") | .reason] | join("|")' "$ROWS")"
+if [ "$N_RC" = 0 ] && [ "$N_ASKED" = 'discovery-vessel.service records-vessel.service described-shape-vessel.service walk-vessel.service ' ] \
+   && [ "$(spans)" = '[{"from_seq":101,"to_seq":103}]' ] && [ "${N_WHY#pull-sync restarted discovery-vessel records-vessel described-shape-vessel walk-vessel:}" != "$N_WHY" ] \
+   && grep -q '^show -p ConsistsOf --value walk-vessel.service$' "$CALLS" && ! grep -q 'relay' <<<"$N_ASKED"; then
+  ok "(n) a restart's span covers the unit and every service PartOf it, transitively: each waited for, all named, one row"
+else bad "(n) rc=$N_RC asked=[$N_ASKED] spans=$(spans) reason=[$N_WHY]"; fi
+
+fresh 100; MOVE=2
+store_head() { local n; echo r >> "$T/reads"; n="$(wc -l < "$T/reads")"; if [ "$n" = 2 ] || [ "$n" = 3 ]; then printf ''; return; fi; printf '%s' "$(cat "$HEAD")"; }
+systemctl restart walk-vessel.service; O_R="$(wc -l < "$T/reads")"
+source "$T/fns.sh"   # the real store_head back
+restart_window_close
+if [ "$(spans)" = '[{"from_seq":101,"to_seq":102}]' ] && [ "$O_R" = 4 ] && ! grep -q 'could not be read' "$LOG"; then
+  ok "(o) a head that answers only on a later read after the restart is read again, and the span written"
+else bad "(o) spans=$(spans) reads=$O_R log: $(tr '\n' ';' < "$LOG" | cut -c1-200)"; fi
+
+fresh 100; MOVE=2; NEVER_PORT="8500 8520"; UNIT_TEXT="$(printf '[Service]\nEnvironment=DESCRIBED_PORT=8520')"
+echo 'records-vessel.service walk-vessel.service described-shape-vessel.service' > "$CONSISTS"
+P0=$SECONDS; systemctl restart records-vessel.service; P_S=$((SECONDS - P0)); restart_window_close
+P_NAMED="$(grep -oE '[a-z-]+ was not ready within 5s' "$LOG" | tr '\n' ';')"
+if [ "$(spans | jq -c '[.[] | .from_seq]')" = '[101]' ] && [ "$P_S" -le 9 ] && [ "$(tail -1 "$T/head-mt")" = 1 ] \
+   && [ "$P_NAMED" = 'records-vessel was not ready within 5s;walk-vessel was not ready within 5s;described-shape-vessel was not ready within 5s;' ] \
+   && sed -n '/^restart /,$p' "$CALLS" | grep -q '^is-active --quiet described-shape-vessel.service$'; then
+  ok "(p) closure units that never answer end the span by one bound for the whole restart, each named; one reached after it is still checked"
+else bad "(p) spans=$(spans) seconds=$P_S head-max=$(tail -1 "$T/head-mt" 2>/dev/null) named=[$P_NAMED]"; fi
+
+fresh 100; MOVE=2; export DOWN=described-shape-vessel.service
+echo 'records-vessel.service walk-vessel.service described-shape-vessel.service' > "$CONSISTS"
+Q0=$SECONDS; systemctl restart records-vessel.service; Q_S=$((SECONDS - Q0)); restart_window_close; unset DOWN
+Q_WHY="$(jq -r '[.[] | select(.shape == "infra_window") | .reason] | join("|")' "$ROWS")"
+if [ "$(spans | jq -c '[.[] | .from_seq]')" = '[101]' ] && [ "$Q_S" -le 2 ] \
+   && grep -q 'described-shape-vessel was not active before the restart' "$LOG" && ! grep -q 'not ready' "$LOG" \
+   && ! sed -n '/^restart /,$p' "$CALLS" | grep -q '^is-active --quiet described-shape-vessel.service$' \
+   && [ "${Q_WHY#pull-sync restarted records-vessel walk-vessel:}" != "$Q_WHY" ]; then
+  ok "(q) a PartOf unit down before the restart is not waited for, and is named; the span names the others"
+else bad "(q) spans=$(spans) seconds=$Q_S reason=[$Q_WHY] log: $(tr '\n' ';' < "$LOG" | cut -c1-240)"; fi
+
+# (r): the script's own healthy(), with curl as a health port that answers and records the max time it was given
+fresh 100; UNIT_TEXT="$(printf '[Service]\nEnvironment=DESCRIBED_PORT=8520')"
+R_MT="$( (
+  sed -n '/^healthy() {/,/^}/p' "$SCRIPT" > "$T/healthy.sh"; source "$T/healthy.sh"
+  curl() { local prev="" a; for a in "$@"; do [ "$prev" = --max-time ] && echo "$a" >> "$T/health-mt"; prev="$a"; done; printf 200; }
+  rm -f "$T/health-mt"; restart_ready described-shape-vessel $((SECONDS + 3)); healthy 8520; tr '\n' ' ' < "$T/health-mt"
+) )"
+case "$R_MT" in '3 5 '|'2 5 ') ok "(r) a health check is cut at the time the bound leaves, and is 5 s with none given" ;;
+  *) bad "(r) the health check's max times were [$R_MT], not the time left then 5" ;; esac
+
+if [ -s "$SHOWCAP" ]; then bad "(x) the closure read ConsistsOf past 50 times in one restart: it has no end"; else ok "(x) every closure's ConsistsOf reads end"; fi
 
 echo; [ "$FAILS" = 0 ] && { echo PASS; exit 0; }
 echo "$FAILS FAILED"; exit 1
