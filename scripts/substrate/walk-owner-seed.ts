@@ -588,6 +588,15 @@ await ensure({ shape: "news_key", of: "gitDiff", fields: ["tree", "check.ran", "
 // edit answers carry `after`: a row naming a field no answer holds would compare every edit of a file as one.
 await ensure({ shape: "news_key", of: "fileEditResult", fields: ["path", "after"] },
   { of: "fileEditResult" }, "news_key fileEditResult");
+// What makes a gap news: whether it is open, localized, held, waiting on a person, runnable, where its change belongs,
+// whose judgment moved it, and which test fails, as the held-gap release and the failing-test generator write them. Not
+// the claim's or the summary's wording: a gap restated with only those changed was judged again on every restatement,
+// each its own root (a tree already refused re-judged on three later roots). The walk weighs a detector's row by this
+// key (applicable.ts repeats) only because the owner names one here.
+await ensure({ shape: "news_key", of: "gap", fields: ["gap_id", "status", "localized", "waits_for", "check_runnable",
+  "meta.edit_site", "meta.localized_by", "meta.claim_rejected_by", "meta.unlocalized_by", "meta.operator_hold", "meta.operator_hold_reason",
+  "meta.check_runnable", "meta.protected_files", "meta.sources", "meta.evidence_resolve.input.test_file", "meta.evidence_resolve.input.only_tests"] },
+  { of: "gap" }, "news_key gap");
 // Which clone a request holding clones of more than one repo binds, when a template names no repo (walk applicable.ts,
 // bind.ts inputsOf): the clone of the repo the request's own newest change_wanted names, its judgment of where the change
 // belongs. Without it such a request binds no clone at all and can neither diff, commit nor land (two asks did so, each

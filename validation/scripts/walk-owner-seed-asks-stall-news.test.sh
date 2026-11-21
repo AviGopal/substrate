@@ -4,7 +4,8 @@
 #   (a) the plain request schema's input is {shape: world_changed, ask: true}, and no other schema declares an ask
 #   (b) one stall_rule: after_rows 240
 #   (c) one news_key for gitDiff: its tree, whether each check ran and passed, and what the clone held uncommitted
-#   (e) one news_key for fileEditResult: the edited path and the bytes it left there (after)
+#   (e) one news_key for fileEditResult: the edited path and the bytes it left there (after); the third is gap's
+#       (walk-owner-seed-gap-news.test.ts reads its fields)
 #   (f) each news_key is found by its own `of`: a store whose newest news_key is another shape's gets no second copy
 #   (d) the seeder run again writes none of them again
 # usage: validation/scripts/walk-owner-seed-asks-stall-news.test.sh
@@ -56,8 +57,8 @@ if [ "$(jq -c '.stall' <<<"$OUT")" = '[240]' ]; then ok "(b) one stall_rule, aft
 if [ "$(jq -c '[.news[] | select(.[0] == "gitDiff")]' <<<"$OUT")" = '[["gitDiff",["tree","check.ran","check.passed","typecheck.ran","typecheck.passed","uncommitted"]]]' ]; then
   ok "(c) one news_key for gitDiff: the tree, whether each check ran and passed, and what the clone held uncommitted"
 else bad "(c) news: $(jq -c '.news' <<<"$OUT" | cut -c1-300)"; fi
-if [ "$(jq -c '[.newsRows[] | select(.of == "fileEditResult")]' <<<"$OUT")" = '[{"shape":"news_key","of":"fileEditResult","fields":["path","after"]}]' ] && [ "$(jq -c '.news | length' <<<"$OUT")" = 2 ]; then
-  ok "(e) one news_key for fileEditResult, exactly {of, fields: [path, after]} (nothing else on it: not retired); no other news_key"
+if [ "$(jq -c '[.newsRows[] | select(.of == "fileEditResult")]' <<<"$OUT")" = '[{"shape":"news_key","of":"fileEditResult","fields":["path","after"]}]' ] && [ "$(jq -c '.news | length' <<<"$OUT")" = 3 ]; then
+  ok "(e) one news_key for fileEditResult, exactly {of, fields: [path, after]} (nothing else on it: not retired); besides it only gitDiff's and gap's"
 else bad "(e) news: $(jq -c '.news' <<<"$OUT" | cut -c1-300)"; fi
 E="$(PRIOR=edit TMPDIR="$T" bun "$T/drive.ts" "$ROOT/scripts/substrate/walk-owner-seed.ts" "$ROOT/scripts/substrate/vessels.inventory.json" 2>/dev/null | tail -1)"
 D="$(PRIOR=diff TMPDIR="$T" bun "$T/drive.ts" "$ROOT/scripts/substrate/walk-owner-seed.ts" "$ROOT/scripts/substrate/vessels.inventory.json" 2>/dev/null | tail -1)"
