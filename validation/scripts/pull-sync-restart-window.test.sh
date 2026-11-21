@@ -14,7 +14,7 @@
 #       least), then drops the span, said, nothing written;
 #   (e) a row the store does not take is said, and its span kept with its end: the next tick's start writes exactly it;
 #   (f) a span with no end (its tick was killed during the restart) is dropped at the next start, said, not written;
-#   (g) nothing written during the restart writes nothing; one row is a one-row span;
+#   (g) nothing written during the restart writes nothing, and says so with both heads; one row is a one-row span;
 #   (h) a unit not ready within the shaped bound (pull_sync.restart_ready_seconds, read once per tick, before the
 #       restart) ends its span there, said;
 #   (i) every other systemctl goes to the binary unchanged and keeps no span; the EXIT trap and the tick's start call
@@ -177,11 +177,12 @@ else bad "(f) wrote=$(cat "$WRITES") file:$(gone)"; fi
 fresh 100; MOVE=0
 systemctl restart walk-vessel.service; restart_window_close
 G1="$(cat "$WRITES")$(gone | grep kept)"
+G1_SAID="$(grep -c 'restart window: the store.s head after restarting walk-vessel (100) is not past its head before it (100)' "$LOG")"
 fresh 100; MOVE=1
 systemctl restart walk-vessel.service; restart_window_close
 G2="$(spans)"
-if [ -z "$G1" ] && [ "$G2" = '[{"from_seq":101,"to_seq":101}]' ]; then ok "(g) nothing written during a restart writes nothing; one row is a one-row span"
-else bad "(g) unmoved:[$G1] one-row:$G2"; fi
+if [ -z "$G1" ] && [ "$G1_SAID" = 1 ] && [ "$G2" = '[{"from_seq":101,"to_seq":101}]' ]; then ok "(g) nothing written during a restart writes nothing, and says so with both heads; one row is a one-row span"
+else bad "(g) unmoved:[$G1] said:$G1_SAID one-row:$G2"; fi
 
 fresh 100; MOVE=2; HEALTH_AFTER=99
 systemctl restart walk-vessel.service; restart_window_close

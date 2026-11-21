@@ -246,7 +246,9 @@ restart_window_close() {
     case "$_rw_from" in ''|*[!0-9]*) continue ;; esac
     if [ -z "$_rw_to" ]; then log "restart window: a span from $_rw_from ($_rw_vs) has no end (its tick was killed during the restart); dropped, not written"; continue; fi
     case "$_rw_to" in *[!0-9]*) continue ;; esac
-    [ "$_rw_to" -lt "$_rw_from" ] && continue   # nothing written since the restart began (or a store reset)
+    if [ "$_rw_to" -lt "$_rw_from" ]; then   # nothing written since the restart began (or a store reset)
+      log "restart window: the store's head after restarting $_rw_vs ($_rw_to) is not past its head before it ($((_rw_from - 1))): nothing was cut, so no window is written"; continue
+    fi
     _rw_row="$(jq -nc --argjson from "$_rw_from" --argjson to "$_rw_to" --arg vs "$_rw_vs" \
       '{shape: "infra_window", window_id: ("restart-\($from)-\($to)"), from_seq: $from, to_seq: $to, statuses: [0],
         reason: ("pull-sync restarted " + $vs + ": a call cut by the restart (status 0) was stopped, not failed"), input_refs: []}')"
