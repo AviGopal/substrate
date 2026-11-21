@@ -1097,24 +1097,34 @@ test_sources() { # <checkout> <test file> <vessel>
   printf '%s' "${out:-[]}"
 }
 
-# A PERSON JUDGES A FAILING TEST'S CLAIM. The generator files a gap no stack localizes as the fact localized false (an
-# older row says it with operator_hold, reason needs_localization, read as the same fact; no hold): it is work while it
-# waits, and whether the test or the source is wrong is not something a stack can say. The person's surface shows gap rows with a
-# grade, which judges a row's claim, so each held row first states one (claim: the test is right and the source must
-# change). Not a row whose check cannot run (the closer's mark: its named tests absent): it has no claim to judge. A person's outcome on any detector row of the gap then releases it, the latest by seq deciding (a later one
-# re-decides a released gap):
-#   - r 1, the claim is right: the not-localized fact (or an old hold) goes, protected_files stay, no edit_site (the walk fixes the source), and sources
+# THE SYSTEM FINDS A FAILING TEST'S EDIT SITE; A PERSON JUDGES WHEN IT CANNOT (the "The system finds it" ruling). The
+# generator files a gap no stack localizes as the fact localized false (an older row says it with operator_hold, reason
+# needs_localization, read as the same fact; no hold): it is work, and finding the place to edit is the walk's own
+# graded step (its change_wanted judgment, made from its code searches). So each such row first states its claim (the
+# test is right and the source must change) with localized false at its top level, where the walk's input where reads
+# it, and waits for no one. Not a row whose check cannot run (the closer's mark: its named tests absent): it has no claim
+# to judge. Then, of the rows on any detector row of the gap, a person's newest outcome decides, and the walk's newest
+# change_wanted decides only where no person's outcome is (a later one of either re-decides a released gap). Each is
+# ordered by seq within its own read, never against the other's: the two reads may reach different stores. Only a
+# person's outcome carries r; a walk row that names neither a site nor a why decides nothing.
+#   - the walk's change_wanted naming an edit site (wanted true): released as a person's r 1 is, with edit_site the file
+#     the site resolves to and localized_by that row, once that file is inside this vessel's checkout and not the
+#     protected test (judged by the resolved file, whatever the spelling or link); a site that is not is said in the
+#     log and releases nothing;
+#   - the walk's change_wanted finding none (wanted false): the gap waits for a person (waits_for "person"), its why in
+#     the claim, still not localized;
+#   - a person's outcome:
+#     - r 1, the claim is right: the not-localized fact (or an old hold) goes, protected_files stay, no edit_site (the walk fixes the source), and sources
 #     names the files the test imports (test_sources), so the walk edits what the check tests rather than guessing a
 #     file from the test's name; a gap released before sources existed gets them once;
-#   - r 0, the claim is wrong: the same fact goes, the test stays protected, and the gap carries check_runnable false (top
+#     - r 0, the claim is wrong: the same fact goes, the test stays protected, and the gap carries check_runnable false (top
 #     level, where the walk's clone precondition reads it, and in its meta). A change must not edit the check that
 #     verifies it, so the walk opens no clone for it: the test is fixed by a reviewed commit to the vessel, which the
 #     failing-test closer then sees pass, closing the gap. A later r 1 clears it.
-# Every row that waits for a person's verdict says so as a top-level fact, waits_for "person" (a held row, from the
-# write below that states its claim; a row marked check_runnable false by a person's r 0 or by the closer), and a row
-# that no longer waits drops it (an r 1 release, the closer's checkable-again row): the page lists "checks waiting for a
-# person" by that field alone and copies no rule. A waiting row without the field is written once more with it, and
-# never again.
+# Every row that waits for a person's verdict says so as a top-level fact, waits_for "person" (a row the walk could not
+# localize; a row marked check_runnable false by a person's r 0 or by the closer), and a row that no longer waits drops
+# it (a release, a stated claim, the closer's checkable-again row): the page lists "checks waiting for a person" by that
+# field alone and copies no rule. A row whose field says otherwise is written once more, and never again.
 # A verdict decides only if a row it names comes after the closer's latest mark (check_runnable false, names_absent: the
 # named tests are absent): a grade given before the mark judged a check that could run, the mark is newer evidence, and
 # the mark row itself has no claim to judge (a page opened before the mark could still cite it). The order is read from the gap rows alone, all from the one gap read; the outcome read may reach
@@ -1130,47 +1140,61 @@ lift_held_gaps() {
     | jq -c 'if type == "array" then . elif (.content | type) == "array" then .content else error("no rows") end' 2>/dev/null)"
   outs="$(dev_resolve '{"impulse":{"pointer":{"type":"record_read","shape":"outcome","where":{"role":"person"}}}}' --max-time 30 2>/dev/null \
     | jq -c 'if type == "array" then . elif (.content | type) == "array" then .content else error("no rows") end' 2>/dev/null)"
-  [ -n "$gaps" ] && [ -n "$outs" ] || { log "$v: held-gap release: records unreadable; nothing released"; return 0; }
+  local sites
+  sites="$(dev_resolve '{"impulse":{"pointer":{"type":"record_read","shape":"change_wanted","where":{"role":"described"}}}}' --max-time 30 2>/dev/null \
+    | jq -c 'if type == "array" then . elif (.content | type) == "array" then .content else error("no rows") end' 2>/dev/null)"
+  [ -n "$gaps" ] && [ -n "$outs" ] && [ -n "$sites" ] || { log "$v: held-gap release: records unreadable; nothing released"; return 0; }
   # The rows go to jq as files, never as one argument: the gap store passed whole (--argjson) outgrew the kernel's limit
   # on a single argument (128 KiB), jq could not start, and with its error dropped every tick read as "no marks" for days
   # (person marks on generator gaps went unread). The same class as jq_ao (--rawfile) for test output.
   local st decided rc ng nm
   st="$(mktemp -d "${TMPDIR:-/tmp}/pullsync-held-XXXXXX")" || { log "$v: held-gap release: input unreadable (no scratch dir); nothing decided"; return 0; }
-  printf '%s' "$gaps" > "$st/gaps.json"; printf '%s' "$outs" > "$st/outs.json"
+  printf '%s' "$gaps" > "$st/gaps.json"; printf '%s' "$outs" > "$st/outs.json"; printf '%s' "$sites" > "$st/sites.json"
   local unseq; unseq="$(printf '%s' "$gaps" | jq -r '[.[] | select(.shape == "gap" and .role == "detector" and (.seq | type) != "number") | .gap_id] | unique | join(", ")' 2>/dev/null)"
   [ -z "$unseq" ] || log "$v: held-gap release: gap rows with no seq ($unseq); those gaps are neither released nor given a claim"
-  decided="$(jq -cn --arg v "$v" --slurpfile rows "$st/gaps.json" --slurpfile outs "$st/outs.json" '
-    $rows[0] as $rows | $outs[0] as $outs
+  decided="$(jq -cn --arg v "$v" --slurpfile rows "$st/gaps.json" --slurpfile outs "$st/outs.json" --slurpfile sites "$st/sites.json" '
+    $rows[0] as $rows | $outs[0] as $outs | $sites[0] as $sites
     | "Not yet localized (no source frame in the stack, or an unclassified error): needs a diagnosis of whether the source or the test is wrong before any compose." as $held
     | "A person judged the test right: fix the source so the named tests pass, keeping every case and expect." as $right
+    | "The walk found where the change belongs (edit_site): fix the source there so the named tests pass, keeping every case and expect." as $found
+    | "The walk searched and found no source file of the repo this failure comes from: a person judges whether the source or the test is wrong." as $none
     | "A person judged the test wrong: a change must not edit the check that verifies it, so this gap is not worked here (check_runnable false); the test is fixed by a reviewed commit to the vessel, and the source is left as it is." as $wrong
-    | ($outs | map(select(.role == "person" and (.r == 0 or .r == 1) and (.seq | type) == "number"))) as $o
+    | ($outs | map(select(.role == "person" and (.r == 0 or .r == 1) and (.seq | type) == "number")) | map({id, seq, input_refs, r})) as $o
+    | ($sites | map(select(.shape == "change_wanted" and .role == "described" and (.seq | type) == "number" and ((.wanted == true and (.edit_site | type) == "string" and .edit_site != "") or (.wanted == false and (.why | type) == "string" and .why != ""))))
+         | map({id, seq, input_refs, site: (if .wanted == true then .edit_site else null end), why: .why})) as $w
     | $rows | map(select(.shape == "gap" and .role == "detector")) | group_by(.gap_id)[]
     | select(all(.[]; (.seq | type) == "number")) | sort_by(.seq) as $all | $all[-1] as $g
     | ($g.meta // {}) as $m
-    | ($m.localized_by // $m.claim_rejected_by) as $was
-    | ($m.localized == false or ($m.operator_hold == true and (($m.operator_hold_reason // "") | startswith("needs_localization")))) as $unlocalized
+    | ($m.localized_by // $m.claim_rejected_by // $m.unlocalized_by) as $was
+    | ($g.localized == false or $m.localized == false or ($m.operator_hold == true and (($m.operator_hold_reason // "") | startswith("needs_localization")))) as $unlocalized
     | select($g.status == "open" and ($unlocalized or $was != null) and $m.filed_by == "pull-sync failing-test generator")
     | select((($m.evidence_resolve.input.vessel // "") | sub("^repos/"; "")) == $v)
     | ($m.evidence_resolve.input.test_file // "") as $tf | select($tf != "")
     | ([$all | to_entries[] | select((.value.check_runnable == false or .value.meta.check_runnable == false) and .value.meta.names_absent != null) | .key] | last) as $mark
     | ([$all | to_entries[] | select($mark == null or .key > $mark) | .value.id] | map(tostring)) as $ids
-    | ([$o[] | select([(.input_refs // [])[] | tostring] | any(. as $x | $ids | index($x)))] | sort_by(.seq) | last) as $by
+    | def cites: select([(.input_refs // [])[] | tostring] | any(. as $x | $ids | index($x)));
+      (([$o[] | cites] | sort_by(.seq) | last) // ([$w[] | cites] | sort_by(.seq) | last)) as $by
     | ($g | del(.shape, .id, .seq, .t, .writer, .role, .input_refs, .gap_id, .meta)) as $rest
     | ("repos/" + $v + "/" + $tf) as $file
-    | {tf: $tf, by: (if $by then {id: $by.id, r: $by.r} else null end),
+    | {tf: $tf, by: (if $by == null then null elif $by.r != null then {id: $by.id, r: $by.r} elif $by.site != null then {id: $by.id, r: 1, site: $by.site} else {id: $by.id, none: $by.why} end),
        gap: ($rest + {id: $g.gap_id, classification_metadata: $m,
          claim: ("The test is right: the source must change so these tests in " + $file + " pass: "
            + (($m.evidence_resolve.input.only_tests // []) | join(" ; ")))})}
-    | ($g.summary | split($held) | join("\u0000") | split($right) | join("\u0000") | split($wrong) | join("\u0000")) as $s
-    | if .by == null then select($was == null and $g.check_runnable != false and $m.check_runnable != false and (($g.claim // "") != .gap.claim or $g.waits_for != "person"))
-        | .gap.waits_for = "person"
-      else select(.by.id != $was or (.by.r == 1 and $m.sources == null) or (.by.r == 0 and $g.waits_for != "person"))
-        | .gap.classification_metadata |= del(.operator_hold, .operator_hold_reason, .disposition, .localized, .localized_by, .claim_rejected_by, .edit_site, .protected_files, .sources, .check_runnable)
+    | ($g.summary | split($held) | join("\u0000") | split($right) | join("\u0000") | split($wrong) | join("\u0000") | split($none) | join("\u0000") | split($found) | join("\u0000")) as $s | (.by.site != null) as $at_site
+    | if .by == null then select($was == null and $g.check_runnable != false and $m.check_runnable != false and (($g.claim // "") != .gap.claim or $g.waits_for != null or $g.localized != false))
+        | .gap |= (.waits_for = null | .localized = false)
+      elif .by.none != null then select(.by.id != $was or $g.waits_for != "person")
+        | .gap.classification_metadata |= (del(.operator_hold, .operator_hold_reason, .localized_by, .claim_rejected_by, .edit_site) + {localized: false, unlocalized_by: $by.id})
+        | .gap |= (.localized = false | .waits_for = "person") | .gap.claim = (.gap.claim + ". The walk found no place to change: " + .by.none)
+        | .gap.summary = ($s | split("\u0000") | join($none))
+      elif .by.r == 1 or .by.r == 0 then select(.by.id != $was or (.by.r == 1 and $m.sources == null) or (.by.r == 0 and $g.waits_for != "person"))
+        | .gap.classification_metadata |= del(.operator_hold, .operator_hold_reason, .disposition, .localized, .localized_by, .claim_rejected_by, .unlocalized_by, .edit_site, .protected_files, .sources, .check_runnable)
+        | .gap |= del(.localized)
         | if .by.r == 1 then .gap.classification_metadata += {protected_files: [$file], localized_by: $by.id} | .gap |= del(.check_runnable, .waits_for)
-            | .gap.summary = ($s | split("\u0000") | join($right))
+            | .gap.summary = ($s | split("\u0000") | join(if $at_site then $found else $right end))
           else .gap.classification_metadata += {protected_files: [$file], claim_rejected_by: $by.id, check_runnable: false} | .gap.check_runnable = false | .gap.waits_for = "person"
             | .gap.summary = ($s | split("\u0000") | join($wrong)) end
+      else empty
       end' 2>"$st/err")"; rc=$?
   # Said every tick, so a reader that reads nothing is seen: what it read and what it decided, or that it could not read.
   if [ "$rc" -ne 0 ]; then
@@ -1181,15 +1205,32 @@ lift_held_gaps() {
   nm="$(jq '[.[] | select(.role == "person" and (.r == 0 or .r == 1))] | length' "$st/outs.json" 2>/dev/null)"
   # released: decided by a person's mark; stated: a claim restated for a gap no mark decides (research: one number hid
   # the one release among a hundred restatements)
-  local nr ns
-  nr="$(printf '%s\n' "$decided" | grep . | jq -s '[.[] | select(.by != null)] | length' 2>/dev/null)"
+  local nr ns np
+  nr="$(printf '%s\n' "$decided" | grep . | jq -s '[.[] | select(.by != null and .by.none == null)] | length' 2>/dev/null)"
+  np="$(printf '%s\n' "$decided" | grep . | jq -s '[.[] | select(.by.none != null)] | length' 2>/dev/null)"
   ns="$(printf '%s\n' "$decided" | grep . | jq -s '[.[] | select(.by == null)] | length' 2>/dev/null)"
-  log "$v: held-gap release: read ${ng:-?} gap rows, ${nm:-?} person marks, released ${nr:-0}, stated ${ns:-0}"
+  log "$v: held-gap release: read ${ng:-?} gap rows, ${nm:-?} person marks, released ${nr:-0}, stated ${ns:-0}, to a person ${np:-0}"
   rm -rf "$st"
   while IFS= read -r p; do
     [ -n "$p" ] || continue
     local tf size
     tf="$(printf '%s' "$p" | jq -r '.tf')"
+    local site; site="$(printf '%s' "$p" | jq -r '.by.site // empty')"
+    if [ -n "$site" ]; then
+      # Judged by the file the site resolves to, not by its spelling: "./", "//", ".." and links all resolve to one
+      # path, which must be a file inside the checkout and not the gap's test; the release names that path.
+      local root at why=""
+      root="$(realpath -e "$dir" 2>/dev/null)"; at=""
+      case "$site" in "repos/$v/"*) at="$(realpath -e "$dir/${site#"repos/$v/"}" 2>/dev/null)" ;; *) why="outside repos/$v/" ;; esac
+      if [ -z "$why" ]; then
+        if [ -z "$root" ] || [ -z "$at" ] || [ ! -f "$at" ]; then why="not a file of the checkout"
+        elif [ "${at#"$root"/}" = "$at" ]; then why="a path that leaves the checkout"
+        elif [ "$at" = "$(realpath -m "$dir/$tf")" ]; then why="its own test file"; fi
+      fi
+      [ -z "$why" ] || { log "$v: held-gap release: $(printf '%s' "$p" | jq -r .gap.id) names $site, $why; nothing released"; continue; }
+      site="repos/$v/${at#"$root"/}"
+      p="$(printf '%s' "$p" | jq -c --arg s "$site" '.by.site = $s | .gap.classification_metadata.edit_site = $s')"
+    fi
     if [ "$(printf '%s' "$p" | jq -r '.by.r // empty')" != "" ] && [ "$(printf '%s' "$p" | jq -r '.gap.classification_metadata.baseline | type')" != object ]; then
       [ -f "$dir/$tf" ] || { log "$v: held-gap release: $tf is not in the checkout; $(printf '%s' "$p" | jq -r .gap.id) stays as it was"; continue; }
       size="$(test_size "$dir/$tf")"
@@ -1201,7 +1242,7 @@ lift_held_gaps() {
       p="$(printf '%s' "$p" | jq -c --argjson s "$src" '.gap.classification_metadata.sources = $s')"
     fi
     emit_gap "$(printf '%s' "$p" | jq -c '{impulse: {pointer: {type: "substrateGap_write", gap: .gap}}}')"
-    log "$v: held-gap release: $(printf '%s' "$p" | jq -r 'if .by.r == null then "stated the claim of " + .gap.id else "released " + .gap.id + " by outcome " + .by.id + " (r " + (.by.r | tostring) + ")" end')"
+    log "$v: held-gap release: $(printf '%s' "$p" | jq -r 'if .by == null then "stated the claim of " + .gap.id elif .by.none != null then "gave " + .gap.id + " to a person: the walk found no site (" + .by.id + ")" elif .by.site != null then "released " + .gap.id + " at " + .by.site + " by the walk'"'"'s change_wanted " + .by.id else "released " + .gap.id + " by outcome " + .by.id + " (r " + (.by.r | tostring) + ")" end')"
   done <<< "$decided"
   return 0
 }

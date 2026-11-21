@@ -183,7 +183,7 @@ const SCHEMAS: Row[] = [
       "meta.edit_site names (a repos/<repo>/ path: the same path in the clone); with none, the files its " +
       "meta.sources names (what the check imports), never the check's test file. A gap whose row says localized false " +
       "names no edit site yet: find it first (code_search, code_find_function, code_read_lines, bounded_shell) before " +
-      "an edit; one still held (operator_hold) is left. A gap " +
+      "an edit; it is work, not held. A gap " +
       "with a later row of the same gap_id whose status is closed is already closed. To close an open one, ask for the " +
       "next call toward closing it: first a clone of the repo the gap names. Every later call on that change (an edit, " +
       "a commit, a diff, a landing) works in the clone: its cwd (or a path under it) is the cwd the clone's hop " +
