@@ -647,6 +647,14 @@ await ensure({ shape: "credits", target: "selection", w_person: 1, w_lapse: 1, w
 await ensure({ shape: "hold_fact", reason_prefix: "needs_localization", fact: { localized: false },
   description: "The USER: read the failing-test generator's needs_localization holds as facts (not localized), not holds." },
   { reason_prefix: "needs_localization" }, "hold_fact needs_localization");
+// How long a wait the walk makes with nothing ahead is held before records answers it with nothing (records' wait_bound;
+// the USER: "Record the recovery"). A shape served again ends such a wait by its own row (discovery's shape_served); the
+// bound ends one no row ever comes for: a recovery discovery did not see (before its restart, or on a peer) or a stall
+// with no waker at all. 15 minutes is three times discovery's registration lifetime (5 minutes), so a vessel that came
+// back has re-registered, and its row been written, well before the bound; and one ended wait costs the walk one choice,
+// against a stall that held a root for hours. A starting value, read by effect: waits ended by the bound against waits
+// ended by a row.
+await ensure({ shape: "wait_bound", within_ms: 900_000 }, {}, "wait_bound");
 // What a person reads of the rows the surface shows: each description's words name the fields (1 to 4) that say what
 // a row is, so the surface draws them from these rows instead of a list of its own.
 const SHOWN: Array<{ of: string; words: string[]; description: string }> = [
