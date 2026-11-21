@@ -435,7 +435,11 @@ SCHEMAS.push({
     "comes from no source file there), wanted is false, why says what was searched and what was found, and " +
     "evidence_refs lists those rows: the gap then waits for a person. When they show neither yet, still name the " +
     "likeliest file they point to: the walk's next calls on that file check it. A change_wanted row shown already " +
-    "naming an edit_site is answered the same unless the answers shown since say otherwise. " +
+    "naming an edit_site is answered the same unless the answers shown since say otherwise. The land_verdict (r 0) " +
+    "and attempt_explanation rows shown are changes already made for this gap and refused, with why: a site whose " +
+    "change was refused because the gap's own check still failed is not named again unless the answers shown since say " +
+    "what that change missed there. When the changes refused show the failing test asks for what the source does on " +
+    "purpose (the test, not the source, looks wrong), wanted is false and why says so, citing them: a person decides. " +
     `${USES_WORDS} ${JSON_ONLY}`,
   schema: {
     type: "object",
@@ -454,7 +458,12 @@ SCHEMAS.push({
   },
   // localized false is the row's top-level fact (the held-gap release writes it there, where the walk's input where reads)
   inputs: [{ shape: "gap", latest_by: "gap_id", where: { localized: false } }, { shape: "codeSearchResult", latest_by: "shape" }],
+  // The changes already refused for this gap, with why (the grader's verdict per tree and each explanation): a gap
+  // written again is a new root of the same episode, whose rows these entries read, so a site refused before is seen
+  // before it is named again. Kept after the judgment's own rows, as the drafter keeps them after its clone and diff.
   context: [{ answers_a_call: true, latest_by: "call_id", keep: true }, "hop", { shape: "change_wanted", keep: true },
+    { shape: "land_verdict", latest_by: "tree", where: { r: 0, role: "described" }, keep: true },
+    { shape: "attempt_explanation", keep: true },
     { shape: "failure", where: { refused: "schema" } }],
   keep_share: 0.25,
 });
@@ -493,7 +502,10 @@ const explained: Row = {
     },
   },
   inputs: ["world_changed", ...EXPLAINED],
-  context: [{ shape: "request_acts", latest_by: "shape", keep: true }, { shape: "attempt_explanation", keep: true }],
+  // Its own refusals too, as every judgment's: an explanation refused (a what_failed not quoted from the diff) is offered
+  // again, never held, and reads why.
+  context: [{ shape: "request_acts", latest_by: "shape", keep: true }, { shape: "attempt_explanation", keep: true },
+    { shape: "failure", where: { refused: "schema" } }],
   keep_share: 0.25,
 };
 SCHEMAS.push(explained, { ...explained, variant: "gap", inputs: [{ shape: "gap", latest_by: "gap_id" }, ...EXPLAINED] });

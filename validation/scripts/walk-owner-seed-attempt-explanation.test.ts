@@ -69,7 +69,8 @@ describe("the seed's rows", () => {
       // the diff's own words, never the verdict's why: only the gitDiff row's fields are named
       expect(s?.schema?.properties?.what_failed?.["x-quotes"]).toEqual({ shape: "gitDiff", paths: ["check.out", "typecheck.out", "check.why", "typecheck.why"], min: 20 })
       expect([s?.schema?.properties?.what_failed?.maxLength, s?.schema?.properties?.next_must?.maxLength]).toEqual([1200, 800])
-      expect(s?.context).toEqual([{ shape: "request_acts", latest_by: "shape", keep: true }, { shape: "attempt_explanation", keep: true }])
+      expect(s?.context).toEqual([{ shape: "request_acts", latest_by: "shape", keep: true }, { shape: "attempt_explanation", keep: true },
+        { shape: "failure", where: { refused: "schema" } }])
     })
 
     test(`[MUST-FAIL] the request${variant ? "/gap" : ""} keeps every explanation of its root, after its own kept rows and before the calls' answers`, () => {
@@ -79,6 +80,18 @@ describe("the seed's rows", () => {
       expect(kept.at(-2)).toEqual({ shape: "attempt_explanation", keep: true })
     })
   }
+
+  test("[MUST-FAIL] the judgment of a gap's edit site keeps the changes already refused for the gap, with why, in view", () => {
+    const s = schemaOf("change_wanted", "gap")
+    const ctx = (s?.context ?? []) as Row[]
+    expect(ctx).toContainEqual({ shape: "land_verdict", latest_by: "tree", where: { r: 0, role: "described" }, keep: true })
+    expect(ctx).toContainEqual({ shape: "attempt_explanation", keep: true })
+    // after the judgment's own kept rows: its own earlier site comes first
+    const at = (shape: string) => ctx.findIndex((e) => e?.shape === shape)
+    expect(at("change_wanted")).toBeLessThan(at("land_verdict"))
+    expect(at("land_verdict")).toBeLessThan(at("attempt_explanation"))
+    expect(String(s?.description)).toContain("not named again")
+  })
 
   test("every x-quotes the seed writes is bound to one of its schema's inputs (a context row may be clipped or left out)", () => {
     const quoting = seeded.filter((r) => r.shape === "shape_schema" && JSON.stringify(r.schema ?? {}).includes("\"x-quotes\""))
