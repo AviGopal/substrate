@@ -7,7 +7,7 @@
 #   (b) one name still fails alone: nothing written, the gap stays open;
 #   (c) a run that printed no bun summary (crashed, timed out): nothing written;
 #   (d) another vessel's gap, and a gap the generator did not file, are not run or touched;
-#   (e) a test file missing from the checkout: nothing written;
+#   (e) a test file missing from the checkout and not tracked (removed): marked not checkable, never closed;
 #   (f) at most the cap it is given gaps are run per call;
 #   (g) a gap behind ones that stay red is still run: four open, the first three red, the fourth green closes within two
 #       calls at one HEAD, and on the first call at a new HEAD when HEAD moves every call;
@@ -21,8 +21,8 @@
 #   (k) a gap marked not checkable whose names are back but red is written checkable again, once;
 #   (l) a re-armed gap whose names go absent again is marked again (the once-guard is the current names_absent, not
 #       "ever marked");
-#   (m) the source check reads the test file the run ran, on disk: an untracked test file (build output, not at any git
-#       ref) whose title is there is not marked.
+#   (m) an untracked test file (build output, not at any git ref) is marked not checkable whatever its source holds: it
+#       checks nothing the repository holds (pull-sync-failing-test-untracked.test.sh).
 #   (n) a gap a person ruled against (claim_rejected_by, check_runnable false) is never made checkable again by the
 #       closer: ruled against, then absent, then back and red, it stays not checkable (one row clears the absent names,
 #       keeps the ruling, never says it is worked again; then nothing more);
@@ -77,6 +77,10 @@ curl() {
 }
 # shellcheck disable=SC1090
 source "$T/fns.sh"
+# The checkout tracks every file a leg puts in it (git add before each call), as a gated vessel's checkout tracks its
+# tests; a leg that wants a file untracked uses another directory.
+eval "orig_$(declare -f close_failing_test_gaps)"
+close_failing_test_gaps() { [ "${3:-}" = "$DIR" ] && git -C "$DIR" add -A; orig_close_failing_test_gaps "$@"; }
 # The candidate's code runs as the generator runs it, minus the env scrub this test does not exercise.
 scrubbed_env() { shift; "$@"; }
 # bun prints, for `bun test ./<file>`, what <file>.out in the fake's directory holds; it records every file it ran.
@@ -86,7 +90,7 @@ cat > "$FAKE/bun" <<'B'
 f="$(basename "$2")"; echo "$f" >> "$(dirname "$0")/ran.txt"; cat "$(dirname "$0")/$f.out" 2>/dev/null
 B
 chmod +x "$FAKE/bun"; BUN_BIN="$FAKE/bun"
-DIR="$T/checkout"; mkdir -p "$DIR/src"
+DIR="$T/checkout"; mkdir -p "$DIR/src"; git init -q "$DIR"
 export TEST_BASELINE_DIR="$T/baseline"; mkdir -p "$TEST_BASELINE_DIR"
 
 row() { # gap_id vessel test_file filed_by names-json
@@ -129,7 +133,8 @@ else bad "(d) writes=$(cat "$WRITES") ran=$(cat "$FAKE/ran.txt")"; fi
 
 reset "$(row g-gone x src/gone.test.ts "$GEN" '["d > one"]')"
 close_failing_test_gaps x 0123456789abcdef "$DIR"
-if [ ! -s "$WRITES" ]; then ok "(e) a test file missing from the checkout closes nothing"; else bad "(e) writes=$(cat "$WRITES")"; fi
+if [ "$(wc -l < "$WRITES")" = 1 ] && jq -e '.status == "open" and .check_runnable == false' "$WRITES" >/dev/null; then ok "(e) a test file removed from the checkout closes nothing: marked not checkable"
+else bad "(e) writes=$(cat "$WRITES")"; fi
 
 summary "(pass) d > one" > "$FAKE/b.test.ts.out"
 reset "$(row g-a x src/a.test.ts "$GEN" '["d > one"]')" "$(row g-b x src/b.test.ts "$GEN" '["d > one"]')"
@@ -235,8 +240,9 @@ printf 'test("forwards", () => {});\n' > "$U/dist/u.test.js"
 reset "$(row g-u x dist/u.test.js "$GEN" '["d > forwards"]')"
 summary "(pass) d > other" > "$FAKE/u.test.js.out"
 close_failing_test_gaps x 0123456789abcdef "$U"
-if [ ! -s "$WRITES" ]; then ok "(m) untracked test file holding the title on disk: not marked"
-else bad "(m) writes=$(cat "$WRITES") log=$(cat "$LOG")"; fi
+if [ "$(wc -l < "$WRITES")" = 1 ] && jq -e '.check_runnable == false and (.summary | contains("not tracked"))' "$WRITES" >/dev/null && [ ! -s "$FAKE/ran.txt" ]; then
+  ok "(m) untracked test file holding the title on disk: marked not checkable as not tracked, and not run"
+else bad "(m) writes=$(cat "$WRITES") ran=$(cat "$FAKE/ran.txt") log=$(cat "$LOG")"; fi
 
 # (n) a person ruled against the gap's claim: marked absent, then back and red, it stays not checkable (no true row)
 reset "$(row g-p x src/a.test.ts "$GEN" '["d > old"]' | jq -c '.check_runnable = false | .meta.claim_rejected_by = "person-row" | .meta.check_runnable = false')"

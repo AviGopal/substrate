@@ -856,6 +856,20 @@ gen_failing_test_gaps() {
   [ "$(head -n1 "$poll" 2>/dev/null)" = "head=${head:0:10}" ] || printf 'head=%s\n' "${head:0:10}" > "$poll" 2>/dev/null || true
   rows="$(printf '%s\n' "$rows" | awk -F'\t' -v pf="$poll" 'BEGIN { while ((getline l < pf) > 0) G[l] = 1 } !($2 in G)')"
   [ -n "$rows" ] || return 0
+  # A failing file not tracked at this HEAD is a build copy the suite also ran (dist/*.test.js) or a file since removed:
+  # no change to this repository's source fixes a copy, and its tracked source twin, when it fails too, is in this same
+  # run under its own path and is filed by it. So only tracked files are filed, each untracked one said once per call.
+  # The suite itself is left as it runs (what it runs is the vessel's own config); the filing is what reads the fact.
+  if [ -n "$dir" ]; then
+    local keep="" utf
+    while IFS= read -r utf; do
+      [ -n "$utf" ] || continue
+      if git -C "$dir" ls-files --error-unmatch -- "$utf" >/dev/null 2>&1; then keep="${keep}${utf}"$'\n'
+      else log "$v: failing-test generator: $utf fails but is not tracked at ${head:0:10} (a build copy, or removed); not filed"; fi
+    done <<< "$(printf '%s\n' "$rows" | cut -f1 | sort -u)"
+    rows="$(printf '%s\n' "$rows" | awk -F'\t' -v k="$keep" 'BEGIN { n = split(k, K, "\n"); for (i = 1; i <= n; i++) if (K[i] != "") T[K[i]] = 1 } ($1 in T)')"
+    [ -n "$rows" ] || return 0
+  fi
   # Per test FILE: does it use test doubles, and is it a SOURCE-TEXT guard (reads src and asserts on its text)?
   # A TypeError counts as mock/wiring only in a file that actually uses doubles; a source-text guard is always
   # assert-class, because its "fix" rewrites src to match text it asserts, and a guard can be stale on purpose
@@ -1009,49 +1023,62 @@ close_failing_test_gaps() {
     [ -n "$g" ] || continue
     if [ -n "${FAILTEST_GEN_DEADLINE:-}" ] && [ $(( $(date +%s) + 170 )) -gt "$FAILTEST_GEN_DEADLINE" ]; then log "$v: failing-test closer: tick budget spent; the rest wait for a later tick"; break; fi
     id="$(printf '%s' "$g" | jq -r .id)"; tf="$(printf '%s' "$g" | jq -r .tf)"
-    [ -f "$dir/$tf" ] || { log "$v: failing-test closer: $tf is not in the checkout; $id left open"; continue; }
-    ao="$(printf '%s' "$runs" | jq -r --arg tf "$tf" '.[$tf] // empty')"
-    if [ -z "$ao" ]; then
-      ar="$(mktemp -d "${TMPDIR:-/tmp}/pullsync-close-alone-XXXXXX")"
-      ao="$(cd "$dir" && scrubbed_env "$ar" timeout --kill-after=15 150 "$BUN_BIN" test "./$tf" --timeout 20000 > "$ar.out" 2>&1; cat "$ar.out"; rm -f "$ar.out")"
-      ao="$(printf '%s\n' "$ao" | sed 's/\x1b\[[0-9;]*m//g; s/ \[[0-9.]*m*s\]$//; s/[[:space:]]*$//')"
-      rm -rf "$ar" 2>/dev/null
-      runs="$(printf '%s' "$runs" | jq_ao "$ao" -c --arg tf "$tf" '. + {($tf): $ao}')"
+    # A test file not tracked at this HEAD (removed since the gap was filed, or a build copy the suite also ran, such as
+    # dist/*.test.js) checks nothing this repository holds: no change to its source can make it pass, and a pass would
+    # be a copy's. So every name it checks is absent, said as the closer says absent names (check_runnable false, the
+    # names and the HEAD), never a close: a close credits the walk's work on the gap, and nothing was fixed. Tracked again
+    # with its names red, the gap is checkable again by the same path as names that came back.
+    local absent="[]" nm untracked=""
+    if ! git -C "$dir" ls-files --error-unmatch -- "$tf" >/dev/null 2>&1; then
+      untracked=1; absent="$(printf '%s' "$g" | jq -c '.names')"
+      jq -c --arg id "$id" --arg head "${head:0:10}" --argjson at "$(date +%s%N)" '. + {($id): {head: $head, at: $at}}' "$seen" > "$seen.new" 2>/dev/null && mv "$seen.new" "$seen"
+      unsee() { jq -c --arg id "$id" 'del(.[$id])' "$seen" > "$seen.new" 2>/dev/null && mv "$seen.new" "$seen"; }
+    else
+      [ -f "$dir/$tf" ] || { log "$v: failing-test closer: $tf is not in the checkout; $id left open"; continue; }
+      ao="$(printf '%s' "$runs" | jq -r --arg tf "$tf" '.[$tf] // empty')"
+      if [ -z "$ao" ]; then
+        ar="$(mktemp -d "${TMPDIR:-/tmp}/pullsync-close-alone-XXXXXX")"
+        ao="$(cd "$dir" && scrubbed_env "$ar" timeout --kill-after=15 150 "$BUN_BIN" test "./$tf" --timeout 20000 > "$ar.out" 2>&1; cat "$ar.out"; rm -f "$ar.out")"
+        ao="$(printf '%s\n' "$ao" | sed 's/\x1b\[[0-9;]*m//g; s/ \[[0-9.]*m*s\]$//; s/[[:space:]]*$//')"
+        rm -rf "$ar" 2>/dev/null
+        runs="$(printf '%s' "$runs" | jq_ao "$ao" -c --arg tf "$tf" '. + {($tf): $ao}')"
+      fi
+      jq -c --arg id "$id" --arg head "${head:0:10}" --argjson at "$(date +%s%N)" '. + {($id): {head: $head, at: $at}}' "$seen" > "$seen.new" 2>/dev/null && mv "$seen.new" "$seen"
+      # A row this run was due to write and the store did not take is not seen: the gap runs again the next time this
+      # vessel is gated, at this HEAD too (a budget deferral or a gate-only re-run), not only once the HEAD moves. The
+      # closer runs only for a gated vessel, so at a converged HEAD that is no sooner than the next gate.
+      unsee() { jq -c --arg id "$id" 'del(.[$id])' "$seen" > "$seen.new" 2>/dev/null && mv "$seen.new" "$seen"; }
+      if ! printf '%s\n' "$ao" | command grep -qE '^ *[0-9]+ (pass|fail)$'; then log "$v: failing-test closer: alone run of $tf produced no result; $id left open"; continue; fi
+      # A named test the file no longer has (renamed or removed since the gap was filed) neither passes nor fails. Counted
+      # as red, the gap could never close, and the walk was sent to change the source to make a test pass that does not
+      # exist. So the closer says what it found: the gap is not checkable here (check_runnable false, which records'
+      # open-gap read leaves out), with the names it could not find and the HEAD it ran at. A name is absent only when the
+      # run names it in neither "(pass)" nor "(fail)" AND the file's source does not hold its test's title (the part after
+      # the last " > "): a file that fails to load names no test at all, and its gaps are red, not absent. And a run that
+      # broke before its tests (an error summary line, an unhandled error, a hook's "(unnamed)" failure) proves nothing
+      # absent. Written once per set of names.
+      printf '%s\n' "$ao" | command grep -qE '^ *[0-9]+ errors?$|^# Unhandled error|^\(fail\) .*\(unnamed\)$' \
+        || while IFS= read -r nm; do
+        [ -n "$nm" ] || continue
+        printf '%s\n' "$ao" | command grep -qxF -e "(pass) $nm" -e "(fail) $nm" && continue
+        command grep -qF -- "${nm##* > }" "$dir/$tf" && continue
+        absent="$(printf '%s' "$absent" | jq -c --arg n "$nm" '. + [$n]')"
+      done < <(printf '%s' "$g" | jq -r '.names[]')
     fi
-    jq -c --arg id "$id" --arg head "${head:0:10}" --argjson at "$(date +%s%N)" '. + {($id): {head: $head, at: $at}}' "$seen" > "$seen.new" 2>/dev/null && mv "$seen.new" "$seen"
-    # A row this run was due to write and the store did not take is not seen: the gap runs again the next time this
-    # vessel is gated, at this HEAD too (a budget deferral or a gate-only re-run), not only once the HEAD moves. The
-    # closer runs only for a gated vessel, so at a converged HEAD that is no sooner than the next gate.
-    unsee() { jq -c --arg id "$id" 'del(.[$id])' "$seen" > "$seen.new" 2>/dev/null && mv "$seen.new" "$seen"; }
-    if ! printf '%s\n' "$ao" | command grep -qE '^ *[0-9]+ (pass|fail)$'; then log "$v: failing-test closer: alone run of $tf produced no result; $id left open"; continue; fi
-    # A named test the file no longer has (renamed or removed since the gap was filed) neither passes nor fails. Counted
-    # as red, the gap could never close, and the walk was sent to change the source to make a test pass that does not
-    # exist. So the closer says what it found: the gap is not checkable here (check_runnable false, which records'
-    # open-gap read leaves out), with the names it could not find and the HEAD it ran at. A name is absent only when the
-    # run names it in neither "(pass)" nor "(fail)" AND the file's source does not hold its test's title (the part after
-    # the last " > "): a file that fails to load names no test at all, and its gaps are red, not absent. And a run that
-    # broke before its tests (an error summary line, an unhandled error, a hook's "(unnamed)" failure) proves nothing
-    # absent. Written once per set of names.
-    local absent="[]" nm
-    printf '%s\n' "$ao" | command grep -qE '^ *[0-9]+ errors?$|^# Unhandled error|^\(fail\) .*\(unnamed\)$' \
-      || while IFS= read -r nm; do
-      [ -n "$nm" ] || continue
-      printf '%s\n' "$ao" | command grep -qxF -e "(pass) $nm" -e "(fail) $nm" && continue
-      command grep -qF -- "${nm##* > }" "$dir/$tf" && continue
-      absent="$(printf '%s' "$absent" | jq -c --arg n "$nm" '. + [$n]')"
-    done < <(printf '%s' "$g" | jq -r '.names[]')
     if [ "$absent" != "[]" ]; then
       # Said once per set of names while the mark holds: a later row that made the gap checkable again (a person's r 1
       # release drops check_runnable) leaves names_absent as it was, and the names still absent are said again.
       if [ "$(printf '%s' "$g" | jq -c '.meta.names_absent // null')" = "$absent" ] && [ "$(printf '%s' "$g" | jq -r '.meta.check_runnable')" = false ] && [ "$(printf '%s' "$g" | jq -r '.row.waits_for // empty')" = person ]; then log "$v: failing-test closer: $id names tests absent from $tf (already said); left open, not checkable"; continue; fi
-      emit_gap_checked "$(printf '%s' "$g" | jq -c --arg v "$v" --arg tf "$tf" --arg head "${head:0:10}" --argjson absent "$absent" \
+      emit_gap_checked "$(printf '%s' "$g" | jq -c --arg v "$v" --arg tf "$tf" --arg head "${head:0:10}" --argjson absent "$absent" --arg untracked "$untracked" \
         '{impulse:{pointer:{type:"substrateGap_write",gap:((.row // {} | del(.claim)) + {id:.id,category:(.category // "failing_test"),source:"substrate_detected",status:"open",
           check_runnable:false, waits_for:"person",
-          summary:("Not checkable here: the tests this gap names (" + ($absent | join("; ")) + ") are not in repos/" + $v + "/" + $tf
-            + " at " + $head + ", so its check can neither pass nor fail. It is not worked until a test that checks it is named; the source is left as it is."),
+          summary:(if $untracked == "" then "Not checkable here: the tests this gap names (" + ($absent | join("; ")) + ") are not in repos/" + $v + "/" + $tf
+            + " at " + $head + ", so its check can neither pass nor fail. It is not worked until a test that checks it is named; the source is left as it is."
+            else "Not checkable here: the test file repos/" + $v + "/" + $tf + " is not tracked at " + $head
+            + " (removed, or a build copy), so its check can neither pass nor fail. It is not worked until a tracked test checks it; the source is left as it is." end),
           classification_metadata:((.meta // {}) + {check_runnable:false, names_absent:$absent, absent_at_head:$head})}
           + (if .severity then {severity:.severity} else {} end))}}}')"
-      if [ "$?" = 0 ]; then log "$v: failing-test closer: $id names $(printf '%s' "$absent" | jq length) test(s) absent from $tf at ${head:0:10}; marked not checkable"
+      if [ "$?" = 0 ]; then log "$v: failing-test closer: $id names $(printf '%s' "$absent" | jq length) test(s) absent from $tf at ${head:0:10}${untracked:+ (the file is not tracked)}; marked not checkable"
       else log "$v: failing-test closer: $id names tests absent from $tf at ${head:0:10}; the not-checkable row was NOT written; runs again the next time $v is gated (a new HEAD, or a re-gate of this one)"; unsee; fi
       continue
     fi

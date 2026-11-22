@@ -24,6 +24,8 @@ export TEST_BASELINE_DIR="$T/baseline"; mkdir -p "$TEST_BASELINE_DIR"
 DIR="$T/checkout"; mkdir -p "$DIR/src"
 printf 'test("one", () => { expect(1).toBe(2) })\n' > "$DIR/src/a.test.ts"
 printf 'test("two", () => { expect(1).toBe(2) })\n' > "$DIR/src/b.test.ts"
+# the generator files only files tracked at HEAD, as a gated checkout's tests are
+git init -q "$DIR"; git -C "$DIR" add -A
 FAKE="$T/fake"; mkdir -p "$FAKE"
 cat > "$FAKE/bun" <<'B'
 #!/usr/bin/env bash

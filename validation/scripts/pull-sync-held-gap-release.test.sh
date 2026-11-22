@@ -80,8 +80,12 @@ cat > "$FAKE/bun" <<'B'
 f="$(basename "$2")"; cat "$(dirname "$0")/$f.out" 2>/dev/null
 B
 chmod +x "$FAKE/bun"; BUN_BIN="$FAKE/bun"
-DIR="$T/checkout"; mkdir -p "$DIR/src"
+DIR="$T/checkout"; mkdir -p "$DIR/src"; git init -q "$DIR"
 export TEST_BASELINE_DIR="$T/baseline"; mkdir -p "$TEST_BASELINE_DIR"
+# The checkout tracks every file a leg puts in it (git add before each closer call), as a gated vessel's checkout tracks
+# its tests: the closer marks a gap on an untracked test file not checkable.
+eval "orig_$(declare -f close_failing_test_gaps)"
+close_failing_test_gaps() { [ "${3:-}" = "$DIR" ] && git -C "$DIR" add -A; orig_close_failing_test_gaps "$@"; }
 GEN="pull-sync failing-test generator"
 HELD="Not yet localized (no source frame in the stack, or an unclassified error): needs a diagnosis of whether the source or the test is wrong before any compose."
 held() { # gap_id vessel test_file filed_by [status]
