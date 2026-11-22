@@ -1817,7 +1817,7 @@
     },
     "/usr/local/bin/gen-env": {
       "src": "scripts/substrate/gen-env.sh",
-      "src_blob": "aba773ff51980e905a8e68776de6207ade9b4f74",
+      "src_blob": "ba7856503c94ec67db8f00a51dabb9aa897fb8dc",
       "level": "none",
       "reason": "unreached",
       "fixtures": []
@@ -2167,7 +2167,7 @@
     },
     "/usr/local/share/substrate/active-scripts/seed-identity.ts": {
       "src": "scripts/substrate/seed-identity.ts",
-      "src_blob": "4bff23a841fff5acd7125524645e197f56f6ee39",
+      "src_blob": "1d8408b3d9272797d9fa9993bd3745ffdc2e1d7e",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -2176,7 +2176,7 @@
       "evidence": {
         "accepted": "cb43dd286c31649019f1e067f541d282cad21a32",
         "mutation": "insert `exit 99` after line 1",
-        "mutated_blob": "4af5043130a5b74a2a674b40b12472f76fb296ef"
+        "mutated_blob": "646ce4757f1bca05e28c51b45e50c6525eaa60c8"
       }
     },
     "/usr/local/share/substrate/active-scripts/self-development-trend.ts": {
@@ -2314,7 +2314,7 @@
     },
     "/usr/local/share/substrate/secrets-manifest.json": {
       "src": "scripts/substrate/secrets-manifest.json",
-      "src_blob": "0285c95f83b9346e12ffb06b66bbe516396b1677",
+      "src_blob": "baa010bde29cf6288b4abbe5c53643e3e3f5a468",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -2356,7 +2356,7 @@
     },
     "/vessels/seed-identity.ts": {
       "src": "scripts/substrate/seed-identity.ts",
-      "src_blob": "4bff23a841fff5acd7125524645e197f56f6ee39",
+      "src_blob": "1d8408b3d9272797d9fa9993bd3745ffdc2e1d7e",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -2365,7 +2365,7 @@
       "evidence": {
         "accepted": "cb43dd286c31649019f1e067f541d282cad21a32",
         "mutation": "insert `exit 99` after line 1",
-        "mutated_blob": "4af5043130a5b74a2a674b40b12472f76fb296ef"
+        "mutated_blob": "646ce4757f1bca05e28c51b45e50c6525eaa60c8"
       }
     },
     "/usr/lib/systemd/system/service.d/20-deregister-on-stop.conf": {

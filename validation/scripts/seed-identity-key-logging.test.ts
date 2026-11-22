@@ -98,8 +98,8 @@ describe("fixture run of the seeder", () => {
       if (live.length > 0) throw new Error(`refusing to run the seeder here: ${live.join(", ")} exist`);
       const { out, issued, exit } = await runSeeder(status);
       expect(exit).toBe(0);
-      // Non-vacuity: the run really issued keys (first boot: default, admin, 3 per-vessel).
-      expect(issued.length).toBeGreaterThanOrEqual(status === 200 ? 5 : 1);
+      // Non-vacuity: the run really issued keys (first boot: default, admin, 2 per-vessel).
+      expect(issued.length).toBeGreaterThanOrEqual(status === 200 ? 4 : 1);
       for (const k of issued) {
         expect(out.includes(k)).toBe(false);
         expect(out).toContain(keyFingerprint(k));

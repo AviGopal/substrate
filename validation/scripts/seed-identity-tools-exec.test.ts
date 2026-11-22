@@ -1,18 +1,18 @@
-// seed-identity-tools-exec.test.ts: goal-host's per-vessel key is minted with tools-exec, and no other key is.
+// seed-identity-tools-exec.test.ts: no key the seeder mints carries tools-exec, and it mints no key for a vessel the
+// fleet no longer runs.
 //
 // The daemon admits its state-changing tool shapes (shell, fs_write, fs_edit, git_commit, code_*) only from node-self,
-// admin or tools-exec. The walk is the ReAct floor that calls them with goal-host's key, so
-// that key carries tools-exec; it still never carries admin. The fleet key is the node's own key (node-self at the
-// daemon), so it does not; neither does any other per-vessel key, the admin key or the corpus runner's.
+// admin or tools-exec. The fleet key is the node's own key (node-self at the daemon), so it needs no tools-exec, and no
+// per-vessel key, the admin key included, is minted with it. A key minted for a vessel with no unit is a live credential
+// nothing uses.
 //
-// Two layers: the exported scope constant, and a fixture RUN of the real script against a fake identity
-// (IDENTITY_VESSEL_URL) that records the scopes of every /v1/keys/issue request by key name, on both seeding paths
-// (first boot: signup 200; warm with a rejected fleet key: signup 409 + login + re-issue). Like
-// seed-identity-key-logging.test.ts, the run refuses where live substrate files exist, so it cannot write them.
+// A fixture RUN of the real script against a fake identity (IDENTITY_VESSEL_URL) that records the scopes of every
+// /v1/keys/issue request by key name, on both seeding paths (first boot: signup 200; warm with a rejected fleet key:
+// signup 409 + login + re-issue). Like seed-identity-key-logging.test.ts, the run refuses where live substrate files
+// exist, so it cannot write them.
 import { describe, expect, test } from "bun:test";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { GOAL_HOST_KEY_SCOPES } from "../../scripts/substrate/seed-identity.ts";
 
 const SCRIPT = join(import.meta.dir, "../../scripts/substrate/seed-identity.ts");
 const live = ["/etc/substrate/env", "/etc/substrate/private", "/workspace/.substrate-private", "/workspace/.substrate-secrets"]
@@ -59,33 +59,24 @@ async function issuedScopes(signupStatus: 200 | 409): Promise<{ byName: Map<stri
   }
 }
 
-describe("goal-host's key carries tools-exec", () => {
-  test("MUST-FAIL: GOAL_HOST_KEY_SCOPES is read, write, tools-exec and never admin", () => {
-    expect(GOAL_HOST_KEY_SCOPES).toEqual(["read", "write", "tools-exec"]);
-    expect(GOAL_HOST_KEY_SCOPES).not.toContain("admin");
-  });
-
+describe("the seeder's keys carry no tools-exec", () => {
   test("the host carries no live substrate files the run could write", () => {
     expect(live).toEqual([]);
   });
 
-  test("MUST-FAIL: a fresh seed mints goal-host-vessel with read, write, tools-exec and no admin", async () => {
+  test("MUST-FAIL: a fresh seed mints only the fleet's keys: none for goal-host-vessel or its corpus runner", async () => {
     if (live.length > 0) throw new Error(`refusing to run the seeder here: ${live.join(", ")} exist`);
     const { byName, exit } = await issuedScopes(200);
     expect(exit).toBe(0);
-    expect(byName.get("goal-host-vessel")).toEqual(["read", "write", "tools-exec"]);
+    expect([...byName.keys()].sort()).toEqual(["concept-db", "local-tools-vessel", "substrate-admin", "substrate-default"]);
   });
 
-  test("CONTROL: on a fresh seed no other key carries tools-exec (fleet, admin, corpus runner, other per-vessel keys)", async () => {
+  test("MUST-FAIL: on a fresh seed no key carries tools-exec (fleet, admin, per-vessel keys)", async () => {
     if (live.length > 0) throw new Error(`refusing to run the seeder here: ${live.join(", ")} exist`);
     const { byName } = await issuedScopes(200);
     // Non-vacuity: every key the first boot mints was observed.
-    for (const name of ["substrate-default", "substrate-admin", "local-tools-vessel", "goal-host-corpus-runner", "concept-db"]) {
-      expect(byName.has(name)).toBe(true);
-      expect(byName.get(name)).not.toContain("tools-exec");
-    }
-    const others = [...byName.keys()].filter((k) => k !== "goal-host-vessel");
-    for (const k of others) expect(byName.get(k)).not.toContain("tools-exec");
+    for (const name of ["substrate-default", "substrate-admin", "local-tools-vessel", "concept-db"]) expect(byName.has(name)).toBe(true);
+    for (const s of byName.values()) expect(s).not.toContain("tools-exec");
     expect(byName.get("substrate-default")).toEqual(["read", "write", "db:admin", "templates:admin"]);
   });
 
