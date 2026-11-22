@@ -1817,7 +1817,7 @@
     },
     "/usr/local/bin/gen-env": {
       "src": "scripts/substrate/gen-env.sh",
-      "src_blob": "ba7856503c94ec67db8f00a51dabb9aa897fb8dc",
+      "src_blob": "5c85536c256b008eac0a16fe17ea3ab839885f47",
       "level": "none",
       "reason": "unreached",
       "fixtures": []
@@ -1992,7 +1992,7 @@
     },
     "/usr/local/bin/substrate-status": {
       "src": "scripts/substrate/substrate-status.sh",
-      "src_blob": "d767d451f09bc68ae525d460e1fe531653ffd2ea",
+      "src_blob": "98f57608c8d23ef15e69260b2d0549dbce67a764",
       "level": "none",
       "reason": "unreached",
       "fixtures": []
@@ -2251,7 +2251,7 @@
     },
     "/usr/local/share/substrate/docker-compose.yml": {
       "src": "docker-compose.yml",
-      "src_blob": "259426e4cd306e2ebceab569eead5c4532ed9c76",
+      "src_blob": "93a2cedcb3fafb226defe21855121b3429db335e",
       "level": "none",
       "reason": "outside-gate-paths",
       "fixtures": []

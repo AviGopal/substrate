@@ -13,7 +13,7 @@
 # LLM resolver this script used to unmask by hand is in that group now), the
 # provider keys and git credential the host keeps in /etc/environment (copied on
 # the host, never fetched here), and the same four ports published beyond the
-# host — 18080, 18100, 18101, 18210. The manifest's other ports are published on
+# host — 18080, 18100, 18101. The manifest's other ports are published on
 # 127.0.0.1 only.
 #
 # The relay: a relay still running as a host process (managed unit or

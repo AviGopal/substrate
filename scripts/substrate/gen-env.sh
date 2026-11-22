@@ -197,7 +197,7 @@ done
 # Only the digits after the last ':' are compared, since a legacy value may carry
 # a host address (127.0.0.1:18310).
 for _pp in ACTIVITY_API_PORT:8080 DEV_VESSEL_PORT:8090 DISCOVERY_PORT:8100 IDENTITY_PORT:8101 \
-           GOAL_HOST_PORT:8210 CONCEPT_DB_PORT:8260 STATEFUL_UI_PORT:8270 \
+           CONCEPT_DB_PORT:8260 STATEFUL_UI_PORT:8270 \
            HUMAN_SURFACE_PORT:8310; do
   _pn="${_pp%%:*}"; _pc="${_pp##*:}"
   _pv="${!_pn:-}"

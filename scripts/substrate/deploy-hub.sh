@@ -13,7 +13,7 @@
 # The same hub: the `hub` role group, plus any ENABLED_EXTRA_VESSELS the caller
 # names (ENABLED_ROLES=hub — not PROFILE=hub, whose composition also carries the
 # autonomy role and boredom), and the same six
-# ports published beyond the host — 18080, 18090, 18100, 18101, 18210, 18260.
+# ports published beyond the host — 18080, 18090, 18100, 18101, 18260.
 # The manifest's other ports are published on 127.0.0.1 only.
 #
 # The relay: a relay still running as a host process (managed unit or

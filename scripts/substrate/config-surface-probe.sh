@@ -180,7 +180,7 @@ probe_lane() {  # $1 = lane name; writes $WORK/<lane>.{env,secrets,values}
       # prefix). A sentinel would contradict SUBSTRATE_NAME's and the prefix's, and
       # gen-env refuses a contradiction; they are consumed, never delivered.
       SUBSTRATE_CONTAINER|WORKSPACE_VOLUME|SURREAL_VOLUME|LIVE_NAME|\
-      ACTIVITY_API_PORT|DEV_VESSEL_PORT|DISCOVERY_PORT|IDENTITY_PORT|GOAL_HOST_PORT|\
+      ACTIVITY_API_PORT|DEV_VESSEL_PORT|DISCOVERY_PORT|IDENTITY_PORT|\
       CONCEPT_DB_PORT|STATEFUL_UI_PORT|HUMAN_SURFACE_PORT)
         echo "$n" >> "$WORK/$lane.unjudged" ;;
       *) envargs+=( -e "$n=$(sentinel_for "$n")" ) ;;
@@ -275,7 +275,7 @@ report_lane() {
   # PUBLIC_IP, and the two *_PUBLIC_PORT names are folded into the
   # DISCOVERY_PUBLIC_URL / IDENTITY_PUBLIC_URL gen-env derives and emits.
   dropped="$(comm -23 "$WORK/$lane.offered" "$WORK/$lane.env" \
-             | grep -vxE 'LLM_ARMS|ALLOW_INSECURE_API_KEY_SECRET|FED_PUBLIC_IP|DISCOVERY_PUBLIC_PORT|IDENTITY_PUBLIC_PORT|SUBSTRATE_CONTAINER|WORKSPACE_VOLUME|SURREAL_VOLUME|LIVE_NAME|(ACTIVITY_API|DEV_VESSEL|DISCOVERY|IDENTITY|GOAL_HOST|ANALYSIS|CONCEPT_DB|STATEFUL_UI|HUMAN_SURFACE)_PORT')"
+             | grep -vxE 'LLM_ARMS|ALLOW_INSECURE_API_KEY_SECRET|FED_PUBLIC_IP|DISCOVERY_PUBLIC_PORT|IDENTITY_PUBLIC_PORT|SUBSTRATE_CONTAINER|WORKSPACE_VOLUME|SURREAL_VOLUME|LIVE_NAME|(ACTIVITY_API|DEV_VESSEL|DISCOVERY|IDENTITY|ANALYSIS|CONCEPT_DB|STATEFUL_UI|HUMAN_SURFACE)_PORT')"
   # Persist for the baseline comparison, not just for the eye. These lists were
   # printed and then discarded: the compared summary held counts only, so a
   # value-replacement regression — a name that starts being overwritten by a

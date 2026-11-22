@@ -109,8 +109,6 @@ ip6tables -A SUBSTRATE-HUB-FW-IN -i eth0 -p tcp --dport 18080 -j REJECT --reject
 ip6tables -A SUBSTRATE-HUB-FW-IN -i eth1 -p tcp --dport 18080 -j REJECT --reject-with tcp-reset
 ip6tables -A SUBSTRATE-HUB-FW-IN -i eth0 -p tcp --dport 18090 -j REJECT --reject-with tcp-reset
 ip6tables -A SUBSTRATE-HUB-FW-IN -i eth1 -p tcp --dport 18090 -j REJECT --reject-with tcp-reset
-ip6tables -A SUBSTRATE-HUB-FW-IN -i eth0 -p tcp --dport 18210 -j REJECT --reject-with tcp-reset
-ip6tables -A SUBSTRATE-HUB-FW-IN -i eth1 -p tcp --dport 18210 -j REJECT --reject-with tcp-reset
 ip6tables -A SUBSTRATE-HUB-FW-IN -i eth0 -p tcp --dport 18250 -j REJECT --reject-with tcp-reset
 ip6tables -A SUBSTRATE-HUB-FW-IN -i eth1 -p tcp --dport 18250 -j REJECT --reject-with tcp-reset
 ip6tables -A SUBSTRATE-HUB-FW-IN -i eth0 -p tcp --dport 18260 -j REJECT --reject-with tcp-reset

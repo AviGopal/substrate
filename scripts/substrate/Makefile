@@ -374,29 +374,10 @@ migrate-state-to-volumes:
 	      echo "[migrate] surreal CURRENT=$$(cat /dst-surreal/data.db/CURRENT 2>/dev/null)"; \
 	      echo "[migrate] done — host dirs left intact as backup"'
 
-# "Before restarting anything, check nothing is mid-flight": goal-host advertises
-# `in_flight` on /health, so report it; the drain below does the waiting. This is
-# a REPORT, not a gate — a busy substrate must still be stoppable.
-#
-# Ask the engine which host port this container publishes for goal-host rather
-# than computing it: `docker port` knows the true mapping whichever way the
-# container was created.
-#
 # `docker stop -t`, not `compose stop`: it drains a container the manifest did
 # not create exactly as it drains one it did.
 stop-live:
 	@$(RESOLVE); \
-	_gp=$$(docker port "$$C" 8210/tcp 2>/dev/null | head -1 | sed -nE 's/.*:([0-9]+)$$/\1/p'); \
-	_inflight=""; \
-	[ -n "$$_gp" ] && _inflight=$$(curl -s --max-time 5 http://localhost:$$_gp/health 2>/dev/null \
-	    | sed -nE 's/.*"in_flight":([0-9]+).*/\1/p'); \
-	if [ -n "$$_inflight" ] && [ "$$_inflight" -gt 0 ] 2>/dev/null; then \
-	  echo "[stop] $$_inflight execution(s) in flight — the drain below waits for them"; \
-	elif [ -n "$$_inflight" ]; then \
-	  echo "[stop] nothing in flight"; \
-	else \
-	  echo "[stop] could not read in-flight count (goal-host not answering) — proceeding"; \
-	fi; \
 	echo "[stop] draining $$C (up to $(STOP_TIMEOUT)s — vessels drain to 240s, SurrealDB flushes RocksDB)"; \
 	docker stop -t $(STOP_TIMEOUT) "$$C" || exit $$?; \
 	echo "[stop] $$C stopped; volumes $$WS + $$SR retained"

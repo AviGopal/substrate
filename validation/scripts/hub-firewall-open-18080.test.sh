@@ -4,7 +4,7 @@
 # its default-deny. A source list and the empty list behave exactly as before.
 # The rule body runs under env -i with iptables/ip6tables/logger/systemctl/ip/ss shimmed (argv recorded; no kernel).
 #   (a) MUST-FAIL: `any` puts 18080 in the open list and admits 9443 from every source
-#   (b) `any` still resets every other new inbound connection, and 18090/18210/18260 get no RETURN
+#   (b) `any` still resets every other new inbound connection, and 18090/18260 get no RETURN
 #   (c) control: a source list still restricts 18080 and 9443 to that list (no unsourced RETURN)
 #   (d) control: an empty list still closes 18080 and 9443
 #   (e) the operator front end accepts `any` and still refuses a malformed list before any ssh
@@ -29,7 +29,7 @@ grep -qx "iptables -A SUBSTRATE-HUB-FW -p tcp -m conntrack --ctorigdstport 18080
   && ok "(a) any: 18080 is open to every source" || bad "(a) any: no unsourced 18080 RETURN"
 grep -qx "iptables -A SUBSTRATE-HUB-FW-IN4 -p tcp --dport 9443 -j RETURN" "$T/log" \
   && ok "(a) any: 9443 is open to every source" || bad "(a) any: no unsourced 9443 RETURN"
-for p in 18090 18210 18260; do
+for p in 18090 18260; do
   grep -q "ctorigdstport $p -j RETURN" "$T/log" && bad "(b) any: $p was opened" || ok "(b) any: $p stays closed"
 done
 for i in eth0 eth1; do grep -qx "iptables -A SUBSTRATE-HUB-FW -i $i -p tcp -m conntrack --ctstate NEW -j REJECT --reject-with tcp-reset" "$T/log" \

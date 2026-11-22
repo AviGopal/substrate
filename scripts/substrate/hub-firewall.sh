@@ -17,7 +17,7 @@
 #     network's learning store. It cannot simply be closed: every hub-attached spoke derives
 #     ACTIVITY_API_ENDPOINT=<hub>:18080 (gen-env) and uses it as its trace store.
 #   denied: every other NEW inbound connection on eth0/eth1 to a docker-published port (18090 gap writes,
-#     18210 goal-host, 18250, 18260 concept-db, 18270, 18310, and anything published later).
+#     18250, 18260 concept-db, 18270, 18310, and anything published later).
 # Docker-published ports bypass ufw's INPUT chain, so the filter lives in DOCKER-USER, matched on the ORIGINAL
 # destination port (packets there are already DNATed). IPv6 publishes ([::]) are covered in ip6tables, in
 # DOCKER-USER if docker manages ip6tables, else in INPUT where the userland proxy listens.
@@ -43,7 +43,7 @@ valid_v4_list() { # comma-separated dotted quads, octets 0-255, no empty item; n
 # The script the hub runs, for apply/undo/status over ssh and as the boot unit's ExecStart. Defined once.
 rule_body() { cat <<'BODY'
 set -u
-CH=SUBSTRATE-HUB-FW; ALLOW="18100 18101 18333"; DENY6="18080 18090 18210 18250 18260 18270 18310"
+CH=SUBSTRATE-HUB-FW; ALLOW="18100 18101 18333"; DENY6="18080 18090 18250 18260 18270 18310"
 valid_v4_list() { # comma-separated dotted quads, octets 0-255, no empty item; never a hostname (iptables would resolve it)
   local a o='(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])'   # no leading zeros (octal ambiguity)
   case "$1" in ,*|*,|*,,*|*[[:space:]]*) echo "bad IPv4 list: empty item or whitespace"; return 1 ;; esac
