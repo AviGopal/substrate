@@ -10,9 +10,9 @@
 #   deploy-hub.sh user@host <public-ip>
 #   == deploy.sh --env-file <generated .env> user@host
 #
-# The same hub: the `hub` role group plus the six compute vessels this script
-# always ran (ENABLED_ROLES=hub + ENABLED_EXTRA_VESSELS — not PROFILE=hub, whose
-# composition also carries the autonomy role and boredom), and the same six
+# The same hub: the `hub` role group, plus any ENABLED_EXTRA_VESSELS the caller
+# names (ENABLED_ROLES=hub — not PROFILE=hub, whose composition also carries the
+# autonomy role and boredom), and the same six
 # ports published beyond the host — 18080, 18090, 18100, 18101, 18210, 18260.
 # The manifest's other ports are published on 127.0.0.1 only.
 #
@@ -50,8 +50,10 @@ for k in ANTHROPIC_API_KEY OPENAI_API_KEY OPENAI_BASE_URL LLM_DEFAULT_MODEL GOOG
 done
 add SUBSTRATE_IMAGE "${IMAGE:-}"
 add ENABLED_ROLES hub
-# The compute vessels this hub has always run on top of the hub role group.
-add ENABLED_EXTRA_VESSELS "${ENABLED_EXTRA_VESSELS:-goal-host-vessel.service,development-vessel.service}"
+# Vessels beyond the hub role group run only when the caller names them: the
+# compute vessels this hub once ran on top of it have left the image, and
+# apply-inventory refuses a name the inventory does not carry.
+add ENABLED_EXTRA_VESSELS "${ENABLED_EXTRA_VESSELS:-}"
 add SUBSTRATE_BIND_HOST 0.0.0.0
 add SUBSTRATE_ROOT "${SUBSTRATE_ROOT:-/workspace/git/super-repo}"
 add PUBLIC_IP "$PUBLIC_IP"
