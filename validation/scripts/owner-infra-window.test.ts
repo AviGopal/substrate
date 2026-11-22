@@ -26,6 +26,12 @@ test("[MUST-FAIL] an overlap with a live window, or a live window_id, is refused
   expect(plan(ok, 60000, [live, { ...live, retracted: true }]).ok).toBe(true);
 });
 
+test("[MUST-FAIL] a live row with an empty span (from after to) is in no window's way", () => {
+  const empty = { shape: "infra_window", window_id: "restart-53500-53499", from_seq: 53500, to_seq: 53499, statuses: [0] };
+  expect(plan(ok, 60000, [empty]).ok).toBe(true);
+  expect(why(plan(ok, 60000, [empty, { ...empty, window_id: "restart-53500-53501", to_seq: 53501 }]))).toContain("overlaps live window restart-53500-53501");
+});
+
 test("arguments parse into the plan's fields; --write is explicit", () => {
   const a = parseArgs(["--window-id", "w", "--from", "1", "--to", "2", "--statuses", "404, 402", "--reason", "r"]);
   expect(a).toEqual({ windowId: "w", from: 1, to: 2, statuses: [404, 402], reason: "r", write: false });

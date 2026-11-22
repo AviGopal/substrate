@@ -37,7 +37,9 @@ export function plan(a: Args, head: number, existing: Row[]): Plan {
     if (fields.every((f) => JSON.stringify(same[1][f]) === JSON.stringify(row[f]))) return { ok: true, row, present: String(same[1].id ?? a.windowId) };
     return { ok: false, why: `window_id ${a.windowId} is already live with other fields` };
   }
-  const overlap = live.find(([, r]) => Number(r.from_seq) <= a.to && a.from <= Number(r.to_seq));
+  // a live row whose span is empty (from after to: a restart that cut nothing, written for the install it made) covers
+  // nothing, so nothing overlaps it
+  const overlap = live.find(([, r]) => Number(r.from_seq) <= Number(r.to_seq) && Number(r.from_seq) <= a.to && a.from <= Number(r.to_seq));
   if (overlap) return { ok: false, why: `the span overlaps live window ${overlap[0]} (${overlap[1].from_seq}..${overlap[1].to_seq})` };
   return { ok: true, row };
 }
