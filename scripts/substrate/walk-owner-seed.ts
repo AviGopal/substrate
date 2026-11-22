@@ -79,10 +79,17 @@ const COMMITTED_TREE = { "x-latest": { shapes: ["gitCommitResult", "gitWorktree"
 const JSON_ONLY = "Reply with only the JSON object: no prose, no code fence.";
 // What a produced row used: the ids of the rows it was shown that it relies on. Credit travels back only through what
 // a step used (records' fold), never through what it was merely shown, so a produce names its own. Each id is held to
-// the rows shown (x-shown: described-shape refuses anything else). It is not required: a row naming none passes no
-// credit back past itself.
-const USES = { type: "array", items: { type: "string", "x-shown": true } };
-const USES_WORDS = "uses lists the id of each row you were shown that this relies on, and only those.";
+// the rows shown. It is not required: a row naming none passes no credit back past itself. An id naming no row shown is
+// left out of what is written and said in its shown_dropped, not refused (x-shown "drop"), on every shape: the rest of
+// the answer, and the shown ids it names, stand. evidence_refs stays held (x-shown true), since a grade rests on it. The
+// list sets no maxItems: one would refuse an answer citing more shown rows than it allows, and what is dropped is
+// bounded by the answer itself, whose length the model's own output cap bounds.
+// The words say which ids are a row's own, since an id copied from inside a shown row's fields names no row shown.
+const USES = { type: "array", items: { type: "string", "x-shown": "drop" } };
+const USES_WORDS = "uses lists the id of each row you were shown that this relies on, and only those: each row's own " +
+  "top-level id, never an id written inside one of its fields, nor a row named only in not_shown_whole or " +
+  "named_not_shown, nor a row a read returned that does not name one of your inputs. An id that names no row you were " +
+  "shown is left out and passes no credit.";
 // Who is answering (the USER: "Both, after promise checks"): the producer is one step of a walk that acts, so "I
 // cannot act" is false while a gated tool is still uncalled. request_acts (in context) says which were called.
 const WHO_ANSWERS = "You are one step of the walk. The walk acts through the tools the owner gates on a wanted change " +

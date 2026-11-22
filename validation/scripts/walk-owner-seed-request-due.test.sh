@@ -44,7 +44,7 @@
 #       weight (w_check, below w_close) and window, and a cap on inheritance (the USER: "Cap inheritance");
 #   (x) an answer may promise its next act (next_act {tool, target}, optional), which records settles;
 #   (w) the answer, request and land verdict (every variant) may name the rows they used (uses: ids, each held to the
-#       rows shown, x-shown), and are told to name only those;
+#       rows shown, an unshown one left out, not refused: x-shown "drop"), and are told to name only those;
 #   (r) the request producer is shown a file read whole, only its newest read per path, in place of the hop that
 #       fetched it (context fileContent: whole, latest_by path, covers hop on call_id), in both request variants.
 set -uo pipefail
@@ -237,9 +237,9 @@ leg(schema("land_verdict")?.repeat_key === "tree" && schema("land_verdict")?.rep
   && rows.filter((r) => r.shape === "shape_schema" && r.target !== "land_verdict").every((r) => r.repeat_key === undefined),
   "(rk) the land_verdict schema says what makes two verdicts the same judgment (tree, r); no other schema names a repeat key");
 const using = rows.filter((r) => r.shape === "shape_schema" && ["answer", "request", "land_verdict"].includes(String(r.target)));
-leg(using.length === 5 && using.every((r) => JSON.stringify((r.schema as Row)?.properties?.uses) === JSON.stringify({ type: "array", items: { type: "string", "x-shown": true } })
+leg(using.length === 5 && using.every((r) => JSON.stringify((r.schema as Row)?.properties?.uses) === JSON.stringify({ type: "array", items: { type: "string", "x-shown": "drop" } })
     && !((r.schema as Row)?.required ?? []).includes("uses") && String(r.description).includes("uses lists the id of each row you were shown that this relies on")),
-  "(w) the answer, request and land verdict (every variant) may name the rows they used, each held to the rows shown");
+  "(w) the answer, request and land verdict (every variant) may name the rows they used, an unshown one left out");
 process.exit(failed === 0 ? 0 : 1);
 TS
 out="$(cd "$W" && "$BUN" "$W/drive.ts" 2>&1)"; rc=$?
