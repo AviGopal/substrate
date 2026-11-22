@@ -995,18 +995,19 @@ gen_failing_test_gaps() {
 # none "(fail)", a closed row is filed under the same id. A run with no bun summary, or any name not passing, closes
 # nothing. Runs only for a vessel the gate just tested (the generator's queue), so a landed fix is seen on the next
 # tick; at most the cap it is given (its fourth argument, 3 when none) per vessel, within the generator's deadline. So that a gap behind ones that stay
-# red is ever run, each run is remembered with the vessel HEAD it ran at (in $v.closer beside the generator's
-# baseline): a gap already run at this HEAD is not run again until HEAD moves, and the rest go least recently run
-# first. A test file several gaps check runs once per call.
+# red is ever run, each run is remembered with the vessel HEAD it ran at and the closer's own code (in $v.closer beside
+# the generator's baseline): a gap already run at this HEAD by this closer is not run again until either moves, and the
+# rest go least recently run first. A test file several gaps check runs once per call.
 close_failing_test_gaps() {
-  local v="$1" head="$2" dir="${3:-}" cap="${4:-3}" st gaps g id tf names ar ao n=0 seen runs="{}"
+  local v="$1" head="$2" dir="${3:-}" cap="${4:-3}" st gaps g id tf names ar ao n=0 seen runs="{}" code
+  code="$(closer_code)"
   command -v jq >/dev/null 2>&1 || return 0
   [ -n "$dir" ] && [ -n "${BUN_BIN:-}" ] || return 0
   seen="${TEST_BASELINE_DIR:-/workspace/.test-baseline}/$v.closer"
   jq -e 'type == "object"' "$seen" >/dev/null 2>&1 || printf '{}' > "$seen" 2>/dev/null || true
   st="$(mktemp "${TMPDIR:-/tmp}/pullsync-close-XXXXXX")" || return 0
   dev_resolve '{"impulse":{"pointer":{"type":"substrateGap","status":"open","limit":5000}}}' --max-time 30 > "$st" 2>/dev/null || true
-  gaps="$(jq -c --arg v "$v" --arg head "${head:0:10}" --slurpfile seen "$seen" '[(.body.gaps // empty)[]
+  gaps="$(jq -c --arg v "$v" --arg head "${head:0:10}" --arg code "$code" --slurpfile seen "$seen" '[(.body.gaps // empty)[]
     | select((.classification_metadata.filed_by? // "") == "pull-sync failing-test generator")
     | select(.classification_metadata.evidence_resolve.shape? == "test_suite")
     | select(((.classification_metadata.evidence_resolve.input.vessel // "") | sub("^repos/"; "")) == $v)
@@ -1015,7 +1016,7 @@ close_failing_test_gaps() {
        row: del(.classification_metadata)}
     | select((.tf // "") != "" and (.names | length) > 0)
     | . + {last: (($seen[0] // {})[.id] // {at: 0, head: ""})}
-    | select(.last.head != $head)]
+    | select(.last.head != $head or (.last.code // "") != $code)]
     | sort_by(.last.at) | .[] | del(.last)' "$st" 2>/dev/null | head -n "$cap")"
   rm -f "$st"
   [ -n "$gaps" ] || return 0
@@ -1031,7 +1032,7 @@ close_failing_test_gaps() {
     local absent="[]" nm untracked=""
     if ! git -C "$dir" ls-files --error-unmatch -- "$tf" >/dev/null 2>&1; then
       untracked=1; absent="$(printf '%s' "$g" | jq -c '.names')"
-      jq -c --arg id "$id" --arg head "${head:0:10}" --argjson at "$(date +%s%N)" '. + {($id): {head: $head, at: $at}}' "$seen" > "$seen.new" 2>/dev/null && mv "$seen.new" "$seen"
+      jq -c --arg id "$id" --arg head "${head:0:10}" --arg code "$code" --argjson at "$(date +%s%N)" '. + {($id): {head: $head, at: $at, code: $code}}' "$seen" > "$seen.new" 2>/dev/null && mv "$seen.new" "$seen"
       unsee() { jq -c --arg id "$id" 'del(.[$id])' "$seen" > "$seen.new" 2>/dev/null && mv "$seen.new" "$seen"; }
     else
       [ -f "$dir/$tf" ] || { log "$v: failing-test closer: $tf is not in the checkout; $id left open"; continue; }
@@ -1043,7 +1044,7 @@ close_failing_test_gaps() {
         rm -rf "$ar" 2>/dev/null
         runs="$(printf '%s' "$runs" | jq_ao "$ao" -c --arg tf "$tf" '. + {($tf): $ao}')"
       fi
-      jq -c --arg id "$id" --arg head "${head:0:10}" --argjson at "$(date +%s%N)" '. + {($id): {head: $head, at: $at}}' "$seen" > "$seen.new" 2>/dev/null && mv "$seen.new" "$seen"
+      jq -c --arg id "$id" --arg head "${head:0:10}" --arg code "$code" --argjson at "$(date +%s%N)" '. + {($id): {head: $head, at: $at, code: $code}}' "$seen" > "$seen.new" 2>/dev/null && mv "$seen.new" "$seen"
       # A row this run was due to write and the store did not take is not seen: the gap runs again the next time this
       # vessel is gated, at this HEAD too (a budget deferral or a gate-only re-run), not only once the HEAD moves. The
       # closer runs only for a gated vessel, so at a converged HEAD that is no sooner than the next gate.
@@ -1131,6 +1132,32 @@ close_failing_test_gaps() {
     n=$((n + 1))
   done <<< "$gaps"
   [ "$n" -gt 0 ] && log "$v: failing-test closer: $n gap(s) closed this tick"
+  return 0
+}
+
+# The closer's own code: a change to how it judges a gap is a reason to judge the gap again, as a new HEAD is.
+closer_code() { declare -f close_failing_test_gaps | git hash-object --stdin 2>/dev/null | cut -c1-12; }
+
+# Every tick, not only when the gate tests a new HEAD: the closer runs only for a vessel the gate just tested, so a
+# change to the closer itself reached no open gap until that vessel's code moved for some other reason, and a gap filed
+# at a HEAD the closer had already run waited for the next one. Each vessel with an open generator gap runs the closer
+# against its clone in <clones dir>/<vessel>, at the HEAD it sits on; the closer runs only the gaps not yet run at that
+# HEAD by its own code, so a tick with none runs nothing. Only the gap's own check, never a suite run: the HEAD the gap
+# was judged at has not moved. A vessel with no clone is skipped, and so is one whose HEAD is not on origin/$BRANCH (a
+# clone ahead of origin or diverged from it, which the tick leaves for the push side): a close there would credit code
+# no gate or push has accepted. The gate's own run judges only HEADs it pulled from origin.
+close_failing_test_gaps_each() {
+  local cl="$1" vs v
+  command -v jq >/dev/null 2>&1 || return 0
+  vs="$(dev_resolve '{"impulse":{"pointer":{"type":"substrateGap","status":"open","limit":5000}}}' --max-time 30 2>/dev/null \
+    | jq -r '[.body.gaps[]? | select((.classification_metadata.filed_by? // "") == "pull-sync failing-test generator")
+        | (.classification_metadata.evidence_resolve.input.vessel // "") | sub("^repos/"; "") | select(. != "")] | unique | .[]' 2>/dev/null)"
+  for v in $vs; do
+    [ -d "$cl/$v" ] || continue
+    git -C "$cl/$v" merge-base --is-ancestor HEAD "origin/$BRANCH" 2>/dev/null \
+      || { log "$v: failing-test closer: clone HEAD is not on origin/$BRANCH; its gaps wait"; continue; }
+    close_failing_test_gaps "$v" "$(git -C "$cl/$v" rev-parse HEAD 2>/dev/null)" "$cl/$v" || true
+  done
   return 0
 }
 
@@ -6794,6 +6821,9 @@ done <<< "$GEN_QUEUE"
 
 # A person's release of a held failing-test gap, every tick (see lift_held_gaps_each).
 lift_held_gaps_each "$CLONE_DIR" || true
+# A changed closer, over every vessel's open gaps (see close_failing_test_gaps_each).
+gleft=$(( ${UNIT_TIMEOUT_S:-3600} - ( $(date +%s) - PULLSYNC_T0 ) - ${FAILTEST_GEN_MARGIN_S:-240} ))
+if [ "$gleft" -ge 200 ]; then FAILTEST_GEN_DEADLINE=$(( $(date +%s) + gleft )) close_failing_test_gaps_each "$CLONE_DIR" || true; fi
 # An open failing-test gap filed before gaps named their repository names it, once (see carry_gap_repo).
 carry_gap_repo || true
 # Deployment events recorded as gaps before they were marked as such stop being worked (carry_infra_gaps).
