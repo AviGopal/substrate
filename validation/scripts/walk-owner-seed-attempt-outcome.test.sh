@@ -7,7 +7,9 @@
 #       described}, keep: true}, on the same x-latest the gitDiff entry uses, the grader's verdict only (a person's mark
 #       grades the page, and a newer one on the tree would otherwise win latest_by and leave the grader's out)
 #   (b) MUST-FAIL: the last entry is {answers_a_call: true, latest_by: call_id, keep: true}, and between it and the
-#       verdict only the root's explanations of its refused attempts ({shape: attempt_explanation, keep: true})
+#       verdict only the root's explanations of its refused attempts ({shape: attempt_explanation, keep: true}) and what
+#       was installed ({shape: infra_window, latest_by: window_id}, not kept: it admits no call's answer, so its place
+#       before the catch-all changes nothing either admits)
 #   (c) the entries up to and including gitDiff are as before, in order
 # usage: validation/scripts/walk-owner-seed-attempt-outcome.test.sh
 set -uo pipefail
@@ -41,11 +43,12 @@ XL='{"x-latest":{"shapes":["gitCommitResult","gitWorktree","gitDiff"],"moves":["
 LV='{"shape":"land_verdict","latest_by":"tree","where":{"tree":'"$XL"',"role":"described"},"keep":true}'
 DK='{"answers_a_call":true,"latest_by":"call_id","keep":true}'
 AE='{"shape":"attempt_explanation","keep":true}'
+IW='{"shape":"infra_window","latest_by":"window_id"}'
 AFTER='[.ctx[] | .[(to_entries | map(select((.value | type) == "object" and .value.shape == "gitDiff")) | .[0].key) + 1:]]'
 if [ "$(jq -c "$AFTER | map(.[0])" <<<"$OUT")" = "[$LV,$LV]" ]; then
   ok "(a) both request variants list the grader's verdict on the diff's own newest tree right after the diff, kept"
 else bad "(a) after gitDiff: $(jq -c "$AFTER" <<<"$OUT" | cut -c1-300)"; fi
-if [ "$(jq -c "$AFTER" <<<"$OUT")" = "[[$LV,$AE,$DK],[$LV,$AE,$DK]]" ]; then
+if [ "$(jq -c "$AFTER" <<<"$OUT")" = "[[$LV,$AE,$IW,$DK],[$LV,$AE,$IW,$DK]]" ]; then
   ok "(b) the answer of every call the root made is listed last, newest per call, kept"
 else bad "(b) after gitDiff: $(jq -c "$AFTER" <<<"$OUT" | cut -c1-300)"; fi
 BEFORE='[.ctx[] | .[0:(to_entries | map(select((.value | type) == "object" and .value.shape == "gitDiff")) | .[0].key) + 1] | map(if type == "string" then . else .shape end)]'

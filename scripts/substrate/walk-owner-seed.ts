@@ -238,6 +238,11 @@ const SCHEMAS: Row[] = [
       // request's own rows: a root refused many times has more explanations than the share holds, and listed first they
       // would push out its clone and diff; here they take what share is left, newest first.
       { shape: "attempt_explanation", keep: true },
+      // What was installed (an owner infra_window row naming what each install put in, and into which vessel): the walk
+      // makes a held request again once over an install bearing on it, and this is how its producer sees what went in.
+      // The walk weighs these rows itself and takes none of them as news otherwise, so reading them here makes no
+      // request due. Not kept: shown in the newest-first fill, one row per window.
+      { shape: "infra_window", latest_by: "window_id" },
       // What came back from each call this root made, success or failure, newest per call: an answer is shown with the
       // request that made it, whatever its shape, so a new tool's answer needs no entry of its own. Listed last: the named
       // entries above keep their own rules, and this catches every answer they do not name. described keeps an answer only
