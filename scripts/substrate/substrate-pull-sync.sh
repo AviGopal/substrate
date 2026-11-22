@@ -280,12 +280,15 @@ restart_window_close() {
     fi
     case "$_rw_to" in *[!0-9]*) continue ;; esac
     # nothing written since the restart began (or a store reset): no call was cut. An install is still news, so its row
-    # is written with that empty span, which the fold reads as covering nothing (from after to).
+    # is written with that empty span, which the fold reads as covering nothing (from after to). Empty spans of one tick
+    # share their seqs, and readers keep the latest row per window_id, so a row that installs names its units and
+    # commits in its id too: one install's row never hides another's.
     if [ "$_rw_to" -lt "$_rw_from" ] && [ "$_rw_inst" = '[]' ]; then
       log "restart window: the store's head after restarting $_rw_vs ($_rw_to) is not past its head before it ($((_rw_from - 1))): nothing was cut, so no window is written"; continue
     fi
     _rw_row="$(jq -nc --argjson from "$_rw_from" --argjson to "$_rw_to" --arg vs "$_rw_vs" --argjson inst "$_rw_inst" \
-      '{shape: "infra_window", window_id: ("restart-\($from)-\($to)"), from_seq: $from, to_seq: $to, statuses: [0],
+      '{shape: "infra_window", from_seq: $from, to_seq: $to, statuses: [0],
+        window_id: ("restart-\($from)-\($to)" + (if $inst == [] then "" else "-" + ($vs | gsub(" "; "+")) + "@" + ($inst | map(.commit) | join("+")) end)),
         reason: ("pull-sync restarted " + $vs + (if $from <= $to then ": a call cut by the restart (status 0) was stopped, not failed" else ": no call was cut" end)
           + (if $inst == [] then "" else "; it installed " + ($inst | map(.repo + " at " + .commit) | join(", ")) end)),
         input_refs: []} + (if $inst == [] then {} else {installed: $inst} end)')"

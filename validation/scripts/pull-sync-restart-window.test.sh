@@ -44,6 +44,8 @@
 #   (u) a restart that installs but cuts nothing still writes its row, the span empty (from after to, which the fold
 #       reads as covering nothing), the reason saying no call was cut;
 #   (v) a unit with no single port names no vessel, says so, and reads no registry;
+#   (y) two installs in one tick that each cut nothing share their seqs, yet write two rows with two window_ids (its
+#       units and commits), so neither hides the other's installed;
 #   (w) no wait runs on past 120 s of the script's clock, and (x) the closure's ConsistsOf reads end: the test fails a
 #       wait or a closure with no end itself (each leg's clock is the script's own; a hang is a FAIL, not a timeout).
 # usage: validation/scripts/pull-sync-restart-window.test.sh [path/to/substrate-pull-sync.sh]
@@ -347,7 +349,7 @@ RESTART_INSTALL='{"repo":"walk-vessel","commit":"c1"}' systemctl restart walk-ve
 U1="$(jq -c '[.[] | select(.shape == "infra_window") | {window_id, from_seq, to_seq, statuses, installed}]' "$ROWS")"
 U_WHY="$(why)"
 fresh 100; MOVE=0; systemctl restart walk-vessel.service; restart_window_close; U2="$(spans)"
-if [ "$U1" = '[{"window_id":"restart-101-100","from_seq":101,"to_seq":100,"statuses":[0],"installed":[{"repo":"walk-vessel","commit":"c1","vessel":"walk"}]}]' ] \
+if [ "$U1" = '[{"window_id":"restart-101-100-walk-vessel@c1","from_seq":101,"to_seq":100,"statuses":[0],"installed":[{"repo":"walk-vessel","commit":"c1","vessel":"walk"}]}]' ] \
    && [ "$U_WHY" = 'pull-sync restarted walk-vessel: no call was cut; it installed walk-vessel at c1' ] && [ "$U2" = '[]' ]; then
   ok "(u) an install that cut nothing still writes its row, its span empty; a plain restart that cut nothing writes none"
 else bad "(u) with install: $U1 [$U_WHY]; without: $U2"; fi
@@ -357,6 +359,17 @@ RESTART_INSTALL='{"repo":"records-vessel","commit":"c2"}' systemctl restart reco
 if [ "$(inst)" = '[[{"repo":"records-vessel","commit":"c2"}]]' ] && grep -q 'install: records-vessel has no single port' "$LOG" && [ ! -s "$T/regreads" ]; then
   ok "(v) a unit with no single port names no vessel, says so, and reads no registry"
 else bad "(v) installed=$(inst) regreads=$(cat "$T/regreads" 2>/dev/null | wc -l) log: $(tr '\n' ';' < "$LOG" | cut -c1-240)"; fi
+
+fresh 100; MOVE=0; REGISTRY="$(reg "[$WALK_LOCAL]")"
+RESTART_INSTALL='{"repo":"walk-vessel","commit":"c1"}' systemctl restart walk-vessel.service
+RESTART_INSTALL='{"repo":"walk-vessel","commit":"c2"}' systemctl restart walk-vessel.service
+RESTART_INSTALL='{"repo":"records-vessel","commit":"c3"}' systemctl restart records-vessel.service
+restart_window_close
+Y="$(jq -c '[.[] | select(.shape == "infra_window") | {window_id, from_seq, to_seq, c: [.installed[].commit]}]' "$ROWS")"
+Y_IDS="$(jq '[.[] | select(.shape == "infra_window") | .window_id] | unique | length' "$ROWS")"
+if [ "$Y" = '[{"window_id":"restart-101-100-walk-vessel@c1","from_seq":101,"to_seq":100,"c":["c1"]},{"window_id":"restart-101-100-walk-vessel@c2","from_seq":101,"to_seq":100,"c":["c2"]},{"window_id":"restart-101-100-records-vessel@c3","from_seq":101,"to_seq":100,"c":["c3"]}]' ] && [ "$Y_IDS" = 3 ]; then
+  ok "(y) installs in one tick that cut nothing write one row each, each its own window_id"
+else bad "(y) rows: $Y ids: $Y_IDS"; fi
 
 if [ -s "$SHOWCAP" ]; then bad "(x) the closure read ConsistsOf past 50 times in one restart: it has no end"; else ok "(x) every closure's ConsistsOf reads end"; fi
 
