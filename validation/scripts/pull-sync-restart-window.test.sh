@@ -45,7 +45,8 @@
 #       reads as covering nothing), the reason saying no call was cut;
 #   (v) a unit with no single port names no vessel, says so, and reads no registry;
 #   (y) installs in one tick that each cut nothing share their seqs, yet write one row each with its own window_id (its
-#       units and commits), so none hides another's installed, and each keeps its own unit's vessel;
+#       units and commits), so none hides another's installed, and each keeps its own unit's vessel: three repos into
+#       three units; one package's commit into two consumers (the bounce); one unit at two commits;
 #   (z) an install whose restart takes a PartOf member on another port names the restarted unit's registration, not
 #       the member's;
 #   (w) no wait runs on past 120 s of the script's clock, and (x) the closure's ConsistsOf reads end: the test fails a
@@ -373,6 +374,16 @@ Y_IDS="$(jq '[.[] | select(.shape == "infra_window") | .window_id] | unique | le
 if [ "$Y" = '[{"window_id":"restart-101-100-walk-vessel@c1","from_seq":101,"to_seq":100,"installed":[{"repo":"walk-vessel","commit":"c1","vessel":"walk"}]},{"window_id":"restart-101-100-local-tools-vessel@c2","from_seq":101,"to_seq":100,"installed":[{"repo":"local-tools-vessel","commit":"c2","vessel":"tools"}]},{"window_id":"restart-101-100-records-vessel@c3","from_seq":101,"to_seq":100,"installed":[{"repo":"records-vessel","commit":"c3"}]}]' ] && [ "$Y_IDS" = 3 ]; then
   ok "(y) installs in one tick that cut nothing write one row each, each its own window_id"
 else bad "(y) rows: $Y ids: $Y_IDS"; fi
+fresh 100; MOVE=0; REGISTRY="$(reg "[$WALK_LOCAL,$LT_LOCAL]")"
+RESTART_INSTALL='{"repo":"pkg","commit":"c9"}' systemctl restart walk-vessel.service
+RESTART_INSTALL='{"repo":"pkg","commit":"c9"}' systemctl restart local-tools-vessel.service
+RESTART_INSTALL='{"repo":"walk-vessel","commit":"c7"}' systemctl restart walk-vessel.service
+RESTART_INSTALL='{"repo":"walk-vessel","commit":"c8"}' systemctl restart walk-vessel.service
+restart_window_close
+Y2="$(jq -c '[.[] | select(.shape == "infra_window") | {window_id, installed}]' "$ROWS")"
+if [ "$Y2" = '[{"window_id":"restart-101-100-walk-vessel@c9","installed":[{"repo":"pkg","commit":"c9","vessel":"walk"}]},{"window_id":"restart-101-100-local-tools-vessel@c9","installed":[{"repo":"pkg","commit":"c9","vessel":"tools"}]},{"window_id":"restart-101-100-walk-vessel@c7","installed":[{"repo":"walk-vessel","commit":"c7","vessel":"walk"}]},{"window_id":"restart-101-100-walk-vessel@c8","installed":[{"repo":"walk-vessel","commit":"c8","vessel":"walk"}]}]' ]; then
+  ok "(y) one package's commit into two consumers, and one unit at two commits, in one tick: one row and id each"
+else bad "(y) bounce and repeat rows: $Y2"; fi
 
 fresh 100; MOVE=2; REGISTRY="$(reg "[$WALK_LOCAL,$LT_LOCAL]")"
 echo 'local-tools-vessel.service walk-vessel.service' > "$CONSISTS"
