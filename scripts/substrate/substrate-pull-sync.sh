@@ -864,7 +864,7 @@ gen_failing_test_gaps() {
     local keep="" utf
     while IFS= read -r utf; do
       [ -n "$utf" ] || continue
-      if git -C "$dir" ls-files --error-unmatch -- "$utf" >/dev/null 2>&1; then keep="${keep}${utf}"$'\n'
+      if test_tracked "$dir" "$utf"; then keep="${keep}${utf}"$'\n'
       else log "$v: failing-test generator: $utf fails but is not tracked at ${head:0:10} (a build copy, or removed); not filed"; fi
     done <<< "$(printf '%s\n' "$rows" | cut -f1 | sort -u)"
     rows="$(printf '%s\n' "$rows" | awk -F'\t' -v k="$keep" 'BEGIN { n = split(k, K, "\n"); for (i = 1; i <= n; i++) if (K[i] != "") T[K[i]] = 1 } ($1 in T)')"
@@ -1030,7 +1030,7 @@ close_failing_test_gaps() {
     # names and the HEAD), never a close: a close credits the walk's work on the gap, and nothing was fixed. Tracked again
     # with its names red, the gap is checkable again by the same path as names that came back.
     local absent="[]" nm untracked=""
-    if ! git -C "$dir" ls-files --error-unmatch -- "$tf" >/dev/null 2>&1; then
+    if ! test_tracked "$dir" "$tf"; then
       untracked=1; absent="$(printf '%s' "$g" | jq -c '.names')"
       jq -c --arg id "$id" --arg head "${head:0:10}" --arg code "$code" --argjson at "$(date +%s%N)" '. + {($id): {head: $head, at: $at, code: $code}}' "$seen" > "$seen.new" 2>/dev/null && mv "$seen.new" "$seen"
       unsee() { jq -c --arg id "$id" 'del(.[$id])' "$seen" > "$seen.new" 2>/dev/null && mv "$seen.new" "$seen"; }
@@ -1135,8 +1135,10 @@ close_failing_test_gaps() {
   return 0
 }
 
-# The closer's own code: a change to how it judges a gap is a reason to judge the gap again, as a new HEAD is.
-closer_code() { declare -f close_failing_test_gaps | git hash-object --stdin 2>/dev/null | cut -c1-12; }
+# The closer's own code, with every function whose result decides its verdict (close, absent, not checkable): a change to
+# how it judges a gap is a reason to judge the gap again, as a new HEAD is. A function that only writes or reports what
+# was decided is left out, since changing it changes no verdict.
+closer_code() { declare -f close_failing_test_gaps test_tracked test_size jq_ao scrubbed_env | git hash-object --stdin 2>/dev/null | cut -c1-12; }
 
 # Every tick, not only when the gate tests a new HEAD: the closer runs only for a vessel the gate just tested, so a
 # change to the closer itself reached no open gap until that vessel's code moved for some other reason, and a gap filed
@@ -1266,7 +1268,7 @@ lift_held_gaps() {
       (([$o[] | cites] | sort_by(.seq) | last) // ([$w[] | cites] | sort_by(.seq) | last)) as $by
     | ($g | del(.shape, .id, .seq, .t, .writer, .role, .input_refs, .gap_id, .meta)) as $rest
     | ("repos/" + $v + "/" + $tf) as $file
-    | {tf: $tf, by: (if $by == null then null elif $by.r != null then {id: $by.id, r: $by.r} elif $by.site != null then {id: $by.id, r: 1, site: $by.site} else {id: $by.id, none: $by.why} end),
+    | {tf: $tf, was_site: (if $unlocalized then null else ($m.edit_site // null) end), by: (if $by == null then null elif $by.r != null then {id: $by.id, r: $by.r} elif $by.site != null then {id: $by.id, r: 1, site: $by.site} else {id: $by.id, none: $by.why} end),
        gap: ($rest + {id: $g.gap_id, classification_metadata: $m,
          claim: ("The test is right: the source must change so these tests in " + $file + " pass: "
            + (($m.evidence_resolve.input.only_tests // []) | join(" ; ")))})}
@@ -1293,18 +1295,18 @@ lift_held_gaps() {
   fi
   ng="$(jq '[.[] | select(.shape == "gap" and .role == "detector")] | length' "$st/gaps.json" 2>/dev/null)"
   nm="$(jq '[.[] | select(.role == "person" and (.r == 0 or .r == 1))] | length' "$st/outs.json" 2>/dev/null)"
-  # released: decided by a person's mark; stated: a claim restated for a gap no mark decides (research: one number hid
-  # the one release among a hundred restatements)
-  local nr ns np
-  nr="$(printf '%s\n' "$decided" | grep . | jq -s '[.[] | select(.by != null and .by.none == null)] | length' 2>/dev/null)"
-  np="$(printf '%s\n' "$decided" | grep . | jq -s '[.[] | select(.by.none != null)] | length' 2>/dev/null)"
-  ns="$(printf '%s\n' "$decided" | grep . | jq -s '[.[] | select(.by == null)] | length' 2>/dev/null)"
-  log "$v: held-gap release: read ${ng:-?} gap rows, ${nm:-?} person marks, released ${nr:-0}, stated ${ns:-0}, to a person ${np:-0}"
+  # Counted as written, after the loop: released (decided by a person's mark or the walk's site), stated (a claim restated
+  # for a gap no mark decides), to a person; a decision the checks below refuse is not released, and one the store
+  # refuses is not written. A count of decisions read as releases that never happened.
+  local nr=0 ns=0 np=0 nx=0 nw=0
   rm -rf "$st"
   while IFS= read -r p; do
     [ -n "$p" ] || continue
     local tf size
     tf="$(printf '%s' "$p" | jq -r '.tf')"
+    # A test file not tracked at HEAD is never released or restated: no change to the source can make it pass, and the
+    # closer marks it not checkable (test_tracked). A row written here would be written again every tick.
+    test_tracked "$dir" "$tf" || { log "$v: held-gap release: $tf is not tracked at ${head:0:10}; $(printf '%s' "$p" | jq -r .gap.id) is not released (the failing-test closer marks it not checkable)"; nx=$((nx + 1)); continue; }
     local site; site="$(printf '%s' "$p" | jq -r '.by.site // empty')"
     if [ -n "$site" ]; then
       # Judged by the file the site resolves to, not by its spelling: "./", "//", ".." and links all resolve to one
@@ -1317,12 +1319,18 @@ lift_held_gaps() {
         elif [ "${at#"$root"/}" = "$at" ]; then why="a path that leaves the checkout"
         elif [ "$at" = "$(realpath -m "$dir/$tf")" ]; then why="its own test file"; fi
       fi
-      [ -z "$why" ] || { log "$v: held-gap release: $(printf '%s' "$p" | jq -r .gap.id) names $site, $why; nothing released"; continue; }
+      [ -z "$why" ] || { log "$v: held-gap release: $(printf '%s' "$p" | jq -r .gap.id) names $site, $why; nothing released"; nx=$((nx + 1)); continue; }
       site="repos/$v/${at#"$root"/}"
+      # The gap already released at this site: a new change_wanted naming the same place says nothing new. A gap held
+      # again (its claim refused) names no released site, so the same place releases it again.
+      if [ "$site" = "$(printf '%s' "$p" | jq -r '.was_site // empty')" ]; then
+        log "$v: held-gap release: $(printf '%s' "$p" | jq -r .gap.id) is already released at $site; $(printf '%s' "$p" | jq -r .by.id) names the same site, nothing written"
+        continue
+      fi
       p="$(printf '%s' "$p" | jq -c --arg s "$site" '.by.site = $s | .gap.classification_metadata.edit_site = $s')"
     fi
     if [ "$(printf '%s' "$p" | jq -r '.by.r // empty')" != "" ] && [ "$(printf '%s' "$p" | jq -r '.gap.classification_metadata.baseline | type')" != object ]; then
-      [ -f "$dir/$tf" ] || { log "$v: held-gap release: $tf is not in the checkout; $(printf '%s' "$p" | jq -r .gap.id) stays as it was"; continue; }
+      [ -f "$dir/$tf" ] || { log "$v: held-gap release: $tf is not in the checkout; $(printf '%s' "$p" | jq -r .gap.id) stays as it was"; nx=$((nx + 1)); continue; }
       size="$(test_size "$dir/$tf")"
       p="$(printf '%s' "$p" | jq -c --argjson s "$size" '.gap.classification_metadata.baseline = $s')"
     fi
@@ -1331,9 +1339,16 @@ lift_held_gaps() {
       src='[]'; [ -f "$dir/$tf" ] && src="$(test_sources "$dir" "$tf" "$v")"
       p="$(printf '%s' "$p" | jq -c --argjson s "$src" '.gap.classification_metadata.sources = $s')"
     fi
-    emit_gap "$(printf '%s' "$p" | jq -c '{impulse: {pointer: {type: "substrateGap_write", gap: .gap}}}')"
+    if ! emit_gap_checked "$(printf '%s' "$p" | jq -c '{impulse: {pointer: {type: "substrateGap_write", gap: .gap}}}')"; then
+      log "$v: held-gap release: $(printf '%s' "$p" | jq -r .gap.id) not written (the store refused it); decided again next tick"
+      nw=$((nw + 1)); continue
+    fi
+    case "$(printf '%s' "$p" | jq -r 'if .by == null then "s" elif .by.none != null then "p" else "r" end')" in
+      s) ns=$((ns + 1)) ;; p) np=$((np + 1)) ;; *) nr=$((nr + 1)) ;;
+    esac
     log "$v: held-gap release: $(printf '%s' "$p" | jq -r 'if .by == null then "stated the claim of " + .gap.id elif .by.none != null then "gave " + .gap.id + " to a person: the walk found no site (" + .by.id + ")" elif .by.site != null then "released " + .gap.id + " at " + .by.site + " by the walk'"'"'s change_wanted " + .by.id else "released " + .gap.id + " by outcome " + .by.id + " (r " + (.by.r | tostring) + ")" end')"
   done <<< "$decided"
+  log "$v: held-gap release: read ${ng:-?} gap rows, ${nm:-?} person marks, released $nr, stated $ns, to a person $np, not released $nx, not written $nw"
   return 0
 }
 
@@ -1352,6 +1367,11 @@ lift_held_gaps_each() {
   done
   return 0
 }
+
+# A test file is the repository's only if it is tracked at the checkout's HEAD: a file since removed, or a build copy the
+# suite also ran (dist/*.test.js), checks nothing a change to the source can make pass. The generator, the closer and the
+# held-gap release all read this one fact.
+test_tracked() { git -C "$1" ls-files --error-unmatch -- "$2" >/dev/null 2>&1; }
 
 # jq with a test run's whole output as $ao, read from a file. An argument is bounded by the kernel's argument size and a
 # run's output is not: passed as --arg, a long one failed with "Argument list too long" (node1, 11-14 01:57, local-tools)

@@ -21,6 +21,8 @@
 #       its HEAD is on origin, it is.
 #   (k) [MUST-FAIL] a gap whose test file is not tracked, once judged at a HEAD by this closer, is not judged again on
 #       the next pass (its record keeps the closer's code too).
+#   (i) [MUST-FAIL] a change to any function whose result decides the closer's verdict (test_tracked, test_size, jq_ao,
+#       scrubbed_env) alone judges each open gap once again, as a change to the closer does; each is checked alone.
 # usage: validation/scripts/pull-sync-failing-test-closer-code.test.sh [path/to/substrate-pull-sync.sh]
 set -uo pipefail
 SCRIPT="${1:-$(cd "$(dirname "$0")/../.." && pwd)/scripts/substrate/substrate-pull-sync.sh}"
@@ -28,7 +30,7 @@ T="$(mktemp -d)"; trap 'rm -rf "${T:?}"' EXIT
 FAILS=0
 ok()  { echo "ok   - $*"; }
 bad() { echo "FAIL - $*"; FAILS=$((FAILS+1)); }
-for f in shape_route gap_resolve dev_resolve emit_gap emit_gap_checked jq_ao closer_code close_failing_test_gaps \
+for f in shape_route gap_resolve dev_resolve emit_gap emit_gap_checked jq_ao test_tracked test_size closer_code close_failing_test_gaps \
          close_failing_test_gaps_each; do sed -n "/^$f() {/,/^}/p" "$SCRIPT"; sed -n "/^$f() { .*}$/p" "$SCRIPT"; done > "$T/fns.sh"
 grep -q '^close_failing_test_gaps()' "$T/fns.sh" || { echo "FAIL - could not extract close_failing_test_gaps"; exit 1; }
 LOG="$T/log.txt"; log() { echo "$*" >> "$LOG"; }
@@ -163,6 +165,20 @@ tick; close_failing_test_gaps_each "$CL"; h1="$(ran)"
 tick; close_failing_test_gaps_each "$CL"; h2="$(ran)"
 if [ "$h1" = "t2.test.ts" ] && [ -z "$h2" ]; then ok "(h) a gap filed at a HEAD already run, closer unchanged: run by the next pass once, then not again"
 else bad "(h) first=[$h1] then=[$h2]"; fi
+
+# (i)
+for fn in test_tracked test_size jq_ao scrubbed_env; do
+  orig="$(declare -f "$fn")"
+  # a helper not defined here would leave the closer's code unchanged, and the leg would test nothing
+  [ -n "$orig" ] || { bad "(i) $fn is not defined in this test"; continue; }
+  eval "$(declare -f "$fn" | sed "0,/{/s//{ : changed-$fn;/")"
+  tick; close_failing_test_gaps_each "$CL"; i1="$(ran)"
+  tick; close_failing_test_gaps_each "$CL"; i2="$(ran)"
+  if [ "$i1" = "t1.test.ts t2.test.ts" ] && [ -z "$i2" ]; then ok "(i) a change to $fn alone judges each open gap once again"
+  else bad "(i) $fn: first=[$i1] then=[$i2]"; fi
+  # restored, the closer's code is what it was, which is a change too: judged once more, so the next helper starts quiet
+  eval "$orig"; tick; close_failing_test_gaps_each "$CL"
+done
 
 # (j)
 echo y >> "$DIR/src/t1.test.ts"; git -C "$DIR" -c user.name=t -c user.email=t@example.invalid commit -qam three

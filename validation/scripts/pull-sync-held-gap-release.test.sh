@@ -19,8 +19,8 @@
 #   (l) every tick, with no gate run: lift_held_gaps_each releases each graded vessel's gap against its clone, skips a
 #       vessel with no clone, and the tick calls it outside the gate's queue;
 #   (m) r 1 names the test's sources (relative imports resolved inside the checkout, no test file, nothing outside it,
-#       nothing unresolved); r 0 names none; a gap released r 1 before sources existed gets them once, and one whose
-#       test file is gone from the checkout gets [] once, not a rewrite every tick;
+#       nothing unresolved); r 0 names none; a gap released r 1 before sources existed gets them once; one whose test
+#       file is gone from the checkout is not written at all (see (y));
 #   (n) an open generator gap whose latest row names no repo gets one row naming the vessel its evidence runs, the
 #       rest of the row (status, summary, meta, any hold) as it was, and not again; (n2) a gap naming a repo, a closed
 #       one, one another writer filed, one naming no vessel: nothing; (n3) records unreadable: nothing, logged;
@@ -29,7 +29,8 @@
 #       claim: a person's word on it would release a gap whose check cannot run;
 #   (x) a verdict given before the closer's mark (on an earlier row) does not lift the mark; (x2) nor does one naming the
 #       mark row itself (it has no claim to judge); (x5) one naming a row after the mark (tests back, re-armed) releases;
-#       (x6) a mark whose row carries check_runnable false only in its meta is still a mark; (x3) a verdict with no seq
+#       (x6) a mark whose row carries check_runnable false only in its meta is still a mark; (x7) [GUARD] after the
+#       closer's re-arm (from its mark, so no claim) the claim is stated once, then nothing is written; (x3) a verdict with no seq
 #       releases nothing; (x4) a gap with a row with no seq: nothing written,
 #       and it is said;
 #   (cw) the walk's change_wanted on a gap row decides as a person's outcome does (newest by seq): a site releases the
@@ -39,7 +40,18 @@
 #       file it resolves to (any spelling, a link), and the release names that file; only a person's outcome is r 0,
 #       and a person's outcome decides over the walk's, whichever is newer;
 #   (i) the closer leaves a released gap open while its test file has fewer expects than at release, and closes it when
-#       it has as many.
+#       it has as many;
+#   (z) [MUST-FAIL] a gap the walk released at a site, then a new change_wanted naming the same file (any spelling):
+#       nothing written, said; [GUARD] a new change_wanted naming another file: released there; [MUST-FAIL] a release
+#       the store refuses is said not written and counted so, and is decided again on the next tick; the count line
+#       counts writes: a decision refused by the checks is counted not released, never released; [MUST-FAIL] a gap
+#       held again after its release (its claim refused, the old site still in its meta) is released again at that site;
+#   (y) [MUST-FAIL] a test file on disk but not tracked at HEAD (a build copy, ignored) is never released, by a person's
+#       r 1 or the walk's site, and nothing is written for it on a later tick; the closer marks it not checkable, and a
+#       tick after the mark writes nothing either, and it is counted not released; the same gap on a tracked file
+#       releases as before.
+#   (x7) [GUARD] after the closer's re-arm, the claim is stated once and then nothing is written
+#   (y2) [MUST-FAIL] a tracked test file missing from the checkout is not released, and is counted not released.
 # usage: validation/scripts/pull-sync-held-gap-release.test.sh [path/to/substrate-pull-sync.sh]
 set -uo pipefail
 SCRIPT="${1:-$(cd "$(dirname "$0")/../.." && pwd)/scripts/substrate/substrate-pull-sync.sh}"
@@ -48,7 +60,7 @@ FAILS=0
 ok()  { echo "ok   - $*"; }
 bad() { echo "FAIL - $*"; FAILS=$((FAILS+1)); }
 {
-  for f in shape_route gap_resolve dev_resolve emit_gap emit_gap_checked jq_ao close_failing_test_gaps test_size test_sources lift_held_gaps lift_held_gaps_each carry_gap_repo; do sed -n "/^$f() {/,/^}/p" "$SCRIPT"; done
+  for f in shape_route gap_resolve dev_resolve emit_gap emit_gap_checked jq_ao test_tracked close_failing_test_gaps test_size test_sources lift_held_gaps lift_held_gaps_each carry_gap_repo; do sed -n "/^$f() {/,/^}/p" "$SCRIPT"; done
 } > "$T/fns.sh"
 grep -q '^lift_held_gaps()' "$T/fns.sh" && grep -q '^test_size()' "$T/fns.sh" \
   || { echo "FAIL - could not extract lift_held_gaps and test_size"; exit 1; }
@@ -64,6 +76,7 @@ curl() {
     vesselCapability) printf '{"content":{"vessels":[{"vesselId":"v"}]}}' ;;
     record_read) if [ -n "$DOWN" ] || [ "$(printf '%s' "$d" | jq -r .pointer.shape)" = "${DOWN_SHAPE:-}" ]; then printf '{"error":"down"}'; else jq -c --arg s "$(printf '%s' "$d" | jq -r .pointer.shape)" 'map(select(.shape == $s))' "$ROWS"; fi ;;
     record_write)
+      [ -n "${WFAIL:-}" ] && { printf '{}'; return 0; }
       local n row; n="$(jq length "$ROWS")"
       row="$(printf '%s' "$d" | jq -c --argjson n "$n" '.pointer as $p | $p.row + {id: ("row-" + ($n | tostring)), seq: ($n + 1), writer: $p.writer, role: $p.role}')"
       jq -c --argjson r "$row" '. + [$r]' "$ROWS" > "$ROWS.new" && mv "$ROWS.new" "$ROWS"
@@ -86,6 +99,8 @@ export TEST_BASELINE_DIR="$T/baseline"; mkdir -p "$TEST_BASELINE_DIR"
 # its tests: the closer marks a gap on an untracked test file not checkable.
 eval "orig_$(declare -f close_failing_test_gaps)"
 close_failing_test_gaps() { [ "${3:-}" = "$DIR" ] && git -C "$DIR" add -A; orig_close_failing_test_gaps "$@"; }
+eval "orig_$(declare -f lift_held_gaps)"
+lift_held_gaps() { [ "${3:-}" = "$DIR" ] && git -C "$DIR" add -A; orig_lift_held_gaps "$@"; }
 GEN="pull-sync failing-test generator"
 HELD="Not yet localized (no source frame in the stack, or an unclassified error): needs a diagnosis of whether the source or the test is wrong before any compose."
 held() { # gap_id vessel test_file filed_by [status]
@@ -188,6 +203,7 @@ if printf '%s' "$L" | jq -e --argjson b "$b1" '.check_runnable == false and .met
 else bad "(k) latest=$L again=$again log=$(cat "$LOG")"; fi
 
 CL="$T/clones"; mkdir -p "$CL/x/src"; cp "$DIR/src/a.test.ts" "$CL/x/src/a.test.ts"
+git -C "$CL/x" init -q && git -C "$CL/x" add src/a.test.ts && git -C "$CL/x" -c user.name=t -c user.email=t@example.invalid commit -qm clone
 reset "$(held g-a x src/a.test.ts "$GEN")" "$(held g-y y src/a.test.ts "$GEN")" "$(outcome 0 r0)" "$(outcome 0 r1)"
 lift_held_gaps_each "$CL"
 if [ "$(latest g-a | jq -r '.check_runnable')" = false ] && [ "$(latest g-y | jq -r '.meta.operator_hold')" = true ] \
@@ -240,8 +256,8 @@ gone="$(held g-a x src/gone.test.ts "$GEN" | jq -c '.meta |= (del(.operator_hold
 reset "$gone" "$(outcome 1 r0)"
 lift_held_gaps x 0123456789abcdef "$DIR"; first="$(wc -l < "$WRITES")"; gsrc="$(latest g-a | jq -c '.meta.sources')"
 : > "$WRITES"; lift_held_gaps x 0123456789abcdef "$DIR"; second="$(wc -l < "$WRITES")"
-if [ "$first" = 1 ] && [ "$gsrc" = "[]" ] && [ "$second" = 0 ]; then
-  ok "(m) a released gap whose test file is gone gets sources [] once, and is not written again"
+if [ "$first" = 0 ] && [ "$gsrc" = "null" ] && [ "$second" = 0 ]; then
+  ok "(m) a released gap whose test file is gone is not written, on any tick"
 else bad "(m) gone: first=$first sources=$gsrc second=$second log=$(cat "$LOG")"; fi
 
 # ── (n)-(p) an open generator gap filed before gaps named their repository names it, once ──────────────────────────
@@ -305,6 +321,16 @@ lift_held_gaps x 0123456789abcdef "$DIR"
 if [ "$(wc -l < "$WRITES")" = 1 ] && latest g-x | jq -e '.meta.localized_by == "r3" and (has("check_runnable") | not) and .meta.check_runnable == null' >/dev/null; then
   ok "(x5) a verdict naming a row after the mark releases"
 else bad "(x5) writes=$(cat "$WRITES") log=$(cat "$LOG")"; fi
+
+# (x7) [GUARD] the re-arm as the closer writes it (from its own mark, which dropped the claim): the release states the
+# claim once, and the next tick writes nothing, so the closer and the release do not answer each other
+closer_rearm() { jq -c 'del(.claim, .waits_for) + {check_runnable: true} | .meta += {check_runnable: true, names_absent: null, absent_at_head: null}'; }
+stated="$(held g-x x src/a.test.ts "$GEN" | jq -c '. + {claim: "The test is right: ...", waits_for: "person"}')"
+reset "$stated" "$(printf '%s' "$stated" | mark | jq -c 'del(.claim)')" "$(printf '%s' "$stated" | mark | closer_rearm)"
+lift_held_gaps x 0123456789abcdef "$DIR"; first="$(wc -l < "$WRITES")"; claimed="$(latest g-x | jq -r '.claim // "" | startswith("The test is right: the source must change")')"
+: > "$WRITES"; lift_held_gaps x 0123456789abcdef "$DIR"
+if [ "$first" = 1 ] && [ "$claimed" = true ] && [ ! -s "$WRITES" ]; then ok "(x7) after the closer's re-arm the claim is stated once, then nothing"
+else bad "(x7) first=$first claimed=$claimed second=$(cat "$WRITES") log=$(cat "$LOG")"; fi
 
 # (x6) r 1 before a mark that says not checkable only in its meta: no release
 reset "$(held g-x x src/a.test.ts "$GEN")" "$(outcome 1 r0)" "$(held g-x x src/a.test.ts "$GEN" | mark | jq -c 'del(.check_runnable)')"
@@ -583,6 +609,73 @@ if latest g-n | jq -e '.meta.localized_by == "r1" and (has("waits_for") | not) a
     ok "[GUARD] (cw19) a person's outcome decides over a newer walk judgment (r 1 over none, r 0 over a site)"
   else bad "(cw19) r0 then site: $(latest g-n)"; fi
 else bad "(cw19) r1 then none: $(latest g-n)"; fi
+
+# (z)
+printf 'export const f = 1;\n' > "$DIR/src/b.ts"; printf 'export const g = 1;\n' > "$DIR/src/c.ts"
+addcw() { # site seq: a change_wanted citing the gap's latest row
+  jq -c --arg s "$1" --argjson q "$2" --arg ref "$(latest g-z | jq -r .id)" \
+    '. + [{shape: "change_wanted", wanted: true, repo: "x", edit_site: $s, evidence_refs: ["cs"], input_refs: [$ref], role: "described", writer: "described", id: ("cw" + ($q | tostring)), seq: $q}]' \
+    "$ROWS" > "$ROWS.new" && mv "$ROWS.new" "$ROWS"
+}
+reset "$(unloc g-z x src/a.test.ts "$GEN")" "$(cw true repos/x/src/b.ts r0)"
+lift_held_gaps x 0123456789abcdef "$DIR"; z1="$(wc -l < "$WRITES")"
+addcw repos/x/./src/b.ts 900; : > "$WRITES"; : > "$LOG"
+lift_held_gaps x 0123456789abcdef "$DIR"; z2="$(wc -l < "$WRITES")"; zsame="$(grep -c 'names the same site, nothing written' "$LOG")"
+zcount="$(grep -c 'released 0, stated 0, to a person 0' "$LOG")"
+addcw repos/x/src/c.ts 901; : > "$WRITES"
+lift_held_gaps x 0123456789abcdef "$DIR"; z3="$(wc -l < "$WRITES")"; zsite="$(latest g-z | jq -r .meta.edit_site)"
+if [ "$z1" = 1 ] && [ "$z2" = 0 ] && [ "$zsame" = 1 ] && [ "$zcount" = 1 ] && [ "$z3" = 1 ] && [ "$zsite" = repos/x/src/c.ts ]; then
+  ok "(z) a new change_wanted at the same site writes nothing; one at another file releases there"
+else bad "(z) first=$z1 same=$z2 said=$zsame count=$zcount other=$z3 site=$zsite log=$(tail -3 "$LOG")"; fi
+# held again (its claim refused) with the released site still in its meta: the same site releases it again
+jq -c '. + [(map(select(.gap_id == "g-z")) | sort_by(.seq) | last
+  | .id = "rz" | .seq = 950 | .localized = false | .meta.localized = false | .meta.claim_rejected_by = "o9" | del(.meta.localized_by))]' \
+  "$ROWS" > "$ROWS.new" && mv "$ROWS.new" "$ROWS"
+addcw repos/x/src/c.ts 951; : > "$WRITES"
+lift_held_gaps x 0123456789abcdef "$DIR"; zre="$(wc -l < "$WRITES")"
+if [ "$zre" = 1 ]; then ok "(z) a gap held again after its release is released again at the same site"
+else bad "(z) held again, same site: writes=$zre log=$(tail -3 "$LOG")"; fi
+reset "$(unloc g-z x src/a.test.ts "$GEN")" "$(cw true repos/x/src/b.ts r0)"
+WFAIL=1 lift_held_gaps x 0123456789abcdef "$DIR"
+zw="$(grep -c 'g-z not written (the store refused it)' "$LOG")"; zwc="$(grep -c 'released 0, stated 0, to a person 0, not released 0, not written 1' "$LOG")"
+: > "$LOG"; lift_held_gaps x 0123456789abcdef "$DIR"; zagain="$(wc -l < "$WRITES")"
+if [ "$zw" = 1 ] && [ "$zwc" = 1 ] && [ "$zagain" = 1 ]; then ok "(z) a release the store refuses is said not written, counted so, and decided again next tick"
+else bad "(z) refused said=$zw counted=$zwc next=$zagain log=$(tail -3 "$LOG")"; fi
+reset "$(unloc g-z x src/a.test.ts "$GEN")" "$(cw true repos/x/src/gone.ts r0)"
+lift_held_gaps x 0123456789abcdef "$DIR"
+if grep -q 'released 0, stated 0, to a person 0, not released 1, not written 0' "$LOG"; then ok "(z) a decision the checks refuse is counted not released"
+else bad "(z) refused-by-check count: $(tail -2 "$LOG")"; fi
+rm -f "$DIR/src/c.ts"
+
+# (y)
+printf 'dist/\n' > "$DIR/.gitignore"; mkdir -p "$DIR/dist"; printf 'test("d > one", () => { expect(1).toBe(1) })\n' > "$DIR/dist/u.test.js"
+reset "$(held g-u x dist/u.test.js "$GEN")" "$(outcome 1 r0)"
+: > "$LOG"; lift_held_gaps x 0123456789abcdef "$DIR"; y1="$(wc -l < "$WRITES")"
+ycount="$(grep -c 'released 0, stated 0, to a person 0, not released 1, not written 0' "$LOG")"
+lift_held_gaps x 0123456789abcdef "$DIR"; y2="$(wc -l < "$WRITES")"
+ylog="$(grep -c 'dist/u.test.js is not tracked' "$LOG")"
+reset "$(held g-u x dist/u.test.js "$GEN")" "$(cw true repos/x/src/b.ts r0)"
+lift_held_gaps x 0123456789abcdef "$DIR"; y3="$(wc -l < "$WRITES")"
+close_failing_test_gaps x 0123456789abcdef "$DIR"; ymark="$(latest g-u | jq -c '[.check_runnable, .meta.operator_hold]')"
+: > "$WRITES"; lift_held_gaps x 0123456789abcdef "$DIR"; lift_held_gaps x 0123456789abcdef "$DIR"; y4="$(wc -l < "$WRITES")"
+reset "$(held g-u x src/a.test.ts "$GEN")" "$(outcome 1 r0)"
+lift_held_gaps x 0123456789abcdef "$DIR"; ytr="$(latest g-u | jq -r '.meta.localized_by // "none"')"
+if [ "$y1" = 0 ] && [ "$y2" = 0 ] && [ "$y3" = 0 ] && [ "$ymark" = '[false,true]' ] && [ "$y4" = 0 ] && [ "$ytr" = r1 ] \
+   && [ "$ylog" -ge 1 ] && [ "$ycount" = 1 ]; then
+  ok "(y) an untracked test file is never released (r 1 or a site) and is counted not released; the closer marks it, nothing more is written; tracked releases"
+else bad "(y) logged=$ylog counted=$ycount r1=$y1 again=$y2 site=$y3 mark=$ymark after=$y4 tracked=$ytr log=$(tail -3 "$LOG")"; fi
+rm -rf "${DIR:?}/dist" "$DIR/.gitignore"
+
+# (y2) a tracked test file missing from the checkout is not released, and is counted not released
+printf 'test("g > one", () => { expect(1).toBe(1) })\n' > "$DIR/src/g.test.ts"
+git -C "$DIR" add src/g.test.ts && git -C "$DIR" -c user.name=t -c user.email=t@example.invalid commit -qm g && rm -f "$DIR/src/g.test.ts"
+reset "$(held g-g x src/g.test.ts "$GEN")" "$(outcome 1 r0)"
+# straight to the release, past this file's wrapper, which stages the tree (and so the file's removal) first
+: > "$WRITES"; : > "$LOG"; orig_lift_held_gaps x 0123456789abcdef "$DIR"
+if [ ! -s "$WRITES" ] && grep -q 'src/g.test.ts is not in the checkout' "$LOG" \
+   && grep -q 'released 0, stated 0, to a person 0, not released 1, not written 0' "$LOG"; then
+  ok "(y2) a tracked test file missing from the checkout is not released, and is counted not released"
+else bad "(y2) writes=$(cat "$WRITES") log=$(tail -3 "$LOG")"; fi
 
 echo; [ "$FAILS" = 0 ] && { echo "PASS - a person releases a held generator gap, and its fix is held to the test's released size"; exit 0; }
 echo "$FAILS FAILED"; exit 1

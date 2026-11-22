@@ -12,7 +12,7 @@ T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
 FAILS=0
 ok()  { echo "ok   - $*"; }
 bad() { echo "FAIL - $*"; FAILS=$((FAILS+1)); }
-for f in gen_failing_test_gaps jq_ao; do sed -n "/^$f() {/,/^}/p" "$SCRIPT"; done > "$T/fns.sh"
+for f in gen_failing_test_gaps jq_ao test_tracked; do sed -n "/^$f() {/,/^}/p" "$SCRIPT"; sed -n "/^$f() { .*}$/p" "$SCRIPT"; done > "$T/fns.sh"
 grep -q '^gen_failing_test_gaps()' "$T/fns.sh" || { echo "FAIL - could not extract gen_failing_test_gaps"; exit 1; }
 # shellcheck disable=SC1090
 source "$T/fns.sh"
