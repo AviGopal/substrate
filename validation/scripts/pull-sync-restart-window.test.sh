@@ -44,8 +44,10 @@
 #   (u) a restart that installs but cuts nothing still writes its row, the span empty (from after to, which the fold
 #       reads as covering nothing), the reason saying no call was cut;
 #   (v) a unit with no single port names no vessel, says so, and reads no registry;
-#   (y) two installs in one tick that each cut nothing share their seqs, yet write two rows with two window_ids (its
-#       units and commits), so neither hides the other's installed;
+#   (y) installs in one tick that each cut nothing share their seqs, yet write one row each with its own window_id (its
+#       units and commits), so none hides another's installed, and each keeps its own unit's vessel;
+#   (z) an install whose restart takes a PartOf member on another port names the restarted unit's registration, not
+#       the member's;
 #   (w) no wait runs on past 120 s of the script's clock, and (x) the closure's ConsistsOf reads end: the test fails a
 #       wait or a closure with no end itself (each leg's clock is the script's own; a hang is a FAIL, not a timeout).
 # usage: validation/scripts/pull-sync-restart-window.test.sh [path/to/substrate-pull-sync.sh]
@@ -72,7 +74,7 @@ RESTART_READY_S=""
 tuning_param() { TP_VALUE=5; echo "$1" >> "$T/tp.txt"; [ -s "$RESTARTED" ] && echo late >> "$T/tp-late"; }   # the shaped bound, as tuning_param sets it
 export RESTARTED="$T/restarted" SHOWS="$T/shows" SHOWCAP="$T/showcap"
 INV="$T/inv.json"
-echo '{"vessels":[{"repo":"walk-vessel","unit":"walk-vessel.service","health_port":8500},{"repo":"records-vessel","unit":"records-vessel.service"},{"repo":"described-shape-vessel","unit":"described-shape-vessel.service"}]}' > "$INV"
+echo '{"vessels":[{"repo":"walk-vessel","unit":"walk-vessel.service","health_port":8500},{"repo":"records-vessel","unit":"records-vessel.service"},{"repo":"described-shape-vessel","unit":"described-shape-vessel.service"},{"repo":"local-tools-vessel","unit":"local-tools-vessel.service","health_port":8230}]}' > "$INV"
 # the systemctl binary: a restart moves the head by $MOVE (the rows the cut calls write) and answers $RC; is-active
 # answers $ACTIVE; every call is logged
 mkdir -p "$T/bin"
@@ -360,16 +362,25 @@ if [ "$(inst)" = '[[{"repo":"records-vessel","commit":"c2"}]]' ] && grep -q 'ins
   ok "(v) a unit with no single port names no vessel, says so, and reads no registry"
 else bad "(v) installed=$(inst) regreads=$(cat "$T/regreads" 2>/dev/null | wc -l) log: $(tr '\n' ';' < "$LOG" | cut -c1-240)"; fi
 
-fresh 100; MOVE=0; REGISTRY="$(reg "[$WALK_LOCAL]")"
+LT_LOCAL='{"vesselId":"tools","endpoint":"http://127.0.0.1:8230","origin":"local"}'
+fresh 100; MOVE=0; REGISTRY="$(reg "[$WALK_LOCAL,$LT_LOCAL]")"
 RESTART_INSTALL='{"repo":"walk-vessel","commit":"c1"}' systemctl restart walk-vessel.service
-RESTART_INSTALL='{"repo":"walk-vessel","commit":"c2"}' systemctl restart walk-vessel.service
+RESTART_INSTALL='{"repo":"local-tools-vessel","commit":"c2"}' systemctl restart local-tools-vessel.service
 RESTART_INSTALL='{"repo":"records-vessel","commit":"c3"}' systemctl restart records-vessel.service
 restart_window_close
-Y="$(jq -c '[.[] | select(.shape == "infra_window") | {window_id, from_seq, to_seq, c: [.installed[].commit]}]' "$ROWS")"
+Y="$(jq -c '[.[] | select(.shape == "infra_window") | {window_id, from_seq, to_seq, installed}]' "$ROWS")"
 Y_IDS="$(jq '[.[] | select(.shape == "infra_window") | .window_id] | unique | length' "$ROWS")"
-if [ "$Y" = '[{"window_id":"restart-101-100-walk-vessel@c1","from_seq":101,"to_seq":100,"c":["c1"]},{"window_id":"restart-101-100-walk-vessel@c2","from_seq":101,"to_seq":100,"c":["c2"]},{"window_id":"restart-101-100-records-vessel@c3","from_seq":101,"to_seq":100,"c":["c3"]}]' ] && [ "$Y_IDS" = 3 ]; then
+if [ "$Y" = '[{"window_id":"restart-101-100-walk-vessel@c1","from_seq":101,"to_seq":100,"installed":[{"repo":"walk-vessel","commit":"c1","vessel":"walk"}]},{"window_id":"restart-101-100-local-tools-vessel@c2","from_seq":101,"to_seq":100,"installed":[{"repo":"local-tools-vessel","commit":"c2","vessel":"tools"}]},{"window_id":"restart-101-100-records-vessel@c3","from_seq":101,"to_seq":100,"installed":[{"repo":"records-vessel","commit":"c3"}]}]' ] && [ "$Y_IDS" = 3 ]; then
   ok "(y) installs in one tick that cut nothing write one row each, each its own window_id"
 else bad "(y) rows: $Y ids: $Y_IDS"; fi
+
+fresh 100; MOVE=2; REGISTRY="$(reg "[$WALK_LOCAL,$LT_LOCAL]")"
+echo 'local-tools-vessel.service walk-vessel.service' > "$CONSISTS"
+RESTART_INSTALL='{"repo":"local-tools-vessel","commit":"c4"}' systemctl restart local-tools-vessel.service; restart_window_close
+Z="$(jq -c '[.[] | select(.shape == "infra_window") | .installed]' "$ROWS")"
+if [ "$Z" = '[[{"repo":"local-tools-vessel","commit":"c4","vessel":"tools"}]]' ] && why | grep -q '^pull-sync restarted local-tools-vessel walk-vessel:'; then
+  ok "(z) an install that restarts a PartOf member too names the restarted unit's registration, not the member's"
+else bad "(z) installed=$Z reason=[$(why)]"; fi
 
 if [ -s "$SHOWCAP" ]; then bad "(x) the closure read ConsistsOf past 50 times in one restart: it has no end"; else ok "(x) every closure's ConsistsOf reads end"; fi
 
