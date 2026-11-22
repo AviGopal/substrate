@@ -176,16 +176,23 @@ restart_closure() {
 }
 # restart_left end -> RL: the seconds left before end, a second at least (a wait with no time left still asks once)
 restart_left() { RL=$(( $1 - SECONDS )); [ "$RL" -ge 1 ] || RL=1; }
+# unit_port unit -> UP: the one port the unit answers on, the inventory's health_port or else the one its unit file
+# declares; empty with neither, or with several declared (which one answers for the unit is not known). The port a
+# restart's span waits on, and the one an install's registration is found by.
+unit_port() {
+  local _up_u="${1%.service}.service"; UP=""
+  command -v jq >/dev/null 2>&1 && [ -f "${INV:-}" ] \
+    && UP="$(jq -r --arg u "$_up_u" '.vessels[] | select(.unit == $u) | .health_port // empty' "$INV" 2>/dev/null | head -1)"
+  if [ -z "$UP" ]; then
+    UP="$(command systemctl cat "$_up_u" 2>/dev/null | grep -oE '^Environment="?[A-Z][A-Z0-9_]*_PORT=[0-9]+' | grep -oE '[0-9]+$')"
+    case "$UP" in *[!0-9]*) UP="" ;; esac
+  fi
+}
 restart_ready() { # unit end -> waits until it is active and answers, while SECONDS is before end (checked once at least,
                   # with no wait once end has passed; each health check cut at the time left)
   local _rr_u="${1%.service}.service" _rr_p="" _rr_once=1
-  command -v jq >/dev/null 2>&1 && [ -f "${INV:-}" ] \
-    && _rr_p="$(jq -r --arg u "$_rr_u" '.vessels[] | select(.unit == $u) | .health_port // empty' "$INV" 2>/dev/null | head -1)"
-  if [ -z "$_rr_p" ]; then
-    _rr_p="$(command systemctl cat "$_rr_u" 2>/dev/null | grep -oE '^Environment="?[A-Z][A-Z0-9_]*_PORT=[0-9]+' | grep -oE '[0-9]+$')"
-    case "$_rr_p" in *[!0-9]*) _rr_p="" ;; esac   # several declared: which one answers for the unit is not known
-    [ -n "$_rr_p" ] || log "restart window: $_rr_u declares no single health port (inventory or unit file); its span ends once it is active"
-  fi
+  unit_port "$_rr_u"; _rr_p="$UP"
+  [ -n "$_rr_p" ] || log "restart window: $_rr_u declares no single health port (inventory or unit file); its span ends once it is active"
   while [ "$_rr_once" = 1 ] || [ "$SECONDS" -lt "$2" ]; do
     _rr_once=0
     if command systemctl is-active --quiet "$_rr_u" 2>/dev/null; then
@@ -195,6 +202,20 @@ restart_ready() { # unit end -> waits until it is active and answers, while SECO
     [ "$SECONDS" -lt "$2" ] && sleep 1
   done
   return 1
+}
+# install_vessel unit -> IV: the vesselId of this node's own registration on the unit's port, read from discovery's
+# registry now (origin local: neither overlay nor a peer's; a loopback host; the unit's port), so an install names the
+# vessel the walk sees serving a shape, not a name guessed from the repo. Empty, and said, when the unit has no single
+# port or not exactly one registration matches.
+install_vessel() {
+  local _iv_u="${1%.service}"; IV=""
+  unit_port "$_iv_u"
+  [ -n "$UP" ] || { log "install: $_iv_u has no single port, so its registration is not known; the install names no vessel"; return 0; }
+  IV="$(dev_resolve '{"impulse":{"pointer":{"type":"vesselRegistry"}}}' --max-time 5 2>/dev/null \
+    | jq -r --arg p "$UP" '[(.content // .).vessels[]? | select(.origin == "local")
+        | select((.endpoint // "") | test("^https?://(127\\.0\\.0\\.1|localhost|\\[::1\\]):" + $p + "(/|$)")) | .vesselId]
+        | if length == 1 then .[0] else empty end' 2>/dev/null)"
+  [ -n "$IV" ] || log "install: not exactly one local registration answers on port $UP for $_iv_u; the install names no vessel"
 }
 restart_span() { # restart [options] unit... (as systemctl takes it)
   local _rs_f="$RESTART_WINDOW_FILE" _rs_h _rs_e _rs_rc _rs_us="" _rs_n _rs_w _rs_end _a
@@ -209,10 +230,11 @@ restart_span() { # restart [options] unit... (as systemctl takes it)
   _rs_us="${_rs_w# }"
   _rs_h="$(store_head 3)"   # bounded: it delays the restart by 3 s at most
   case "$_rs_h" in
-    ''|*[!0-9]*) log "restart window: the store's head could not be read before restarting $_rs_us; no span is kept for it" ;;
+    ''|*[!0-9]*) log "restart window: the store's head could not be read before restarting $_rs_us; no span is kept for it${RESTART_INSTALL:+, and the install it makes is not recorded}" ;;
     *) # opened before the restart, with no end: a tick killed during it leaves this, and the next tick drops it
        { [ -s "$_rs_f" ] && cat "$_rs_f" || echo '[]'; } \
-         | jq -c --argjson from "$((_rs_h + 1))" --arg us "$_rs_us" '. + [{from: $from, units: $us}]' > "$_rs_f.new" 2>/dev/null \
+         | jq -c --argjson from "$((_rs_h + 1))" --arg us "$_rs_us" --argjson inst "${RESTART_INSTALL:-null}" \
+             '. + [{from: $from, units: $us} + (if $inst == null then {} else {installed: [$inst]} end)]' > "$_rs_f.new" 2>/dev/null \
          && mv "$_rs_f.new" "$_rs_f" ;;
   esac
   if [ -z "$RESTART_READY_S" ]; then tuning_param pull_sync.restart_ready_seconds 60; RESTART_READY_S="$TP_VALUE"; fi
@@ -220,6 +242,14 @@ restart_span() { # restart [options] unit... (as systemctl takes it)
   case "$_rs_h" in ''|*[!0-9]*) return "$_rs_rc" ;; esac
   _rs_end=$((SECONDS + RESTART_READY_S))
   for _a in $_rs_us; do restart_ready "$_a" "$_rs_end" || log "restart window: $_a was not ready within ${RESTART_READY_S}s; its span ends now"; done
+  if [ -n "${RESTART_INSTALL:-}" ] && [ "$RESTART_INSTALL" != null ]; then
+    install_vessel "${_rs_us%% *}"
+    if [ -n "$IV" ]; then
+      jq -c --argjson from "$((_rs_h + 1))" --arg iv "$IV" \
+        'map(if .from == $from and (has("to") | not) then .installed |= map(. + {vessel: $iv}) else . end)' "$_rs_f" > "$_rs_f.new" 2>/dev/null \
+        && mv "$_rs_f.new" "$_rs_f"
+    fi
+  fi
   restart_left "$_rs_end"; _rs_e="$(store_head "$RL")"   # the store may be one of the units still starting: read again until it answers, within the bound
   while case "$_rs_e" in ''|*[!0-9]*) [ "$SECONDS" -lt "$_rs_end" ] ;; *) false ;; esac; do sleep 1; restart_left "$_rs_end"; _rs_e="$(store_head "$RL")"; done
   case "$_rs_e" in
@@ -236,7 +266,7 @@ restart_span() { # restart [options] unit... (as systemctl takes it)
 # (nothing written since the restart began, or a store reset) is dropped. A row the store does not take is said, and its
 # span kept, end and all, for the next tick.
 restart_window_close() {
-  local _rw_f="$RESTART_WINDOW_FILE" _rw_n _rw_i _rw_s _rw_from _rw_to _rw_vs _rw_row _rw_out _rw_keep='[]'
+  local _rw_f="$RESTART_WINDOW_FILE" _rw_n _rw_i _rw_s _rw_from _rw_to _rw_vs _rw_inst _rw_row _rw_out _rw_keep='[]'
   [ -f "$_rw_f" ] || return 0
   command -v jq >/dev/null 2>&1 || return 0
   _rw_n="$(jq 'length' "$_rw_f" 2>/dev/null)"; case "$_rw_n" in ''|*[!0-9]*) _rw_n=0 ;; esac
@@ -244,14 +274,21 @@ restart_window_close() {
     _rw_s="$(jq -c ".[$_rw_i]" "$_rw_f" 2>/dev/null)"
     _rw_from="$(jq -r '.from // empty' <<<"$_rw_s")"; _rw_to="$(jq -r '.to // empty' <<<"$_rw_s")"; _rw_vs="$(jq -r '.units // ""' <<<"$_rw_s")"
     case "$_rw_from" in ''|*[!0-9]*) continue ;; esac
-    if [ -z "$_rw_to" ]; then log "restart window: a span from $_rw_from ($_rw_vs) has no end (its tick was killed during the restart); dropped, not written"; continue; fi
+    _rw_inst="$(jq -c '.installed // []' <<<"$_rw_s")"
+    if [ -z "$_rw_to" ]; then
+      log "restart window: a span from $_rw_from ($_rw_vs) has no end (its tick was killed during the restart); dropped, not written$( [ "$_rw_inst" = '[]' ] || printf '; the install it carried (%s) is not recorded' "$_rw_inst")"; continue
+    fi
     case "$_rw_to" in *[!0-9]*) continue ;; esac
-    if [ "$_rw_to" -lt "$_rw_from" ]; then   # nothing written since the restart began (or a store reset)
+    # nothing written since the restart began (or a store reset): no call was cut. An install is still news, so its row
+    # is written with that empty span, which the fold reads as covering nothing (from after to).
+    if [ "$_rw_to" -lt "$_rw_from" ] && [ "$_rw_inst" = '[]' ]; then
       log "restart window: the store's head after restarting $_rw_vs ($_rw_to) is not past its head before it ($((_rw_from - 1))): nothing was cut, so no window is written"; continue
     fi
-    _rw_row="$(jq -nc --argjson from "$_rw_from" --argjson to "$_rw_to" --arg vs "$_rw_vs" \
+    _rw_row="$(jq -nc --argjson from "$_rw_from" --argjson to "$_rw_to" --arg vs "$_rw_vs" --argjson inst "$_rw_inst" \
       '{shape: "infra_window", window_id: ("restart-\($from)-\($to)"), from_seq: $from, to_seq: $to, statuses: [0],
-        reason: ("pull-sync restarted " + $vs + ": a call cut by the restart (status 0) was stopped, not failed"), input_refs: []}')"
+        reason: ("pull-sync restarted " + $vs + (if $from <= $to then ": a call cut by the restart (status 0) was stopped, not failed" else ": no call was cut" end)
+          + (if $inst == [] then "" else "; it installed " + ($inst | map(.repo + " at " + .commit) | join(", ")) end)),
+        input_refs: []} + (if $inst == [] then {} else {installed: $inst} end)')"
     _rw_out="$(dev_resolve "$(jq -nc --argjson row "$_rw_row" '{impulse: {pointer: {type: "record_write", row: $row, writer: "owner", role: "owner"}}}')" --max-time 15 2>/dev/null)"
     if [ "$(printf '%s' "$_rw_out" | jq -r '.shape // .content.shape // empty' 2>/dev/null)" = infra_window ]; then
       log "restart window: wrote infra_window $_rw_from..$_rw_to ($_rw_vs)"
@@ -4454,7 +4491,7 @@ for d in "${PASS_ORDER[@]}"; do
       if [ -n "$P_UNIT" ] && systemctl is-active --quiet "$P_UNIT" 2>/dev/null; then
         restart_breadcrumb "$v" "$P_REASON" "$P_INFLIGHT"
         P_PREV_START="$(unit_start_epoch "$P_UNIT")"
-        systemctl restart "$P_UNIT" 2>/dev/null || true
+        RESTART_INSTALL="$(jq -nc --arg r "$v" --arg c "${HEAD:-}" 'if $c == "" then null else {repo: $r, commit: $c} end')" systemctl restart "$P_UNIT" 2>/dev/null || true
         Q_CARRY=""; quiesce_release   # a carried hold ends with the restart: the new process must find admission open
         sleep "$STAGGER_SECONDS"
         owed_restart_settle "$v" "${d:-}" "$P_UNIT" "${P_PORT:-}" "${HEAD:-}" "$P_PREV_START"
@@ -6084,7 +6121,7 @@ EOF
         CU="$(vessel_unit "$c")"; CP="$(health_port "$c")"
         [ -n "$CU" ] && [ "${CU%.service}" != "$CU" ] || continue
         systemctl is-active "$CU" >/dev/null 2>&1 || continue
-        restart_breadcrumb "$c" "dependency bounce after $v converged"; systemctl restart "$CU" 2>/dev/null || true; BOUNCED="$BOUNCED $c"; sleep "$STAGGER_SECONDS"
+        restart_breadcrumb "$c" "dependency bounce after $v converged"; RESTART_INSTALL="$(jq -nc --arg r "$v" --arg c "$HEAD" '{repo: $r, commit: $c}')" systemctl restart "$CU" 2>/dev/null || true; BOUNCED="$BOUNCED $c"; sleep "$STAGGER_SECONDS"
         if [ -n "$CP" ]; then ok=0; for _ in 1 2 3 4 5; do healthy "$CP" && { ok=1; break; }; sleep 4; done; [ "$ok" = 1 ] || { bad="$c"; break; }; fi
       done
       if [ -n "$bad" ]; then
@@ -6253,7 +6290,7 @@ EOF
     rm -f "$DEFER_FILE" 2>/dev/null || true
     rm -f "$MARKER_DIR/$v.restart-pending" "$MARKER_DIR/$v.restart-owed-since" 2>/dev/null || true
     restart_breadcrumb "$v" "converged to origin/dev${RA_OLDEST:+ (oldest in-flight ${RA_OLDEST}ms)}" "$INFLIGHT"
-    systemctl restart "$UNIT" 2>/dev/null || true
+    RESTART_INSTALL="$(jq -nc --arg r "$v" --arg c "$HEAD" '{repo: $r, commit: $c}')" systemctl restart "$UNIT" 2>/dev/null || true
     Q_CARRY=""; quiesce_release   # the new process must find admission open, a carried hold included
     sleep "$STAGGER_SECONDS"
     if [ -n "$PORT" ]; then

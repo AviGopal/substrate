@@ -36,6 +36,14 @@
 #   (q) a unit PartOf the restarted one that was not active before the restart (systemd's try-restart leaves it down)
 #       is not waited for, and the log names it; the span names the others;
 #   (r) the script's own health check is given the time the bound leaves as its max time (5 s when given none);
+#   (s) a restart that installs a repo's commit writes it on its row (installed: repo, commit, and the vessel: the id of
+#       this node's one registration on the unit's port, read from discovery's registry after the unit is ready), and
+#       the reason names it; a restart that installs nothing carries no installed and reads no registry;
+#   (t) the vessel is left out, and said, unless exactly one registration matches: origin local (not overlay, not a
+#       peer's), a loopback host, the unit's port: two such, or only an overlay, a peer's host or another port, name none;
+#   (u) a restart that installs but cuts nothing still writes its row, the span empty (from after to, which the fold
+#       reads as covering nothing), the reason saying no call was cut;
+#   (v) a unit with no single port names no vessel, says so, and reads no registry;
 #   (w) no wait runs on past 120 s of the script's clock, and (x) the closure's ConsistsOf reads end: the test fails a
 #       wait or a closure with no end itself (each leg's clock is the script's own; a hang is a FAIL, not a timeout).
 # usage: validation/scripts/pull-sync-restart-window.test.sh [path/to/substrate-pull-sync.sh]
@@ -46,7 +54,7 @@ FAILS=0
 ok()  { echo "ok   - $*"; }
 bad() { echo "FAIL - $*"; FAILS=$((FAILS+1)); }
 command -v jq >/dev/null || { echo "FAIL - no jq: cannot judge"; exit 1; }
-FNS="shape_route dev_resolve store_head systemctl restart_closure restart_left restart_ready restart_span restart_window_close"
+FNS="shape_route dev_resolve store_head systemctl restart_closure restart_left unit_port restart_ready install_vessel restart_span restart_window_close"
 for f in $FNS; do sed -n "/^$f() {/,/^}/p" "$SCRIPT"; done > "$T/fns.sh"
 for f in $FNS; do grep -q "^$f()" "$T/fns.sh" || { echo "FAIL - could not extract $f"; exit 1; }; done
 LOG="$T/log.txt"; log() { echo "$*" >> "$LOG"; }
@@ -93,6 +101,7 @@ curl() {
   local t; t="$(printf '%s' "$d" | jq -r '.pointer.type // empty')"
   case "$t" in
     vesselCapability) printf '{"content":{"vessels":[{"vesselId":"v"}]}}' ;;
+    vesselRegistry) echo x >> "$T/regreads"; printf '%s' "${REGISTRY:-{\"content\":{\"vessels\":[]}}}" ;;
     record_read)
       if [ "$(printf '%s' "$d" | jq -r '.pointer.head // false')" = true ]; then
         prev=""; for a in "$@"; do [ "$prev" = --max-time ] && echo "$a" >> "$T/head-mt"; prev="$a"; done
@@ -112,7 +121,7 @@ curl() {
 source "$T/fns.sh"
 export ISACT="$T/isact"
 fresh() { echo '[]' > "$ROWS"; : > "$WRITES"; : > "$LOG"; : > "$CALLS"; rm -f "$RESTART_WINDOW_FILE" "$T/hc" "$T/ports" "$ISACT"; echo "$1" > "$HEAD"
-  unset NOHEAD WFAIL NEVER_PORT; rm -f "$T/consists" "$T/reads" "$RESTARTED" "$SHOWS" "$T/head-mt"; T0=$SECONDS; export CONSISTS="$T/consists"; MOVE=0; RC=0; ACTIVE=1; HEALTH_AFTER=0; UNIT_TEXT=""; INACTIVE_FOR=0; export MOVE RC ACTIVE UNIT_TEXT INACTIVE_FOR; }
+  unset NOHEAD WFAIL NEVER_PORT REGISTRY; rm -f "$T/consists" "$T/reads" "$RESTARTED" "$SHOWS" "$T/head-mt" "$T/regreads"; T0=$SECONDS; export CONSISTS="$T/consists"; MOVE=0; RC=0; ACTIVE=1; HEALTH_AFTER=0; UNIT_TEXT=""; INACTIVE_FOR=0; export MOVE RC ACTIVE UNIT_TEXT INACTIVE_FOR; }
 spans() { jq -c '[.[] | select(.shape == "infra_window") | {from_seq, to_seq}]' "$ROWS"; }
 gone() { [ -f "$RESTART_WINDOW_FILE" ] && echo kept || echo gone; }
 
@@ -294,6 +303,60 @@ R_MT="$( (
 ) )"
 case "$R_MT" in '3 5 '|'2 5 ') ok "(r) a health check is cut at the time the bound leaves, and is 5 s with none given" ;;
   *) bad "(r) the health check's max times were [$R_MT], not the time left then 5" ;; esac
+
+reg() { jq -nc --argjson v "$1" '{content: {vessels: $v}}'; }
+inst() { jq -c '[.[] | select(.shape == "infra_window") | .installed]' "$ROWS"; }
+why() { jq -r '[.[] | select(.shape == "infra_window") | .reason] | join("|")' "$ROWS"; }
+WALK_LOCAL='{"vesselId":"walk","endpoint":"http://127.0.0.1:8500","origin":"local"}'
+
+fresh 100; MOVE=5; export REGISTRY; REGISTRY="$(reg "[$WALK_LOCAL,{\"vesselId\":\"other\",\"endpoint\":\"http://127.0.0.1:8501\",\"origin\":\"local\"}]")"
+RESTART_INSTALL='{"repo":"walk-vessel","commit":"c1"}' systemctl restart walk-vessel.service; S_RC=$?
+echo 140 > "$HEAD"; MOVE=3; rm -f "$T/regreads"; systemctl restart walk-vessel.service; S_READS="$(cat "$T/regreads" 2>/dev/null | wc -l)"
+restart_window_close
+if [ "$S_RC" = 0 ] && [ "$(inst)" = '[[{"repo":"walk-vessel","commit":"c1","vessel":"walk"}],null]' ] && [ "$(spans)" = '[{"from_seq":101,"to_seq":105},{"from_seq":141,"to_seq":143}]' ] \
+   && why | grep -q '^pull-sync restarted walk-vessel: a call cut by the restart (status 0) was stopped, not failed; it installed walk-vessel at c1|' \
+   && [ "$S_READS" = 0 ] && [ -z "${RESTART_INSTALL:-}" ]; then
+  ok "(s) an install's row names the repo, commit and this node's registration on the unit's port; a plain restart names none and reads no registry"
+else bad "(s) rc=$S_RC installed=$(inst) spans=$(spans) reads=$S_READS reason=[$(why)]"; fi
+
+T_BAD=""
+for R_SET in "[$WALK_LOCAL,$WALK_LOCAL]" \
+  '[{"vesselId":"walk","endpoint":"http://127.0.0.1:8500","origin":"overlay"}]' \
+  '[{"vesselId":"walk","endpoint":"http://peer.test:8500","origin":"local"}]' \
+  '[{"vesselId":"walk","endpoint":"http://127.0.0.1:8500","origin":"peer:http://peer.test"}]' \
+  '[{"vesselId":"walk","endpoint":"http://127.0.0.1:85000","origin":"local"}]' \
+  '[{"vesselId":"walk","endpoint":"http://127.0.0.1:18500","origin":"local"}]' \
+  '[{"vesselId":"walk","origin":"local"}]'; do
+  fresh 100; MOVE=2; REGISTRY="$(reg "$R_SET")"
+  RESTART_INSTALL='{"repo":"walk-vessel","commit":"c1"}' systemctl restart walk-vessel.service; restart_window_close
+  [ "$(inst)" = '[[{"repo":"walk-vessel","commit":"c1"}]]' ] && grep -q 'not exactly one local registration answers on port 8500 for walk-vessel' "$LOG" \
+    || T_BAD="$T_BAD [$R_SET -> $(inst)]"
+done
+fresh 100; MOVE=2; REGISTRY="$(reg "[$WALK_LOCAL]")"; RESTART_INSTALL='{"repo":"walk-vessel","commit":"c1"}' systemctl restart walk-vessel.service; restart_window_close
+[ "$(inst)" = '[[{"repo":"walk-vessel","commit":"c1","vessel":"walk"}]]' ] || T_BAD="$T_BAD [one local -> $(inst)]"
+for H in localhost '[::1]'; do
+  fresh 100; MOVE=2; REGISTRY="$(reg "[{\"vesselId\":\"walk\",\"endpoint\":\"http://$H:8500/\",\"origin\":\"local\"}]")"
+  RESTART_INSTALL='{"repo":"walk-vessel","commit":"c1"}' systemctl restart walk-vessel.service; restart_window_close
+  [ "$(inst)" = '[[{"repo":"walk-vessel","commit":"c1","vessel":"walk"}]]' ] || T_BAD="$T_BAD [$H -> $(inst)]"
+done
+if [ -z "$T_BAD" ]; then ok "(t) the vessel is named only by exactly one local, loopback registration on the unit's port"
+else bad "(t)$T_BAD"; fi
+
+fresh 100; MOVE=0; REGISTRY="$(reg "[$WALK_LOCAL]")"
+RESTART_INSTALL='{"repo":"walk-vessel","commit":"c1"}' systemctl restart walk-vessel.service; restart_window_close
+U1="$(jq -c '[.[] | select(.shape == "infra_window") | {window_id, from_seq, to_seq, statuses, installed}]' "$ROWS")"
+U_WHY="$(why)"
+fresh 100; MOVE=0; systemctl restart walk-vessel.service; restart_window_close; U2="$(spans)"
+if [ "$U1" = '[{"window_id":"restart-101-100","from_seq":101,"to_seq":100,"statuses":[0],"installed":[{"repo":"walk-vessel","commit":"c1","vessel":"walk"}]}]' ] \
+   && [ "$U_WHY" = 'pull-sync restarted walk-vessel: no call was cut; it installed walk-vessel at c1' ] && [ "$U2" = '[]' ]; then
+  ok "(u) an install that cut nothing still writes its row, its span empty; a plain restart that cut nothing writes none"
+else bad "(u) with install: $U1 [$U_WHY]; without: $U2"; fi
+
+fresh 100; MOVE=2; REGISTRY="$(reg '[{"vesselId":"records","endpoint":"http://127.0.0.1:8600","origin":"local"}]')"
+RESTART_INSTALL='{"repo":"records-vessel","commit":"c2"}' systemctl restart records-vessel.service; restart_window_close
+if [ "$(inst)" = '[[{"repo":"records-vessel","commit":"c2"}]]' ] && grep -q 'install: records-vessel has no single port' "$LOG" && [ ! -s "$T/regreads" ]; then
+  ok "(v) a unit with no single port names no vessel, says so, and reads no registry"
+else bad "(v) installed=$(inst) regreads=$(cat "$T/regreads" 2>/dev/null | wc -l) log: $(tr '\n' ';' < "$LOG" | cut -c1-240)"; fi
 
 if [ -s "$SHOWCAP" ]; then bad "(x) the closure read ConsistsOf past 50 times in one restart: it has no end"; else ok "(x) every closure's ConsistsOf reads end"; fi
 
