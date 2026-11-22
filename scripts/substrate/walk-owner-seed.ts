@@ -188,7 +188,10 @@ const SCHEMAS: Row[] = [
       "next call toward closing it: first a clone of the repo the gap names. Every later call on that change (an edit, " +
       "a commit, a diff, a landing) works in the clone: its cwd (or a path under it) is the cwd the clone's hop " +
       "returned, never a repos/ path. A gitWorktree row is this request's own clone (its cwd is the clone); with none, " +
-      "this request has no clone yet. A change_wanted row is this request's own judgment of which repository a change " +
+      "this request has no clone yet. An edit needs that file read in this clone first: a fileContent row is a read of " +
+      "the path it names, so a read of the same file in an earlier clone (another cwd) does not count, and an edit " +
+      "drafted from it is held; when a failure row says the call's path differs from a fileContent's, read the file at " +
+      "the call's path. A change_wanted row is this request's own judgment of which repository a change " +
       "belongs in. " + USES_WORDS + " " + JSON_ONLY,
     // A request either names the next call or declines (none); the walk reads a request without a pointer as a decline.
     schema: {
