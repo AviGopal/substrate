@@ -254,8 +254,9 @@ const SCHEMAS: Row[] = [
     keep_share: 0.25,
 
     // declared: only shapes whose producer declared their inputs, the ones a request can fill (discovery resolvers.ts).
-    // gap: every detector gap row, opening and closing alike, so a closed gap is seen as closed.
-    reads: [{ type: "shapeDescriptions", declared: true }, { type: "record_read", shape: "gap" }],
+    // gap: each detector gap's latest row, by gap_id, so a closed gap is seen as closed (its latest row says so) and an
+    // open one as it stands now. Not each gap's history: every row of every gap, on every prompt, grew with the store.
+    reads: [{ type: "shapeDescriptions", declared: true }, { type: "record_read", shape: "gap", latest_by: "gap_id" }],
   },
   {
     target: "due",
