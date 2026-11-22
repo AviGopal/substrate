@@ -31,7 +31,7 @@ const BUN = process.env["BUN_BIN"] ?? "/root/.bun/bin/bun";
 // Vessels with a writable push clone (only these can cut over). Keep in sync with
 // /workspace/git/vessels/*. dev-vessel last so its restart-on-cutover doesn't
 // interrupt generation for the others.
-const VESSELS = (process.env["TYPECHECK_VESSELS"] ?? "activity-api,goal-host-vessel,ribosome-vessel,concept-db,development-vessel").split(",");
+const VESSELS = (process.env["TYPECHECK_VESSELS"] ?? "activity-api,ribosome-vessel,concept-db,development-vessel").split(",");
 const MAX_NEW = Number(process.env["MAX_NEW_SCENARIOS"] ?? 3);
 const slug = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60);
 async function pathExists(p) {

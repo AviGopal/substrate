@@ -224,7 +224,7 @@ VESSELS=()
 while IFS= read -r line; do [ -n "$line" ] && VESSELS+=("$line"); done < <(fleet_vessels)
 if [ "${#VESSELS[@]}" -eq 0 ]; then
   VESSELS=(
-    "activity-api:8080" "development-vessel:8090" "goal-host-vessel:8210"
+    "activity-api:8080" "development-vessel:8090"
     "concept-db:8260" "relevance-sink-vessel:8255" "llm-resolver-vessel:8220"
     "federation-transport-vessel:8401"
   )

@@ -1063,7 +1063,7 @@ async function main() {
     // Deliberately reported as ONE gap class with the offending units named, not one gap per
     // unit: the defect is a shared pattern in how these units treat a missing value, and
     // filing it per-unit would fragment one repair into several.
-    const FED_UNITS = ['federation-relay.service', 'discovery-vessel.service', 'goal-host-vessel.service'];
+    const FED_UNITS = ['federation-relay.service', 'discovery-vessel.service'];
     const flappers = [];
     for (const u of FED_UNITS) {
         const before = rosterBefore.get(u);
@@ -1106,7 +1106,7 @@ async function main() {
     // the shapes under test. Everything else is recorded as background churn for context.
     const RELEVANT = new Set([
         TRANSPORT, 'federation-relay.service', 'discovery-vessel.service',
-        'goal-host-vessel.service', 'development-vessel.service', 'activity-api.service',
+        'development-vessel.service', 'activity-api.service',
     ]);
     const churnedExcludingTerminal = churned.filter((u) => !(u === TRANSPORT && transportFlapping));
     const churnedRelevant = churnedExcludingTerminal.filter((u) => RELEVANT.has(u));
@@ -1242,7 +1242,7 @@ async function main() {
         // and MainPID unchanged across two samples bracketing a full sweep.
         registry_lost_local_rows: 'across two consecutive sweeps, every registry row this substrate owns (bare vesselId, no @substrate qualifier) that was present in the earlier sweep is still present in the later one, regardless of how many foreign peers joined or left in between.',
         stale_foreign_rows_advertised: 'no foreign <vessel>@<substrate> row is returned by discovery with a lastSeen inside the TTL while a dial to the circuit that row advertises fails.',
-        federation_unit_flapping: 'every federation unit (relay, discovery, goal-host) shows NRestarts and MainPID unchanged across two samples bracketing a full sweep, and none sits in `activating` after a non-zero exit.',
+        federation_unit_flapping: 'every federation unit (relay, discovery) shows NRestarts and MainPID unchanged across two samples bracketing a full sweep, and none sits in `activating` after a non-zero exit.',
         transport_unit_flapping: 'federation-transport-vessel.service shows NRestarts AND MainPID unchanged across two samples bracketing a full sweep interval (an instantaneous ActiveState=active / Result=success does NOT satisfy this — the unit reports exactly that during each up-phase of its crash loop).',
         join_door_host_dependent: 'GET /bootstrap returns a non-empty discovery_endpoint and a non-loopback identity_endpoint when queried under a foreign Host header.',
         no_relay_anchor: 'GET /bootstrap returns a non-empty relay_multiaddrs, OR the transport holds a reservation with no relay anchor configured (direct-only overlay is a valid answer).',

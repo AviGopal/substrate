@@ -64,7 +64,6 @@ const FED_UNITS = [
   "federation-transport-vessel.service",
   "federation-relay.service",
   "discovery-vessel.service",
-  "goal-host-vessel.service",
 ];
 
 function federationChangeSignature(): string {

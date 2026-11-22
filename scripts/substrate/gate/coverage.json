@@ -1880,7 +1880,7 @@
     },
     "/usr/local/bin/reseed-restart": {
       "src": "scripts/substrate/reseed-restart.sh",
-      "src_blob": "3acebae2030afc0e2f86dcb163749fbde7c3af53",
+      "src_blob": "0467052c6bc463f48037de14233aaa9de2c69687",
       "level": "none",
       "reason": "unreached",
       "fixtures": []
@@ -1894,7 +1894,7 @@
     },
     "/usr/local/bin/self-recovery-tick": {
       "src": "scripts/substrate/self-recovery-tick.sh",
-      "src_blob": "6ab109e80663dab33bb6034ed264c509f49d78d5",
+      "src_blob": "3883c969b54421dace9002fed91f675cc4d80935",
       "level": "none",
       "reason": "unreached",
       "fixtures": []
@@ -1929,7 +1929,7 @@
     },
     "/usr/local/bin/substrate-doctor": {
       "src": "scripts/substrate/substrate-doctor.sh",
-      "src_blob": "0702a03db89ca6e57ccd6e0e236178af2c659a66",
+      "src_blob": "42337fc7f2091e6ac831cf89e60df2532a9b9f0f",
       "level": "none",
       "reason": "unreached",
       "fixtures": []
@@ -2139,7 +2139,7 @@
     },
     "/usr/local/share/substrate/active-scripts/rhythm-conduct-tick.ts": {
       "src": "scripts/substrate/rhythm-conduct-tick.ts",
-      "src_blob": "e1895e8823b7bde62f72ece0a6850de104b7c050",
+      "src_blob": "9cb1e20bedad2229303d60c9157071079b5010ec",
       "level": "none",
       "reason": "unreached",
       "fixtures": []
@@ -2202,7 +2202,7 @@
     },
     "/usr/local/share/substrate/active-scripts/typecheck-scenario-gen.ts": {
       "src": "scripts/substrate/typecheck-scenario-gen.ts",
-      "src_blob": "0f2670c88e1f30c9189456a87c54b4d446e7fd10",
+      "src_blob": "4a0b76da42c045d1d4c100e7f0fbffc51b4539b6",
       "level": "none",
       "reason": "unreached",
       "fixtures": []

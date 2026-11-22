@@ -576,40 +576,24 @@ esac
 if [ "$SMOKE" = 1 ]; then
   echo "== 8. smoke: known-answer goal -> reached:true -> trace lands =="
   # `reached`, not `status` and not an execution id: a hollow walk completes and
-  # still mints an id. The goal's answer is recomputed by goal-host's deterministic
-  # registry oracle, so a pass here is evidence rather than a judge's prose.
+  # still mints an id. The walk's grade is its outcome row in records, whose cited
+  # answer must state the registry's count, so a pass here is evidence rather than
+  # a judge's prose.
   SMOKE_OUT="$(status_probe goal 2>/dev/null)"; SMOKE_RC=$?
   SMOKE_EV="$(printf '%s' "$SMOKE_OUT" | jq -r '.evidence // empty' 2>/dev/null)"
-  # The probe names its dispatch, route and execution id as fields; nothing here
-  # parses them out of the evidence prose.
-  SMOKE_ROUTE="$(printf '%s' "$SMOKE_OUT" | jq -r '.route // empty' 2>/dev/null)"
+  # The probe names its dispatch and outcome row as fields; nothing here parses
+  # them out of the evidence prose.
   EXEC_ID="$(printf '%s' "$SMOKE_OUT" | jq -r '.execution_id // empty' 2>/dev/null)"
   if [ "$SMOKE_RC" = 0 ]; then
     ok "known-answer goal reached"
     note "$SMOKE_EV"
-    if [ "$SMOKE_ROUTE" = "walk" ]; then
-      # Asked of the walk and graded by its outcome row in records: there is no execution trace in a trace
-      # store to look up (activity-api is retired), so the trace check does not run.
-      note "SKIPPED trace check: the goal was walked; its evidence is the outcome row ${EXEC_ID:-?} in records"
-    elif [ -z "$EXEC_ID" ] && [ "$SMOKE_ROUTE" = "federated" ]; then
-      # A federated goal-host answers the poll through discovery, and not every
-      # one reports the execution id it minted; name the check that did not run.
-      note "SKIPPED trace check: the goal ran on a federated goal-host that reported no executionId"
-    elif [ -z "$EXEC_ID" ]; then
-      bad "the local goal-host reached the goal but recorded no executionId — a walk with no trace"
-    else
-      TRACE_OK=0
-      for _ in $(seq 1 20); do
-        CODE="$(csh "K=\$(grep -m1 '^METABOB_API_KEY=' /etc/substrate/env | cut -d= -f2- | tr -d '\"'); curl -s -o /dev/null -w '%{http_code}' -m 8 -H \"Authorization: ApiKey \$K\" $ACTIVITY_EP/v2/activities/execution-traces/$EXEC_ID" 2>/dev/null || true)"
-        [ "$CODE" = "200" ] && { TRACE_OK=1; break; }
-        sleep 3
-      done
-      if [ "$TRACE_OK" = 1 ]; then ok "execution trace landed ($EXEC_ID)"; else bad "trace for $EXEC_ID not readable within 60s"; fi
-    fi
+    # Asked of the walk and graded by its outcome row in records: there is no execution trace in a trace
+    # store to look up (activity-api is retired), so the trace check does not run.
+    note "SKIPPED trace check: the goal was walked; its evidence is the outcome row ${EXEC_ID:-?} in records"
   elif [ "$SMOKE_RC" = 1 ]; then
     bad "known-answer goal did NOT reach"
     note "${SMOKE_EV:-no evidence returned}"
-    note "why: the cockpit's goal_reasoning on that dispatch, or GET :8210/executions/<dispatch id> in-container"
+    note "why: the cockpit's goal_reasoning on that dispatch, or the walk's moves on its root in records"
   else
     bad "smoke could not be decided (${SMOKE_EV:-probe unavailable, exit $SMOKE_RC}) — an undecided smoke is not a pass"
   fi
