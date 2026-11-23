@@ -64,6 +64,15 @@ async function ensure(row: Row, where: Row | undefined, label: string): Promise<
   return typeof w.id === "string" ? w.id : undefined;
 }
 
+// A starting value the owner changes by writing a row, not by changing code: written only when no row matches, so a
+// boot never writes over a later one.
+async function ensureAbsent(row: Row, where: Row, label: string): Promise<string | undefined> {
+  const rows = await read(row.shape as string, where);
+  const latest = rows[rows.length - 1];
+  if (latest) { console.log(`[walk-owner-seed] ${label}: kept (${latest.id})`); return String(latest.id); }
+  return ensure(row, where, label);
+}
+
 // The clone's newest tree (the newest-tree landing ruling): the tree of the newest row of these shapes a tool recorded on the
 // request's clone (the same cwd) that names one; a newer moving row naming none leaves it unknown, and unknown meets
 // nothing; a gap opened again takes the clone of the earlier gap with its gap_id. Read by the walk and described alike.
@@ -697,6 +706,11 @@ await ensure({ shape: "credits", target: "gap", by_call: "git_land" }, { target:
 // .03 on failures inherited from other requests. The value is the USER's: "4 grades".
 await ensure({ shape: "credits", target: "selection", w_person: 1, w_lapse: 1, w_close: 1, gamma: 0.7, depth: 12, w_check: 0.5, promise_window: 6, prior_count: 4 },
   { target: "selection" }, "credits selection");
+// Where a move no level of records' fold has a record for starts: the owner's prior for its kind (prior {kind, alpha0,
+// beta0}) when one is written, else this default (USER ruling 11-23, a never-run move starts from its kind's record, else
+// the owner's p0). 1/1 is the start the fold held as a constant. It is a setting the owner changes by writing a row, with
+// no change of code, so it is written only when none is there.
+await ensureAbsent({ shape: "prior", default: true, alpha0: 1, beta0: 1 }, { default: true }, "prior default");
 // A hold the owner reads as a fact (records' hold_fact; the USER, relayed first-hand: "Read as facts"). pull-sync's
 // failing-test generator once held each gap no stack localizes (operator_hold, its reason "needs_localization: ..."):
 // that hold says only that no source frame names the edit site, so it is read as localized false, and the gap is work
