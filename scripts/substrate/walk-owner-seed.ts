@@ -636,9 +636,10 @@ await ensure({ shape: "failure_rule", target: "walk_failure", min_count: 3, min_
 // says a stalled root.
 const failureDetector = await ensure({ shape: "activity_template", sig: { in: [], out: ["walkFailureReport"] }, calls: [{ shape: "walk_failure_detect", pointer: {} }] },
   undefined, "activity_template walk_failure_detect");
-if (failureDetector !== undefined) {
-  await ensure({ shape: "rhythm", template: failureDetector, every_rows: SWEEP_ROWS }, { template: failureDetector }, "rhythm walk_failure_detect");
-}
+// A template answered with no id leaves the rhythm nothing to name, and a detector with no rhythm is never run: the seed
+// stops and says so rather than finish as though it were scheduled.
+if (failureDetector === undefined) throw new Error("activity_template walk_failure_detect: no id, rhythm not written");
+await ensure({ shape: "rhythm", template: failureDetector, every_rows: SWEEP_ROWS }, { template: failureDetector }, "rhythm walk_failure_detect");
 // What makes a diff news to the root that asked for it: its tree, whether each check ran and passed, and what the clone
 // held uncommitted, not the check's timings (walk applicable.ts repeats, by the owner's news_key). A re-run diff of an
 // unchanged tree is then no news, and the root stops judging the same tree again (544972ef judged one tree r 0 ten

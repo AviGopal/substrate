@@ -79,6 +79,42 @@ describe("the seed's rows", () => {
   })
 })
 
+// The detector's template write answered with no id: the seed must stop loudly, since the rhythm would have nothing to name.
+const isDetector = (r: Row) => r.shape === "activity_template" && [r.calls].flat().some((c: Row) => c?.shape === "walk_failure_detect")
+const seedWithIdlessTemplate = async (): Promise<{ code: number; err: string; rows: Row[] }> => {
+  const rows: Row[] = []
+  const server = Bun.serve({ hostname: "127.0.0.1", port: 0, fetch: async (req) => {
+    const p = (((await req.json().catch(() => ({}))) as Row).pointer ?? {}) as Row
+    if (p.type === "record_read") return Response.json(rows.filter((r) => r.shape === p.shape).filter((r) => Object.entries((p.where ?? {}) as Row).every(([k, v]) => String(r[k]) === String(v))))
+    if (p.type === "record_write") {
+      const r = { ...p.row, id: `n${rows.length + 1}`, seq: rows.length + 1, role: p.role }
+      rows.push(r)
+      if (isDetector(r)) { const { id: _id, ...noId } = r; return Response.json(noId) }
+      return Response.json(r)
+    }
+    return Response.json({ error: "Not found", shape: p.type }, { status: 404 })
+  } })
+  const dir = mkdtempSync(join(tmpdir(), "wos-faildetect-noid-"))
+  try {
+    await Bun.write(join(dir, "walk-owner-seed.ts"), Bun.file(SEED))
+    await Bun.write(join(dir, "vessels.inventory.json"), Bun.file(INVENTORY))
+    const p = Bun.spawn([process.execPath, join(dir, "walk-owner-seed.ts")], { env: { PATH: process.env.PATH ?? "",
+      DISCOVERY_URL: `http://127.0.0.1:${server.port}`, METABOB_API_KEY: `mb-faildetect-${"k".repeat(32)}` }, stdout: "pipe", stderr: "pipe" })
+    const code = await p.exited
+    return { code, err: await new Response(p.stderr).text(), rows }
+  } finally { server.stop(true); rmSync(dir, { recursive: true, force: true }) }
+}
+
+describe("a template answered with no id", () => {
+  test("[MUST-FAIL] the seed fails, saying the rhythm was not written, and writes no rhythm", async () => {
+    const { code, err, rows } = await seedWithIdlessTemplate()
+    expect(rows.filter(isDetector).length).toBe(1)
+    expect(code).not.toBe(0)
+    expect(err).toContain("activity_template walk_failure_detect: no id, rhythm not written")
+    expect(rows.filter((r) => r.shape === "rhythm")).toEqual([])
+  })
+})
+
 describe("one seeding", () => {
   test("[MUST-FAIL] a node seeded once has the rhythm naming the template it wrote in the same run", () => {
     const t = firstSeeding.filter((r) => r.shape === "activity_template" && [r.calls].flat().some((c: Row) => c?.shape === "walk_failure_detect"))
