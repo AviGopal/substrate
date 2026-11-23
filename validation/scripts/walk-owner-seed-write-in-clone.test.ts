@@ -5,11 +5,12 @@
 // gitWorktree (a clone handed out to the root), in its own group, besides a wanted change or an open gap.
 //
 // WHAT IS JUDGED. The seed of this tree runs against a stub store (the drive of walk-owner-seed-commit-before-check).
-//   rows: one requires row per writer, exactly; git_worktree, git_commit, git_diff and git_land gain none.
+//   rows: one requires row per writer, exactly; git_worktree, git_diff and git_land gain none. git_commit's rows (what
+//     there is to commit, a carrying refresh among them) are judged in walk-owner-seed-commit-needs-edit.
 //   behaviour: the seeded owner rows go through the walk's own applicable (repos/walk-vessel) with a root's rows in the
 //     forms the walk records them, values made up: with no clone, no writer is offered, the skip names git_worktree as
-//     where a gitWorktree comes from, and git_worktree is offered, while git_commit is offered as before; with the
-//     root's clone handed out, every writer is.
+//     where a gitWorktree comes from, and git_worktree is offered; with the root's clone handed out, every writer is.
+//     Whether git_commit is offered (only when there is something to commit) is walk-owner-seed-commit-needs-edit's.
 //
 // SAFETY and NEEDS: loopback only (the stub store), a private temp dir; reads repos/walk-vessel (run-glue-tests NEEDS).
 import { afterAll, beforeAll, describe, expect, test } from "bun:test"
@@ -56,10 +57,6 @@ describe("the seed's rows", () => {
     for (const r of req) expect(r).toEqual({ shape: "requires", for: r.for, needs: "gitWorktree", where: {}, latest_by: "cwd", group: "clone" })
   })
 
-  test("[GUARD] the git_ tools gain no gitWorktree requirement beyond git_diff's", () => {
-    const git = seeded.filter((r) => r.shape === "requires" && r.needs === "gitWorktree" && String(r.for).startsWith("git_")).map((r) => r.for)
-    expect(git).toEqual(["git_diff"])
-  })
 })
 
 describe("the walk reading them", () => {
@@ -109,10 +106,6 @@ describe("the walk reading them", () => {
       expect(Object.keys(WRITERS).filter(r.offered)).toEqual([])
       for (const t of Object.keys(WRITERS)) expect(`${t}: ${r.why(t)}`).toContain("gitWorktree comes from a git_worktree call")
       expect(r.offered("git_worktree")).toBe(true)
-    })
-
-    test(`[GUARD] the git_ tools are not held for a clone: with none, git_commit is offered as before (${root.shape} root)`, async () => {
-      expect((await run(root, [read(root.id, 20)])).offered("git_commit")).toBe(true)
     })
 
     test(`[GUARD] with the root's clone handed out, every writer is offered (${root.shape} root)`, async () => {

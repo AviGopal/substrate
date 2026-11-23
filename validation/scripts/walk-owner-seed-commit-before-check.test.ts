@@ -13,7 +13,8 @@
 //     with values made up: a clean clone is diffed as before; after an applied edit the diff waits and git_commit is
 //     offered; a commit newer than the edit opens the diff again; an edit found already made changes nothing. Each
 //     kind of applied edit moves the clone; each clone's own newest row is read; a gap opened again reads the clone of
-//     the gap it continues; a refused commit waits for news (a refresh, or a diff leaving other files uncommitted).
+//     the gap it continues; a refused commit waits for news (a refresh). Whether a commit is offered at all (only when
+//     there is something to commit) is walk-owner-seed-commit-needs-edit's.
 //
 // SAFETY and NEEDS: loopback only (the stub store), a private temp dir; reads repos/walk-vessel (run-glue-tests NEEDS).
 import { afterAll, beforeAll, describe, expect, test } from "bun:test"
@@ -174,8 +175,6 @@ describe("the walk reading them", () => {
       ? { shape: "failure", id: `fail-${n}`, seq: n + 3, role: "walk", blames: "request", call_id: `h${n}`, selection_ref: `sel-${n}`, input_refs: [root] }
       : { shape: "hop", id: `hop-e${n}`, seq: n + 3, role: "walk", phase: "ended", kind: "call", call_id: `h${n}`, pointer_type: type, output, selection_ref: `sel-${n}`, input_refs: [root] },
   ]
-  const diffed = (uncommitted: string[]): Row => ({ shape: "gitDiff", cwd, tree: tree(1), check: { ran: true, passed: true },
-    typecheck: { ran: true, passed: true }, uncommitted })
   const run = async (root: Row, extra: Row[], also: string[] = []) => {
     const skipped: Row[] = []
     const base = root.id === "root-ask" ? [root, wanted] : [root]
@@ -279,13 +278,6 @@ describe("the walk reading them", () => {
       expect((await run(root, [...waiting, handout(id, 50, tree(1))])).diff).toBe(true)
     })
 
-    // A diff of the same tree that leaves other files uncommitted is news (gitDiff's news_key names uncommitted): a
-    // refused commit is offered again over it. The same diff again is not news, and the commit stays refused.
-    test(`[MUST-FAIL] a refused git_commit is offered again after a diff whose uncommitted files differ, not after the same diff again (${root.shape} root)`, async () => {
-      const before = [handout(id, 20, tree(1)), ...called(id, 30, "git_diff", diffed(["src/x.ts"])), ...called(id, 40, "git_commit")]
-      expect((await run(root, [...before, ...called(id, 50, "git_diff", diffed(["src/y.ts"]))])).commit).toBe(true)
-      expect((await run(root, [...before, ...called(id, 50, "git_diff", diffed(["src/x.ts"]))])).commit).toBe(false)
-    })
   }
 
   // A gap opened again (the same gap_id, a newer root) has no handout of its own: it reads the clone of the root it

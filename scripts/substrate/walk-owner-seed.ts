@@ -576,6 +576,20 @@ await ensure({ shape: "requires", for: "git_diff", needs: "gitCommitResult", whe
   { for: "git_diff", needs: "gitCommitResult" }, "requires git_diff gitCommitResult");
 await ensure({ shape: "requires", for: "git_diff", needs: "gitWorktree", where: { committed_tree: COMMITTED_TREE }, latest_by: "cwd", group: "committed" },
   { for: "git_diff", needs: "gitWorktree" }, "requires git_diff gitWorktree");
+// A commit is offered only when there is something to commit in its own clone (the clone the commit names, cwd): an
+// answer of a tool that changed a file there (each edit answer names the clone it changed), or the clone handed out by a
+// refresh that carried its uncommitted edits onto the new base. So after an edit the call that consumes it, git_commit,
+// is the one the producer is shown, and a clone with nothing changed in it is never committed. Alternatives in their own
+// group (any one meets it), needed besides a wanted change or an open gap; each counts the newest row per clone
+// (latest_by cwd), so another clone's newer row never meets this one, and a later clean handout of the same clone ends
+// what a carrying one began. An edit already committed still meets it: the commit then answers that nothing changed,
+// and the same request is not made again until something new comes.
+for (const edit of EDIT_RESULTS) {
+  await ensure({ shape: "requires", for: "git_commit", needs: edit, where: { cwd: { "x-pointer": "cwd" } }, latest_by: "cwd", group: "uncommitted" },
+    { for: "git_commit", needs: edit }, `requires git_commit ${edit}`);
+}
+await ensure({ shape: "requires", for: "git_commit", needs: "gitWorktree", where: { carried: "uncommitted", cwd: { "x-pointer": "cwd" } }, latest_by: "cwd", group: "uncommitted" },
+  { for: "git_commit", needs: "gitWorktree" }, "requires git_commit gitWorktree");
 // An edit waits for a read of the very file it changes: the root's whole-file read (fileContent) of the path the edit
 // names (bound to the edit's own pointer). A clone's files sit under the clone's own directory, so a read made in an
 // older clone, or none, does not open an edit in a fresh one. A line-range read does not count: an edit's old text must
