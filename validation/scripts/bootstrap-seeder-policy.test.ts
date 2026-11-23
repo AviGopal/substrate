@@ -56,6 +56,30 @@ describe("the containment file contains itself", () => {
   });
 });
 
+// Which paths of the model service a change may land on without a person (USER ruling 11-23, the model service's main
+// file leaves the protected list): its main file lands like any other path, while its spending-limit files stay on
+// the list. Read with the rule local-tools' git_commit and git_land apply to this file at a change's super base
+// (write-containment.ts scopeEntryFor): an entry ending in "/" is a directory, any other one file, exactly.
+function entryFor(rel: string, excluded: readonly string[]): string | null {
+  const n = rel.replace(/\\/g, "/").replace(/^\.\//, "");
+  if (!n) return null;
+  for (const e of excluded) {
+    if (e.endsWith("/")) { if (n === e.slice(0, -1) || n.startsWith(e)) return e; }
+    else if (n === e) return e;
+  }
+  return null;
+}
+describe("the model service on the protected list", () => {
+  const excluded = (): string[] => JSON.parse(readFileSync(SCOPE_FILE, "utf8")).autonomyScope.excluded_paths;
+  it("[MUST-FAIL] its main file is not on the list, so a change to it needs no person", () => {
+    expect(entryFor("repos/llm-resolver-vessel/src/index.ts", excluded())).toBeNull();
+  });
+  it("[GUARD] its spending-limit file and that file's test stay on it", () => {
+    expect(entryFor("repos/llm-resolver-vessel/src/dispatch-budget.ts", excluded())).toBe("repos/llm-resolver-vessel/src/dispatch-budget.ts");
+    expect(entryFor("repos/llm-resolver-vessel/src/dispatch-budget.test.ts", excluded())).toBe("repos/llm-resolver-vessel/src/dispatch-budget.test.ts");
+  });
+});
+
 describe("bootstrap-seeder --pool-policy", () => {
   it("seeds a fresh pool with exactly the committed file's autonomyScope and spendEnvelope (reason aside)", () => {
     const root = mkdtempSync(join(tmpdir(), "seed-policy-"));

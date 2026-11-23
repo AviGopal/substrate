@@ -2,7 +2,6 @@
   "description": "The committed autonomy containment: the paths autonomous work may change only on a person's verdict, the falsifier classes it is held to, and the spend envelope it runs under. Readers: local-tools' git_commit and git_land read this file at the base of every change. A change lands only on a person's verdict when it touches a path excluded_paths names (super-relative; a vessel path as repos/<vessel>/<path>; a directory entry by prefix), or a path person_only names (repo-relative globs: every_repo in every repository, by_repo in the named one, and fixtures_without_gate_policy in a repository whose base has no gate policy, which names its own accepted fixtures). This file names itself in excluded_paths, so a change to the person-only set is itself judged by a person. Write containment reads excluded_paths for the wording of a refusal into the live clones; pull-sync's protected test gate reads its .test.ts entries under a vessel, so a directory of protected tests also lists each of its test files by name (test/judge-split/); those per-file entries are redundant for exclusion. scripts/bootstrap-seeder.ts --pool-policy seeds it into a fresh pool as the first autonomyScope and spendEnvelope records.",
   "autonomyScope": {
     "excluded_paths": [
-      "repos/llm-resolver-vessel/src/index.ts",
       "repos/boredom-vessel/src/index.ts",
       "repos/discovery-vessel/",
       "repos/identity-vessel/",
