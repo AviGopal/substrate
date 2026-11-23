@@ -53,13 +53,15 @@ const read = async (shape: string, where?: Row): Promise<Row[]> => {
 };
 
 // A row "already says it" when every field we write equals the latest matching row's (JSON-compared).
-async function ensure(row: Row, where: Row | undefined, label: string): Promise<void> {
+// Answers the id of the row that says it (present or written), so a later row can name it.
+async function ensure(row: Row, where: Row | undefined, label: string): Promise<string | undefined> {
   const rows = await read(row.shape as string, where);
   const same = (r: Row) => Object.keys(row).every((k) => JSON.stringify(r[k]) === JSON.stringify(row[k]));
   const latest = where ? rows[rows.length - 1] : rows.find(same);
-  if (latest && same(latest)) { console.log(`[walk-owner-seed] ${label}: present (${latest.id})`); return; }
+  if (latest && same(latest)) { console.log(`[walk-owner-seed] ${label}: present (${latest.id})`); return String(latest.id); }
   const w = (await records("record_write", { row: { ...row, input_refs: [] }, writer: OWNER, role: OWNER })) as Row;
   console.log(`[walk-owner-seed] ${label}: wrote ${w.id ?? JSON.stringify(w).slice(0, 80)}`);
+  return typeof w.id === "string" ? w.id : undefined;
 }
 
 // The clone's newest tree (the newest-tree landing ruling): the tree of the newest row of these shapes a tool recorded on the
@@ -615,7 +617,28 @@ await ensure({ shape: "requires", for: "walk_trees_reclaim", needs: "gap", where
 // A root that offers no move is said, as a stall row naming it, once every after_rows store rows it sits (walk loop.ts
 // stalls; its producer is offered again once per row). Counted in store rows, the unit a detector's quiet window uses,
 // sized to about one round of the walk's selections over the open roots.
-await ensure({ shape: "stall_rule", after_rows: 240 }, {}, "stall_rule");
+// How many store rows the owner's sweeps over the walk's own work wait between runs: the stall rule and the failure
+// detector's rhythm alike, so both look again on one cadence.
+const SWEEP_ROWS = 240;
+await ensure({ shape: "stall_rule", after_rows: SWEEP_ROWS }, {}, "stall_rule");
+// The walk's failures are classed and the classes that recur filed as gaps by walk_failure_detect (local-tools), which
+// decides by this row, read at each run: a class is filed once it failed min_count times over min_roots roots within
+// the last window_rows store rows, and closed once quiet for quiet_rows rows with its tool called since without failing
+// so. Each value is a starting guess, not a finding, kept as a row so it can be revised: three failures is one
+// recurrence beyond a pair; one root, since a single root can repeat a failure many times; 2000 rows is about an hour
+// of the live store, and a class stays open as long after its last failure. It writes from the start: a gap filed
+// wrongly is visible and closable, where a dry run's report is one more thing nobody reads.
+await ensure({ shape: "failure_rule", target: "walk_failure", min_count: 3, min_roots: 1, window_rows: 2000, quiet_rows: 2000, write: true },
+  { target: "walk_failure" }, "failure_rule walk_failure");
+// The detector runs as the one call of an owner template that a rhythm names: records shares such a template with every
+// root, and the walk runs it on its idle root when due, so each run is a traced, graded move. A seeded template is the
+// bootstrap tier: a walk cannot earn a detector it has never been offered. It runs every SWEEP_ROWS rows, as the stall rule
+// says a stalled root.
+const failureDetector = await ensure({ shape: "activity_template", sig: { in: [], out: ["walkFailureReport"] }, calls: [{ shape: "walk_failure_detect", pointer: {} }] },
+  undefined, "activity_template walk_failure_detect");
+if (failureDetector !== undefined) {
+  await ensure({ shape: "rhythm", template: failureDetector, every_rows: SWEEP_ROWS }, { template: failureDetector }, "rhythm walk_failure_detect");
+}
 // What makes a diff news to the root that asked for it: its tree, whether each check ran and passed, and what the clone
 // held uncommitted, not the check's timings (walk applicable.ts repeats, by the owner's news_key). A re-run diff of an
 // unchanged tree is then no news, and the root stops judging the same tree again (544972ef judged one tree r 0 ten

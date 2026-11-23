@@ -82,6 +82,7 @@ declare -A NEEDS=(
   [walk-owner-seed-write-in-clone.test.ts]="repos/walk-vessel"
   [walk-owner-seed-commit-needs-edit.test.ts]="repos/walk-vessel"
   [walk-owner-seed-commit-after-diff.test.ts]="repos/walk-vessel"
+  [walk-owner-seed-failure-detector.test.ts]="repos/walk-vessel repos/local-tools-vessel"
   [walk-owner-seed-attempt-explanation.test.ts]="repos/walk-vessel repos/described-shape-vessel"
   [walk-owner-seed-gap-words.test.ts]="repos/human-surface-vessel"
 )
