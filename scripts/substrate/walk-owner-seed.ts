@@ -590,6 +590,10 @@ for (const edit of EDIT_RESULTS) {
 }
 await ensure({ shape: "requires", for: "git_commit", needs: "gitWorktree", where: { carried: "uncommitted", cwd: { "x-pointer": "cwd" } }, latest_by: "cwd", group: "uncommitted" },
   { for: "git_commit", needs: "gitWorktree" }, "requires git_commit gitWorktree");
+// A diff says so too: git_diff answers uncommitted_any, whether the clone it diffed holds paths changed and not
+// committed, so the newest diff of the clone saying true is something to commit, and one saying false is not.
+await ensure({ shape: "requires", for: "git_commit", needs: "gitDiff", where: { uncommitted_any: true, cwd: { "x-pointer": "cwd" } }, latest_by: "cwd", group: "uncommitted" },
+  { for: "git_commit", needs: "gitDiff" }, "requires git_commit gitDiff");
 // An edit waits for a read of the very file it changes: the root's whole-file read (fileContent) of the path the edit
 // names (bound to the edit's own pointer). A clone's files sit under the clone's own directory, so a read made in an
 // older clone, or none, does not open an edit in a fresh one. A line-range read does not count: an edit's old text must

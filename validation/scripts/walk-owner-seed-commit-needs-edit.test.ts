@@ -43,12 +43,13 @@ beforeAll(async () => {
 afterAll(() => rmSync(T, { recursive: true, force: true }))
 
 describe("the seed's rows", () => {
-  test("[MUST-FAIL] git_commit requires something to commit in its clone: one row per edit shape and a carrying refresh, one group", () => {
+  test("[MUST-FAIL] git_commit requires something to commit in its clone: one row per edit shape, a carrying refresh and a diff saying so, one group", () => {
     const req = seeded.filter((r) => r.shape === "requires" && r.for === "git_commit" && r.group === "uncommitted")
       .map(({ id: _i, seq: _s, role: _r, input_refs: _x, ...rest }) => rest)
     expect(req).toEqual([...EDITS.map((needs) =>
       ({ shape: "requires", for: "git_commit", needs, where: { cwd: { "x-pointer": "cwd" } }, latest_by: "cwd", group: "uncommitted" })),
-      { shape: "requires", for: "git_commit", needs: "gitWorktree", where: { carried: "uncommitted", cwd: { "x-pointer": "cwd" } }, latest_by: "cwd", group: "uncommitted" }])
+      { shape: "requires", for: "git_commit", needs: "gitWorktree", where: { carried: "uncommitted", cwd: { "x-pointer": "cwd" } }, latest_by: "cwd", group: "uncommitted" },
+      { shape: "requires", for: "git_commit", needs: "gitDiff", where: { uncommitted_any: true, cwd: { "x-pointer": "cwd" } }, latest_by: "cwd", group: "uncommitted" }])
   })
 })
 
