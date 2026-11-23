@@ -26,6 +26,7 @@ const OTHER_TEMPLATE = "some-other-template"
 const T = mkdtempSync(join(tmpdir(), "wos-faildetect-"))
 let seeded: Row[] = []
 let firstSeeding: Row[] = []
+let secondSeeding: Row[] = []
 beforeAll(async () => {
   const rows: Row[] = []
   const server = Bun.serve({ hostname: "127.0.0.1", port: 0, fetch: async (req) => {
@@ -48,15 +49,21 @@ beforeAll(async () => {
   for (const row of [{ shape: "failure_rule", target: OTHER_TARGET, min_count: 1 }, { shape: "rhythm", template: OTHER_TEMPLATE, every_rows: 1 }])
     rows.push({ ...row, id: `o${rows.length + 1}`, seq: rows.length + 1, role: "owner", input_refs: [] })
   await seed()
+  secondSeeding = [...rows]
+  // Then the rhythm naming the detector's template says another cadence (an owner edit, or a row a crashed seed left)
+  // and the seed runs again: it finds the template present and restores the rhythm the seed says.
+  const tid = secondSeeding.find((r) => r.shape === "activity_template" && [r.calls].flat().some((c: Row) => c?.shape === "walk_failure_detect"))?.id
+  if (tid !== undefined) rows.push({ shape: "rhythm", template: tid, every_rows: 7, id: `o${rows.length + 1}`, seq: rows.length + 1, role: "owner", input_refs: [] })
+  await seed()
   server.stop(true)
   seeded = rows
 })
 afterAll(() => rmSync(T, { recursive: true, force: true }))
 
 const bare = ({ id: _i, seq: _s, role: _r, input_refs: _x, ...rest }: Row) => rest
-const ruleRow = () => seeded.filter((r) => r.shape === "failure_rule" && r.target === "walk_failure")
-const templateRows = () => seeded.filter((r) => r.shape === "activity_template" && [r.calls].flat().some((c: Row) => c?.shape === "walk_failure_detect"))
-const rhythmRows = () => seeded.filter((r) => r.shape === "rhythm" && r.template !== OTHER_TEMPLATE)
+const ruleRow = () => secondSeeding.filter((r) => r.shape === "failure_rule" && r.target === "walk_failure")
+const templateRows = () => secondSeeding.filter((r) => r.shape === "activity_template" && [r.calls].flat().some((c: Row) => c?.shape === "walk_failure_detect"))
+const rhythmRows = () => secondSeeding.filter((r) => r.shape === "rhythm" && r.template !== OTHER_TEMPLATE)
 
 describe("the seed's rows", () => {
   test("[MUST-FAIL] the failure_rule the detector decides by, writing, once over two seedings", () => {
@@ -67,7 +74,7 @@ describe("the seed's rows", () => {
     expect(templateRows()[0].role).toBe("owner")
   })
   test("[MUST-FAIL] a rhythm naming that template, on the stall rule's cadence, once over two seedings", () => {
-    const stall = seeded.filter((r) => r.shape === "stall_rule").at(-1)
+    const stall = secondSeeding.filter((r) => r.shape === "stall_rule").at(-1)
     expect(rhythmRows().map(bare)).toEqual([{ shape: "rhythm", template: templateRows()[0]?.id, every_rows: stall?.after_rows }])
   })
 })
@@ -77,6 +84,15 @@ describe("one seeding", () => {
     const t = firstSeeding.filter((r) => r.shape === "activity_template" && [r.calls].flat().some((c: Row) => c?.shape === "walk_failure_detect"))
     expect(t.length).toBe(1)
     expect(firstSeeding.filter((r) => r.shape === "rhythm").map((r) => r.template)).toEqual([t[0].id])
+  })
+})
+
+describe("a later seeding", () => {
+  test("[MUST-FAIL] with the template already present, a rhythm for it saying another cadence is restored to the seed's", () => {
+    const tid = templateRows()[0]?.id
+    const newest = seeded.filter((r) => r.shape === "rhythm" && r.template === tid).at(-1)
+    expect(newest?.every_rows).toBe(rhythmRows()[0]?.every_rows)
+    expect(seeded.filter((r) => r.shape === "rhythm" && r.template === tid).map((r) => r.every_rows)).toEqual([rhythmRows()[0]?.every_rows, 7, rhythmRows()[0]?.every_rows])
   })
 })
 
@@ -101,12 +117,13 @@ describe("the walk reading them", () => {
     return cands.some((c) => c.id === `run/${templateRows()[0]?.id}`)
   }
 
+  const newestRhythm = () => seeded.filter((r) => r.shape === "rhythm" && r.template === templateRows()[0]?.id).at(-1) as Row
   test("[MUST-FAIL] once every_rows store rows have passed since the rhythm row, the detector's template is offered", async () => {
-    const r = rhythmRows()[0]
+    const r = newestRhythm()
     expect(await offeredAt(r.seq + r.every_rows)).toBe(true)
   })
   test("[MUST-FAIL] before then it is not", async () => {
-    const r = rhythmRows()[0]
+    const r = newestRhythm()
     expect(await offeredAt(r.seq + r.every_rows - 1)).toBe(false)
   })
 })
