@@ -6,6 +6,10 @@
 # whose archive cannot satisfy it would run every promoted tick as a TRACKED-RED LIB MISSING
 # no-op on every node, so it must never be promoted. A body without the loader has nothing to
 # satisfy and passes. Run by shadow-eval.sh with PULLSYNC_BIN / CANDIDATE_DIR (see its header).
+# The tracked gap is offered both ways a body may read it: as a store file (DEV_VESSEL), and as records
+# rows through dev_resolve (a detector gap row and a person's r 1 citing it: the only gap a body reading
+# records exempts, USER ruling 11-23, check-first reds exempt only by a person-marked gap). The corpus
+# judging a candidate is the accepted one, so it accepts both the body before that change and after it.
 set -u
 grep -q '^# >>> gap-tracked-red loader$' "$PULLSYNC_BIN" || { echo "ok - the candidate body has no gap-tracked-red loader"; exit 0; }
 W="$(mktemp -d "${TMPDIR:-/tmp}/lib-sources.XXXXXX")" || { echo "FAIL - mktemp"; exit 1; }
@@ -13,9 +17,12 @@ trap 'rm -rf "$W"' EXIT
 mkdir -p "$W/empty-share"
 sed -n '/^# >>> gap-tracked-red loader$/,/^# <<< gap-tracked-red loader$/p' "$PULLSYNC_BIN" > "$W/loader.sh"
 printf '[{"id":"g","status":"open","classification_metadata":{"evidence_resolve":{"shape":"test_suite","input":{"vessel":"v","test_file":"t.test.ts","only_tests":["probe"]}}}}]\n' > "$W/store.json"
+printf '[{"shape":"gap","role":"detector","gap_id":"g","id":"r1","seq":1,"status":"open","meta":{"evidence_resolve":{"shape":"test_suite","input":{"vessel":"v","test_file":"t.test.ts","only_tests":["probe"]}}}}]\n' > "$W/gaps.json"
+printf '[{"shape":"outcome","role":"person","r":1,"id":"m1","seq":2,"input_refs":["r1"]}]\n' > "$W/outs.json"
 out="$( PULLSYNC_SELF_DIR="$(dirname "$PULLSYNC_BIN")" PULLSYNC_SHARE_DIR="$W/empty-share" DEV_VESSEL="$W/store.json"
   # shellcheck disable=SC1091
   . "$W/loader.sh" >/dev/null 2>&1
+  dev_resolve() { case "$1" in *'"shape":"gap"'*) cat "$W/gaps.json" ;; *'"shape":"outcome"'*) cat "$W/outs.json" ;; *) echo '[]' ;; esac; }
   printf 'lib=%s\n' "${GTR_LIB:-}"
   printf 'names=%s\n' "$(tracked_fail_names v t.test.ts 2>/dev/null | tr '\n' ' ')"
   printf 'match=%s\n' "$(gtr_select tracked probe '(fail) a > probe' 2>/dev/null)" )"
