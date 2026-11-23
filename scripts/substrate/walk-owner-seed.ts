@@ -706,10 +706,10 @@ await ensure({ shape: "credits", target: "gap", by_call: "git_land" }, { target:
 // .03 on failures inherited from other requests. The value is the USER's: "4 grades".
 await ensure({ shape: "credits", target: "selection", w_person: 1, w_lapse: 1, w_close: 1, gamma: 0.7, depth: 12, w_check: 0.5, promise_window: 6, prior_count: 4 },
   { target: "selection" }, "credits selection");
-// Where a move no level of records' fold has a record for starts: the owner's prior for its kind (prior {kind, alpha0,
-// beta0}) when one is written, else this default (USER ruling 11-23, a never-run move starts from its kind's record, else
-// the owner's p0). 1/1 is the start the fold held as a constant. It is a setting the owner changes by writing a row, with
-// no change of code, so it is written only when none is there.
+// Where a move starts when records' fold has no record for it, at its kind either: the owner's default prior (USER ruling
+// 11-23, a never-run move starts from its kind's record, else the owner's p0). 1/1 is the start the fold held as a
+// constant. It is a setting the owner changes by writing a row, with no change of code, so it is written only when none
+// is there.
 await ensureAbsent({ shape: "prior", default: true, alpha0: 1, beta0: 1 }, { default: true }, "prior default");
 // A hold the owner reads as a fact (records' hold_fact; the USER, relayed first-hand: "Read as facts"). pull-sync's
 // failing-test generator once held each gap no stack localizes (operator_hold, its reason "needs_localization: ..."):
