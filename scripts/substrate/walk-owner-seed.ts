@@ -583,7 +583,11 @@ await ensure({ shape: "requires", for: "git_land", needs: "land_verdict", where:
 // check. Alternatives in their own group (either row meets it), needed besides a wanted change or an open gap; each
 // counts the newest row per clone (latest_by cwd), so another clone's newer row never hides this one's. Nothing about
 // what git_diff answers or how it is graded changes.
-await ensure({ shape: "requires", for: "git_diff", needs: "gitCommitResult", where: { committed_tree: COMMITTED_TREE }, latest_by: "cwd", group: "committed" },
+// A commit leads on to its diff (USER ruling 11-23, the walk offers the step a refusal's chain names): when a gated
+// call's chain names git_diff and the root's newest made row is a commit, the walk offers the diff with no request
+// asking for it, its pointer bound from that commit row as binds says (the clone the commit names, cwd). Only the
+// commit's row binds: a clean clone handed out has nothing committed to diff.
+await ensure({ shape: "requires", for: "git_diff", needs: "gitCommitResult", where: { committed_tree: COMMITTED_TREE }, latest_by: "cwd", group: "committed", binds: { cwd: "cwd" } },
   { for: "git_diff", needs: "gitCommitResult" }, "requires git_diff gitCommitResult");
 await ensure({ shape: "requires", for: "git_diff", needs: "gitWorktree", where: { committed_tree: COMMITTED_TREE }, latest_by: "cwd", group: "committed" },
   { for: "git_diff", needs: "gitWorktree" }, "requires git_diff gitWorktree");

@@ -77,7 +77,7 @@ describe("the seed's rows", () => {
     const req = seeded.filter((r) => r.shape === "requires" && r.for === "git_diff" && r.group === "committed")
       .map(({ id: _i, seq: _s, role: _r, input_refs: _x, ...rest }) => rest)
     expect(req).toEqual([
-      { shape: "requires", for: "git_diff", needs: "gitCommitResult", where: { committed_tree: COMMITTED }, latest_by: "cwd", group: "committed" },
+      { shape: "requires", for: "git_diff", needs: "gitCommitResult", where: { committed_tree: COMMITTED }, latest_by: "cwd", group: "committed", binds: { cwd: "cwd" } },
       { shape: "requires", for: "git_diff", needs: "gitWorktree", where: { committed_tree: COMMITTED }, latest_by: "cwd", group: "committed" },
     ])
   })
