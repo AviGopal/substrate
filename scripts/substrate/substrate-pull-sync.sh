@@ -840,6 +840,15 @@ tfn_rows() { # <pointer json> <out file> -> 0, 1 unreadable, 2 credential refuse
   fi
   printf '%s' "$raw" | jq -c 'if type == "array" then . elif (.content | type) == "array" then .content else error("no rows") end' > "$2" 2>/dev/null || return 1
 }
+# What checks a test regression's gap: the vessel's whole suite, naming the tests it saw newly red ("(fail) <name>"
+# lines, as fail_names writes them) by name alone, with no test file: the walk's land check then runs the whole suite
+# and passes only when every named test is green and nothing green on the base turned red. A regression that named no
+# test (a file that no longer loads, a protected test red alone) names none, and the suite's exit decides.
+regression_evidence() { # <vessel> <fail lines>
+  printf '%s\n' "${2:-}" | jq -R -s -c --arg v "${1:-}" '{shape: "test_suite", input: {vessel: $v,
+    only_tests: (split("\n") | map(sub("^(\\(fail\\)|✗) *"; "") | sub("\\s*\\[[0-9.]+m?s\\]$"; "") | select(test("\\S"))) | unique)}}'
+}
+
 tracked_fail_names() {
   local st rc
   [ -n "$GTR_LIB" ] || return 0
@@ -5886,11 +5895,14 @@ EOF
     # (last-good pin .. HEAD, test_only_range) leaves the unit's code byte-identical, so refusing
     # it costs no staleness at all — and breaking would deploy nothing but the regression's
     # absorption. It is refused for as long as it regresses. Uncomputable -> not test-only.
+    # every regression gap says what checks it (regression_evidence): the tests it confirmed, or none
+    REG_EVIDENCE="$(regression_evidence "$v" "$( [ "${CONFIRMED:-0}" -gt 0 ] && printf '%s' "${CONF_SET:-}")")"
+    [ -n "$REG_EVIDENCE" ] || REG_EVIDENCE="$(jq -n -c --arg v "$v" '{shape: "test_suite", input: {vessel: $v, only_tests: []}}')"
     TG_PREV_GOOD="$(cat "${LAST_GOOD_DIR:-/nonexistent}/$v" 2>/dev/null || true)"
     TG_TESTONLY=""
     test_only_range "$d" "$TG_PREV_GOOD" "$HEAD" && TG_TESTONLY=1
     if [ -n "$TG_TESTONLY" ]; then
-      emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-test-regression-$v\",\"category\":\"systematic_failure\",\"source\":\"substrate_detected\",\"summary\":\"pull-sync test gate: $v at ${HEAD:0:10} regressed its own suite ($REG), confirmed on a second run. The range ${TG_PREV_GOOD:0:10}..${HEAD:0:10} changes only tests, so it is refused until repaired (refusal $RC); the starvation break never applies to a test-only range, which changes no runtime code.\",\"status\":\"open\",\"repo\":\"$v\",\"classification_metadata\":{\"vessel\":\"$v\",\"effective_wall_s\":${SUITE_EFF_WALL_S:-240},\"wall_why\":\"${SUITE_WALL_WHY:-}\"}}}}}"
+      emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-test-regression-$v\",\"category\":\"systematic_failure\",\"source\":\"substrate_detected\",\"summary\":\"pull-sync test gate: $v at ${HEAD:0:10} regressed its own suite ($REG), confirmed on a second run. The range ${TG_PREV_GOOD:0:10}..${HEAD:0:10} changes only tests, so it is refused until repaired (refusal $RC); the starvation break never applies to a test-only range, which changes no runtime code.\",\"status\":\"open\",\"repo\":\"$v\",\"classification_metadata\":{\"evidence_resolve\":$REG_EVIDENCE,\"vessel\":\"$v\",\"effective_wall_s\":${SUITE_EFF_WALL_S:-240},\"wall_why\":\"${SUITE_WALL_WHY:-}\"}}}}}"
       log "$v: TEST REGRESSION at ${HEAD:0:10} ($REG) — REFUSING to converge (refusal $RC; ${TG_PREV_GOOD:0:10}..${HEAD:0:10} is test-only, so no starvation break); runtime keeps running its current code"
       tg_verdict "refused: $REG"; skipped=$((skipped + 1)); continue
     fi
@@ -5901,14 +5913,14 @@ EOF
     # stop. So past the bound the refusal stands and the gap is ESCALATED (severity high, which the gap
     # picker ranks above routine work). Outstanding state left by earlier breaks is still drained above.
     if [ "$RC" -le "${TEST_GATE_MAX_REFUSALS:-3}" ]; then
-      emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-test-regression-$v\",\"category\":\"systematic_failure\",\"source\":\"substrate_detected\",\"summary\":\"pull-sync test gate: $v at ${HEAD:0:10} regressed its own suite ($REG), confirmed on a second run. Refusal $RC of ${TEST_GATE_MAX_REFUSALS:-3}; the runtime stays on the code it is already running until this is repaired.\",\"status\":\"open\",\"repo\":\"$v\",\"classification_metadata\":{\"vessel\":\"$v\",\"effective_wall_s\":${SUITE_EFF_WALL_S:-240},\"wall_why\":\"${SUITE_WALL_WHY:-}\"}}}}}"
+      emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-test-regression-$v\",\"category\":\"systematic_failure\",\"source\":\"substrate_detected\",\"summary\":\"pull-sync test gate: $v at ${HEAD:0:10} regressed its own suite ($REG), confirmed on a second run. Refusal $RC of ${TEST_GATE_MAX_REFUSALS:-3}; the runtime stays on the code it is already running until this is repaired.\",\"status\":\"open\",\"repo\":\"$v\",\"classification_metadata\":{\"evidence_resolve\":$REG_EVIDENCE,\"vessel\":\"$v\",\"effective_wall_s\":${SUITE_EFF_WALL_S:-240},\"wall_why\":\"${SUITE_WALL_WHY:-}\"}}}}}"
       log "$v: TEST REGRESSION at ${HEAD:0:10} ($REG) — REFUSING to converge ($RC/${TEST_GATE_MAX_REFUSALS:-3}); runtime keeps running its current code"
       tg_verdict "refused: $REG"; skipped=$((skipped + 1)); continue
     fi
-    emit_gap "$(jq -n -c --arg v "$v" --arg head "${HEAD:0:10}" --arg reg "$REG" --arg rc "$RC" --arg max "${TEST_GATE_MAX_REFUSALS:-3}" --argjson ew "${SUITE_EFF_WALL_S:-240}" --arg why "${SUITE_WALL_WHY:-}" \
+    emit_gap "$(jq -n -c --arg v "$v" --arg head "${HEAD:0:10}" --arg reg "$REG" --arg rc "$RC" --arg max "${TEST_GATE_MAX_REFUSALS:-3}" --argjson ew "${SUITE_EFF_WALL_S:-240}" --arg why "${SUITE_WALL_WHY:-}" --argjson er "$REG_EVIDENCE" \
       '{impulse:{pointer:{type:"substrateGap_write",gap:{id:("pull-sync-test-regression-" + $v),category:"systematic_failure",source:"substrate_detected",status:"open",severity:"high",repo:$v,
         summary:("Repair needed (ESCALATED): pull-sync test gate has refused " + $v + " " + $rc + " consecutive runs, past the bound of " + $max + ", at " + $head + " (" + $reg + "). The starvation break defers convergence; it never promotes past red, so the runtime stays on its current code until the regression is repaired."),
-        classification_metadata:{vessel:$v,head:$head,refusals:($rc | tonumber),refusal_bound:($max | tonumber),escalated:true,regression:$reg,effective_wall_s:$ew,wall_why:$why}}}}}' 2>/dev/null)"
+        classification_metadata:{evidence_resolve:$er,vessel:$v,head:$head,refusals:($rc | tonumber),refusal_bound:($max | tonumber),escalated:true,regression:$reg,effective_wall_s:$ew,wall_why:$why}}}}}' 2>/dev/null)"
     log "$v: TEST REGRESSION at ${HEAD:0:10} ($REG) — REFUSING to converge (refusal $RC, past the bound ${TEST_GATE_MAX_REFUSALS:-3}: gap ESCALATED; the starvation break defers, it never promotes past red); runtime keeps running its current code"
     tg_verdict "refused past the bound: $REG"; skipped=$((skipped + 1)); continue
   fi
