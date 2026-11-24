@@ -6,7 +6,8 @@
 # with emit_gap stubbed to keep the payload.
 #   (a) [MUST-FAIL] the helper turns the gate's "(fail) <name>" lines (and bun's ✗ form, with timings) into bare names,
 #       each once; no lines give no names
-#   (b) [MUST-FAIL] the names are the confirmed set only when the gate confirmed named reds; otherwise none
+#   (b) [MUST-FAIL] the names are the confirmed set only when the gate confirmed named reds, otherwise none; the
+#       vessel is the one the gate judged
 #   (c) [MUST-FAIL] every regression gap the gate writes (test-only range, within the bound, escalated) carries the
 #       same evidence_resolve, and still parses
 #   (d) [GUARD] such a gap exempts nothing at the gate: the exemption needs a test file, and it names none
@@ -34,9 +35,12 @@ is "(a) no lines: no names" "$(regression_evidence v "" 2>/dev/null)" '{"shape":
 # (b) the script's own lines that choose the names
 grep -E '^ *(REG_EVIDENCE=|\[ -n "\$REG_EVIDENCE" \])' "$SCRIPT" > "$T/pick.sh"
 [ "$(grep -c . "$T/pick.sh")" = 2 ] || bad "(b) the two lines choosing the names were not found"
-pick() { (v=v; CONFIRMED="$1"; CONF_SET="$2"; REG_EVIDENCE=""; . "$T/pick.sh"; printf '%s' "$REG_EVIDENCE" | jq -c '.input.only_tests'); }
-is "(b) [MUST-FAIL] confirmed named reds: their names" "$(pick 1 '(fail) add > adds')" '["add > adds"]'
-is "(b) none confirmed: no names, whatever the set holds" "$(pick 0 '(fail) add > adds')" '[]'
+# the whole evidence, so the vessel it names (whose suite checks the gap) is the one the gate judged
+pick() { (v=demo-vessel; CONFIRMED="$1"; CONF_SET="$2"; REG_EVIDENCE=""; . "$T/pick.sh"; printf '%s' "$REG_EVIDENCE"); }
+is "(b) [MUST-FAIL] confirmed named reds: their names, on the gate's vessel" "$(pick 1 '(fail) add > adds')" \
+  '{"shape":"test_suite","input":{"vessel":"demo-vessel","only_tests":["add > adds"]}}'
+is "(b) none confirmed: no names, whatever the set holds" "$(pick 0 '(fail) add > adds')" \
+  '{"shape":"test_suite","input":{"vessel":"demo-vessel","only_tests":[]}}'
 
 # (c) every regression gap the script writes, as it writes it
 awk '/emit_gap .*pull-sync-test-regression-\$v/ { print; next }
