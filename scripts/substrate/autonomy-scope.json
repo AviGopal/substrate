@@ -1,5 +1,5 @@
 {
-  "description": "The committed autonomy containment: the paths autonomous work may change only on a person's verdict, the falsifier classes it is held to, and the spend envelope it runs under. Readers: local-tools' git_commit and git_land read this file at the base of every change. A change lands only on a person's verdict when it touches a path excluded_paths names (super-relative; a vessel path as repos/<vessel>/<path>; a directory entry by prefix), or a path person_only names (repo-relative globs: every_repo in every repository, by_repo in the named one, and fixtures_without_gate_policy in a repository whose base has no gate policy, which names its own accepted fixtures). This file names itself in excluded_paths, so a change to the person-only set is itself judged by a person. Write containment reads excluded_paths for the wording of a refusal into the live clones; pull-sync's protected test gate reads its .test.ts entries under a vessel, so a directory of protected tests also lists each of its test files by name (test/judge-split/); those per-file entries are redundant for exclusion. scripts/bootstrap-seeder.ts --pool-policy seeds it into a fresh pool as the first autonomyScope and spendEnvelope records.",
+  "description": "The committed autonomy containment: the paths outside autonomous work's reach, the falsifier classes it is held to, and the spend envelope it runs under. Readers: local-tools' git_commit and git_land read this file at the base of every change. A change touching a path excluded_paths names (super-relative; a vessel path as repos/<vessel>/<path>; a directory entry by prefix) is refused at commit and never lands, whatever any verdict says; every other change lands on its own evidence, and no change waits on a person. This file names itself in excluded_paths, so autonomous work never edits the list. Write containment reads excluded_paths for the wording of a refusal into the live clones; pull-sync's protected test gate reads its .test.ts entries under a vessel, so a directory of protected tests also lists each of its test files by name (test/judge-split/); those per-file entries are redundant for exclusion. scripts/bootstrap-seeder.ts --pool-policy seeds it into a fresh pool as the first autonomyScope and spendEnvelope records.",
   "autonomyScope": {
     "excluded_paths": [
       "repos/boredom-vessel/src/index.ts",
@@ -18,37 +18,6 @@
       "repos/llm-resolver-vessel/src/dispatch-budget.ts",
       "repos/llm-resolver-vessel/src/dispatch-budget.test.ts"
     ],
-    "person_only": {
-      "every_repo": [
-        "scripts/git-hooks/**",
-        ".git-hooks/**",
-        "scripts/substrate/gate/**",
-        "validation/scripts/gate/**",
-        "scripts/substrate/walk-owner-seed.ts"
-      ],
-      "by_repo": {
-        "local-tools-vessel": [
-          "src/git-*.ts",
-          "src/walk-rows.ts",
-          "src/index.ts",
-          "src/shell-containment.ts",
-          "src/write-containment.ts",
-          "src/agent-shell-env.ts",
-          "src/shell-privilege.ts",
-          "src/tool-roots.ts",
-          "src/script-runner.ts",
-          "src/script-runner-reaper.ts"
-        ],
-        "records-vessel": [
-          "src/**"
-        ]
-      },
-      "fixtures_without_gate_policy": [
-        "validation/**",
-        "test/fixtures/**",
-        "src/**/fixtures/**"
-      ]
-    },
     "require_falsifier_classes": [
       "class2"
     ]

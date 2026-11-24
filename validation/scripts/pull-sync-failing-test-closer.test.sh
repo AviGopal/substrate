@@ -173,8 +173,8 @@ L="$(tail -n 1 "$WRITES")"; n1="$(wc -l < "$WRITES")"
 if [ "$n1" = 1 ] && printf '%s' "$L" | jq -e '.gap_id == "g-a" and .status == "open" and .role == "detector" and .check_runnable == false
     and .meta.check_runnable == false and .meta.names_absent == ["d > old"] and .meta.absent_at_head == "0123456789"
     and (.meta.evidence_resolve.input.only_tests == ["d > old"]) and (.summary | contains("Not checkable here"))
-    and .waits_for == "person"' >/dev/null; then
-  ok "(i) a named test the file no longer has: one open row, not checkable, naming it, waiting for a person (waits_for)"
+    and .waits_for == null' >/dev/null; then
+  ok "[MUST-FAIL] (i) a named test the file no longer has: one open row, not checkable, naming it, waiting for no one"
 else bad "(i) writes=$(cat "$WRITES") log=$(cat "$LOG")"; fi
 : > "$WRITES"; close_failing_test_gaps x fedcba9876543210 "$DIR"
 if [ ! -s "$WRITES" ]; then ok "(i) said once: a later run finding the same names absent writes nothing"
@@ -184,14 +184,14 @@ summary "(pass) d > old" > "$FAKE/a.test.ts.out"
 if [ "$(wc -l < "$WRITES")" = 1 ] && [ "$(jq -r '.status' "$WRITES")" = closed ]; then ok "(i) the named test back and passing: the gap closes"
 else bad "(i) back: writes=$(cat "$WRITES") log=$(cat "$LOG")"; fi
 
-# (i2) a not-checkable mark written before waits_for existed is written once more with it, then never again
+# (i2) a not-checkable mark that still says it waits for a person is written once more without it, then never again
 reset "$(row g-a x src/a.test.ts "$GEN" '["d > old"]')"
 summary "(pass) d > new" > "$FAKE/a.test.ts.out"
 close_failing_test_gaps x 0123456789abcdef "$DIR"
-jq -c 'map(if .shape == "gap" then del(.waits_for) else . end)' "$ROWS" > "$ROWS.new" && mv "$ROWS.new" "$ROWS"
+jq -c 'map(if .shape == "gap" then . + {waits_for: "person"} else . end)' "$ROWS" > "$ROWS.new" && mv "$ROWS.new" "$ROWS"
 : > "$WRITES"; close_failing_test_gaps x fedcba9876543210 "$DIR"; m1="$(wc -l < "$WRITES")"; mwf="$(tail -n 1 "$WRITES" | jq -r '.waits_for // "none"')"
 : > "$WRITES"; close_failing_test_gaps x fedcba9876543211 "$DIR"; m2="$(wc -l < "$WRITES")"
-if [ "$m1" = 1 ] && [ "$mwf" = person ] && [ "$m2" = 0 ]; then ok "(i2) a mark without waits_for is written once with it, then not again"
+if [ "$m1" = 1 ] && [ "$mwf" = none ] && [ "$m2" = 0 ]; then ok "[MUST-FAIL] (i2) a mark that says it waits for a person is written once without it, then not again"
 else bad "(i2) m1=$m1 wf=$mwf m2=$m2 log=$(cat "$LOG")"; fi
 
 # (j) a broken run is red, not absent: the import throws (no named line, an error summary), the setup throws

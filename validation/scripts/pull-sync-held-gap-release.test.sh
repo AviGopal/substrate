@@ -35,7 +35,7 @@
 #       and it is said;
 #   (cw) the walk's change_wanted on a gap row decides as a person's outcome does (newest by seq): a site releases the
 #       gap there (edit_site), once it is a file of the checkout, not the test, inside the repo; finding none (with a
-#       why) gives it to a person; one naming neither, not by described, citing no row of the gap, with no seq, or
+#       why) leaves it the walk's work, not localized, the why in its claim; one naming neither, not by described, citing no row of the gap, with no seq, or
 #       unreadable decides nothing; a parked row (stated, waiting) is written once as work; a site is judged by the
 #       file it resolves to (any spelling, a link), and the release names that file; only a person's outcome is r 0,
 #       and a person's outcome decides over the walk's, whichever is newer;
@@ -353,7 +353,7 @@ lift_held_gaps x 0123456789abcdef "$DIR"
 if [ ! -s "$WRITES" ] && grep -q 'gap rows with no seq (g-y)' "$LOG"; then ok "(x4) a gap row with no seq: nothing written, and said"
 else bad "(x4) writes=$(cat "$WRITES") log=$(cat "$LOG")"; fi
 
-# (wf) waits_for "person" is a top-level fact on exactly the rows that wait for a person's verdict
+# (wf) no row waits on a person: none written says waits_for, a person's r 0 included (its check_runnable false stays)
 reset "$(held g-a x src/a.test.ts "$GEN")"
 lift_held_gaps x 0123456789abcdef "$DIR"
 held_wf="$(latest g-a | jq -r '.waits_for // "none"')"
@@ -364,12 +364,12 @@ marked_wf="$(latest g-a | jq -r '.waits_for // "none"')"
 reset "$(held g-a x src/a.test.ts "$GEN" | jq -c '. + {waits_for: "person"}')" "$(outcome 1 r0)"
 lift_held_gaps x 0123456789abcdef "$DIR"
 released_wf="$(latest g-a | jq -r '.waits_for // "none"')"
-if [ "$held_wf" = none ] && [ "$marked_wf" = person ] && [ "$released_wf" = none ]; then
-  ok "(wf1) a row a person marked r 0 waits for a person (waits_for top level); a stated claim and an r 1 release do not"
+if [ "$held_wf" = none ] && [ "$marked_wf" = none ] && [ "$released_wf" = none ]; then
+  ok "[MUST-FAIL] (wf1) no row waits for a person: not a stated claim, not a person's r 0, not an r 1 release"
 else bad "(wf1) held=$held_wf marked=$marked_wf released=$released_wf log=$(cat "$LOG")"; fi
 
 # (wf2) a stated row written before the top-level fact (a held row with its claim) is written once more with
-# localized false on top and no wait, and a row already marked r 0 once more with waits_for; then never again
+# localized false on top and no wait, and a row marked r 0 that still says it waits once more without it; then never again
 pre_claim="$(held g-a x src/a.test.ts "$GEN" | jq -c '. + {claim: "The test is right: the source must change so these tests in repos/x/src/a.test.ts pass: d > one"}')"
 reset "$pre_claim"
 lift_held_gaps x 0123456789abcdef "$DIR"; n1="$(wc -l < "$WRITES")"; : > "$WRITES"
@@ -377,11 +377,11 @@ lift_held_gaps x 0123456789abcdef "$DIR"; n2="$(wc -l < "$WRITES")"
 wf="$(latest g-a | jq -r '.waits_for // "none"')"; wloc="$(latest g-a | jq -r '.localized')"
 reset "$(held g-a x src/a.test.ts "$GEN")" "$(outcome 0 r0)"
 lift_held_gaps x 0123456789abcdef "$DIR"
-jq -c 'map(if .shape == "gap" then del(.waits_for) else . end)' "$ROWS" > "$ROWS.new" && mv "$ROWS.new" "$ROWS"; : > "$WRITES"
+jq -c 'map(if .shape == "gap" then . + {waits_for: "person"} else . end)' "$ROWS" > "$ROWS.new" && mv "$ROWS.new" "$ROWS"; : > "$WRITES"
 lift_held_gaps x 0123456789abcdef "$DIR"; m1="$(wc -l < "$WRITES")"; mwf="$(latest g-a | jq -r '.waits_for // "none"')"; : > "$WRITES"
 lift_held_gaps x 0123456789abcdef "$DIR"; m2="$(wc -l < "$WRITES")"
-if [ "$n1" = 1 ] && [ "$n2" = 0 ] && [ "$wf" = none ] && [ "$wloc" = false ] && [ "$m1" = 1 ] && [ "$mwf" = person ] && [ "$m2" = 0 ]; then
-  ok "(wf2) a waiting row without the field is written once with it, then not again (held: $n1/$n2, marked: $m1/$m2)"
+if [ "$n1" = 1 ] && [ "$n2" = 0 ] && [ "$wf" = none ] && [ "$wloc" = false ] && [ "$m1" = 1 ] && [ "$mwf" = none ] && [ "$m2" = 0 ]; then
+  ok "[MUST-FAIL] (wf2) a row with the old fields is written once in the new form, then not again (held: $n1/$n2, marked: $m1/$m2)"
 else bad "(wf2) held $n1/$n2 wf=$wf marked $m1/$m2 wf=$mwf log=$(cat "$LOG")"; fi
 
 # THE NOT-LOCALIZED FACT (the USER: "Read as facts"): the generator now files localized false and no hold; an older row's
@@ -440,8 +440,8 @@ if [ ! -s "$WRITES" ] && grep -q "x: held-gap release: input unreadable (jq exit
 else bad "(y2) writes=$(cat "$WRITES") log=$(cat "$LOG")"; fi
 
 # THE SYSTEM FINDS THE SITE (the "The system finds it" ruling): the walk's change_wanted on a gap row decides as a
-# person's outcome does, newest by seq; a site must be a file of the checkout and not the test; finding none hands the
-# gap to a person.
+# person's outcome does, newest by seq; a site must be a file of the checkout and not the test; finding none leaves the
+# gap the walk's work, with no wait on a person.
 cw() { # wanted site_or_why ref [role]
   if [ "$1" = true ]; then jq -cn --arg s "$2" --arg ref "$3" --arg role "${4:-described}" '{shape: "change_wanted", wanted: true, repo: "x", edit_site: $s, evidence_refs: ["cs"], input_refs: [$ref], role: $role, writer: "described"}'
   else jq -cn --arg w "$2" --arg ref "$3" --arg role "${4:-described}" '{shape: "change_wanted", wanted: false, why: $w, evidence_refs: ["cs"], input_refs: [$ref], role: $role, writer: "described"}'; fi
@@ -481,15 +481,15 @@ if jq -se 'map(select(.meta.unlocalized_by != null or .waits_for != null)) | len
 else bad "(cw3b) writes=$(cat "$WRITES") log=$(cat "$LOG")"; fi
 reset "$(unloc g-n x src/a.test.ts "$GEN")" "$(cw false "searched src/ for the handler; none" r0)"
 lift_held_gaps x 0123456789abcdef "$DIR"; L="$(latest g-n)"
-if printf '%s' "$L" | jq -e '.waits_for == "person" and .localized == false and .meta.localized == false and .meta.unlocalized_by == "r1"
+if printf '%s' "$L" | jq -e '.waits_for == null and .localized == false and .meta.localized == false and .meta.unlocalized_by == "r1"
     and (.claim | contains("The walk found no place to change: searched src/ for the handler; none"))
-    and (.summary | contains("The walk searched and found no source file"))' >/dev/null && grep -q "released 0, stated 0, to a person 1" "$LOG"; then
+    and (.summary | contains("The walk searched and found no source file"))' >/dev/null && grep -q "released 0, stated 0, found no site 1" "$LOG"; then
   : > "$WRITES"; lift_held_gaps x 0123456789abcdef "$DIR"
-  jq -c 'map(if .shape == "gap" then del(.waits_for) else . end)' "$ROWS" > "$ROWS.new" && mv "$ROWS.new" "$ROWS"
+  jq -c 'map(if .shape == "gap" then . + {waits_for: "person"} else . end)' "$ROWS" > "$ROWS.new" && mv "$ROWS.new" "$ROWS"
   lift_held_gaps x 0123456789abcdef "$DIR"; back="$(latest g-n | jq -r '.waits_for // "none"')"
-  [ "$back" = person ] && ok "[MUST-FAIL] (cw4b) a row given to a person that lost its waits_for gets it again" || bad "(cw4b) waits_for=$back log=$(cat "$LOG")"
+  [ "$back" = none ] && ok "[MUST-FAIL] (cw4b) a row that still says it waits for a person is written without it: no gap waits on a person" || bad "(cw4b) waits_for=$back log=$(cat "$LOG")"
   : > "$WRITES"; : > "$LOG"; lift_held_gaps x 0123456789abcdef "$DIR"
-  if [ ! -s "$WRITES" ] && ! grep -q "gave g-n" "$LOG"; then ok "[MUST-FAIL] (cw4) the walk finding no site gives the gap to a person (waits_for, why in the claim), counted so; not again"
+  if [ ! -s "$WRITES" ] && ! grep -q "found no site for g-n" "$LOG"; then ok "[MUST-FAIL] (cw4) the walk finding no site leaves the gap its work (no wait, why in the claim), counted so; not again"
   else bad "(cw4) second tick wrote $(cat "$WRITES") log=$(cat "$LOG")"; fi
 else bad "(cw4) $L log=$(cat "$LOG")"; fi
 reset "$(unloc g-n x src/a.test.ts "$GEN")" "$(cw false "none found" r0)" "$(outcome 1 r0)"
@@ -539,11 +539,11 @@ reset "$(unloc g-n x src/a.test.ts "$GEN")" "$(cw true repos/x/src/b.ts r0)"; DO
 lift_held_gaps x 0123456789abcdef "$DIR"; DOWN_SHAPE=""
 if [ ! -s "$WRITES" ] && grep -q 'records unreadable' "$LOG"; then ok "[MUST-FAIL] (cw10) the walk's judgments unreadable: nothing written, and said"
 else bad "(cw10) writes=$(cat "$WRITES") log=$(cat "$LOG")"; fi
-# (cw4c) a held-form row (the hold, no fact in meta) given to a person says localized false in its meta as well
+# (cw4c) a held-form row (the hold, no fact in meta) the walk found no site for says localized false in its meta as well
 reset "$(held g-a x src/a.test.ts "$GEN")" "$(cw false "none found" r0)"
 lift_held_gaps x 0123456789abcdef "$DIR"
-if latest g-a | jq -e '.meta.localized == false and .localized == false and .waits_for == "person" and (.meta | has("operator_hold") | not)' >/dev/null; then
-  ok "[MUST-FAIL] (cw4c) a held row given to a person carries the fact (top level and meta), not the hold"
+if latest g-a | jq -e '.meta.localized == false and .localized == false and .waits_for == null and (.meta | has("operator_hold") | not)' >/dev/null; then
+  ok "[MUST-FAIL] (cw4c) a held row the walk found no site for carries the fact (top level and meta), not the hold, and no wait"
 else bad "(cw4c) $(latest g-a) log=$(cat "$LOG")"; fi
 
 # A site is judged by the file it resolves to. (cw11, cw12 are qa's probe legs P1, P8.)
@@ -574,21 +574,21 @@ done
 # Only a person's outcome is r 0. (cw15, cw17, cw18 are qa's P2, P3, P4.)
 reset "$(unloc g-n x src/a.test.ts "$GEN")" "$(cw false "none found" r0 | jq -c '. + {edit_site: "repos/x/src/b.ts"}')"
 lift_held_gaps x 0123456789abcdef "$DIR"
-if latest g-n | jq -e '.waits_for == "person" and (.meta | has("edit_site") or has("localized_by") | not) and .meta.unlocalized_by == "r1"' >/dev/null; then
-  ok "[MUST-FAIL] (cw15) wanted false carrying a site goes to a person, not released at the site"
+if latest g-n | jq -e '.waits_for == null and (.meta | has("edit_site") or has("localized_by") | not) and .meta.unlocalized_by == "r1"' >/dev/null; then
+  ok "[MUST-FAIL] (cw15) wanted false carrying a site is no site found, not released at the site"
 else bad "(cw15) $(latest g-n)"; fi
 reset "$(unloc g-n x src/a.test.ts "$GEN")" "$(cw false "" r0 | jq -c 'del(.why) + {edit_site: "repos/x/src/b.ts"}')"
 lift_held_gaps x 0123456789abcdef "$DIR"
 if jq -se 'map(select(.check_runnable == false or .meta.check_runnable == false or .meta.claim_rejected_by != null or .meta.localized_by != null or .waits_for == "person")) | length == 0' "$WRITES" >/dev/null \
-   && ! grep -q "released g-n\|gave g-n" "$LOG" && grep -q "stated 1" "$LOG"; then
+   && ! grep -q "released g-n\|found no site for g-n" "$LOG" && grep -q "stated 1" "$LOG"; then
   ok "[MUST-FAIL] (cw16) a walk row naming neither a site nor a why (a site under wanted false) never judges the test: no check_runnable false, no person wait; the claim is stated as if it were absent"
 else bad "(cw16) writes=$(cat "$WRITES") log=$(cat "$LOG")"; fi
 reset "$(unloc g-n x src/a.test.ts "$GEN")" "$(cw true repos/x/src/b.ts r0)"
 lift_held_gaps x 0123456789abcdef "$DIR"
 jq -c --argjson c "$(cw false "looked again; none" r0 | jq -c '. + {id: "rz", seq: 99}')" '. + [$c]' "$ROWS" > "$ROWS.new" && mv "$ROWS.new" "$ROWS"
 lift_held_gaps x 0123456789abcdef "$DIR"
-if latest g-n | jq -e '.waits_for == "person" and (.meta | has("edit_site") or has("localized_by") | not) and .meta.unlocalized_by == "rz"' >/dev/null; then
-  ok "[MUST-FAIL] (cw17) released at a site, then none found: no site or localized_by left while it waits"
+if latest g-n | jq -e '.waits_for == null and (.meta | has("edit_site") or has("localized_by") | not) and .meta.unlocalized_by == "rz"' >/dev/null; then
+  ok "[MUST-FAIL] (cw17) released at a site, then none found: no site or localized_by left"
 else bad "(cw17) $(latest g-n)"; fi
 reset "$(unloc g-n x src/a.test.ts "$GEN")" "$(cw false "none found" r0)"
 lift_held_gaps x 0123456789abcdef "$DIR"
@@ -621,7 +621,7 @@ reset "$(unloc g-z x src/a.test.ts "$GEN")" "$(cw true repos/x/src/b.ts r0)"
 lift_held_gaps x 0123456789abcdef "$DIR"; z1="$(wc -l < "$WRITES")"
 addcw repos/x/./src/b.ts 900; : > "$WRITES"; : > "$LOG"
 lift_held_gaps x 0123456789abcdef "$DIR"; z2="$(wc -l < "$WRITES")"; zsame="$(grep -c 'names the same site, nothing written' "$LOG")"
-zcount="$(grep -c 'released 0, stated 0, to a person 0' "$LOG")"
+zcount="$(grep -c 'released 0, stated 0, found no site 0' "$LOG")"
 addcw repos/x/src/c.ts 901; : > "$WRITES"
 lift_held_gaps x 0123456789abcdef "$DIR"; z3="$(wc -l < "$WRITES")"; zsite="$(latest g-z | jq -r .meta.edit_site)"
 if [ "$z1" = 1 ] && [ "$z2" = 0 ] && [ "$zsame" = 1 ] && [ "$zcount" = 1 ] && [ "$z3" = 1 ] && [ "$zsite" = repos/x/src/c.ts ]; then
@@ -637,13 +637,13 @@ if [ "$zre" = 1 ]; then ok "(z) a gap held again after its release is released a
 else bad "(z) held again, same site: writes=$zre log=$(tail -3 "$LOG")"; fi
 reset "$(unloc g-z x src/a.test.ts "$GEN")" "$(cw true repos/x/src/b.ts r0)"
 WFAIL=1 lift_held_gaps x 0123456789abcdef "$DIR"
-zw="$(grep -c 'g-z not written (the store refused it)' "$LOG")"; zwc="$(grep -c 'released 0, stated 0, to a person 0, not released 0, not written 1' "$LOG")"
+zw="$(grep -c 'g-z not written (the store refused it)' "$LOG")"; zwc="$(grep -c 'released 0, stated 0, found no site 0, not released 0, not written 1' "$LOG")"
 : > "$LOG"; lift_held_gaps x 0123456789abcdef "$DIR"; zagain="$(wc -l < "$WRITES")"
 if [ "$zw" = 1 ] && [ "$zwc" = 1 ] && [ "$zagain" = 1 ]; then ok "(z) a release the store refuses is said not written, counted so, and decided again next tick"
 else bad "(z) refused said=$zw counted=$zwc next=$zagain log=$(tail -3 "$LOG")"; fi
 reset "$(unloc g-z x src/a.test.ts "$GEN")" "$(cw true repos/x/src/gone.ts r0)"
 lift_held_gaps x 0123456789abcdef "$DIR"
-if grep -q 'released 0, stated 0, to a person 0, not released 1, not written 0' "$LOG"; then ok "(z) a decision the checks refuse is counted not released"
+if grep -q 'released 0, stated 0, found no site 0, not released 1, not written 0' "$LOG"; then ok "(z) a decision the checks refuse is counted not released"
 else bad "(z) refused-by-check count: $(tail -2 "$LOG")"; fi
 rm -f "$DIR/src/c.ts"
 
@@ -651,7 +651,7 @@ rm -f "$DIR/src/c.ts"
 printf 'dist/\n' > "$DIR/.gitignore"; mkdir -p "$DIR/dist"; printf 'test("d > one", () => { expect(1).toBe(1) })\n' > "$DIR/dist/u.test.js"
 reset "$(held g-u x dist/u.test.js "$GEN")" "$(outcome 1 r0)"
 : > "$LOG"; lift_held_gaps x 0123456789abcdef "$DIR"; y1="$(wc -l < "$WRITES")"
-ycount="$(grep -c 'released 0, stated 0, to a person 0, not released 1, not written 0' "$LOG")"
+ycount="$(grep -c 'released 0, stated 0, found no site 0, not released 1, not written 0' "$LOG")"
 lift_held_gaps x 0123456789abcdef "$DIR"; y2="$(wc -l < "$WRITES")"
 ylog="$(grep -c 'dist/u.test.js is not tracked' "$LOG")"
 reset "$(held g-u x dist/u.test.js "$GEN")" "$(cw true repos/x/src/b.ts r0)"
@@ -673,7 +673,7 @@ reset "$(held g-g x src/g.test.ts "$GEN")" "$(outcome 1 r0)"
 # straight to the release, past this file's wrapper, which stages the tree (and so the file's removal) first
 : > "$WRITES"; : > "$LOG"; orig_lift_held_gaps x 0123456789abcdef "$DIR"
 if [ ! -s "$WRITES" ] && grep -q 'src/g.test.ts is not in the checkout' "$LOG" \
-   && grep -q 'released 0, stated 0, to a person 0, not released 1, not written 0' "$LOG"; then
+   && grep -q 'released 0, stated 0, found no site 0, not released 1, not written 0' "$LOG"; then
   ok "(y2) a tracked test file missing from the checkout is not released, and is counted not released"
 else bad "(y2) writes=$(cat "$WRITES") log=$(tail -3 "$LOG")"; fi
 
