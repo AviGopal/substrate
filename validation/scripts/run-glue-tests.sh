@@ -79,6 +79,7 @@ declare -A NEEDS=(
   [fed-owner-status.test.ts]="repos/libp2p-federation-transport"
   [fed-hub-mirror.test.ts]="repos/libp2p-federation-transport"
   [write-containment-copies.test.ts]="repos/local-tools-vessel"
+  [pull-sync-regression-evidence-feed.test.ts]="repos/local-tools-vessel"
   [walk-owner-seed-commit-before-check.test.ts]="repos/walk-vessel"
   [walk-owner-seed-write-in-clone.test.ts]="repos/walk-vessel"
   [walk-owner-seed-commit-needs-edit.test.ts]="repos/walk-vessel"
