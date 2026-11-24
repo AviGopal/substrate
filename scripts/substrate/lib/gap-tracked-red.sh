@@ -55,11 +55,13 @@
 #   gtr_select tracked|untracked <tracked names, newline-sep.> <red lines, newline-sep.>
 #       Prints the red lines that are (tracked) / are not (untracked) matched by a name.
 #   gtr_person_marked <gap rows file> <outcome rows file> <out-file>
-#       From records rows (gap rows as stored, and person outcomes), writes the OPEN gaps a person marked
-#       right as one JSON array in the loaded form (id, status, classification_metadata), for
+#       From records rows (gap rows as stored, and person outcomes), writes the OPEN gaps a person filed or
+#       marked right as one JSON array in the loaded form (id, status, classification_metadata), for
 #       gtr_tracked_names. Returns 0, or 1 when either input is not a list of rows.
 #
-# PERSON-MARKED (USER ruling 11-23, check-first reds exempt only by a person-marked gap). A gap is marked
+# PERSON-MARKED (USER ruling 11-23, check-first reds exempt only by a person-marked gap). A gap a person filed is
+# marked by its filing: its latest row (of role detector or person) is the person's and open, and its names are that
+# row's. A detector's gap is marked
 # when its latest row of role detector is open, and the latest person verdict citing one of its rows (an
 # outcome of role person, r 0 or 1, numeric seq) is r 1, every row of the gap has a numeric seq (as the held-gap release reads it), and cites a row written after the closer's latest
 # mark (check_runnable false with names_absent: the named tests were absent, so a verdict before it judged
@@ -129,5 +131,9 @@ gtr_person_marked() {
         | [$all | to_entries[] | select($mark == null or .key > $mark) | .value.id | tostring] as $ids
         | ([$o[] | select([(.input_refs // [])[] | tostring] | any(. as $x | $ids | index($x)))] | sort_by(.seq) | last) as $by
         | select($by != null and $by.r == 1)
-        | {id: $g.gap_id, status: "open", classification_metadata: ($g.meta // {})}]' > "$3" 2>/dev/null || { : > "$3"; return 1; }
+        | {id: $g.gap_id, status: "open", classification_metadata: ($g.meta // {})}]
+      + [$rows[0] | map(select(.shape == "gap" and (.role == "detector" or .role == "person"))) | group_by(.gap_id)[]
+        | select(all(.[]; (.seq | type) == "number")) | sort_by(.seq) | .[-1] | select(.role == "person" and .status == "open")
+        | {id: .gap_id, status: "open", classification_metadata: (.meta // {})}]
+      | unique_by(.id)' > "$3" 2>/dev/null || { : > "$3"; return 1; }
 }

@@ -819,8 +819,8 @@ gtr_try_load() { # -> 0 and GTR_LIB set when a candidate sources and defines the
   return 1
 }
 # CHECK-FIRST REDS ARE EXEMPT ONLY BY A PERSON-MARKED GAP (USER ruling 11-23, check-first reds exempt only by a
-# person-marked gap). A failing test is not counted as a regression only when a person said its gap's claim is right:
-# the gap's latest person verdict (an outcome of role person, r 0 or 1, citing one of the gap's rows) is r 1, it cites a
+# person-marked gap). A failing test is not counted as a regression only when a person filed its gap (the gap's latest
+# row is the person's, open) or said a detector's gap's claim is right: the gap's latest person verdict (an outcome of role person, r 0 or 1, citing one of the gap's rows) is r 1, it cites a
 # row written after the closer's latest mark (check_runnable false with names_absent: the named tests were absent, so
 # a verdict before it judged other names), and the gap's latest row is open. Records refuses a person row under any
 # service key, so no vessel can mark a gap; a detector's gap alone (any vessel may write one under the node key) exempts

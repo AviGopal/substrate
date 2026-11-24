@@ -12,6 +12,10 @@
 #   (e) only rows of role detector are the gap and only outcomes of role person mark it
 #   (f) a gap with a row that has no numeric seq is not marked (the held-gap release reads it the same way)
 #   (g) input that is not a list of rows is an error (1), not "nothing marked"
+#   (h) a gap a person filed (its latest gap row of role detector or person is the person's, open) is marked by the
+#       filing, with that row's names; a later closed row of the person's, or a later detector row, ends that
+#   (i) a marked gap's names exempt only when its test file is among the changed files (gtr_tracked_names): the red
+#       lines carry no file, so that is how far "for that test file only" reaches
 # usage: validation/scripts/gap-tracked-red-person-marked.test.sh   (bash, jq)
 set -uo pipefail
 SRC="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -95,5 +99,25 @@ printf '%s\n' "$G1" | jq -s . > "$T/g1.json"; printf '%s\n' "$(out p1 2 1 r1)" |
 gtr_person_marked "$T/obj.json" "$T/o1.json" "$T/m.json"; is "(g) gap rows as an object of rows: 1" "$?" 1
 gtr_person_marked "$T/g1.json" "$T/oobj.json" "$T/m.json"; is "(g) outcomes as an object of rows: 1" "$?" 1
 gtr_person_marked "$T/empty.json" "$T/empty.json" "$T/m.json"; is "(g) empty lists: 0, nothing marked" "$?:$(cat "$T/m.json")" "0:[]"
+
+# (h)
+P1="$(row g1 r1 1 '{"role":"person"}')"
+is "(h) [MUST-FAIL] an open gap a person filed is marked with no verdict" "$(marked "$P1" "")" g1
+jq -c '.[0].classification_metadata.evidence_resolve.input.only_tests' "$T/m.json" > "$T/n.txt"
+is "(h) a gap a person filed closed is not marked" "$(marked "$(row g1 r1 1 '{"role":"person","status":"closed"}')" "")" ""
+is "(h) a person's gap row with no status is not marked" "$(marked "$(row g1 r1 1 '{"role":"person"}' | jq -c 'del(.status)')" "")" ""
+is "(h) its names are the filing row's" "$(cat "$T/n.txt")" '["a"]'
+is "(h) a later closed row of the person's unmarks it" "$(marked "$P1"$'\n'"$(row g1 r2 2 '{"role":"person","status":"closed"}')" "")" ""
+is "(h) a later detector row ends the filing's mark: it needs a person's verdict" \
+  "$(marked "$P1"$'\n'"$(row g1 r2 2)" "")" ""
+is "(h) ... and a person's r 1 on the detector row marks it" "$(marked "$P1"$'\n'"$(row g1 r2 2)" "$(out p1 3 1 r2)")" g1
+is "(h) a later walk row is no gap row: the filing stands" "$(marked "$P1"$'\n'"$(row g1 r2 2 '{"role":"walk","status":"closed"}')" "")" g1
+is "(h) [MUST-FAIL] a gap both filed and marked is one gap (its names would otherwise exempt twice)" \
+  "$(marked "$P1"$'\n'"$(row g1 r2 2)"$'\n'"$(row g1 r3 3 '{"role":"person"}')" "$(out p1 4 1 r2)")" g1
+is "(h) a filed and a marked gap are one gap each" "$(marked "$P1"$'\n'"$(row g2 s1 2)" "$(out p1 3 1 s1)")" "g1 g2"
+# (i)
+marked "$G1" "$(out p1 2 1 r1)" > /dev/null
+is "(i) [GUARD] a marked gap's names, its test file changed" "$(gtr_tracked_names "$T/m.json" v $'src/x.ts\nt.test.ts')" a
+is "(i) [GUARD] ... its test file not changed: nothing" "$(gtr_tracked_names "$T/m.json" v $'src/x.ts\nother.test.ts')" ""
 
 echo; [ "$FAILS" = 0 ] && { echo "PASS"; exit 0; } || { echo "$FAILS FAILED"; exit 1; }

@@ -1971,7 +1971,7 @@
     },
     "/usr/local/bin/substrate-pull-sync": {
       "src": "scripts/substrate/substrate-pull-sync.sh",
-      "src_blob": "8d1f347b2bf72ee15d5c5de32637e2d15e5e20f7",
+      "src_blob": "b574dc08ec19ea0a49dc99ce76e7ede07b5d5f54",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -1980,7 +1980,7 @@
       "evidence": {
         "accepted": "ac413feeaa16e68dde1a169a9d7748fd28d95ce8",
         "mutation": "insert `exit 99` after line 1",
-        "mutated_blob": "2eccbff33c1d7fc343f7d23aac9507cf1e66661a"
+        "mutated_blob": "a64d93374479e8000d7eb605e7dfd6cfe9bd8348"
       }
     },
     "/usr/local/bin/substrate-ready": {
@@ -2293,7 +2293,7 @@
     },
     "/usr/local/share/substrate/lib/gap-tracked-red.sh": {
       "src": "scripts/substrate/lib/gap-tracked-red.sh",
-      "src_blob": "abd8eca2703ee7e5dfb690eb5fb54943de62f1a5",
+      "src_blob": "f2fe50bab244cee483deedb0e25142bb18b6985d",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -2302,7 +2302,7 @@
       "evidence": {
         "accepted": "ac413feeaa16e68dde1a169a9d7748fd28d95ce8",
         "mutation": "insert `exit 99` after line 1",
-        "mutated_blob": "53c4c0cf233a305be8e1872c6a2e2e350cd0b711"
+        "mutated_blob": "782e934cd8ede261ac74c01371fe2a15d4362975"
       }
     },
     "/usr/local/share/substrate/secrets.env.sh": {
