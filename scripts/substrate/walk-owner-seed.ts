@@ -633,7 +633,13 @@ await ensure({ shape: "requires", for: "walk_trees_reclaim", needs: "gap", where
 // How many store rows the owner's sweeps over the walk's own work wait between runs: the stall rule and the failure
 // detector's rhythm alike, so both look again on one cadence.
 const SWEEP_ROWS = 240;
-await ensure({ shape: "stall_rule", after_rows: SWEEP_ROWS }, {}, "stall_rule");
+// ends_after: a root said stalled this many times with nothing of its own changing ends its attempt (walk loop.ts
+// stalls; the USER: a root said stalled S times with no change ends as failed), charging once each produce whose answer
+// moved nothing since the first of them; its gap stays open and wakes on a change or an install of its repo. A root
+// waiting on a person's verdict is never ended. Three: the first say is news to the root's producers, and two more
+// periods with no change (an hour at the 30-minute clock below) show the news moved nothing. A starting value, read by
+// effect: roots ended against roots that moved again after their third say.
+await ensure({ shape: "stall_rule", after_rows: SWEEP_ROWS, ends_after: 3 }, {}, "stall_rule");
 // The stall clock in time (walk loop.ts stalls): a root with no move is also said once its newest row is every_ms old,
 // and the walk's waits end by then. A count in store rows stops when the walk does: parked on one wait it writes a few
 // rows an hour, so 240 rows left a root with no move unsaid for most of a day. 30 minutes: over two days of open gap

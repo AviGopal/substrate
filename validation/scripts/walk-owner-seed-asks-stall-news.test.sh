@@ -2,7 +2,7 @@
 # walk-owner-seed-asks-stall-news.test.sh: the owner seed declares what an ask is, and writes the walk's stall rule and
 # what makes a diff news (asks are the kind the owner declares; every other owner row is a setting the walk is given):
 #   (a) the plain request schema's input is {shape: world_changed, ask: true}, and no other schema declares an ask
-#   (b) one stall_rule: after_rows 240
+#   (b) one stall_rule: after_rows 240, ends_after 3
 #   (c) one news_key for gitDiff: its tree, whether each check ran and passed, and what the clone held uncommitted
 #   (e) one news_key for fileEditResult: the edited path and the bytes it left there (after); the third is gap's
 #       (walk-owner-seed-gap-news.test.ts reads its fields)
@@ -51,7 +51,7 @@ const req = last((r) => r.shape === "shape_schema" && r.target === "request" && 
 const asks = rows.filter((r) => r.shape === "shape_schema").flatMap((s) => [s.inputs ?? []].flat().filter((e: any) => e?.ask === true).map((e: any) => `${s.target}|${s.variant ?? ""}|${e.shape}`))
 const written = (of: string) => rows.slice(planted, n1).filter((r) => r.shape === "news_key" && r.of === of).length
 console.log(JSON.stringify({ editWrites: written("fileEditResult"), diffWrites: written("gitDiff"), reqInputs: req?.inputs ?? null, asks: [...new Set(asks)],
-  stall: rows.filter((r) => r.shape === "stall_rule").map((r) => r.after_rows),
+  stall: rows.filter((r) => r.shape === "stall_rule").map((r) => [r.after_rows, r.ends_after]),
   clock: rows.filter((r) => r.shape === "rhythm" && r.target !== undefined).map(({ id: _i, seq: _s, role: _r, input_refs: _x, ...rest }) => rest),
   templateRhythms: rows.filter((r) => r.shape === "rhythm" && r.template !== undefined).length, news: rows.filter((r) => r.shape === "news_key").map((r) => [r.of, r.fields]),
   // each news_key row as the seed wrote it, less what the store adds (id, seq, role) and its empty refs
@@ -62,7 +62,7 @@ OUT="$(TMPDIR="$T" bun "$T/drive.ts" "$ROOT/scripts/substrate/walk-owner-seed.ts
 if [ "$(jq -c '.reqInputs' <<<"$OUT")" = '[{"shape":"world_changed","ask":true}]' ] && [ "$(jq -c '.asks' <<<"$OUT")" = '["request||world_changed"]' ]; then
   ok "(a) the request schema declares world_changed the ask, and no other schema declares one"
 else bad "(a) $(jq -c '[.reqInputs, .asks]' <<<"$OUT" | cut -c1-300)"; fi
-if [ "$(jq -c '.stall' <<<"$OUT")" = '[240]' ]; then ok "(b) one stall_rule, after_rows 240"; else bad "(b) stall: $(jq -c '.stall' <<<"$OUT")"; fi
+if [ "$(jq -c '.stall' <<<"$OUT")" = '[[240,3]]' ]; then ok "(b) one stall_rule, after_rows 240, ends_after 3"; else bad "(b) stall: $(jq -c '.stall' <<<"$OUT")"; fi
 if [ "$(jq -c '[.news[] | select(.[0] == "gitDiff")]' <<<"$OUT")" = '[["gitDiff",["tree","check.ran","check.passed","typecheck.ran","typecheck.passed","uncommitted"]]]' ]; then
   ok "(c) one news_key for gitDiff: the tree, whether each check ran and passed, and what the clone held uncommitted"
 else bad "(c) news: $(jq -c '.news' <<<"$OUT" | cut -c1-300)"; fi
