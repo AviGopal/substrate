@@ -61,7 +61,7 @@
 #
 # PERSON-MARKED (USER ruling 11-23, check-first reds exempt only by a person-marked gap). A gap a person filed is
 # marked by its filing: its latest row (of role detector or person) is the person's and open, and its names are that
-# row's. A detector's gap is marked
+# row's. Such a gap's names are the filing's even when a person also marked an earlier detector row of it. A detector's gap is marked
 # when its latest row of role detector is open, and the latest person verdict citing one of its rows (an
 # outcome of role person, r 0 or 1, numeric seq) is r 1, every row of the gap has a numeric seq (as the held-gap release reads it), and cites a row written after the closer's latest
 # mark (check_runnable false with names_absent: the named tests were absent, so a verdict before it judged
@@ -125,15 +125,15 @@ gtr_person_marked() {
   jq -e 'type == "array"' "$1" >/dev/null 2>&1 && jq -e 'type == "array"' "$2" >/dev/null 2>&1 || return 1
   jq -cn --slurpfile rows "$1" --slurpfile outs "$2" '
       ($outs[0] | map(select(.role == "person" and (.r == 0 or .r == 1) and (.seq | type) == "number"))) as $o
-      | [$rows[0] | map(select(.shape == "gap" and .role == "detector")) | group_by(.gap_id)[]
+      | [$rows[0] | map(select(.shape == "gap" and (.role == "detector" or .role == "person"))) | group_by(.gap_id)[]
+        | select(all(.[]; (.seq | type) == "number")) | sort_by(.seq) | .[-1] | select(.role == "person" and .status == "open")
+        | {id: .gap_id, status: "open", classification_metadata: (.meta // {})}]
+      + [$rows[0] | map(select(.shape == "gap" and .role == "detector")) | group_by(.gap_id)[]
         | select(all(.[]; (.seq | type) == "number")) | sort_by(.seq) as $all | $all[-1] as $g | select($g.status == "open")
         | ([$all | to_entries[] | select((.value.check_runnable == false or .value.meta.check_runnable == false) and .value.meta.names_absent != null) | .key] | last) as $mark
         | [$all | to_entries[] | select($mark == null or .key > $mark) | .value.id | tostring] as $ids
         | ([$o[] | select([(.input_refs // [])[] | tostring] | any(. as $x | $ids | index($x)))] | sort_by(.seq) | last) as $by
         | select($by != null and $by.r == 1)
         | {id: $g.gap_id, status: "open", classification_metadata: ($g.meta // {})}]
-      + [$rows[0] | map(select(.shape == "gap" and (.role == "detector" or .role == "person"))) | group_by(.gap_id)[]
-        | select(all(.[]; (.seq | type) == "number")) | sort_by(.seq) | .[-1] | select(.role == "person" and .status == "open")
-        | {id: .gap_id, status: "open", classification_metadata: (.meta // {})}]
       | unique_by(.id)' > "$3" 2>/dev/null || { : > "$3"; return 1; }
 }

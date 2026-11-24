@@ -114,6 +114,10 @@ is "(h) ... and a person's r 1 on the detector row marks it" "$(marked "$P1"$'\n
 is "(h) a later walk row is no gap row: the filing stands" "$(marked "$P1"$'\n'"$(row g1 r2 2 '{"role":"walk","status":"closed"}')" "")" g1
 is "(h) [MUST-FAIL] a gap both filed and marked is one gap (its names would otherwise exempt twice)" \
   "$(marked "$P1"$'\n'"$(row g1 r2 2)"$'\n'"$(row g1 r3 3 '{"role":"person"}')" "$(out p1 4 1 r2)")" g1
+PB="$(jq -c '.evidence_resolve.input.only_tests = ["b"]' <<< "$M")"
+marked "$P1"$'\n'"$(row g1 r2 2)"$'\n'"$(row g1 r3 3 "{\"role\":\"person\",\"meta\":$PB}")" "$(out p1 4 1 r2)" > /dev/null
+is "(h) [MUST-FAIL] a filing after a marked detector row: the filing's names, not the detector's" \
+  "$(jq -c '[.[] | .classification_metadata.evidence_resolve.input.only_tests]' "$T/m.json")" '[["b"]]'
 is "(h) a filed and a marked gap are one gap each" "$(marked "$P1"$'\n'"$(row g2 s1 2)" "$(out p1 3 1 s1)")" "g1 g2"
 # (i)
 marked "$G1" "$(out p1 2 1 r1)" > /dev/null

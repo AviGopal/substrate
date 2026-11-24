@@ -2293,7 +2293,7 @@
     },
     "/usr/local/share/substrate/lib/gap-tracked-red.sh": {
       "src": "scripts/substrate/lib/gap-tracked-red.sh",
-      "src_blob": "f2fe50bab244cee483deedb0e25142bb18b6985d",
+      "src_blob": "96ce1565ffb1a091ec3af20af34b7953a0e274b7",
       "level": "behaviour",
       "reason": "mutation-proven",
       "fixtures": [
@@ -2302,7 +2302,7 @@
       "evidence": {
         "accepted": "ac413feeaa16e68dde1a169a9d7748fd28d95ce8",
         "mutation": "insert `exit 99` after line 1",
-        "mutated_blob": "782e934cd8ede261ac74c01371fe2a15d4362975"
+        "mutated_blob": "2abbe7f4335833ff4826ef75f314c7853db21aed"
       }
     },
     "/usr/local/share/substrate/secrets.env.sh": {
