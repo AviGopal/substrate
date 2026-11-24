@@ -54,6 +54,17 @@
 #       Prints the tracked names, one per line. Prints nothing on any error.
 #   gtr_select tracked|untracked <tracked names, newline-sep.> <red lines, newline-sep.>
 #       Prints the red lines that are (tracked) / are not (untracked) matched by a name.
+#   gtr_person_marked <gap rows file> <outcome rows file> <out-file>
+#       From records rows (gap rows as stored, and person outcomes), writes the OPEN gaps a person marked
+#       right as one JSON array in the loaded form (id, status, classification_metadata), for
+#       gtr_tracked_names. Returns 0, or 1 when either input is not a list of rows.
+#
+# PERSON-MARKED (USER ruling 11-23, check-first reds exempt only by a person-marked gap). A gap is marked
+# when its latest row of role detector is open, and the latest person verdict citing one of its rows (an
+# outcome of role person, r 0 or 1, numeric seq) is r 1, every row of the gap has a numeric seq (as the held-gap release reads it), and cites a row written after the closer's latest
+# mark (check_runnable false with names_absent: the named tests were absent, so a verdict before it judged
+# other names). Records refuses a person row under any service key, so no vessel can mark a gap; a gap any
+# vessel can write under the node key exempts nothing alone, nor does a person's r 0 (the test is wrong).
 
 GTR_LIMIT="${GTR_LIMIT:-5000}"
 
@@ -104,4 +115,19 @@ gtr_select() {
   local want
   case "${1:-}" in tracked) want=1 ;; untracked) want=0 ;; *) return 2 ;; esac
   printf '%s\n' "${3:-}" | awk -v names="${2:-}" -v want="$want" 'BEGIN{n=split(names,T,"\n")} $0=="" {next} {hit=0; for(i=1;i<=n;i++){ if(T[i]!="" && !used[i] && ((length($0)>=length(T[i])+3 && substr($0,length($0)-length(T[i])-2)==" > " T[i]) || $0=="(fail) " T[i] || $0=="✗ " T[i])){used[i]=1; hit=1; break} } if(hit==want) print}' || true
+}
+
+gtr_person_marked() {
+  [ -r "${1:-}" ] && [ -r "${2:-}" ] && [ -n "${3:-}" ] || return 1
+  command -v jq >/dev/null 2>&1 || return 1
+  jq -e 'type == "array"' "$1" >/dev/null 2>&1 && jq -e 'type == "array"' "$2" >/dev/null 2>&1 || return 1
+  jq -cn --slurpfile rows "$1" --slurpfile outs "$2" '
+      ($outs[0] | map(select(.role == "person" and (.r == 0 or .r == 1) and (.seq | type) == "number"))) as $o
+      | [$rows[0] | map(select(.shape == "gap" and .role == "detector")) | group_by(.gap_id)[]
+        | select(all(.[]; (.seq | type) == "number")) | sort_by(.seq) as $all | $all[-1] as $g | select($g.status == "open")
+        | ([$all | to_entries[] | select((.value.check_runnable == false or .value.meta.check_runnable == false) and .value.meta.names_absent != null) | .key] | last) as $mark
+        | [$all | to_entries[] | select($mark == null or .key > $mark) | .value.id | tostring] as $ids
+        | ([$o[] | select([(.input_refs // [])[] | tostring] | any(. as $x | $ids | index($x)))] | sort_by(.seq) | last) as $by
+        | select($by != null and $by.r == 1)
+        | {id: $g.gap_id, status: "open", classification_metadata: ($g.meta // {})}]' > "$3" 2>/dev/null || { : > "$3"; return 1; }
 }

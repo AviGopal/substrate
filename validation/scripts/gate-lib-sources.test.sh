@@ -50,9 +50,13 @@ grep -q 'TRACKED-RED LIB MISSING' "$T/out.txt" && bad "promoted: the promoted bo
 # tracked_fail_names FROM accepted/: the loader's own BASH_SOURCE default, the share dir EMPTY
 cp -a "$G/accepted" "$T/acc"; mkdir -p "$T/empty-share"
 sed -n '/^# >>> gap-tracked-red loader$/,/^# <<< gap-tracked-red loader$/p' "$T/acc/$PS" > "$T/acc/scripts/substrate/_loader.sh"
-printf '[{"id":"g","status":"open","classification_metadata":{"evidence_resolve":{"shape":"test_suite","input":{"vessel":"v","test_file":"t.test.ts","only_tests":["armed red"]}}}}]\n' > "$T/store.json"
-N="$( unset PULLSYNC_SELF_DIR; PULLSYNC_SHARE_DIR="$T/empty-share" DEV_VESSEL="$T/store.json"
-  . "$T/acc/scripts/substrate/_loader.sh" >/dev/null 2>&1; echo "$GTR_LIB|$(tracked_fail_names v t.test.ts)" )"
+# records as discovery routes it: one open detector gap, and a person's r 1 citing its row
+printf '[{"shape":"gap","role":"detector","gap_id":"g","id":"r1","seq":1,"status":"open","meta":{"evidence_resolve":{"shape":"test_suite","input":{"vessel":"v","test_file":"t.test.ts","only_tests":["armed red"]}}}}]\n' > "$T/gaps.json"
+printf '[{"shape":"outcome","role":"person","r":1,"id":"m1","seq":2,"input_refs":["r1"]}]\n' > "$T/outs.json"
+N="$( unset PULLSYNC_SELF_DIR; PULLSYNC_SHARE_DIR="$T/empty-share"
+  . "$T/acc/scripts/substrate/_loader.sh" >/dev/null 2>&1
+  dev_resolve() { case "$1" in *'"shape":"gap"'*) cat "$T/gaps.json" ;; *) cat "$T/outs.json" ;; esac; }
+  echo "$GTR_LIB|$(tracked_fail_names v t.test.ts)" )"
 [ "$N" = "$T/acc/$LIBREL|armed red" ] && ok "promoted: tracked_fail_names run from accepted/ (share dir empty) returns the tracked name" \
   || bad "promoted: loader from accepted/ gave '$N'"
 

@@ -7,7 +7,8 @@
 #   (c) a row with status closed written by the walk (role walk) closes nothing;
 #   (d) a 10k-line failing log yields a row under 8 KiB;
 #   (e) reads answer as the old store did: {body: {gaps: [...]}}; a write asked for its status code gets 200;
-#   (f) the gate exemption (tracked_fail_names) is untouched by a detector row naming a test;
+#   (f) the gate exemption (tracked_fail_names, with the lib loaded) is untouched by a detector row naming a test
+#       [GUARD]; a person's r 1 citing that row exempts its named test [MUST-FAIL]; a later person r 0 takes it back;
 #   (g) a read records answers with an error fails closed: rc 7, and nothing is written;
 #   (h) a write records answers with a row not stamped detector (another key's) is a failure, not "ok";
 #   (i) a gap's repo is a top-level field of its row, and the same gap again writes nothing;
@@ -23,9 +24,9 @@ FAILS=0
 ok()  { echo "ok   - $*"; }
 bad() { echo "FAIL - $*"; FAILS=$((FAILS+1)); }
 {
-  for f in shape_route gap_resolve dev_resolve tracked_fail_names; do sed -n "/^$f() {/,/^}/p" "$SCRIPT"; done
+  for f in shape_route gap_resolve dev_resolve tfn_rows tracked_fail_names; do sed -n "/^$f() {/,/^}/p" "$SCRIPT"; done
 } > "$T/fns.sh"
-grep -q '^gap_resolve()' "$T/fns.sh" && grep -q '^tracked_fail_names()' "$T/fns.sh" \
+grep -q '^gap_resolve()' "$T/fns.sh" && grep -q '^tfn_rows()' "$T/fns.sh" && grep -q '^tracked_fail_names()' "$T/fns.sh" \
   || { echo "FAIL - could not extract gap_resolve and tracked_fail_names"; exit 1; }
 LOG="$T/log.txt"; log() { echo "$*" >> "$LOG"; }
 ROWS="$T/rows.json"; echo '[]' > "$ROWS"; WRITES="$T/writes.txt"; : > "$WRITES"
@@ -84,9 +85,22 @@ if [ "$code" = 200 ] && printf '%s' "$open" | jq -e '.body.gaps | type == "array
 else bad "(e) code=$code open=$open"; fi
 
 jq -c '. + [{shape: "gap", gap_id: "failing-test-x", status: "open", id: "t1", seq: 100, writer: "pull-sync", role: "detector", meta: {evidence_resolve: {shape: "test_suite", input: {vessel: "x", test_file: "a.test.ts", only_tests: ["it works"]}}}}]' "$ROWS" > "$ROWS.new" && mv "$ROWS.new" "$ROWS"
+# the gate's predicate is the lib's (pull-sync's loader block sources it); loaded here as the loader does
+GTR_LIB="$(cd "$(dirname "$SCRIPT")" && pwd)/lib/gap-tracked-red.sh"
+# shellcheck disable=SC1090
+. "$GTR_LIB" || { bad "(f) could not source $GTR_LIB"; GTR_LIB=""; }
 tracked="$(tracked_fail_names x a.test.ts 2>/dev/null)"
-if [ -z "$tracked" ]; then ok "(f) the gate exemption is untouched by a detector row naming a test"
-else bad "(f) tracked=$tracked"; fi
+if [ -n "$GTR_LIB" ] && [ -z "$tracked" ]; then ok "(f) [GUARD] the gate exemption is untouched by a detector row naming a test"
+else bad "(f) [GUARD] tracked=$tracked"; fi
+jq -c '. + [{shape: "outcome", role: "person", r: 1, id: "pm1", seq: 101, input_refs: ["t1"]}]' "$ROWS" > "$ROWS.new" && mv "$ROWS.new" "$ROWS"
+tracked="$(tracked_fail_names x a.test.ts 2>/dev/null)"
+if [ "$tracked" = "it works" ]; then ok "(f) [MUST-FAIL] a person's r 1 citing the gap's row exempts its named test"
+else bad "(f) [MUST-FAIL] person-marked: tracked='$tracked'"; fi
+jq -c '. + [{shape: "outcome", role: "person", r: 0, id: "pm2", seq: 102, input_refs: ["t1"]}]' "$ROWS" > "$ROWS.new" && mv "$ROWS.new" "$ROWS"
+tracked="$(tracked_fail_names x a.test.ts 2>/dev/null)"
+if [ -z "$tracked" ]; then ok "(f) a later person r 0 (the test is wrong) takes the exemption back"
+else bad "(f) after r 0: tracked='$tracked'"; fi
+jq -c 'map(select(.shape != "outcome"))' "$ROWS" > "$ROWS.new" && mv "$ROWS.new" "$ROWS"
 
 READ_MODE=""
 curl_real="$(declare -f curl)"

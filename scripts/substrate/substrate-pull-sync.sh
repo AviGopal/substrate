@@ -814,24 +814,43 @@ gtr_try_load() { # -> 0 and GTR_LIB set when a candidate sources and defines the
   [ -n "$GTR_LIB" ] && return 0
   while IFS= read -r c; do
     # shellcheck disable=SC1090
-    if [ -r "$c" ] && . "$c" && declare -F gtr_load gtr_tracked_names gtr_select >/dev/null; then GTR_LIB="$c"; return 0; fi
+    if [ -r "$c" ] && . "$c" && declare -F gtr_load gtr_tracked_names gtr_select gtr_person_marked >/dev/null; then GTR_LIB="$c"; return 0; fi
   done < <(gtr_lib_candidates)
   return 1
 }
-# Returns 2 when the store refused the node key (401; gtr_load printed the distinct line): the
-# tracked set is UNKNOWN, and the caller holds instead of judging. Any other unreadable store is
-# "nothing tracked" (0), as before: the stricter gate stands.
-# The store is read only from a local file named by DEV_VESSEL (a snapshot, or a fixture's stand-in). gap-tracked-red.sh
-# reads a URL by endpoint, not by shape, so an http source is not read: there is no default and no fixed endpoint, and
-# with none given (a live node today) nothing is tracked. Routing the library by shape is its own change.
+# CHECK-FIRST REDS ARE EXEMPT ONLY BY A PERSON-MARKED GAP (USER ruling 11-23, check-first reds exempt only by a
+# person-marked gap). A failing test is not counted as a regression only when a person said its gap's claim is right:
+# the gap's latest person verdict (an outcome of role person, r 0 or 1, citing one of the gap's rows) is r 1, it cites a
+# row written after the closer's latest mark (check_runnable false with names_absent: the named tests were absent, so
+# a verdict before it judged other names), and the gap's latest row is open. Records refuses a person row under any
+# service key, so no vessel can mark a gap; a detector's gap alone (any vessel may write one under the node key) exempts
+# nothing, nor does a person's r 0 (the test is wrong). The names are the marked gap's only_tests for this vessel among
+# the changed files (gtr_tracked_names), matched to red lines as gtr_select always has. Which gaps are marked is the
+# library's gtr_person_marked, one selector for any caller.
+# Both reads go by shape through discovery. Returns 2 when either refused the node key (401): the tracked set is
+# UNKNOWN, and the caller holds instead of judging. Any other unreadable read is "nothing tracked" (0): the stricter
+# gate stands.
+tfn_rows() { # <pointer json> <out file> -> 0, 1 unreadable, 2 credential refused
+  local raw code=""
+  raw="$(dev_resolve "{\"impulse\":{\"pointer\":$1}}" --max-time 30 -w '\n%{http_code}' 2>/dev/null)" || return 1
+  case "$raw" in *$'\n'[0-9][0-9][0-9]) code="${raw##*$'\n'}"; raw="${raw%$'\n'*}" ;; esac
+  if [ "$code" = 401 ]; then
+    echo "credential refused (401) — key stale? records refused the node key (the key is never printed); tracked-red verdict unknown (environment), not red" >&2
+    return 2
+  fi
+  printf '%s' "$raw" | jq -c 'if type == "array" then . elif (.content | type) == "array" then .content else error("no rows") end' > "$2" 2>/dev/null || return 1
+}
 tracked_fail_names() {
   local st rc
   [ -n "$GTR_LIB" ] || return 0
-  case "${DEV_VESSEL:-}" in ''|http://*|https://*) return 0 ;; esac
-  st="$(mktemp "${TMPDIR:-/tmp}/pullsync-gtr.XXXXXX" 2>/dev/null)" || return 0
-  gtr_load "$DEV_VESSEL" "$st"; rc=$?
-  [ "$rc" -eq 0 ] && gtr_tracked_names "$st" "$1" "$2"
-  rm -f "$st"
+  command -v jq >/dev/null 2>&1 || return 0
+  st="$(mktemp -d "${TMPDIR:-/tmp}/pullsync-gtr.XXXXXX" 2>/dev/null)" || return 0
+  tfn_rows '{"type":"record_read","shape":"gap","stored":true}' "$st/gaps.json"; rc=$?
+  [ "$rc" -eq 0 ] && { tfn_rows '{"type":"record_read","shape":"outcome","where":{"role":"person"}}' "$st/outs.json"; rc=$?; }
+  if [ "$rc" -eq 0 ] && gtr_person_marked "$st/gaps.json" "$st/outs.json" "$st/marked.json"; then
+    gtr_tracked_names "$st/marked.json" "$1" "$2"
+  fi
+  rm -rf "${st:?}"
   [ "$rc" -eq 2 ] && return 2
   return 0
 }

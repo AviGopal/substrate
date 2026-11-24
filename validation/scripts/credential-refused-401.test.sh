@@ -15,9 +15,10 @@
 #   (b) runner  a red glue test under a 401 store is UNKNOWN, not FAIL and not TRACKED-RED; the
 #               run exits 3 (environment) with the distinct line; with the store readable the
 #               same test is TRACKED-RED and the run exits 0 (control)
-#   (c) pull-sync  tracked_fail_names (its loader block, verbatim from the script) does not read an http
-#               store at all (pull-sync addresses its shapes by shape through discovery), so a 401 store
-#               is never asked: rc 0, no line; the test gate given a 401 answer (rc 2) HOLDS the vessel: no refusal
+#   (c) pull-sync  tracked_fail_names (its loader block, verbatim from the script) reads the gaps and the
+#               person verdicts from records by shape (dev_resolve): records answering 401 is rc 2 with the
+#               distinct line [MUST-FAIL: the parent never asked]; answering 200 with no mark is rc 0 and no
+#               line (control); the test gate given a 401 answer (rc 2) HOLDS the vessel: no refusal
 #               counted, no regression gap, no convergence, baseline untouched, the distinct line
 #               logged; given "nothing tracked" (rc 0) it refuses as before (control)
 #
@@ -95,11 +96,18 @@ grep -qE '^TRACKED-RED .*fx-red\.test\.sh' "$T/run.txt" && [ "$RC" = 0 ] && ok "
 # ── (c) pull-sync ───────────────────────────────────────────────────────────────
 sed -n '/^# >>> gap-tracked-red loader$/,/^# <<< gap-tracked-red loader$/p' "$PS" > "$T/loader.sh"
 grep -q '^tracked_fail_names()' "$T/loader.sh" || bad "(c) could not extract pull-sync's gap-tracked-red loader"
-echo 401 > "$T/status"
-( PATH="$T/fx:$PATH"; PULLSYNC_SELF_DIR="$SRC/scripts/substrate"; PULLSYNC_SHARE_DIR="$T/no-share"; DEV_VESSEL="$STORE"
-  . "$T/loader.sh" >/dev/null 2>&1; tracked_fail_names demo "test/x.test.ts" ) >"$T/out" 2>"$T/err"; RC=$?
-[ "$RC" = 0 ] && ok "(c) pull-sync: tracked_fail_names does not read an http store (rc 0)" || bad "(c) pull-sync: tracked_fail_names returned $RC on an http store"
-grep -qF "$LINE" "$T/err" && bad "(c) pull-sync: read the http store (the 401 line came back)" || ok "(c) pull-sync: no request reached the http store (no 401 line)"
+# records through dev_resolve, as discovery routes it: answers `[]` and the status code curl's -w would print
+pullsync_tfn() { # <status> -> RC, $T/err
+  ( ST="$1"; PULLSYNC_SELF_DIR="$SRC/scripts/substrate"; PULLSYNC_SHARE_DIR="$T/no-share"; DEV_VESSEL=""
+    . "$T/loader.sh" >/dev/null 2>&1
+    dev_resolve() { printf '[]\n%s' "$ST"; }
+    tracked_fail_names demo "test/x.test.ts" ) >"$T/out" 2>"$T/err"; RC=$?
+}
+pullsync_tfn 401
+[ "$RC" = 2 ] && ok "(c) [MUST-FAIL] pull-sync: records refusing the node key is rc 2 (unknown), not nothing tracked" || bad "(c) pull-sync: 401 gave rc $RC"
+grep -qF "$LINE" "$T/err" && ok "(c) [MUST-FAIL] pull-sync: the distinct line on a 401" || bad "(c) pull-sync: no '$LINE' on a 401"
+pullsync_tfn 200
+[ "$RC" = 0 ] && ! grep -qF "$LINE" "$T/err" && ok "(c) control: records readable with no mark: rc 0, no line" || bad "(c) control: 200 gave rc $RC"
 
 # The gate slice, as pull-sync-testgate-outstanding.test.sh extracts it.
 {
