@@ -7,8 +7,9 @@
 #   (e) one news_key for fileEditResult: the edited path and the bytes it left there (after); the third is gap's
 #       (walk-owner-seed-gap-news.test.ts reads its fields)
 #   (f) each news_key is found by its own `of`: a store whose newest news_key is another shape's gets no second copy
-#   (g) one rhythm naming the stall, every_ms 1800000, beside the detector's template rhythm; a store whose owner
-#       already has a stall rhythm (another value) gets none, and the detector's rhythm does not stand for it
+#   (g) one rhythm naming the stall, every_ms 1800000, beside the detector's template rhythm, also on a store that
+#       already holds the detector's (it does not stand for the stall's); a store whose owner already has a stall
+#       rhythm (another value) gets none
 #   (d) the seeder run again writes none of them again
 # usage: validation/scripts/walk-owner-seed-asks-stall-news.test.sh
 set -uo pipefail
@@ -24,7 +25,10 @@ const rows: Row[] = []
 // key already written, then a newer fileEditResult key with other fields
 const nk = (id: string, of: string, fields: string[]) => ({ shape: "news_key", of, fields, id, seq: rows.length + 1, role: "owner", input_refs: [] })
 if (process.env.PRIOR === "edit") rows.push(nk("p1", "fileEditResult", ["path", "after"]), nk("p2", "gitDiff", ["tree"]))
+// PRIOR=stall: the owner's own stall rhythm, another value; PRIOR=detector: a store from before the stall rhythm, holding
+// the detector's template rhythm only
 if (process.env.PRIOR === "stall") rows.push({ shape: "rhythm", target: "stall", every_ms: 3_600_000, id: "p1", seq: 1, role: "owner", input_refs: [] })
+if (process.env.PRIOR === "detector") rows.push({ shape: "rhythm", template: "t0", every_rows: 240, id: "p1", seq: 1, role: "owner", input_refs: [] })
 if (process.env.PRIOR === "diff") rows.push(nk("p1", "gitDiff", ["tree", "check.ran", "check.passed", "typecheck.ran", "typecheck.passed", "uncommitted"]), nk("p2", "fileEditResult", ["path"]))
 const planted = rows.length
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { "Content-Type": "application/json" } })
@@ -71,10 +75,12 @@ if [ "$(jq -c '[.editWrites, .diffWrites]' <<<"$E")" = '[0,1]' ] && [ "$(jq -c '
   ok "(f) each news_key is found by its own of: no second copy when another shape's key is newer"
 else bad "(f) edit-first $(jq -c '[.editWrites, .diffWrites]' <<<"$E") diff-first $(jq -c '[.diffWrites, .editWrites]' <<<"$D")"; fi
 P="$(PRIOR=stall TMPDIR="$T" bun "$T/drive.ts" "$ROOT/scripts/substrate/walk-owner-seed.ts" "$ROOT/scripts/substrate/vessels.inventory.json" 2>/dev/null | tail -1)"
+U="$(PRIOR=detector TMPDIR="$T" bun "$T/drive.ts" "$ROOT/scripts/substrate/walk-owner-seed.ts" "$ROOT/scripts/substrate/vessels.inventory.json" 2>/dev/null | tail -1)"
 if [ "$(jq -c '.clock' <<<"$OUT")" = '[{"shape":"rhythm","target":"stall","every_ms":1800000}]' ] && [ "$(jq -c '.templateRhythms' <<<"$OUT")" = 1 ] \
-  && [ "$(jq -c '.clock' <<<"$P")" = '[{"shape":"rhythm","target":"stall","every_ms":3600000}]' ]; then
-  ok "(g) one stall rhythm, every_ms 1800000, beside the detector's; an owner's own stall rhythm is kept, not written over"
-else bad "(g) clock: $(jq -c '[.clock, .templateRhythms]' <<<"$OUT" | cut -c1-300) prior: $(jq -c '.clock' <<<"$P" | cut -c1-200)"; fi
+  && [ "$(jq -c '.clock' <<<"$P")" = '[{"shape":"rhythm","target":"stall","every_ms":3600000}]' ] \
+  && [ "$(jq -c '.clock' <<<"$U")" = '[{"shape":"rhythm","target":"stall","every_ms":1800000}]' ]; then
+  ok "(g) one stall rhythm, every_ms 1800000, beside the detector's, also on a store that already has the detector's; an owner's own stall rhythm is kept"
+else bad "(g) clock: $(jq -c '[.clock, .templateRhythms]' <<<"$OUT" | cut -c1-300) prior: $(jq -c '.clock' <<<"$P" | cut -c1-200) upgrade: $(jq -c '.clock' <<<"$U" | cut -c1-200)"; fi
 if [ "$(jq -c '.again' <<<"$OUT")" = 0 ]; then ok "(d) run again, the seeder writes none of them again"; else bad "(d) again: $(jq -c '.again' <<<"$OUT")"; fi
 echo; [ "$FAILS" = 0 ] && { echo PASS; exit 0; }
 echo "$FAILS FAILED"; exit 1
