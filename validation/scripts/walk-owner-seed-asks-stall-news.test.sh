@@ -7,6 +7,8 @@
 #   (e) one news_key for fileEditResult: the edited path and the bytes it left there (after); the third is gap's
 #       (walk-owner-seed-gap-news.test.ts reads its fields)
 #   (f) each news_key is found by its own `of`: a store whose newest news_key is another shape's gets no second copy
+#   (g) one rhythm naming the stall, every_ms 1800000, beside the detector's template rhythm; a store whose owner
+#       already has a stall rhythm (another value) gets none, and the detector's rhythm does not stand for it
 #   (d) the seeder run again writes none of them again
 # usage: validation/scripts/walk-owner-seed-asks-stall-news.test.sh
 set -uo pipefail
@@ -22,6 +24,7 @@ const rows: Row[] = []
 // key already written, then a newer fileEditResult key with other fields
 const nk = (id: string, of: string, fields: string[]) => ({ shape: "news_key", of, fields, id, seq: rows.length + 1, role: "owner", input_refs: [] })
 if (process.env.PRIOR === "edit") rows.push(nk("p1", "fileEditResult", ["path", "after"]), nk("p2", "gitDiff", ["tree"]))
+if (process.env.PRIOR === "stall") rows.push({ shape: "rhythm", target: "stall", every_ms: 3_600_000, id: "p1", seq: 1, role: "owner", input_refs: [] })
 if (process.env.PRIOR === "diff") rows.push(nk("p1", "gitDiff", ["tree", "check.ran", "check.passed", "typecheck.ran", "typecheck.passed", "uncommitted"]), nk("p2", "fileEditResult", ["path"]))
 const planted = rows.length
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { "Content-Type": "application/json" } })
@@ -38,13 +41,15 @@ const run = async () => { const p = Bun.spawn([process.execPath, `${dir}/walk-ow
 await run()
 const n1 = rows.length
 await run()
-const again = rows.slice(n1).filter((r) => ["stall_rule", "news_key"].includes(r.shape) || (r.shape === "shape_schema" && r.target === "request")).length
+const again = rows.slice(n1).filter((r) => ["stall_rule", "news_key"].includes(r.shape) || (r.shape === "rhythm" && r.target === "stall") || (r.shape === "shape_schema" && r.target === "request")).length
 const last = (f: (r: Row) => boolean) => rows.filter(f).at(-1)
 const req = last((r) => r.shape === "shape_schema" && r.target === "request" && !r.variant)
 const asks = rows.filter((r) => r.shape === "shape_schema").flatMap((s) => [s.inputs ?? []].flat().filter((e: any) => e?.ask === true).map((e: any) => `${s.target}|${s.variant ?? ""}|${e.shape}`))
 const written = (of: string) => rows.slice(planted, n1).filter((r) => r.shape === "news_key" && r.of === of).length
 console.log(JSON.stringify({ editWrites: written("fileEditResult"), diffWrites: written("gitDiff"), reqInputs: req?.inputs ?? null, asks: [...new Set(asks)],
-  stall: rows.filter((r) => r.shape === "stall_rule").map((r) => r.after_rows), news: rows.filter((r) => r.shape === "news_key").map((r) => [r.of, r.fields]),
+  stall: rows.filter((r) => r.shape === "stall_rule").map((r) => r.after_rows),
+  clock: rows.filter((r) => r.shape === "rhythm" && r.target !== undefined).map(({ id: _i, seq: _s, role: _r, input_refs: _x, ...rest }) => rest),
+  templateRhythms: rows.filter((r) => r.shape === "rhythm" && r.template !== undefined).length, news: rows.filter((r) => r.shape === "news_key").map((r) => [r.of, r.fields]),
   // each news_key row as the seed wrote it, less what the store adds (id, seq, role) and its empty refs
   newsRows: rows.filter((r) => r.shape === "news_key" && !String(r.id).startsWith("p")).map(({ id: _i, seq: _s, role: _r, input_refs: _x, ...rest }) => rest), again }))
 server.stop(true)
@@ -65,6 +70,11 @@ D="$(PRIOR=diff TMPDIR="$T" bun "$T/drive.ts" "$ROOT/scripts/substrate/walk-owne
 if [ "$(jq -c '[.editWrites, .diffWrites]' <<<"$E")" = '[0,1]' ] && [ "$(jq -c '[.diffWrites, .editWrites]' <<<"$D")" = '[0,1]' ]; then
   ok "(f) each news_key is found by its own of: no second copy when another shape's key is newer"
 else bad "(f) edit-first $(jq -c '[.editWrites, .diffWrites]' <<<"$E") diff-first $(jq -c '[.diffWrites, .editWrites]' <<<"$D")"; fi
+P="$(PRIOR=stall TMPDIR="$T" bun "$T/drive.ts" "$ROOT/scripts/substrate/walk-owner-seed.ts" "$ROOT/scripts/substrate/vessels.inventory.json" 2>/dev/null | tail -1)"
+if [ "$(jq -c '.clock' <<<"$OUT")" = '[{"shape":"rhythm","target":"stall","every_ms":1800000}]' ] && [ "$(jq -c '.templateRhythms' <<<"$OUT")" = 1 ] \
+  && [ "$(jq -c '.clock' <<<"$P")" = '[{"shape":"rhythm","target":"stall","every_ms":3600000}]' ]; then
+  ok "(g) one stall rhythm, every_ms 1800000, beside the detector's; an owner's own stall rhythm is kept, not written over"
+else bad "(g) clock: $(jq -c '[.clock, .templateRhythms]' <<<"$OUT" | cut -c1-300) prior: $(jq -c '.clock' <<<"$P" | cut -c1-200)"; fi
 if [ "$(jq -c '.again' <<<"$OUT")" = 0 ]; then ok "(d) run again, the seeder writes none of them again"; else bad "(d) again: $(jq -c '.again' <<<"$OUT")"; fi
 echo; [ "$FAILS" = 0 ] && { echo PASS; exit 0; }
 echo "$FAILS FAILED"; exit 1

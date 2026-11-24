@@ -634,6 +634,14 @@ await ensure({ shape: "requires", for: "walk_trees_reclaim", needs: "gap", where
 // detector's rhythm alike, so both look again on one cadence.
 const SWEEP_ROWS = 240;
 await ensure({ shape: "stall_rule", after_rows: SWEEP_ROWS }, {}, "stall_rule");
+// The stall clock in time (walk loop.ts stalls): a root with no move is also said once its newest row is every_ms old,
+// and the walk's waits end by then. A count in store rows stops when the walk does: parked on one wait it writes a few
+// rows an hour, so 240 rows left a root with no move unsaid for most of a day. 30 minutes: over two days of open gap
+// roots, the gap between a root's consecutive work rows was 9.1 minutes at the 99th percentile pooled by rows, and a
+// root's own 99th percentile was 21.6 minutes at the median over roots; the roots above 30 minutes were the ones that
+// sat. Being said costs one more offer to the root's producer. A starting value, read by effect: roots said by time against roots that moved
+// again unsaid. Written only when the owner has no such row, so a value the owner revises is kept.
+await ensureAbsent({ shape: "rhythm", target: "stall", every_ms: 1_800_000 }, { target: "stall" }, "rhythm stall");
 // The walk's failures are classed and the classes that recur filed as gaps by walk_failure_detect (local-tools), which
 // decides by this row, read at each run: a class is filed once it failed min_count times over min_roots roots within
 // the last window_rows store rows, and closed once quiet for quiet_rows rows with its tool called since without failing
