@@ -10,7 +10,8 @@
 #   (g) one rhythm naming the stall, every_ms 1800000, beside the detector's template rhythm, also on a store that
 #       already holds the detector's (it does not stand for the stall's); a store whose owner already has a stall
 #       rhythm (another value) gets none
-#   (h) an owner's stall_rule naming ends_after (another value, or 0: no ending) is kept; one naming none gains
+#   (h) an owner's stall_rule naming ends_after (another value, or 0: no ending) is kept; one naming none (or a
+#       non-number, which the walk reads as none) gains
 #       ends_after 3 and keeps its after_rows
 #   (d) the seeder run again writes none of them again
 # usage: validation/scripts/walk-owner-seed-asks-stall-news.test.sh
@@ -35,6 +36,7 @@ if (process.env.PRIOR === "detector") rows.push({ shape: "rhythm", template: "t0
 // own after_rows
 if (process.env.PRIOR === "rule") rows.push({ shape: "stall_rule", after_rows: 240, ends_after: 5, id: "p1", seq: 1, role: "owner", input_refs: [] })
 if (process.env.PRIOR === "off") rows.push({ shape: "stall_rule", after_rows: 240, ends_after: 0, id: "p1", seq: 1, role: "owner", input_refs: [] })
+if (process.env.PRIOR === "strrule") rows.push({ shape: "stall_rule", after_rows: 240, ends_after: "3", id: "p1", seq: 1, role: "owner", input_refs: [] })
 if (process.env.PRIOR === "oldrule") rows.push({ shape: "stall_rule", after_rows: 300, id: "p1", seq: 1, role: "owner", input_refs: [] })
 if (process.env.PRIOR === "diff") rows.push(nk("p1", "gitDiff", ["tree", "check.ran", "check.passed", "typecheck.ran", "typecheck.passed", "uncommitted"]), nk("p2", "fileEditResult", ["path"]))
 const planted = rows.length
@@ -90,10 +92,12 @@ if [ "$(jq -c '.clock' <<<"$OUT")" = '[{"shape":"rhythm","target":"stall","every
 else bad "(g) clock: $(jq -c '[.clock, .templateRhythms]' <<<"$OUT" | cut -c1-300) prior: $(jq -c '.clock' <<<"$P" | cut -c1-200) upgrade: $(jq -c '.clock' <<<"$U" | cut -c1-200)"; fi
 K="$(PRIOR=rule TMPDIR="$T" bun "$T/drive.ts" "$ROOT/scripts/substrate/walk-owner-seed.ts" "$ROOT/scripts/substrate/vessels.inventory.json" 2>/dev/null | tail -1)"
 O="$(PRIOR=oldrule TMPDIR="$T" bun "$T/drive.ts" "$ROOT/scripts/substrate/walk-owner-seed.ts" "$ROOT/scripts/substrate/vessels.inventory.json" 2>/dev/null | tail -1)"
+N="$(PRIOR=strrule TMPDIR="$T" bun "$T/drive.ts" "$ROOT/scripts/substrate/walk-owner-seed.ts" "$ROOT/scripts/substrate/vessels.inventory.json" 2>/dev/null | tail -1)"
 Z="$(PRIOR=off TMPDIR="$T" bun "$T/drive.ts" "$ROOT/scripts/substrate/walk-owner-seed.ts" "$ROOT/scripts/substrate/vessels.inventory.json" 2>/dev/null | tail -1)"
-if [ "$(jq -c '.stall' <<<"$K")" = '[[240,5]]' ] && [ "$(jq -c '.stall' <<<"$Z")" = '[[240,0]]' ] && [ "$(jq -c '.stall' <<<"$O")" = '[[300,null],[300,3]]' ]; then
-  ok "(h) an owner's stall_rule naming ends_after (5, or 0: no ending) is kept; one naming none gains ends_after 3 and keeps its after_rows"
-else bad "(h) kept: $(jq -c '.stall' <<<"$K") off: $(jq -c '.stall' <<<"$Z") upgrade: $(jq -c '.stall' <<<"$O")"; fi
+if [ "$(jq -c '.stall' <<<"$K")" = '[[240,5]]' ] && [ "$(jq -c '.stall' <<<"$Z")" = '[[240,0]]' ] && [ "$(jq -c '.stall' <<<"$O")" = '[[300,null],[300,3]]' ] \
+  && [ "$(jq -c '.stall' <<<"$N")" = '[[240,"3"],[240,3]]' ]; then
+  ok "(h) an owner's stall_rule naming ends_after (5, or 0: no ending) is kept; one naming none, or a non-number the walk reads as none, gains ends_after 3 and keeps its after_rows"
+else bad "(h) kept: $(jq -c '.stall' <<<"$K") off: $(jq -c '.stall' <<<"$Z") upgrade: $(jq -c '.stall' <<<"$O") non-number: $(jq -c '.stall' <<<"$N")"; fi
 if [ "$(jq -c '.again' <<<"$OUT")" = 0 ]; then ok "(d) run again, the seeder writes none of them again"; else bad "(d) again: $(jq -c '.again' <<<"$OUT")"; fi
 echo; [ "$FAILS" = 0 ] && { echo PASS; exit 0; }
 echo "$FAILS FAILED"; exit 1
