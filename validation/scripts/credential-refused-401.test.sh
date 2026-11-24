@@ -35,20 +35,23 @@ ok()  { echo "ok   - $*"; }
 bad() { echo "FAIL - $*"; FAILS=$((FAILS+1)); }
 LINE='credential refused (401) — key stale?'
 
-# A curl on PATH that answers like the real one: the body, then any -w format with %{http_code}
+# A curl on PATH that answers like records: the body, then any -w format with %{http_code}
 # replaced by the status in $T/status-gap or $T/status-outcome, by the shape the -d pointer reads.
-# -K - reads (and discards) stdin.
+# As records does, it refuses (401) a read whose -K - config on stdin carries no node key, and
+# answers a gap read that does not ask for the rows as stored with none (a read of the facts).
 mkdir -p "$T/fx"
 cat > "$T/fx/curl" <<EOF
 #!/usr/bin/env bash
-w=""; prev=""; sh=outcome
+w=""; prev=""; sh=outcome; cfg=""; stored=""
 for a in "\$@"; do
   [ "\$prev" = "-w" ] && w="\$a"
-  [ "\$prev" = "-K" ] && [ "\$a" = "-" ] && cat >/dev/null
-  [ "\$prev" = "-d" ] && case "\$a" in *'"shape":"gap"'*) sh=gap ;; esac
+  [ "\$prev" = "-K" ] && [ "\$a" = "-" ] && cfg="\$(cat)"
+  [ "\$prev" = "-d" ] && { case "\$a" in *'"shape":"gap"'*) sh=gap ;; esac; case "\$a" in *'"stored":true'*) stored=1 ;; esac; }
   prev="\$a"
 done
 st="\$(cat "$T/status-\$sh")"
+case "\$cfg" in *'Authorization: ApiKey fx-node-key'*) ;; *) st=401 ;; esac
+[ "\$st" = 200 ] && [ "\$sh" = gap ] && [ -z "\$stored" ] && { printf '[]'; [ -n "\$w" ] && printf '%b' "\${w//%\{http_code\}/200}"; exit 0; }
 case "\$st" in
   200) cat "$T/resp-\$sh.json" ;;
   401) printf '{"error":"unauthorized"}' ;;
@@ -65,6 +68,7 @@ jq -n -c --arg l "$LABEL" '{content:[{shape:"gap", role:"person", gap_id:"g-fx",
   test_file:"validation/scripts/fx-red.test.sh", only_tests:[$l]}}}}]}' > "$T/resp-gap.json"
 echo '[]' > "$T/resp-outcome.json"
 STORE=http://fixture.invalid
+export METABOB_API_KEY=fx-node-key
 status() { echo "$1" > "$T/status-gap"; echo "${2:-$1}" > "$T/status-outcome"; }
 
 # ── (a) the lib ─────────────────────────────────────────────────────────────────
@@ -82,6 +86,8 @@ lib_load 401 200
 [ "$RC" = 2 ] && ok "(a) lib: the gap read refused, the outcome read answered: exit 2" || bad "(a) lib: gap 401, outcome 200 gave exit $RC"
 lib_load 200
 [ "$RC" = 0 ] && [ "$(jq -c '[.[].id]' "$T/loaded.json" 2>/dev/null)" = '["g-fx"]' ] && ok "(a) control: records readable: the gap a person filed loads" || bad "(a) control: 200 gave exit $RC"
+( unset METABOB_API_KEY; status 200; PATH="$T/fx:$PATH"; . "$LIB"; gtr_load_marked "$STORE" "$T/loaded.json" ) 2>"$T/err" >"$T/out"; RC=$?
+[ "$RC" = 2 ] && ok "(a) [MUST-FAIL] the node key is what records reads: with none sent, records refuses and the load is exit 2" || bad "(a) lib: no key gave exit $RC"
 lib_load 500
 [ "$RC" = 1 ] && ! grep -qF "$LINE" "$T/err" && ok "(a) control: a 500 page is unreadable (1) with no 401 line" || bad "(a) control: 500 gave exit $RC / $(head -c 200 "$T/err")"
 
