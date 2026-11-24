@@ -63,7 +63,9 @@ afterAll(() => rmSync(T, { recursive: true, force: true }))
 const bare = ({ id: _i, seq: _s, role: _r, input_refs: _x, ...rest }: Row) => rest
 const ruleRow = () => secondSeeding.filter((r) => r.shape === "failure_rule" && r.target === "walk_failure")
 const templateRows = () => secondSeeding.filter((r) => r.shape === "activity_template" && [r.calls].flat().some((c: Row) => c?.shape === "walk_failure_detect"))
-const rhythmRows = () => secondSeeding.filter((r) => r.shape === "rhythm" && r.template !== OTHER_TEMPLATE)
+// a template's rhythm: the seed also writes the stall clock, a rhythm naming no template (walk loop.ts stalls)
+const templateRhythm = (r: Row) => r.shape === "rhythm" && r.template !== undefined
+const rhythmRows = () => secondSeeding.filter((r) => templateRhythm(r) && r.template !== OTHER_TEMPLATE)
 
 describe("the seed's rows", () => {
   test("[MUST-FAIL] the failure_rule the detector decides by, writing, once over two seedings", () => {
@@ -111,7 +113,7 @@ describe("a template answered with no id", () => {
     expect(rows.filter(isDetector).length).toBe(1)
     expect(code).not.toBe(0)
     expect(err).toContain("activity_template walk_failure_detect: no id, rhythm not written")
-    expect(rows.filter((r) => r.shape === "rhythm")).toEqual([])
+    expect(rows.filter(templateRhythm)).toEqual([])
   })
 })
 
@@ -119,7 +121,7 @@ describe("one seeding", () => {
   test("[MUST-FAIL] a node seeded once has the rhythm naming the template it wrote in the same run", () => {
     const t = firstSeeding.filter((r) => r.shape === "activity_template" && [r.calls].flat().some((c: Row) => c?.shape === "walk_failure_detect"))
     expect(t.length).toBe(1)
-    expect(firstSeeding.filter((r) => r.shape === "rhythm").map((r) => r.template)).toEqual([t[0].id])
+    expect(firstSeeding.filter(templateRhythm).map((r) => r.template)).toEqual([t[0].id])
   })
 })
 
