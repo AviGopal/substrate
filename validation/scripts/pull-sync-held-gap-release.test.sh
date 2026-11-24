@@ -485,9 +485,14 @@ if printf '%s' "$L" | jq -e '.waits_for == null and .localized == false and .met
     and (.claim | contains("The walk found no place to change: searched src/ for the handler; none"))
     and (.summary | contains("The walk searched and found no source file"))' >/dev/null && grep -q "released 0, stated 0, found no site 1" "$LOG"; then
   : > "$WRITES"; lift_held_gaps x 0123456789abcdef "$DIR"
-  jq -c 'map(if .shape == "gap" then . + {waits_for: "person"} else . end)' "$ROWS" > "$ROWS.new" && mv "$ROWS.new" "$ROWS"
+  # the row as the no-site branch wrote it before no gap waited on one: the wait and the summary naming a person
+  jq -c 'map(if .shape == "gap" then . + {waits_for: "person", summary: "The walk searched and found no source file of the repo this failure comes from: a person judges whether the source or the test is wrong."} else . end)' "$ROWS" > "$ROWS.new" && mv "$ROWS.new" "$ROWS"
   lift_held_gaps x 0123456789abcdef "$DIR"; back="$(latest g-n | jq -r '.waits_for // "none"')"
   [ "$back" = none ] && ok "[MUST-FAIL] (cw4b) a row that still says it waits for a person is written without it: no gap waits on a person" || bad "(cw4b) waits_for=$back log=$(cat "$LOG")"
+  said="$(latest g-n | jq -r '.summary // ""')"
+  if [ "$said" = "The walk searched and found no source file of the repo this failure comes from: whether the source or the test is wrong is still open." ]; then
+    ok "[GUARD] (cw4d) that row's summary is the no-site text as it reads now, once: no person is named as the judge"
+  else bad "(cw4d) summary=$said"; fi
   : > "$WRITES"; : > "$LOG"; lift_held_gaps x 0123456789abcdef "$DIR"
   if [ ! -s "$WRITES" ] && ! grep -q "found no site for g-n" "$LOG"; then ok "[MUST-FAIL] (cw4) the walk finding no site leaves the gap its work (no wait, why in the claim), counted so; not again"
   else bad "(cw4) second tick wrote $(cat "$WRITES") log=$(cat "$LOG")"; fi

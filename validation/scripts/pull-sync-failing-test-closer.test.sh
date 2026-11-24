@@ -259,14 +259,16 @@ if [ "$N1" = 1 ] && [ ! -s "$WRITES" ] && grep -q 'a person ruled against its cl
 else bad "(n) N1=$N1 NL=$NL again=$(cat "$WRITES") log=$(cat "$LOG")"; fi
 
 # (o) marked absent, then ruled against by a person (lift_held_gaps keeps names_absent), then back and red: no true row
-reset "$(row g-q x src/a.test.ts "$GEN" '["d > old"]' | jq -c '.check_runnable = false | .meta += {names_absent: ["d > old"], absent_at_head: "0123456789", claim_rejected_by: "person-row", check_runnable: false}')"
+# (a row from before no gap waited on a person: it says waits_for person, and the row this branch writes says null)
+reset "$(row g-q x src/a.test.ts "$GEN" '["d > old"]' | jq -c '.check_runnable = false | .waits_for = "person" | .meta += {names_absent: ["d > old"], absent_at_head: "0123456789", claim_rejected_by: "person-row", check_runnable: false}')"
 printf '(fail) d > old\n 0 pass\n 1 fail\n' > "$FAKE/a.test.ts.out"
 close_failing_test_gaps x 9999999999999999 "$DIR"
 O1="$(wc -l < "$WRITES")"; OL="$(tail -n 1 "$WRITES")"
 : > "$WRITES"; close_failing_test_gaps x 999999999999999a "$DIR"
 if [ "$O1" = 1 ] && [ ! -s "$WRITES" ] && grep -q 'a person ruled against its claim' "$LOG" \
     && printf '%s' "$OL" | jq -e '.check_runnable == false and .meta.claim_rejected_by == "person-row" and .meta.names_absent == null
-      and .meta.absent_at_head == null and (.summary | contains("worked") | not)' >/dev/null; then ok "(o) absent, then a person's r 0, then back and red: stays not checkable"
+      and .meta.absent_at_head == null and (.summary | contains("worked") | not) and has("waits_for") and .waits_for == null' >/dev/null; then
+  ok "[MUST-FAIL] (o) absent, then a person's r 0, then back and red: stays not checkable, and its row waits on no one"
 else bad "(o) O1=$O1 OL=$OL again=$(cat "$WRITES") log=$(cat "$LOG")"; fi
 
 # (p) marked absent, then a person's r 1 (localized_by; check_runnable dropped; names_absent kept), names still absent:
