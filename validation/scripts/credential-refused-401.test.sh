@@ -97,15 +97,20 @@ grep -qE '^TRACKED-RED .*fx-red\.test\.sh' "$T/run.txt" && [ "$RC" = 0 ] && ok "
 sed -n '/^# >>> gap-tracked-red loader$/,/^# <<< gap-tracked-red loader$/p' "$PS" > "$T/loader.sh"
 grep -q '^tracked_fail_names()' "$T/loader.sh" || bad "(c) could not extract pull-sync's gap-tracked-red loader"
 # records through dev_resolve, as discovery routes it: answers `[]` and the status code curl's -w would print
-pullsync_tfn() { # <status> -> RC, $T/err
-  ( ST="$1"; PULLSYNC_SELF_DIR="$SRC/scripts/substrate"; PULLSYNC_SHARE_DIR="$T/no-share"; DEV_VESSEL=""
+pullsync_tfn() { # <status of the gap read> [<status of the outcome read>] -> RC, $T/err
+  ( GS="$1"; OS="${2:-$1}"; PULLSYNC_SELF_DIR="$SRC/scripts/substrate"; PULLSYNC_SHARE_DIR="$T/no-share"; DEV_VESSEL=""
     . "$T/loader.sh" >/dev/null 2>&1
-    dev_resolve() { printf '[]\n%s' "$ST"; }
+    dev_resolve() { case "$1" in *'"shape":"gap"'*) printf '[]\n%s' "$GS" ;; *) printf '[]\n%s' "$OS" ;; esac; }
     tracked_fail_names demo "test/x.test.ts" ) >"$T/out" 2>"$T/err"; RC=$?
 }
 pullsync_tfn 401
 [ "$RC" = 2 ] && ok "(c) [MUST-FAIL] pull-sync: records refusing the node key is rc 2 (unknown), not nothing tracked" || bad "(c) pull-sync: 401 gave rc $RC"
 grep -qF "$LINE" "$T/err" && ok "(c) [MUST-FAIL] pull-sync: the distinct line on a 401" || bad "(c) pull-sync: no '$LINE' on a 401"
+# each read is its own: a refusal of either is unknown, whatever the other read answered
+pullsync_tfn 401 200
+[ "$RC" = 2 ] && ok "(c) [MUST-FAIL] pull-sync: the gap read refused, the outcome read answered: still rc 2" || bad "(c) pull-sync: gap 401, outcome 200 gave rc $RC"
+pullsync_tfn 200 401
+[ "$RC" = 2 ] && ok "(c) pull-sync: the outcome read refused, the gap read answered: rc 2" || bad "(c) pull-sync: gap 200, outcome 401 gave rc $RC"
 pullsync_tfn 200
 [ "$RC" = 0 ] && ! grep -qF "$LINE" "$T/err" && ok "(c) control: records readable with no mark: rc 0, no line" || bad "(c) control: 200 gave rc $RC"
 

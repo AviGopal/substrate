@@ -55,8 +55,14 @@ pullsync_verdict() { # [share dir] [person outcomes file] -> "tracked:<lines>" f
   ( PULLSYNC_SELF_DIR="$R/scripts/substrate" PULLSYNC_SHARE_DIR="${1:-$T/no-share}" DEV_VESSEL="$T/store.json"
     # shellcheck disable=SC1090
     . "$T/loader.sh" 2>/dev/null
-    # records, as discovery would route it: the rows of the asked shape
-    dev_resolve() { case "$(printf '%s' "$1" | jq -r '.impulse.pointer.shape')" in gap) cat "$T/gaps.rows.json" ;; outcome) cat "$outs" ;; *) echo '[]' ;; esac; }
+    # records, as discovery would route it: the rows of the asked shape. Gap rows are answered only to a read of
+    # them as stored (a read without it shows a hold as its fact, not the row the closer wrote); WRAP answers in
+    # the {content: [...]} form discovery may return
+    dev_resolve() { local q="$1" a
+      case "$(printf '%s' "$q" | jq -r '.impulse.pointer.shape')" in
+        gap) if [ "$(printf '%s' "$q" | jq -r '.impulse.pointer.stored')" = true ]; then a="$(cat "$T/gaps.rows.json")"; else a='[]'; fi ;;
+        outcome) a="$(cat "$outs")" ;; *) a='[]' ;; esac
+      if [ -n "${WRAP:-}" ]; then printf '%s' "$a" | jq -c '{content: .}'; else printf '%s\n' "$a"; fi; }
     TRACKED="$(tracked_fail_names demo-vessel "$(printf 'src/a.ts\ntest/x.test.ts')" 2>/dev/null)"
     CONF_SET="$(printf '(fail) new > broke\n(fail) other > untouched')"
     if [ -n "$TRACKED" ]; then echo "tracked:$(gtr_select tracked "$TRACKED" "$CONF_SET" | tr '\n' ';')"; else echo "tracked:"; fi )
@@ -70,6 +76,8 @@ runner_verdict() { # -> the runner's exit code on the copied root
 fresh
 P="$(pullsync_verdict)"; G="$(runner_verdict)"
 [ "$P" = "tracked:(fail) new > broke;" ] && ok "(a) pull-sync subtracts its tracked name" || bad "(a) pull-sync verdict: '$P'"
+P="$(WRAP=1 pullsync_verdict)"
+[ "$P" = "tracked:(fail) new > broke;" ] && ok "(a) [MUST-FAIL] ... and the same when records' rows come wrapped as {content}" || bad "(a) wrapped: pull-sync verdict: '$P'"
 [ "$G" = 0 ] && ok "(a) the runner lets its tracked red through" || { bad "(a) runner exit $G"; sed 's/^/    /' "$T/out.txt" | tail -5; }
 
 # ── (b) edit ONLY the copied predicate's status filter ────────────────────────
