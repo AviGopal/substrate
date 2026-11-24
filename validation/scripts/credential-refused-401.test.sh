@@ -9,9 +9,10 @@
 # fault with one greppable line, `credential refused (401) — key stale?`, and the verdict it blocks
 # is UNKNOWN, never red.
 #
-#   (a) lib     gtr_load against a store that answers 401: the distinct line on stderr, exit 2
-#               (1 stays "unreadable"); a 200 store loads (control); a 500 page is 1 with no
-#               401 line (control)
+#   (a) lib     gtr_load_marked against records that answer 401: the distinct line on stderr, exit 2
+#               (1 stays "unreadable"), whichever of its two reads (gap rows, person outcomes) is
+#               refused; 200 loads the gap a person filed (control); a 500 page is 1 with no 401
+#               line (control)
 #   (b) runner  a red glue test under a 401 store is UNKNOWN, not FAIL and not TRACKED-RED; the
 #               run exits 3 (environment) with the distinct line; with the store readable the
 #               same test is TRACKED-RED and the run exits 0 (control)
@@ -35,19 +36,21 @@ bad() { echo "FAIL - $*"; FAILS=$((FAILS+1)); }
 LINE='credential refused (401) — key stale?'
 
 # A curl on PATH that answers like the real one: the body, then any -w format with %{http_code}
-# replaced by the status in $T/status. -K - reads (and discards) stdin.
+# replaced by the status in $T/status-gap or $T/status-outcome, by the shape the -d pointer reads.
+# -K - reads (and discards) stdin.
 mkdir -p "$T/fx"
 cat > "$T/fx/curl" <<EOF
 #!/usr/bin/env bash
-w=""; prev=""
+w=""; prev=""; sh=outcome
 for a in "\$@"; do
   [ "\$prev" = "-w" ] && w="\$a"
   [ "\$prev" = "-K" ] && [ "\$a" = "-" ] && cat >/dev/null
+  [ "\$prev" = "-d" ] && case "\$a" in *'"shape":"gap"'*) sh=gap ;; esac
   prev="\$a"
 done
-st="\$(cat "$T/status")"
+st="\$(cat "$T/status-\$sh")"
 case "\$st" in
-  200) cat "$T/resp.json" ;;
+  200) cat "$T/resp-\$sh.json" ;;
   401) printf '{"error":"unauthorized"}' ;;
   500) printf '<html><body>500 Internal Server Error</body></html>' ;;
 esac
@@ -56,22 +59,29 @@ exit 0
 EOF
 chmod +x "$T/fx/curl"
 LABEL='check-first: fixture red'
-jq -n -c --arg l "$LABEL" '{shape:"substrateGap", body:{gaps:[{id:"g-fx", status:"open",
-  classification_metadata:{evidence_resolve:{shape:"test_suite", input:{vessel:"super-repo",
-  test_file:"validation/scripts/fx-red.test.sh", only_tests:[$l]}}}}]}}' > "$T/resp.json"
+# records' answers: a gap a person filed naming the red case (as discovery wraps a producer's rows), no outcomes
+jq -n -c --arg l "$LABEL" '{content:[{shape:"gap", role:"person", gap_id:"g-fx", id:"r1", seq:1, status:"open",
+  meta:{evidence_resolve:{shape:"test_suite", input:{vessel:"super-repo",
+  test_file:"validation/scripts/fx-red.test.sh", only_tests:[$l]}}}}]}' > "$T/resp-gap.json"
+echo '[]' > "$T/resp-outcome.json"
 STORE=http://fixture.invalid
+status() { echo "$1" > "$T/status-gap"; echo "${2:-$1}" > "$T/status-outcome"; }
 
 # ── (a) the lib ─────────────────────────────────────────────────────────────────
-lib_load() { # status -> RC, stderr in $T/err
-  echo "$1" > "$T/status"
-  ( PATH="$T/fx:$PATH"; . "$LIB"; gtr_load "$STORE" "$T/loaded.json" ) 2>"$T/err" >"$T/out"; RC=$?
+lib_load() { # <gap read status> [<outcome read status>] -> RC, stderr in $T/err
+  status "$@"
+  ( PATH="$T/fx:$PATH"; . "$LIB"; gtr_load_marked "$STORE" "$T/loaded.json" ) 2>"$T/err" >"$T/out"; RC=$?
 }
 lib_load 401
 [ "$RC" = 2 ] && ok "(a) lib: a 401 store is exit 2 (environment), not 1 (unreadable)" || bad "(a) lib: 401 gave exit $RC"
 grep -qF "$LINE" "$T/err" && ok "(a) lib: the 401 prints the distinct line on stderr" || bad "(a) lib: no '$LINE' on stderr (got: $(head -c 200 "$T/err"))"
 grep -qF "$LINE" "$T/out" && bad "(a) lib: the 401 line went to stdout (callers capture stdout)" || ok "(a) lib: nothing on stdout"
+lib_load 200 401
+[ "$RC" = 2 ] && grep -qF "$LINE" "$T/err" && ok "(a) lib: the gap read answered, the outcome read refused: exit 2, the line" || bad "(a) lib: gap 200, outcome 401 gave exit $RC"
+lib_load 401 200
+[ "$RC" = 2 ] && ok "(a) lib: the gap read refused, the outcome read answered: exit 2" || bad "(a) lib: gap 401, outcome 200 gave exit $RC"
 lib_load 200
-[ "$RC" = 0 ] && [ "$(jq length "$T/loaded.json" 2>/dev/null)" = 1 ] && ok "(a) control: a 200 store loads its open gap" || bad "(a) control: 200 gave exit $RC"
+[ "$RC" = 0 ] && [ "$(jq -c '[.[].id]' "$T/loaded.json" 2>/dev/null)" = '["g-fx"]' ] && ok "(a) control: records readable: the gap a person filed loads" || bad "(a) control: 200 gave exit $RC"
 lib_load 500
 [ "$RC" = 1 ] && ! grep -qF "$LINE" "$T/err" && ok "(a) control: a 500 page is unreadable (1) with no 401 line" || bad "(a) control: 500 gave exit $RC / $(head -c 200 "$T/err")"
 
@@ -81,7 +91,7 @@ cp "$SRC/validation/scripts/run-glue-tests.sh" "$R/validation/scripts/"
 cp "$LIB" "$R/scripts/substrate/lib/"
 printf '#!/usr/bin/env bash\necho %q\nexit 1\n' "FAIL - $LABEL" > "$R/validation/scripts/fx-red.test.sh"
 runner() { # status -> RC, output in $T/run.txt
-  echo "$1" > "$T/status"
+  status "$1"
   PATH="$T/fx:$PATH" bash "$R/validation/scripts/run-glue-tests.sh" --root "$R" --log-dir "$T/logs-$1" --gap-store "$STORE" > "$T/run.txt" 2>&1; RC=$?
 }
 runner 401

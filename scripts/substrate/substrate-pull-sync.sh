@@ -814,7 +814,7 @@ gtr_try_load() { # -> 0 and GTR_LIB set when a candidate sources and defines the
   [ -n "$GTR_LIB" ] && return 0
   while IFS= read -r c; do
     # shellcheck disable=SC1090
-    if [ -r "$c" ] && . "$c" && declare -F gtr_load gtr_tracked_names gtr_select gtr_person_marked >/dev/null; then GTR_LIB="$c"; return 0; fi
+    if [ -r "$c" ] && . "$c" && declare -F gtr_tracked_names gtr_select gtr_person_marked >/dev/null; then GTR_LIB="$c"; return 0; fi
   done < <(gtr_lib_candidates)
   return 1
 }

@@ -6,17 +6,17 @@
 # on a root holding one synthetic check-first test. Editing ONLY the copied predicate then flips
 # BOTH verdicts. No network, no container.
 #
-#   (a) both callers exempt their tracked red against the same fixture store
-#   (b) the predicate's open-status filters edited (the store's, read by the runner; the person-marked one, read
-#       by pull-sync) -> both stop exempting
+#   (a) both callers exempt their tracked red against the same records rows
+#   (b) the predicate's open-status filters edited (gtr_person_marked's, which both callers read) -> both stop
+#       exempting
 #   (c) the predicate's name matcher edited -> both stop exempting
 #   (d) the predicate absent -> both fail closed (pull-sync tracks nothing; the runner refuses)
 #   (e) pull-sync finds the image's copy under PULLSYNC_SHARE_DIR/lib when none is beside it
 #   (f) neither caller carries its own copy: the jq selector and the awk matcher live only in the lib
-#   (g) pull-sync reads the gaps from records by shape and exempts only a person-marked one (USER ruling 11-23,
-#       check-first reds exempt only by a person-marked gap): the same open gap with no person verdict, or with a
-#       person's r 0, exempts nothing there [MUST-FAIL: the parent exempted it]. The runner still reads --gap-store
-#       and exempts any open gap named; whether the ruling covers it is not settled, so this test states the split.
+#   (g) both read the gaps from records by shape and exempt only a person-marked one (USER ruling 11-23,
+#       check-first reds exempt only by a person-marked gap; the glue runner by the same rule): the same open gap
+#       with no person verdict, or with a person's r 0, exempts nothing in either [MUST-FAIL for the runner: the
+#       parent exempted any open gap named]
 #
 # usage: validation/scripts/gap-tracked-red-shared.test.sh
 # Needs bash, jq, awk, sed.
@@ -39,6 +39,8 @@ jq -n -c --arg l "$LABEL" '[
 jq -c '[to_entries[] | {shape: "gap", role: "detector", gap_id: .value.id, id: ("row-" + (.key | tostring)), seq: (.key + 1),
   status: .value.status, meta: .value.classification_metadata}]' "$T/store.json" > "$T/gaps.rows.json"
 jq -c '[.[] | {shape: "outcome", role: "person", r: 1, id: ("pm-" + .id), seq: (.seq + 10), input_refs: [.id]}]' "$T/gaps.rows.json" > "$T/marks.json"
+# the runner reads the same rows from a file, as {"gap": [...], "outcome": [...]}
+runner_store() { jq -n -c --slurpfile g "$T/gaps.rows.json" --slurpfile o "$1" '{gap: $g[0], outcome: $o[0]}' > "$T/runner-store.json"; }
 
 fresh() { # -> $R: copies of pull-sync, the runner, the predicate, and one red check-first test
   R="$T/root"; rm -rf "$R"; mkdir -p "$R/scripts/substrate/lib" "$R/validation/scripts"
@@ -67,8 +69,9 @@ pullsync_verdict() { # [share dir] [person outcomes file] -> "tracked:<lines>" f
     CONF_SET="$(printf '(fail) new > broke\n(fail) other > untouched')"
     if [ -n "$TRACKED" ]; then echo "tracked:$(gtr_select tracked "$TRACKED" "$CONF_SET" | tr '\n' ';')"; else echo "tracked:"; fi )
 }
-runner_verdict() { # -> the runner's exit code on the copied root
-  bash "$R/validation/scripts/run-glue-tests.sh" --root "$R" --log-dir "$T/logs" --gap-store "$T/store.json" > "$T/out.txt" 2>&1
+runner_verdict() { # [person outcomes file] -> the runner's exit code on the copied root
+  runner_store "${1:-$T/marks.json}"
+  bash "$R/validation/scripts/run-glue-tests.sh" --root "$R" --log-dir "$T/logs" --gap-store "$T/runner-store.json" > "$T/out.txt" 2>&1
   echo $?
 }
 
@@ -81,7 +84,7 @@ P="$(WRAP=1 pullsync_verdict)"
 [ "$G" = 0 ] && ok "(a) the runner lets its tracked red through" || { bad "(a) runner exit $G"; sed 's/^/    /' "$T/out.txt" | tail -5; }
 
 # ── (b) edit ONLY the copied predicate's status filter ────────────────────────
-fresh; sed -i 's/\.status? == "open"/.status? == "never-open"/; s/\$g\.status == "open"/$g.status == "never-open"/' "$R/$LIB_REL"
+fresh; sed -i 's/\.role == "person" and \.status == "open"/.role == "person" and .status == "never-open"/; s/\$g\.status == "open"/$g.status == "never-open"/' "$R/$LIB_REL"
 [ "$(grep -c 'never-open' "$R/$LIB_REL")" = 2 ] || bad "(b) the mutations did not both apply"
 P="$(pullsync_verdict)"; G="$(runner_verdict)"
 [ "$P" = "tracked:" ] && ok "(b) status filter edited in the lib: pull-sync stops exempting" || bad "(b) pull-sync verdict: '$P'"
@@ -122,7 +125,9 @@ P="$(pullsync_verdict "" "$T/none.json")"
 [ "$P" = "tracked:" ] && ok "(g) [MUST-FAIL] an open gap no person marked: pull-sync exempts nothing" || bad "(g) unmarked: pull-sync verdict: '$P'"
 P="$(pullsync_verdict "" "$T/wrong.json")"
 [ "$P" = "tracked:" ] && ok "(g) [MUST-FAIL] a person's r 0 (the test is wrong): pull-sync exempts nothing" || bad "(g) r 0: pull-sync verdict: '$P'"
-G="$(runner_verdict)"
-[ "$G" = 0 ] && ok "(g) the runner, reading --gap-store, still lets the open gap's red through (the split stated above)" || bad "(g) runner exit $G"
+G="$(runner_verdict "$T/none.json")"
+[ "$G" = 1 ] && ok "(g) [MUST-FAIL] an open gap no person marked: the runner refuses its red too" || bad "(g) unmarked: runner exit $G"
+G="$(runner_verdict "$T/wrong.json")"
+[ "$G" = 1 ] && ok "(g) [MUST-FAIL] a person's r 0: the runner refuses its red too" || bad "(g) r 0: runner exit $G"
 
 echo; [ "$FAILS" = 0 ] && { echo "PASS"; exit 0; } || { echo "$FAILS FAILED"; exit 1; }

@@ -27,7 +27,9 @@
 #
 # TRACKED RED IS NOT A REGRESSION. A check-first glue test (deliberately red until its fix lands,
 # tracked by an OPEN gap) may be committed: a red *.test.sh is reported TRACKED-RED and does not
-# fail the run when every case it reports as "FAIL - <label>" is named by an open gap whose
+# fail the run when every case it reports as "FAIL - <label>" is named by an open gap a person
+# filed or marked (gtr_person_marked; USER ruling 11-23, check-first reds exempt only by a
+# person-marked gap, the same rule as pull-sync's test gate) whose
 # evidence_resolve is {shape:"test_suite", input:{vessel:"super-repo",
 # test_file:"validation/scripts/<file>", only_tests:["<label>", ...]}}. The predicate is
 # scripts/substrate/lib/gap-tracked-red.sh under --root — the SAME file pull-sync's test gate
@@ -36,7 +38,7 @@
 # unreadable store is a failure: no store, no exemption. A tracked test that is green passes,
 # with a note that its gap can close. bun tests (*.test.ts) are never exempted here.
 #
-# A REFUSED CREDENTIAL IS UNKNOWN, NOT RED. When the store answers 401 (gtr_load exit 2: the node
+# A REFUSED CREDENTIAL IS UNKNOWN, NOT RED. When records answers 401 (gtr_load_marked exit 2: the node
 # key is stale or wrong), whether a red *.test.sh is tracked cannot be known. Such a test is
 # reported UNKNOWN, never FAIL or TRACKED-RED, the output carries `credential refused (401) — key
 # stale?`, and the run exits 3 (environment) when nothing else failed. That still stops the
@@ -47,21 +49,20 @@
 #   --root DIR  tree to test (default: the tree this script sits in). The pre-commit hook
 #               passes a checkout-index export of the index here.
 #   --log-dir   where per-test output lands (default: a fresh mktemp dir, kept)
-#   --gap-store the gap store that can exempt a tracked red: a development-vessel base URL
-#               (read through the substrateGap resolver), a JSON file, or `client-config`:
-#               the address the emitted client config names (below). Absent = no exemption.
+#   --gap-store where the rows that can exempt a tracked red are read: a discovery base URL
+#               (records' gap rows as stored and person outcomes, read by shape), a JSON file
+#               {"gap": [rows], "outcome": [rows]}, or `client-config`: the discovery the
+#               emitted client config names (below). Absent = no exemption.
 #   --list      print the tests that would run, and exit
 #   --print-needs print each submodule worktree a test reads (NEEDS), once, and exit
 # env: GLUE_TESTS_BUN  path to a bun binary (default: bun on PATH)
 #      GTR_MAX_TIME    seconds to wait for a --gap-store URL (default 10)
 #
-# --gap-store client-config. The store address is never a pinned default. It is, in order:
-#   DEV_VESSEL_ENDPOINT, when set (an explicit operator override, named in the output);
-#   else `.substrate.gapStoreEndpoint` of the client config substrate-connect emits, found by the
-#   cockpit's own rule: METABOB_CONFIG_PATH when set, else ./.metabob/config.json, else
-#   ~/.metabob/config.json.
-# No config file, or one without that field (a config emitted before substrate-connect wrote it),
-# is FAIL CLOSED: no exemption, and the output says which file was read and what it lacked.
+# --gap-store client-config. The address is never a pinned default: it is `.metabob.discoveryEndpoint`
+# of the client config substrate-connect emits (the discovery the cockpit resolves shapes through),
+# found by the cockpit's own rule: METABOB_CONFIG_PATH when set, else ./.metabob/config.json, else
+# ~/.metabob/config.json. No config file, or one without that field, is FAIL CLOSED: no exemption,
+# and the output says which file was read and what it lacked.
 # exit: 0 no failure (a TRACKED-RED test is not a failure) · 1 a test failed · 3 no test failed,
 #       but a red test's tracking is UNKNOWN because the gap store refused the credential (401) · 64 usage
 set -uo pipefail
@@ -135,17 +136,16 @@ mkdir -p "$LOG_DIR" && LOG_DIR="$(cd "$LOG_DIR" && pwd)"
 GTR_STATE=none; GTR_STORE="$LOG_DIR/.open-gaps.json"; GTR_NONE_WHY=""; GAP_STORE_FROM=""
 client_config_store() { # -> prints the store address; or prints nothing and sets nothing (why on fd 3)
   local cfg ep
-  if [ -n "${DEV_VESSEL_ENDPOINT:-}" ]; then printf '%s' "$DEV_VESSEL_ENDPOINT"; echo "DEV_VESSEL_ENDPOINT (explicit override)" >&3; return 0; fi
   if [ -n "${METABOB_CONFIG_PATH:-}" ]; then cfg="$METABOB_CONFIG_PATH"
   elif [ -f "$PWD/.metabob/config.json" ]; then cfg="$PWD/.metabob/config.json"
   else cfg="${HOME:-/nonexistent}/.metabob/config.json"; fi
   if [ ! -r "$cfg" ]; then
-    echo "no client config: $cfg is absent or unreadable (METABOB_CONFIG_PATH ${METABOB_CONFIG_PATH:+set}${METABOB_CONFIG_PATH:-unset}; no ./.metabob/config.json) and DEV_VESSEL_ENDPOINT is unset — emit one with substrate-connect" >&3
+    echo "no client config: $cfg is absent or unreadable (METABOB_CONFIG_PATH ${METABOB_CONFIG_PATH:+set}${METABOB_CONFIG_PATH:-unset}; no ./.metabob/config.json) — emit one with substrate-connect" >&3
     return 1
   fi
-  ep="$(jq -r '.substrate.gapStoreEndpoint // empty' "$cfg" 2>/dev/null)"
+  ep="$(jq -r '.metabob.discoveryEndpoint // empty' "$cfg" 2>/dev/null)"
   if [ -z "$ep" ]; then
-    echo "client config $cfg names no .substrate.gapStoreEndpoint — re-emit it with substrate-connect" >&3
+    echo "client config $cfg names no .metabob.discoveryEndpoint — re-emit it with substrate-connect" >&3
     return 1
   fi
   printf '%s' "$ep"; echo "client config $cfg" >&3
@@ -161,12 +161,12 @@ if [ -n "$GAP_STORE" ]; then
   GTR_MAX_TIME="${GTR_MAX_TIME:-10}"
   # shellcheck disable=SC1091
   if [ -r "$ROOT/scripts/substrate/lib/gap-tracked-red.sh" ] && . "$ROOT/scripts/substrate/lib/gap-tracked-red.sh" \
-     && declare -F gtr_load gtr_tracked_names gtr_select >/dev/null; then
-    gtr_load "$GAP_STORE" "$GTR_STORE"
+     && declare -F gtr_load_marked gtr_person_marked gtr_tracked_names gtr_select >/dev/null; then
+    gtr_load_marked "$GAP_STORE" "$GTR_STORE"
     case $? in
       0) GTR_STATE=loaded ;;
       2) GTR_STATE=environment
-         GTR_NONE_WHY="credential refused (401) — key stale? the gap store $GAP_STORE${GAP_STORE_FROM:+ (from $GAP_STORE_FROM)} refused the node key" ;;
+         GTR_NONE_WHY="credential refused (401) — key stale? records at $GAP_STORE${GAP_STORE_FROM:+ (from $GAP_STORE_FROM)} refused the node key" ;;
     esac
   fi
 fi
@@ -185,7 +185,7 @@ tracked_red() {
   lines="$(printf '%s\n' "$labels" | sed 's/^/(fail) /')"
   untracked="$(gtr_select untracked "$names" "$lines")"
   if [ -n "$untracked" ]; then
-    GTR_WHY="not tracked by an open gap: $(printf '%s\n' "$untracked" | sed "s/^(fail) /$1::/" | head -3 | tr '\n' ';')"
+    GTR_WHY="not tracked by an open gap a person filed or marked: $(printf '%s\n' "$untracked" | sed "s/^(fail) /$1::/" | head -3 | tr '\n' ';')"
     return 1
   fi
   GTR_CASES="$(printf '%s\n' "$labels" | sed "s/^/$1::/" | tr '\n' ';')"
@@ -200,7 +200,7 @@ t_all="$(now)"
 mode="full"; [ "$FAST" = 1 ] && mode="fast"
 echo "glue tests ($mode) under $ROOT — logs: $LOG_DIR"
 case "$GTR_STATE" in
-  loaded) echo "tracked-red exemptions: open gaps from $GAP_STORE${GAP_STORE_FROM:+ (from $GAP_STORE_FROM)}" ;;
+  loaded) echo "tracked-red exemptions: open gaps a person filed or marked, read from $GAP_STORE${GAP_STORE_FROM:+ (from $GAP_STORE_FROM)}" ;;
   unreadable) echo "tracked-red exemptions: NONE — $GTR_NONE_WHY; every red test fails" ;;
   environment) echo "tracked-red exemptions: UNKNOWN — $GTR_NONE_WHY; a red glue test is reported UNKNOWN (environment), not FAIL" ;;
 esac

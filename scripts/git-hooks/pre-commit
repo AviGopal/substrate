@@ -621,14 +621,13 @@ if [[ ${#GLUE_STAGED[@]} -gt 0 ]]; then
   GLUE_LOGS="$(mktemp -d "${TMPDIR:-/tmp}/glue-logs.XXXXXX")"
   trap 'rm -rf "$GLUE_TREE"' EXIT
   git checkout-index -a --prefix="$GLUE_TREE/"
-  # TRACKED RED (check-first): a red glue test every failing case of which an OPEN gap names in its
-  # only_tests is let through (run-glue-tests.sh header; the predicate is the staged
-  # scripts/substrate/lib/gap-tracked-red.sh, the same file pull-sync's test gate sources). The store
-  # is the LIVE one, read through development-vessel's substrateGap resolver at the address the
-  # emitted client config names (`client-config`: DEV_VESSEL_ENDPOINT when set, else
-  # .substrate.gapStoreEndpoint of the cockpit's config file) — no pinned default, and never this
-  # clone's gaps/gaps.json, a gitignored and possibly months-stale cache. No config, no field or an
-  # unreachable store = no exemption: a red test stays refused, and the output says why.
+  # TRACKED RED (check-first): a red glue test every failing case of which an OPEN gap a person filed
+  # or marked names in its only_tests is let through (run-glue-tests.sh header; the predicate is the
+  # staged scripts/substrate/lib/gap-tracked-red.sh, the same file and the same two record reads as
+  # pull-sync's test gate). The rows are the LIVE ones, read from records through the discovery the
+  # emitted client config names (`client-config`: .metabob.discoveryEndpoint of the cockpit's config
+  # file) — no pinned default, and never a local cache. No config, no field or an unreachable
+  # discovery = no exemption: a red test stays refused, and the output says why.
   GLUE_ARGS=(--root "$GLUE_TREE" --log-dir "$GLUE_LOGS" --gap-store client-config)
   [[ "${GLUE_TESTS_FAST:-0}" == 1 ]] && GLUE_ARGS+=(--fast)
   printf '%s\n' "${DIM}glue tests: running against the staged tree (${GLUE_STAGED[0]}$([[ ${#GLUE_STAGED[@]} -gt 1 ]] && echo " +$(( ${#GLUE_STAGED[@]} - 1 ))"))${NC}"

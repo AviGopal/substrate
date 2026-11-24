@@ -2,7 +2,8 @@
 #
 # ONE IMPLEMENTATION, TWO CALLERS. scripts/substrate/substrate-pull-sync.sh (its test gate
 # subtracts tracked names from the newly-failing set) and validation/scripts/run-glue-tests.sh
-# (the pre-commit glue gate lets a tracked red glue test through) both source this file. A
+# (the pre-commit glue gate lets a tracked red glue test through) both source this file, and both
+# read the same two record shapes into gtr_person_marked, so a red one exempts the other does too. A
 # second hand-written copy is the failure class this file exists to prevent: two copies of
 # one predicate drift, and the gate that drifted stops meaning what its log says.
 # validation/scripts/gap-tracked-red-shared.test.sh proves both callers reach these functions.
@@ -32,24 +33,24 @@
 # substring. Each tracked name matches at most ONE red line, so a name shared by two cases
 # cannot hide the second one. Glue labels are fed as "(fail) <label>".
 #
-# FAIL CLOSED. An unreadable store (no jq, curl failure, a wrong address, a file that does not
-# parse to an array) is reported by gtr_load's exit status, and every caller treats it as "no
-# name is tracked": the stricter gate stands. A wrong address is unreadable, never "zero gaps".
+# FAIL CLOSED. An unreadable source (no jq, curl failure, a wrong address, a file without both
+# lists of rows) is reported by gtr_load_marked's exit status, and every caller treats it as "no
+# name is tracked": the stricter gate stands. A wrong address is unreadable, never "zero gaps";
+# rows read with no gap a person filed or marked are a source read, exempting nothing.
 #
 # A REFUSED CREDENTIAL IS NOT A VERDICT. The store is read with the node key. A 401 means the key
-# is stale or wrong: an environment fault that says nothing about any test. gtr_load prints
+# is stale or wrong: an environment fault that says nothing about any test. gtr_load_marked prints
 # `credential refused (401) — key stale?` on stderr and returns 2, distinct from 1, and callers
 # report the verdict they could not reach as UNKNOWN (the glue runner) or hold (pull-sync), never
 # as a red or a regression.
 #
 # Interface (no globals set, no exit, safe under set -u):
-#   gtr_load <src> <out-file>
-#       src: a JSON file (a flat array of gaps, as gaps/gaps.json; or {gaps:[...]}; or a
-#            resolver response {shape:"substrateGap", body:{gaps:[...]}}), or an http(s)://
-#            development-vessel base, read with the substrateGap resolver
-#            (status "open", limit GTR_LIMIT, timeout GTR_MAX_TIME seconds).
-#       Writes the OPEN gaps as one JSON array to <out-file>. Returns 0, 1 = unreadable, or
-#       2 = the store refused the credential (HTTP 401; the distinct line is on stderr).
+#   gtr_load_marked <src> <out-file>
+#       src: an http(s):// discovery base, read by shape (POST <src>/resolve, timeout GTR_MAX_TIME
+#            seconds) as pull-sync's gate reads it: gap rows as stored, and outcomes of role person;
+#            or a JSON file {"gap": [rows], "outcome": [rows]}.
+#       Writes gtr_person_marked's list (possibly empty) to <out-file>. Returns 0, 1 = unreadable,
+#       or 2 = either read refused the credential (HTTP 401; the distinct line is on stderr).
 #   gtr_tracked_names <loaded-file> <vessel> <files, newline-separated>
 #       Prints the tracked names, one per line. Prints nothing on any error.
 #   gtr_select tracked|untracked <tracked names, newline-sep.> <red lines, newline-sep.>
@@ -68,42 +69,41 @@
 # other names). Records refuses a person row under any service key, so no vessel can mark a gap; a gap any
 # vessel can write under the node key exempts nothing alone, nor does a person's r 0 (the test is wrong).
 
-GTR_LIMIT="${GTR_LIMIT:-5000}"
 
-gtr_load() {
-  local src="${1:-}" out="${2:-}" raw code
+gtr_load_marked() {
+  local src="${1:-}" out="${2:-}" d rc=0 s ptr raw code
   [ -n "$src" ] && [ -n "$out" ] || return 1
   command -v jq >/dev/null 2>&1 || return 1
+  d="$(mktemp -d "${TMPDIR:-/tmp}/gtr-marked.XXXXXX" 2>/dev/null)" || return 1
   case "$src" in
     http://*|https://*)
-      # The store is read with the node key when one is set (on stdin as a curl config, never argv):
-      # every resolve route validates its caller, and an anonymous read can come back empty.
-      # -w appends the HTTP status on its own line; output without a 3-digit last line is all body.
-      raw="$({ if [ -n "${METABOB_API_KEY:-}" ]; then printf 'header = "Authorization: ApiKey %s"\n' "$METABOB_API_KEY"; fi; } \
-        | curl -K - -s -w '\n%{http_code}' --max-time "${GTR_MAX_TIME:-30}" -X POST "${src%/}/v2/impulses/resolve" -H 'Content-Type: application/json' \
-        -d "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap\",\"status\":\"open\",\"limit\":$GTR_LIMIT}}}" 2>/dev/null)" || return 1
-      code=""
-      case "$raw" in
-        *$'\n'[0-9][0-9][0-9]) code="${raw##*$'\n'}"; raw="${raw%$'\n'*}" ;;
-      esac
-      if [ "$code" = 401 ]; then
-        echo "credential refused (401) — key stale? the gap store at ${src%/} refused the node key (METABOB_API_KEY $([ -n "${METABOB_API_KEY:-}" ] && echo set || echo unset); the key is never printed); tracked-red verdict unknown (environment), not red" >&2
-        : > "$out"; return 2
-      fi
+      for s in gap outcome; do
+        case "$s" in
+          gap) ptr='{"type":"record_read","shape":"gap","stored":true}' ;;
+          outcome) ptr='{"type":"record_read","shape":"outcome","where":{"role":"person"}}' ;;
+        esac
+        # The node key goes on stdin as a curl config, never argv. -w appends the HTTP status on its own line.
+        raw="$({ if [ -n "${METABOB_API_KEY:-}" ]; then printf 'header = "Authorization: ApiKey %s"\n' "$METABOB_API_KEY"; fi; } \
+          | curl -K - -s -w '\n%{http_code}' --max-time "${GTR_MAX_TIME:-30}" -X POST "${src%/}/resolve" -H 'Content-Type: application/json' \
+          -d "{\"pointer\":$ptr}" 2>/dev/null)" || { rc=1; break; }
+        code=""
+        case "$raw" in *$'\n'[0-9][0-9][0-9]) code="${raw##*$'\n'}"; raw="${raw%$'\n'*}" ;; esac
+        if [ "$code" = 401 ]; then
+          echo "credential refused (401) — key stale? records at ${src%/} refused the node key (METABOB_API_KEY $([ -n "${METABOB_API_KEY:-}" ] && echo set || echo unset); the key is never printed); tracked-red verdict unknown (environment), not red" >&2
+          rc=2; break
+        fi
+        printf '%s' "$raw" | jq -c 'if type == "array" then . elif (.content | type) == "array" then .content else error("no rows") end' \
+          > "$d/$s.json" 2>/dev/null || { rc=1; break; }
+      done
       ;;
     *)
-      [ -f "$src" ] && [ -r "$src" ] || return 1
-      raw="$(cat "$src" 2>/dev/null)" || return 1
+      if [ -f "$src" ] && [ -r "$src" ] && jq -c '.gap' "$src" > "$d/gap.json" 2>/dev/null && jq -c '.outcome' "$src" > "$d/outcome.json" 2>/dev/null; then :; else rc=1; fi
       ;;
   esac
-  printf '%s' "$raw" | jq -c '
-    if type == "array" then .
-    elif type == "object" and (.shape? == "substrateGap") and ((.body.gaps? | type) == "array") then .body.gaps
-    elif type == "object" and ((.gaps? | type) == "array") then .gaps
-    else error("not a gap store") end
-    | [ .[] | select(type == "object" and .status? == "open") ]' > "$out" 2>/dev/null || { : > "$out"; return 1; }
-  [ -s "$out" ] || return 1
-  return 0
+  [ "$rc" -eq 0 ] && { gtr_person_marked "$d/gap.json" "$d/outcome.json" "$out" || rc=1; }
+  rm -rf "${d:?}"
+  [ "$rc" -eq 0 ] || : > "$out"
+  return "$rc"
 }
 
 gtr_tracked_names() {
