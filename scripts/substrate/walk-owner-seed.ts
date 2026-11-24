@@ -638,8 +638,11 @@ const SWEEP_ROWS = 240;
 // moved nothing since the first of them; its gap stays open and wakes on a change or an install of its repo. A root
 // waiting on a person's verdict is never ended. Three: the first say is news to the root's producers, and two more
 // periods with no change (an hour at the 30-minute clock below) show the news moved nothing. A starting value, read by
-// effect: roots ended against roots that moved again after their third say.
-await ensure({ shape: "stall_rule", after_rows: SWEEP_ROWS, ends_after: 3 }, {}, "stall_rule");
+// effect: roots ended against roots that moved again after their third say. The owner revises both by writing a row, so a
+// boot writes the rule only when the newest names no ends_after, and then keeps that row's after_rows.
+const stallRule = (await read("stall_rule", {})).at(-1);
+if (typeof stallRule?.ends_after === "number") console.log(`[walk-owner-seed] stall_rule: kept (${stallRule.id})`);
+else await ensure({ shape: "stall_rule", after_rows: stallRule?.after_rows ?? SWEEP_ROWS, ends_after: 3 }, {}, "stall_rule");
 // The stall clock in time (walk loop.ts stalls): a root with no move is also said once its newest row is every_ms old,
 // and the walk's waits end by then. A count in store rows stops when the walk does: parked on one wait it writes a few
 // rows an hour, so 240 rows left a root with no move unsaid for most of a day. 30 minutes: over two days of open gap
