@@ -106,10 +106,17 @@ const USES_WORDS = "uses lists the id of each row you were shown that this relie
 const WHO_ANSWERS = "You are one step of the walk. The walk acts through the tools the owner gates on a wanted change " +
   "(request_acts lists which were called here and which were not). While a gated tool is still uncalled here, saying " +
   "you cannot act is false.";
+// The route the walk read for this request (request_acts.path) was in the producer's context with no word saying what it
+// is, and requests kept asking for another edit while its next was the commit. Said where the call is chosen, as the
+// call that moves the request; a failure or refusal that names something to read or fix still comes first, so a read of
+// the lines a refusal named stays the step it is.
+const ROUTE_WORDS = "request_acts.path, when there is one, is the route from here toward what is wanted: path.next names " +
+  "the calls that move this request along it. Ask for one of those next, unless a failure or refusal row names something " +
+  "to read or fix first; then read or fix exactly that.";
 const SCHEMAS: Row[] = [
   {
     target: "answer",
-    description: `${WHO_ANSWERS} ` + "The answer to what the world_changed row's `what` field asks for. An ask that changes something is " +
+    description: `${WHO_ANSWERS} ${ROUTE_WORDS} ` + "The answer to what the world_changed row's `what` field asks for. An ask that changes something is " +
       "done only when a hop row shows the change landed (a git_land call that ended). Until then say what you will do " +
       `next, never that it was done. ${USES_WORDS} ${JSON_ONLY}`,
     schema: { type: "object", required: ["text"], properties: {
@@ -189,7 +196,7 @@ const SCHEMAS: Row[] = [
   },
   {
     target: "request",
-    description: `${WHO_ANSWERS} ` + "The next call toward what the world_changed row's `what` asks, whether it reads something or changes " +
+    description: `${WHO_ANSWERS} ${ROUTE_WORDS} ` + "The next call toward what the world_changed row's `what` asks, whether it reads something or changes " +
       "something (a clone made for a change, an edit, a commit, a diff, a landing): pointer.type is the shape to " +
       "resolve, and pointer's other fields are its arguments. The shapes you can call are in reads: shape_descriptions " +
       "says what each does, and shape_inputs gives the JSON Schema of the fields its pointer takes; fill every required " +
