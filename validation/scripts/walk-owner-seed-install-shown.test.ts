@@ -47,7 +47,9 @@ describe("the request schema shows what was installed", () => {
   test("[GUARD] no other schema shows them, and the request's own kept rows keep their place", () => {
     const others = seeded.filter((r) => r.shape === "shape_schema" && r.target !== "request")
     expect(others.filter((r) => JSON.stringify([r.inputs, r.context]).includes("infra_window")).map((r) => r.target)).toEqual([])
-    expect(requestContext().filter((e) => (e as Row)?.keep === true).map((e) => (e as Row).shape ?? "answers_a_call"))
+    // the edit-miss rows are ranked in their own test (walk-owner-seed-edit-miss-context); the rest keep their order
+    expect(requestContext().filter((e) => (e as Row)?.keep === true).map((e) => (e as Row).shape ?? "answers_a_call")
+      .filter((s) => s !== "failure" && s !== "fileEditResult"))
       .toEqual(["gitWorktree", "change_wanted", "gitCommitResult", "request_acts", "gitDiff", "land_verdict", "attempt_explanation", "answers_a_call"])
   })
 })

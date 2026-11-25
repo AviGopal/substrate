@@ -230,12 +230,19 @@ const SCHEMAS: Row[] = [
     // Its own clone (what its own git_worktree call answered with) and its own change_wanted judgment: records builds a
     // root's context from that root's own episode, so these are this request's, newest per repository; small, and kept
     // when older hops fall out of the context budget.
-    context: ["hop", "failure", "answer", "outcome", { shape: "fileContent", whole: true, latest_by: "path", covers: { shape: "hop", on: "call_id" } },
+    context: ["hop", "answer", "outcome", { shape: "fileContent", whole: true, latest_by: "path", covers: { shape: "hop", on: "call_id" } },
       { shape: "gitWorktree", latest_by: "repo", keep: true }, { shape: "change_wanted", latest_by: "repo", keep: true },
       // The request's newest commit (its sha and tree) is kept like its clone: without it a request whose clone row
       // survived still asked for a new clone (d929). request_acts: only the newest row (latest_by shape), since each
       // restates every act so far and 76 of them filled the keep share before the clone row could fit (qa, database).
       { shape: "gitCommitResult", latest_by: "shape", keep: true }, { shape: "request_acts", latest_by: "shape", keep: true },
+      // An edit that missed (fs_edit's failure, which names its call and path as fields), whole, its newest per path, and
+      // kept: the miss quotes the file's real lines, the text the next edit must anchor on, and a cut copy, or one pushed
+      // out by newer rows, sends the drafter back to the same miss. Beside it the newest edit result per path, so an edit
+      // that took is seen to supersede the miss. Small rows, one per path, so ranked before the diff. A row is shown by the
+      // first entry it matches, so the bare failure entry, which shows every other failure, is listed after these.
+      { shape: "failure", where: { call: "fs_edit" }, latest_by: "path", whole: true, keep: true },
+      { shape: "fileEditResult", latest_by: "path", keep: true }, "failure",
       // The clone's newest diff, with what its check said (the drafter-context ruling): an edit drafted after a failing
       // check is drafted seeing why it failed. Whole, since the check follows the diff text in the row and an 8 KB cut
       // lost it. Kept, as the clone is: by the time the next edit is drafted, most requests have far more newer rows than

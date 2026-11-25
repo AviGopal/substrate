@@ -10,7 +10,8 @@
 #       verdict only the root's explanations of its refused attempts ({shape: attempt_explanation, keep: true}) and what
 #       was installed ({shape: infra_window, latest_by: window_id}, not kept: it admits no call's answer, so its place
 #       before the catch-all changes nothing either admits)
-#   (c) the entries up to and including gitDiff are as before, in order
+#   (c) the entries up to and including gitDiff are as listed, in order (the fs_edit miss and edit result entries, then
+#       the bare failure entry, after request_acts: see walk-owner-seed-drafter-diff.test.sh (b))
 # usage: validation/scripts/walk-owner-seed-attempt-outcome.test.sh
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -52,7 +53,7 @@ if [ "$(jq -c "$AFTER" <<<"$OUT")" = "[[$LV,$AE,$IW,$DK],[$LV,$AE,$IW,$DK]]" ]; 
   ok "(b) the answer of every call the root made is listed last, newest per call, kept"
 else bad "(b) after gitDiff: $(jq -c "$AFTER" <<<"$OUT" | cut -c1-300)"; fi
 BEFORE='[.ctx[] | .[0:(to_entries | map(select((.value | type) == "object" and .value.shape == "gitDiff")) | .[0].key) + 1] | map(if type == "string" then . else .shape end)]'
-if [ "$(jq -c "$BEFORE" <<<"$OUT")" = '[["hop","failure","answer","outcome","fileContent","gitWorktree","change_wanted","gitCommitResult","request_acts","gitDiff"],["hop","failure","answer","outcome","fileContent","gitWorktree","change_wanted","gitCommitResult","request_acts","gitDiff"]]' ]; then
+if [ "$(jq -c "$BEFORE" <<<"$OUT")" = '[["hop","answer","outcome","fileContent","gitWorktree","change_wanted","gitCommitResult","request_acts","failure","fileEditResult","failure","gitDiff"],["hop","answer","outcome","fileContent","gitWorktree","change_wanted","gitCommitResult","request_acts","failure","fileEditResult","failure","gitDiff"]]' ]; then
   ok "(c) the entries up to the diff are as before"
 else bad "(c) $(jq -c "$BEFORE" <<<"$OUT" | cut -c1-300)"; fi
 echo; [ "$FAILS" = 0 ] && { echo PASS; exit 0; }

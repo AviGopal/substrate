@@ -5,7 +5,9 @@
 # call's own hop:
 #   (a) MUST-FAIL: both request variants' context holds {shape: gitDiff, latest_by: shape, where: {tree: x-latest,
 #       role: walk}, whole: true, keep: true, covers: {shape: hop, on: call_id}}, after the gitWorktree entry
-#   (b) the entries before it are as before, in order
+#   (b) the entries before it are as listed, in order: the fs_edit miss per path and the newest edit result come after
+#       request_acts, and the bare failure entry after them (described shows a row by the first entry it matches, so
+#       the bare one listed first would take the misses from the whole, kept entry)
 # usage: validation/scripts/walk-owner-seed-drafter-diff.test.sh
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -39,7 +41,7 @@ WANT='{"shape":"gitDiff","latest_by":"shape","where":{"tree":'"$XL"',"role":"wal
 if [ "$(jq -c '[.ctx[] | map(select(.shape? == "gitDiff"))]' <<<"$OUT")" = "[[$WANT],[$WANT]]" ]; then
   ok "(a) both request variants are shown the clone's newest diff, whole, kept, covering its hop"
 else bad "(a) gitDiff entries: $(jq -c '[.ctx[] | map(select(.shape? == "gitDiff"))]' <<<"$OUT" | cut -c1-300)"; fi
-if [ "$(jq -c '[.ctx[] | .[0:(to_entries | map(select((.value | type) == "object" and .value.shape == "gitDiff")) | .[0].key)] | map(if type == "string" then . else .shape end)]' <<<"$OUT")" = '[["hop","failure","answer","outcome","fileContent","gitWorktree","change_wanted","gitCommitResult","request_acts"],["hop","failure","answer","outcome","fileContent","gitWorktree","change_wanted","gitCommitResult","request_acts"]]' ]; then
+if [ "$(jq -c '[.ctx[] | .[0:(to_entries | map(select((.value | type) == "object" and .value.shape == "gitDiff")) | .[0].key)] | map(if type == "string" then . else .shape end)]' <<<"$OUT")" = '[["hop","answer","outcome","fileContent","gitWorktree","change_wanted","gitCommitResult","request_acts","failure","fileEditResult","failure"],["hop","answer","outcome","fileContent","gitWorktree","change_wanted","gitCommitResult","request_acts","failure","fileEditResult","failure"]]' ]; then
   ok "(b) the entries before it are as before"
 else bad "(b) $(jq -c '[.ctx[] | .[0:(to_entries | map(select((.value | type) == "object" and .value.shape == "gitDiff")) | .[0].key)] | map(if type == "string" then . else .shape end)]' <<<"$OUT" | cut -c1-300)"; fi
 echo; [ "$FAILS" = 0 ] && { echo PASS; exit 0; }
