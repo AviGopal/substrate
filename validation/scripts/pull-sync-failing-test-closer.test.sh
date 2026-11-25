@@ -452,7 +452,7 @@ if [ "$(printf '%s\n' "$X1" | wc -l)" = 1 ] && printf '%s' "$X1" | jq -e --argjs
       and .meta.operator_hold == "h" and .meta.evidence_resolve == $er and .meta.closer_evidence.rc == "1"
       and .meta.closer_evidence.names == [{name: "d > one", result: "fail", error: "error: expect(received).toContain(expected)",
         got: "Expected to contain: \"wrote no report\"\nReceived: \"spawn ENOENT\""}]' >/dev/null \
-  && [ "$X2" = 1 ] && printf '%s' "$X3" | jq -e '.meta.closer_evidence.names[0].got | endswith("Received: \"spawn EACCES\"")' >/dev/null; then
+  && [ "$X2" = 1 ] && [ "$(wc -l < "$WRITES")" = 2 ] && printf '%s' "$X3" | jq -e '.meta.closer_evidence.names[0].got | endswith("Received: \"spawn EACCES\"")' >/dev/null; then
   ok "(x) a red verdict's row carries the matcher line and what the assertion got, keeps its holds, drops its claim; the same at a new HEAD writes nothing, a new received writes again"
 else bad "(x) X1=$X1 X2=$X2 X3=$X3 log=$(cat "$LOG")"; fi
 # twelve names, each failing with a long received: the row's metadata stays within gap_resolve's 4096, evidence_resolve
@@ -510,6 +510,57 @@ close_failing_test_gaps x 4040404040404040 "$DIR"
 if grep -q "g-x's evidence row was NOT written" "$LOG" && [ "$(wc -l < "$FAKE/ran.txt")" = 1 ] && [ "$(wc -l < "$WRITES")" = 1 ]; then
   ok "(x) an evidence row the store refused is written on the next call at the same HEAD"
 else bad "(x) refused: ran=$(cat "$FAKE/ran.txt") writes=$(wc -l < "$WRITES") log=$(cat "$LOG")"; fi
+rm -f "$FAKE/x.test.ts.rc"
+
+# (y) the edges of what the row takes from a failure's block, and of the bound. xe: the one name's evidence on the row.
+xe() { jq -c '.meta.closer_evidence.names[0]' "$WRITES"; }
+echo 1 > "$FAKE/x.test.ts.rc"
+# the matcher line is the one that starts "error:": a source line holding "error:" further in is not it
+printf '3 |   expect(x).toBe("error: y");\n                ^\nerror: expect(received).toBe(expected)\nExpected: "error: y"\n(fail) d > one\n 0 pass\n 1 fail\n' > "$FAKE/x.test.ts.out"
+reset "$(row g-x x src/x.test.ts "$GEN" '["d > one"]')"; close_failing_test_gaps x 4141414141414141 "$DIR"; Y1="$(xe)"
+# a matcher line followed at once by the stack: nothing got, so no got
+printf 'error: boom\n      at <anonymous> (src/x.test.ts:1:1)\n(fail) d > one\n 0 pass\n 1 fail\n' > "$FAKE/x.test.ts.out"
+reset "$(row g-x x src/x.test.ts "$GEN" '["d > one"]')"; close_failing_test_gaps x 4242424242424242 "$DIR"; Y2="$(xe)"
+# no line starts "error:": the first line naming an error is preferred over the block's first line
+printf 'boom\nTypeError: x is not a function\n(fail) d > one\n 0 pass\n 1 fail\n' > "$FAKE/x.test.ts.out"
+reset "$(row g-x x src/x.test.ts "$GEN" '["d > one"]')"; close_failing_test_gaps x 4343434343434343 "$DIR"; Y3="$(xe)"
+if printf '%s' "$Y1" | jq -e '.error == "error: expect(received).toBe(expected)" and .got == "Expected: \"error: y\""' >/dev/null \
+  && printf '%s' "$Y2" | jq -e '.error == "error: boom" and (has("got") | not)' >/dev/null \
+  && printf '%s' "$Y3" | jq -e '.error == "TypeError: x is not a function" and (has("got") | not)' >/dev/null; then
+  ok "(y) the matcher line is the one starting error:, a stack straight after it gives no got, and with none the first error line is taken"
+else bad "(y) block: Y1=$Y1 Y2=$Y2 Y3=$Y3"; fi
+# nine names: eight on the row, names_cut 9
+{ for i in $(seq 0 8); do printf 'error: e%s\n(fail) d > n%s\n' "$i" "$i"; done; printf ' 0 pass\n 9 fail\n'; } > "$FAKE/x.test.ts.out"
+reset "$(row g-x x src/x.test.ts "$GEN" "$(jq -cn '[range(9) | "d > n\(.)"]')")"; close_failing_test_gaps x 4444444444444444 "$DIR"
+if jq -e '(.meta.closer_evidence.names | length) == 8 and .meta.closer_evidence.names_cut == 9' "$WRITES" >/dev/null; then
+  ok "(y) nine names: eight on the row and names_cut 9"
+else bad "(y) nine: $(jq -c .meta.closer_evidence "$WRITES" | cut -c1-400)"; fi
+# the bound is 4096 inclusive: metadata of exactly 4096 with the evidence keeps it whole; at 4097 the next form is taken
+xout "spawn ENOENT" > "$FAKE/x.test.ts.out"
+xpad() { row g-x x src/x.test.ts "$GEN" '["d > one"]' | jq -c --argjson n "$1" '.meta.note = ("" | . + ([range($n)] | map("p") | add // ""))'; }
+reset "$(xpad 0)"; close_failing_test_gaps x 4545454545454545 "$DIR"
+L0="$(jq -r '.meta | tostring | length' "$WRITES")"; K=$((4096 - L0))
+reset "$(xpad "$K")"; close_failing_test_gaps x 4646464646464646 "$DIR"; Y6="$(jq -c '.meta' "$WRITES")"
+reset "$(xpad $((K + 1)))"; close_failing_test_gaps x 4747474747474747 "$DIR"; Y7="$(jq -c '.meta' "$WRITES")"
+if printf '%s' "$Y6" | jq -e '(tostring | length) == 4096 and (.closer_evidence | has("evidence_cut") | not) and (.closer_evidence.names[0] | has("got") and has("error"))' >/dev/null \
+  && printf '%s' "$Y7" | jq -e '(tostring | length) <= 4096 and .closer_evidence.evidence_cut == true and (.closer_evidence.names[0] | has("error") | not)' >/dev/null; then
+  ok "(y) metadata of exactly 4096 keeps the evidence whole; at 4097 the matcher line goes"
+else bad "(y) edge: L0=$L0 Y6=$(printf '%s' "$Y6" | jq -c '{n: (tostring | length), e: .closer_evidence}' | cut -c1-300) Y7=$(printf '%s' "$Y7" | jq -c '{n: (tostring | length), e: .closer_evidence}' | cut -c1-300)"; fi
+# when only the empty list of names fits, the row still says how many there were
+XL="$(jq -cn '[range(3) | "d > \(.) " + ([range(290)] | map("n") | add)]')"
+{ for i in 0 1 2; do printf 'error: e\n(fail) %s\n' "$(printf '%s' "$XL" | jq -r ".[$i]")"; done; printf ' 0 pass\n 3 fail\n'; } > "$FAKE/x.test.ts.out"
+reset "$(row g-x x src/x.test.ts "$GEN" "$XL" | jq -c '.meta.note = ([range(2600)] | map("p") | add)')"; close_failing_test_gaps x 4848484848484848 "$DIR"
+if jq -e '.meta.closer_evidence.names == [] and .meta.closer_evidence.names_cut == 3 and .meta.closer_evidence.evidence_cut == true' "$WRITES" >/dev/null; then
+  ok "(y) a row with room for no names still says how many there were"
+else bad "(y) empty names: $(jq -c '{n: (.meta | tostring | length), e: .meta.closer_evidence}' "$WRITES" | cut -c1-400) log=$(tail -3 "$LOG")"; fi
+# the same names and counts with another exit code (the bound cut the run: 124) are new evidence and write again
+xout "spawn ENOENT" > "$FAKE/x.test.ts.out"
+reset "$(row g-x x src/x.test.ts "$GEN" '["d > one"]')"; close_failing_test_gaps x 4949494949494949 "$DIR"
+reset "$(row g-x x src/x.test.ts "$GEN" '["d > one"]' | jq -c --argjson m "$(jq -c .meta "$WRITES")" '.meta = $m')"
+echo 124 > "$FAKE/x.test.ts.rc"; close_failing_test_gaps x 5050505050505050 "$DIR"
+if [ "$(wc -l < "$WRITES")" = 1 ] && jq -e '.meta.closer_evidence.rc == "124"' "$WRITES" >/dev/null; then
+  ok "(y) the same names and counts under another exit code write a new row"
+else bad "(y) rc: writes=$(wc -l < "$WRITES") $(jq -c .meta.closer_evidence "$WRITES" | cut -c1-300) log=$(tail -3 "$LOG")"; fi
 rm -f "$FAKE/x.test.ts.rc"
 
 [ "$FAILS" = 0 ] && { echo "PASS - pull-sync closes a generator gap once its named tests pass alone, and only then"; exit 0; }
