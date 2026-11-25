@@ -688,8 +688,9 @@ await ensure({ shape: "failure_rule", target: "walk_failure", min_count: 3, min_
 // value is just over the runs measured on the node, whose mean per run was 250 to 297 s where both runs finished, while
 // runs were being cut at the 300 s step bound; not generously, since the whole walk writes no rows while a git_diff
 // runs. Read by effect: gitDiff rows say each run's ms, and a run stopped at the bound says status "bound". Written only
-// when the owner has no such row, so a value the owner revises is kept.
-await ensureAbsent({ shape: "suite_bound", suite_step_ms: 330_000 }, {}, "suite_bound");
+// when the owner has no such row, so a value the owner revises is kept. Only the owner's rows count, as local-tools reads
+// only the owner's: another writer's row would stop the seed and leave the owner with none, so every suite at the step bound.
+await ensureAbsent({ shape: "suite_bound", suite_step_ms: 330_000 }, { role: OWNER }, "suite_bound");
 // The detector runs as the one call of an owner template that a rhythm names: records shares such a template with every
 // root, and the walk runs it on its idle root when due, so each run is a traced, graded move. A seeded template is the
 // bootstrap tier: a walk cannot earn a detector it has never been offered. It runs every SWEEP_ROWS rows, as the stall rule

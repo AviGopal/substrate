@@ -3,7 +3,8 @@
 // row, only when the owner has none, and local-tools reads it at each call (repos/local-tools-vessel suite-bound.ts).
 //
 // WHAT IS JUDGED. The seed of this tree runs against a stub store (the drive of walk-owner-seed-attempt-explanation).
-//   rows: one suite_bound row naming no repo, as declared; a second run over a store where the owner revised it writes none.
+//   rows: one suite_bound row naming no repo, as declared; a second run over a store where the owner revised it writes none;
+//     another writer's row does not stop it (only the owner's rows count, as local-tools reads only the owner's).
 //   reader: local-tools' own suiteBoundOf over the seeded rows gives the seeded bound for any repository.
 //
 // SAFETY and NEEDS: loopback only (stub store), a private temp dir; reads repos/local-tools-vessel (run-glue-tests NEEDS).
@@ -51,6 +52,15 @@ describe("the suite's bound, as the seed writes it", () => {
   test("[GUARD] a bound the owner revised is kept: the seed writes none over it", async () => {
     const revised = { shape: "suite_bound", id: "own1", seq: 0, role: "owner", suite_step_ms: 400_000 }
     expect(bounds(await seedOver([revised]))).toEqual([revised])
+  })
+
+  test("[MUST-FAIL] another writer's row is not the owner's: the seed still writes the owner's, and the reader takes it", async () => {
+    const stray = { shape: "suite_bound", id: "w1", seq: 0, role: "walk", suite_step_ms: 1 }
+    const seeded = await seedOver([stray])
+    expect(bounds(seeded)).toEqual([stray, expect.objectContaining({ role: "owner", suite_step_ms: 330_000 })])
+    const { suiteBoundOf } = await import(READER)
+    const rows = async (q: { shape?: string }) => seeded.filter((r) => r.shape === q.shape)
+    expect(await suiteBoundOf(rows, "some-vessel")).toBe(330_000)
   })
 
   test("[MUST-FAIL] local-tools' own reader, over the seeded rows, takes the seeded bound for any repository", async () => {
