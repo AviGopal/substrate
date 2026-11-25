@@ -110,6 +110,12 @@ const WHO_ANSWERS = "You are one step of the walk. The walk acts through the too
 // is, and requests kept asking for another edit while its next was the commit. Said where the call is chosen, as the
 // call that moves the request; a failure or refusal that names something to read or fix still comes first, so a read of
 // the lines a refusal named stays the step it is.
+// A free-text field's bound, stated in its description's words from the same number as its schema's maxLength: shown only
+// inside the schema, it lost to words asking for lines copied character for character, and each answer over it was a
+// whole produce refused (422).
+const WHY_MAX = 800;
+const WHAT_FAILED_MAX = 1200;
+const NEXT_MUST_MAX = 800;
 const ROUTE_WORDS = "request_acts.path, when there is one, is the route from here toward what is wanted: path.next names " +
   "the calls that move this request along it. Ask for one of those next, unless a failure or refusal row names something " +
   "to read or fix first; then read or fix exactly that.";
@@ -481,7 +487,7 @@ SCHEMAS.push({
     "change was refused because the gap's own check still failed is not named again unless the answers shown since say " +
     "what that change missed there. When the changes refused show the failing test asks for what the source does on " +
     "purpose (the test, not the source, looks wrong), wanted is false and why says so, citing them: a person decides. " +
-    `${USES_WORDS} ${JSON_ONLY}`,
+    `why is at most ${WHY_MAX} characters. ${USES_WORDS} ${JSON_ONLY}`,
   schema: {
     type: "object",
     required: ["wanted", "evidence_refs"],
@@ -489,7 +495,7 @@ SCHEMAS.push({
       wanted: { type: "boolean" },
       repo: { type: ["string", "null"] },
       edit_site: { type: "string", pattern: "^repos/[^/]+/.+" },
-      why: { type: "string", minLength: 1, maxLength: 800 },
+      why: { type: "string", minLength: 1, maxLength: WHY_MAX },
       evidence_refs: { type: "array", minItems: 1, items: { type: "string", "x-shown": true } },
       uses: USES,
     },
@@ -524,10 +530,11 @@ const EXPLAINED = [{ shape: "gitDiff", latest_by: "shape", where: { tree: NEWEST
 const explained: Row = {
   target: "attempt_explanation",
   description: "Why the attempt in the gitDiff row was refused, for whoever drafts the next one. The land_verdict row " +
-    "says it was refused (r 0) and why, in the grader's reading. what_failed copies, character for character, the lines " +
-    "of the gitDiff row that show the failure: from its check.out or typecheck.out (a failing assertion, an error with " +
-    "its file and line), or, when the check or typecheck did not run, its check.why or typecheck.why; at least 20 " +
-    "characters copied exactly, and never the verdict's words. next_must says what the next attempt must do that this " +
+    "says it was refused (r 0) and why, in the grader's reading. what_failed copies exactly, from the gitDiff row, the " +
+    "first failing line or error with its file and line, not the whole block: from its check.out or typecheck.out (a " +
+    "failing assertion, an error with its file and line), or, when the check or typecheck did not run, its check.why or " +
+    `typecheck.why; at least 20 and at most ${WHAT_FAILED_MAX} characters, and never the verdict's words. next_must, at most ` +
+    `${NEXT_MUST_MAX} characters, says what the next attempt must do that this ` +
     "one did not, and what this change already did on its clone that the next attempt must not redo or undo (the " +
     "request_acts row lists it); the earlier attempt_explanation rows say what earlier attempts tried, so do not send the " +
     `next one back to a fix already refused. tree is copied from the gitDiff row. ${USES_WORDS} ${JSON_ONLY}`,
@@ -536,17 +543,18 @@ const explained: Row = {
     required: ["tree", "what_failed", "next_must"],
     properties: {
       tree: { type: "string", pattern: "^[0-9a-f]{40}$", "x-equals": { shape: "gitDiff", path: "tree" } },
-      what_failed: { type: "string", minLength: 20, maxLength: 1200,
+      what_failed: { type: "string", minLength: 20, maxLength: WHAT_FAILED_MAX,
         "x-quotes": { shape: "gitDiff", paths: ["check.out", "typecheck.out", "check.why", "typecheck.why"], min: 20 } },
-      next_must: { type: "string", minLength: 1, maxLength: 800 },
+      next_must: { type: "string", minLength: 1, maxLength: NEXT_MUST_MAX },
       uses: USES,
     },
   },
   inputs: ["world_changed", ...EXPLAINED],
-  // Its own refusals too, as every judgment's: an explanation refused (a what_failed not quoted from the diff) is offered
-  // again, never held, and reads why.
+  // Its own refusals too, as every judgment's: an explanation refused (a what_failed not quoted from the diff, or one past
+  // its bound) is offered again, never held, and reads why. Kept, so the retry sees its last refusal whatever else fills
+  // the context: a refused produce records no rows it was shown, so whether it saw one cannot be read afterwards.
   context: [{ shape: "request_acts", latest_by: "shape", keep: true }, { shape: "attempt_explanation", keep: true },
-    { shape: "failure", where: { refused: "schema" } }],
+    { shape: "failure", where: { refused: "schema" }, keep: true }],
   keep_share: 0.25,
 };
 SCHEMAS.push(explained, { ...explained, variant: "gap", inputs: [{ shape: "gap", latest_by: "gap_id" }, ...EXPLAINED] });

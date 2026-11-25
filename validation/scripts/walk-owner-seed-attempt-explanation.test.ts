@@ -70,7 +70,7 @@ describe("the seed's rows", () => {
       expect(s?.schema?.properties?.what_failed?.["x-quotes"]).toEqual({ shape: "gitDiff", paths: ["check.out", "typecheck.out", "check.why", "typecheck.why"], min: 20 })
       expect([s?.schema?.properties?.what_failed?.maxLength, s?.schema?.properties?.next_must?.maxLength]).toEqual([1200, 800])
       expect(s?.context).toEqual([{ shape: "request_acts", latest_by: "shape", keep: true }, { shape: "attempt_explanation", keep: true },
-        { shape: "failure", where: { refused: "schema" } }])
+        { shape: "failure", where: { refused: "schema" }, keep: true }])
     })
 
     test(`[MUST-FAIL] the request${variant ? "/gap" : ""} keeps every explanation of its root, after its own kept rows and before the calls' answers`, () => {

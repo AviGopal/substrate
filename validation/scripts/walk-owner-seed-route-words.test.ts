@@ -5,7 +5,9 @@
 //
 // WHAT IS JUDGED. The seed of this tree runs against a stub store (the drive of walk-owner-seed-gap-words).
 //   rows: the request schema (both variants) and the answer schema name request_acts.path and path.next, and the
-//     read-or-fix-first clause; the request still keeps the newest request_acts in its context.
+//     read-or-fix-first clause; the request still keeps the newest request_acts in its context. Each bounded free-text
+//     field (attempt_explanation's what_failed and next_must, change_wanted's why) says its schema's maxLength in its
+//     description's words, read from the schema, and what_failed asks for the first failing line, not the block.
 //
 // SAFETY and NEEDS: loopback only (the stub store), a private temp dir.
 import { afterAll, beforeAll, describe, expect, test } from "bun:test"
@@ -57,6 +59,36 @@ describe("the route, as the producer is told it", () => {
     const ans = schemas("answer")
     expect(ans.length).toBeGreaterThan(0)
     for (const a of ans) expect(String(a.description)).toContain("path.next names the calls that move this request")
+  })
+
+  // a free-text field's bound, read from the seeded schema: the words must carry the same number, so they cannot drift
+  const bounded: [string, string, string][] = [["attempt_explanation", "", "what_failed"], ["attempt_explanation", "gap", "what_failed"],
+    ["attempt_explanation", "", "next_must"], ["attempt_explanation", "gap", "next_must"], ["change_wanted", "gap", "why"]]
+  test("[MUST-FAIL] each bounded free-text field's description states its schema's maxLength", () => {
+    for (const [target, variant, field] of bounded) {
+      const row = schemas(target).find((r) => String(r.variant ?? "") === variant)
+      const n = row?.schema?.properties?.[field]?.maxLength
+      expect(typeof n).toBe("number")
+      const words = String(row?.description)
+      const at = words.indexOf(`at most ${n} characters`)
+      expect(at).toBeGreaterThan(-1)
+      // said of this field: the nearest bounded field named before the number is this one
+      // a field named as itself, not as part of a dotted path (check.why is the gitDiff row's, not change_wanted's why)
+      const lastAt = (f: string): number => Math.max(-1, ...[...words.slice(0, at).matchAll(new RegExp(`(?<![.\\w])${f}(?!\\w)`, "g"))].map((m) => m.index ?? -1))
+      const named = bounded.map(([, , f]) => [f, lastAt(f)] as const).filter(([, i]) => i > -1).sort((x, y) => y[1] - x[1])
+      expect(named[0]?.[0]).toBe(field)
+    }
+  })
+
+  test("[MUST-FAIL] what_failed copies the first failing line, not the whole block; no description asks for a copy without a bound", () => {
+    for (const r of schemas("attempt_explanation")) expect(String(r.description)).toContain("first failing line or error with its file and line, not the whole block")
+    for (const r of seeded.filter((x) => x.shape === "shape_schema")) expect(String(r.description)).not.toContain("character for character")
+  })
+
+  test("[MUST-FAIL] an attempt explanation, both variants, keeps its own schema refusals in view", () => {
+    const ae = schemas("attempt_explanation")
+    expect(ae.map((r) => String(r.variant ?? "")).sort()).toEqual(["", "gap"])
+    for (const r of ae) expect(r.context).toContainEqual({ shape: "failure", where: { refused: "schema" }, keep: true })
   })
 
   test("[GUARD] the request still keeps the newest request_acts in its context", () => {
