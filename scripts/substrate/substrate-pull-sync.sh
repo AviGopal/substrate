@@ -1143,7 +1143,7 @@ close_failing_test_gaps() {
       # release drops check_runnable) leaves names_absent as it was, and the names still absent are said again. A mark
       # that still says it waits for a person is written once more without it: no gap waits on a person.
       if [ "$(printf '%s' "$g" | jq -c '.meta.names_absent // null')" = "$absent" ] && [ "$(printf '%s' "$g" | jq -r '.meta.check_runnable')" = false ] && [ -z "$(printf '%s' "$g" | jq -r '.row.waits_for // empty')" ]; then log "$v: failing-test closer: $id names tests absent from $tf (already said); left open, not checkable | evidence $ev"; continue; fi
-      emit_gap_checked "$(printf '%s' "$g" | jq -c --arg v "$v" --arg tf "$tf" --arg head "${head:0:10}" --argjson absent "$absent" --arg untracked "$untracked" \
+      emit_gap_checked "$(closer_fit "$(printf '%s' "$g" | jq -c --arg v "$v" --arg tf "$tf" --arg head "${head:0:10}" --argjson absent "$absent" --arg untracked "$untracked" \
         '{impulse:{pointer:{type:"substrateGap_write",gap:((.row // {} | del(.claim)) + {id:.id,category:(.category // "failing_test"),source:"substrate_detected",status:"open",
           check_runnable:false, waits_for:null,
           summary:(if $untracked == "" then "Not checkable here: the tests this gap names (" + ($absent | join("; ")) + ") are not in repos/" + $v + "/" + $tf
@@ -1151,7 +1151,7 @@ close_failing_test_gaps() {
             else "Not checkable here: the test file repos/" + $v + "/" + $tf + " is not tracked at " + $head
             + " (removed, or a build copy), so its check can neither pass nor fail. It is not worked until a tracked test checks it; the source is left as it is." end),
           classification_metadata:((.meta // {}) + {check_runnable:false, names_absent:$absent, absent_at_head:$head})}
-          + (if .severity then {severity:.severity} else {} end))}}}')"
+          + (if .severity then {severity:.severity} else {} end))}}}')" "$ev")"
       if [ "$?" = 0 ]; then log "$v: failing-test closer: $id names $(printf '%s' "$absent" | jq length) test(s) absent from $tf at ${head:0:10}${untracked:+ (the file is not tracked)}; marked not checkable | evidence $ev"
       else log "$v: failing-test closer: $id names tests absent from $tf at ${head:0:10}; the not-checkable row was NOT written; runs again the next time $v is gated (a new HEAD, or a re-gate of this one) | evidence $ev"; unsee; fi
       continue
@@ -1165,28 +1165,39 @@ close_failing_test_gaps() {
       # person ruled against (claim_rejected_by, lift_held_gaps): its check_runnable false is the person's, which only a
       # reviewed test fix ends, and this closer's mark ending does not end it.
       if [ "$(printf '%s' "$g" | jq -c '.meta.names_absent // null')" != null ] && [ "$(printf '%s' "$g" | jq -c '.meta.claim_rejected_by // null')" != null ]; then
-        emit_gap_checked "$(printf '%s' "$g" | jq -c --arg v "$v" --arg tf "$tf" --arg head "${head:0:10}" \
+        emit_gap_checked "$(closer_fit "$(printf '%s' "$g" | jq -c --arg v "$v" --arg tf "$tf" --arg head "${head:0:10}" \
           '{impulse:{pointer:{type:"substrateGap_write",gap:((.row // {} | del(.claim)) + {id:.id,category:(.category // "failing_test"),source:"substrate_detected",status:"open",
             check_runnable:false, waits_for:null,
             summary:("The tests this gap names are in repos/" + $v + "/" + $tf + " again at " + $head + " and do not all pass. A person ruled against its claim, so it stays not checkable until a reviewed test fix."),
             classification_metadata:((.meta // {}) + {check_runnable:false, names_absent:null, absent_at_head:null})}
-            + (if .severity then {severity:.severity} else {} end))}}}')"
+            + (if .severity then {severity:.severity} else {} end))}}}')" "$ev")"
         if [ "$?" = 0 ]; then log "$v: failing-test closer: $id names its tests again and they are red ($names pass); a person ruled against its claim, so it stays not checkable | evidence $ev"
         else log "$v: failing-test closer: $id names its tests again and they are red; the row clearing its absent names was NOT written; runs again the next time $v is gated (a new HEAD, or a re-gate of this one) | evidence $ev"; unsee; fi
         continue
       fi
       if [ "$(printf '%s' "$g" | jq -c '.meta.names_absent // null')" != null ]; then
-        emit_gap_checked "$(printf '%s' "$g" | jq -c --arg v "$v" --arg tf "$tf" --arg head "${head:0:10}" \
+        emit_gap_checked "$(closer_fit "$(printf '%s' "$g" | jq -c --arg v "$v" --arg tf "$tf" --arg head "${head:0:10}" \
           '{impulse:{pointer:{type:"substrateGap_write",gap:((.row // {} | del(.waits_for)) + {id:.id,category:(.category // "failing_test"),source:"substrate_detected",status:"open",
             check_runnable:true,
             summary:("The tests this gap names are in repos/" + $v + "/" + $tf + " again at " + $head + " and do not all pass: it is checkable, and worked, again."),
             classification_metadata:((.meta // {}) + {check_runnable:true, names_absent:null, absent_at_head:null})}
-            + (if .severity then {severity:.severity} else {} end))}}}')"
+            + (if .severity then {severity:.severity} else {} end))}}}')" "$ev")"
         if [ "$?" = 0 ]; then log "$v: failing-test closer: $id names its tests again and they are red ($names pass); checkable again | evidence $ev"
         else log "$v: failing-test closer: $id names its tests again and they are red; the checkable row was NOT written; runs again the next time $v is gated (a new HEAD, or a re-gate of this one) | evidence $ev"; unsee; fi
         continue
       fi
-      log "$v: failing-test closer: $id still red alone ($names named tests pass); left open | evidence $ev"; continue
+      log "$v: failing-test closer: $id still red alone ($names named tests pass); left open | evidence $ev"
+      # The red verdict goes on the gap's row only when what the run found changed (its exit code, counts, and each name's
+      # result and assertion), never for the checkout or the sha alone: a new gap row moves the gap's root (the walk counts
+      # its stall and age from it), so a HEAD that changed nothing the test says writes nothing. The row is the gap's
+      # latest as it is, with its claim left out as the closer's other marks leave it.
+      local erow; erow="$(closer_fit "$(printf '%s' "$g" | jq -c '{impulse:{pointer:{type:"substrateGap_write",gap:((.row // {} | del(.claim)) + {id:.id, classification_metadata:(.meta // {})})}}}')" "$ev")"
+      if ! printf '%s' "$g" | jq -e --argjson w "$erow" 'def p: {rc, count, names: [(.names // [])[] | {name, result, error, got}], names_cut};
+          ((.meta.closer_evidence // {}) | p) == (($w.impulse.pointer.gap.classification_metadata.closer_evidence // {}) | p)' >/dev/null 2>&1; then
+        if emit_gap_checked "$erow"; then log "$v: failing-test closer: $id's row now says what its run found"
+        else log "$v: failing-test closer: $id's evidence row was NOT written; runs again the next time $v is gated (a new HEAD, or a re-gate of this one)"; unsee; fi
+      fi
+      continue
     fi
     # A gap a person released carries the test file's size when released (lift_held_gaps): green by losing a case or
     # an expect is not a fix, so it stays open.
@@ -1196,10 +1207,10 @@ close_failing_test_gaps() {
         log "$v: failing-test closer: $id passes alone but $tf has fewer cases or expects than when it was released ($now); left open | evidence $ev"; continue
       fi
     fi
-    emit_gap_checked "$(jq -cn --arg id "$id" --arg v "$v" --arg tf "$tf" --arg head "${head:0:10}" \
+    emit_gap_checked "$(closer_fit "$(jq -cn --arg id "$id" --arg v "$v" --arg tf "$tf" --arg head "${head:0:10}" \
       '{impulse:{pointer:{type:"substrateGap_write",gap:{id:$id,category:"failing_test",source:"substrate_detected",status:"closed",closed_reason:"named_tests_pass",
         summary:("Every test this gap checks in repos/" + $v + "/" + $tf + " passes when the file runs alone, at " + $head + "."),
-        classification_metadata:{filed_by:"pull-sync failing-test generator",closed_at_head:$head}}}}}')"
+        classification_metadata:{filed_by:"pull-sync failing-test generator",closed_at_head:$head}}}}}')" "$ev")"
     if [ "$?" != 0 ]; then log "$v: failing-test closer: $id passes alone at ${head:0:10}; the closed row was NOT written; runs again the next time $v is gated (a new HEAD, or a re-gate of this one) | evidence $ev"; unsee; continue; fi
     log "$v: failing-test closer: closed $id (named tests pass alone at ${head:0:10}) | evidence $ev"
     n=$((n + 1))
@@ -1208,12 +1219,16 @@ close_failing_test_gaps() {
   return 0
 }
 
-# What a closer verdict was judged on, for its journal line: the checkout and the sha it ran in, whether the checkout has
-# node_modules (without them an import fails, and the run says "0 pass, 0 fail, 1 error"), the alone run's exit code
-# (124 or 137: the bound's timeout cut it), the run's count lines, and each named test as the run said it (pass, fail, or
-# absent: named in neither), with the first error line printed before a failing one's result, each bounded to 300
-# characters. A verdict recorded without its input can't be rechecked by anyone reading it. With no exit code, nothing
-# was run: only where. The run's output is read from stdin when its third argument is "-".
+# What a closer verdict was judged on, for its journal line and its gap's row: the checkout and the sha it ran in,
+# whether the checkout has node_modules (without them an import fails, and the run says "0 pass, 0 fail, 1 error"), the
+# alone run's exit code (124 or 137: the bound's timeout cut it), the run's count lines, and each named test as the run
+# said it (pass, fail, or absent: named in neither). A failing one carries its assertion as the runner printed it before
+# its result: the matcher line ("error: ...", else the first line holding "error", else the block's first line) and,
+# after the matcher line, what the assertion got (its expected and received lines, or its diff, up to the stack), each
+# bounded to 300 characters. The runner prints the failing source line first, so a test whose source names an error
+# would otherwise be read as its own source, not as what the run returned. A verdict recorded without its input can't
+# be rechecked by anyone reading it. With no exit code, nothing was run: only where. The run's output is read from stdin
+# when its third argument is "-".
 closer_evidence() { # dir rc ("" when not run) "-"|"" names-json
   local sha mods=false; sha="$(git -C "$1" rev-parse HEAD 2>/dev/null || echo none)"
   [ -e "$1/node_modules" ] && mods=true
@@ -1227,9 +1242,34 @@ closer_evidence() { # dir rc ("" when not run) "-"|"" names-json
          | if $f != null then
              ([range(0; $f) | select($L[.] | test("^\\((pass|fail|skip|todo)\\) "))] | last // -1) as $s
              | ($L[($s + 1):$f] | map(select(length > 0))) as $B
-             | {name: $n[0:300], result: "fail", error: ((($B | map(select(test("error"; "i"))) | first) // $B[0] // "")[0:300])}
+             | ([range(0; $B | length) | select($B[.] | test("^error:"))] | first) as $m
+             | ($B | map(select(test("error"; "i"))) | first) as $e
+             | {name: $n[0:300], result: "fail", error: ((if $m != null then $B[$m] else ($e // $B[0] // "") end)[0:300])}
+             + (if $m == null then {} else
+                 ($B[($m + 1):] | (map(test("^ +at ")) | index(true)) as $at | (if $at == null then . else .[:$at] end) | join("\n")) as $g
+                 | if $g == "" then {} else {got: $g[0:300]} end end)
            elif $p != null then {name: $n[0:300], result: "pass"}
            else {name: $n[0:300], result: "absent"} end]}'
+}
+
+# THE EVIDENCE GOES ON THE GAP'S ROW, so the walk's producers, which are shown a gap row whole, see what the check found:
+# a gap that says only that it is still red gives a drafter nothing it can act on. A gap's metadata is stored whole only within
+# 4096 characters (gap_resolve: past that it is cut, and with it what records and this closer read from it), so the
+# evidence is fitted, never the metadata: at most 8 names (names_cut: how many there were), each error line within 160
+# characters; past the bound, the error lines go first, then what each assertion got, then the names (evidence_cut):
+# what the run returned is the fact a drafter can act on, and its matcher line is the least of it.
+# Metadata already past the bound gets none. The journal keeps the whole evidence.
+closer_fit() { # gap-write-json evidence-json
+  printf '%s' "$1" | jq -c --argjson e "$2" '
+    . as $w | (.impulse.pointer.gap.classification_metadata // {}) as $m | ($e.names // null) as $N
+    | ($e | if $N == null then . else .names = ($N[:8] | map(if .error then .error |= .[0:160] else . end))
+        | (if ($N | length) > 8 then .names_cut = ($N | length) else . end) end) as $e0
+    | [$e0] + (if $N == null then [] else [
+        ($e0 | .names |= map(del(.error)) | .evidence_cut = true),
+        ($e0 | .names |= map(del(.got, .error)) | .evidence_cut = true),
+        ($e0 | .names = [] | .names_cut = ($N | length) | .evidence_cut = true)] end)
+    | map($m + {closer_evidence: .}) | map(select(tostring | length <= 4096)) as $fit
+    | $w | .impulse.pointer.gap.classification_metadata = ($fit[0] // $m)' 2>/dev/null || printf '%s' "$1"
 }
 
 # The closer's own code, with every function whose result decides its verdict (close, absent, not checkable): a change to

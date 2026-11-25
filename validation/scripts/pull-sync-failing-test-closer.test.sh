@@ -4,7 +4,7 @@
 # so without this a fixed test stayed work forever. Runs the script's own functions with curl stubbed as discovery in
 # front of an in-memory records store, and bun stubbed to print what each test file would.
 #   (a) every name a gap checks passes alone: one closed detector row, and the open read no longer lists it;
-#   (b) one name still fails alone: nothing written, the gap stays open;
+#   (b) one name still fails alone: the gap stays open, and its one new row says what the run found;
 #   (c) a run that printed no bun summary (crashed, timed out): nothing written;
 #   (d) another vessel's gap, and a gap the generator did not file, are not run or touched;
 #   (e) a test file missing from the checkout and not tracked (removed): marked not checkable, never closed;
@@ -16,7 +16,7 @@
 #       one open detector row with check_runnable false, the absent names and the HEAD, written once per set of names;
 #       and once the named test is there and passes, the gap closes as before;
 #   (j) a run that broke before its tests (an import that throws: an error summary and no named line; a beforeAll that
-#       throws: an "(unnamed)" failure) proves nothing absent: no row; nor a name the run omits whose test title the
+#       throws: an "(unnamed)" failure) proves nothing absent: no mark; nor a name the run omits whose test title the
 #       file's source still holds;
 #   (k) a gap marked not checkable whose names are back but red is written checkable again, once;
 #   (l) a re-armed gap whose names go absent again is marked again (the once-guard is the current names_absent, not
@@ -39,9 +39,15 @@
 #       ended does not come back;
 #   (v) a held gap (operator_hold) is marked with its hold kept: the mark ends a claim, never a hold;
 #   (w) every verdict line carries what it was judged on: the checkout and its sha, the alone run's exit code (124 when
-#       the bound cut it), the count lines, and each named test, by its whole line, as pass, fail (with the first error
-#       line before its result, bounded) or absent, and whether the checkout has node_modules; an untracked file's line
-#       says nothing was run;
+#       the bound cut it), the count lines, and each named test, by its whole line, as pass, fail (with its matcher
+#       line and what the assertion got, each bounded) or absent, and whether the checkout has node_modules; an
+#       untracked file's line says nothing was run;
+#   (x) the evidence goes on the gap's row: a red verdict writes one row with it (a failing expect's matcher line and
+#       its expected and received, never its source line; holds kept, claim dropped), the same found at a new sha writes
+#       nothing, a new received writes again, and a refused row is written on the next call; the close, the absent mark
+#       and the re-arms carry it; the row's metadata stays within gap_resolve's 4096 with evidence_resolve whole (at
+#       most 8 names, matcher lines cut at 160, past the bound the matcher lines dropped before what the assertions
+#       got), and metadata already at the bound takes none;
 #   (q) a row the store does not take is said not written (no "marked" line for a mark that did not happen) and is
 #       run again by the next run of the closer at the same HEAD (a re-gate; the closer runs only for a gated vessel):
 #       a mark, and a close.
@@ -55,7 +61,7 @@ FAILS=0
 ok()  { echo "ok   - $*"; }
 bad() { echo "FAIL - $*"; FAILS=$((FAILS+1)); }
 {
-  for f in shape_route gap_resolve dev_resolve emit_gap emit_gap_checked jq_ao test_tracked closer_evidence closer_code close_failing_test_gaps carry_gap_repo; do sed -n "/^$f() {/,/^}/p" "$SCRIPT"; done
+  for f in shape_route gap_resolve dev_resolve emit_gap emit_gap_checked jq_ao test_tracked closer_evidence closer_fit closer_code close_failing_test_gaps carry_gap_repo; do sed -n "/^$f() {/,/^}/p" "$SCRIPT"; done
 } > "$T/fns.sh"
 grep -q '^close_failing_test_gaps()' "$T/fns.sh" && grep -q '^gap_resolve()' "$T/fns.sh" \
   || { echo "FAIL - could not extract close_failing_test_gaps and gap_resolve"; exit 1; }
@@ -122,7 +128,8 @@ else bad "(a) writes=$(cat "$WRITES") open=$(open_ids) log=$(cat "$LOG")"; fi
 reset "$(row g-a x src/a.test.ts "$GEN" '["d > one","d > two"]')"
 printf '(pass) d > one\n(fail) d > two\n 1 pass\n 1 fail\n' > "$FAKE/a.test.ts.out"
 close_failing_test_gaps x 0123456789abcdef "$DIR"
-if [ ! -s "$WRITES" ] && [ "$(open_ids)" = '["g-a"]' ]; then ok "(b) a name still red alone: nothing written, the gap stays open"
+if [ "$(wc -l < "$WRITES")" = 1 ] && [ "$(jq -r '.status + "/" + (.meta.closer_evidence.names | map(.result) | join(","))' "$WRITES")" = "open/pass,fail" ] \
+  && [ "$(open_ids)" = '["g-a"]' ]; then ok "(b) a name still red alone: the gap stays open, its one new row says what the run found"
 else bad "(b) writes=$(cat "$WRITES")"; fi
 
 printf 'error: could not load the file\n' > "$FAKE/a.test.ts.out"
@@ -154,7 +161,8 @@ four() { reset "$(row g-a x src/a.test.ts "$GEN" '["d > one"]')" "$(row g-b x sr
   "$(row g-c x src/c.test.ts "$GEN" '["d > one"]')" "$(row g-d x src/d.test.ts "$GEN" '["d > one"]')"; }
 four
 close_failing_test_gaps x 0123456789abcdef "$DIR"; close_failing_test_gaps x 0123456789abcdef "$DIR"
-if [ "$(jq -r '.gap_id + "/" + .status' "$WRITES" 2>/dev/null)" = "g-d/closed" ] && [ "$(wc -l < "$FAKE/ran.txt")" = 4 ]; then
+if [ "$(jq -r 'select(.status == "closed") | .gap_id' "$WRITES" 2>/dev/null)" = "g-d" ] && [ "$(jq -r 'select(.status == "open") | .gap_id' "$WRITES" | sort | tr '\n' ' ')" = "g-a g-b g-c " ] \
+  && [ "$(wc -l < "$FAKE/ran.txt")" = 4 ]; then
   ok "(g) one HEAD: three stay red, the fourth runs on the second call and closes; none of the red runs twice"
 else bad "(g) one HEAD: writes=$(cat "$WRITES") ran=$(tr '\n' ' ' < "$FAKE/ran.txt")"; fi
 four
@@ -202,16 +210,17 @@ else bad "(i2) m1=$m1 wf=$mwf m2=$m2 log=$(cat "$LOG")"; fi
 # (j) a broken run is red, not absent: the import throws (no named line, an error summary), the setup throws
 # ("(unnamed)"), or the run omits a name whose test title the source still holds. Each on its own gap, each checked.
 J=""
+marked() { jq -e -s 'any(.[]; .meta.check_runnable == false or .meta.names_absent != null)' "$WRITES" >/dev/null; }
 reset "$(row g-a x src/a.test.ts "$GEN" '["d > gone"]')"
 printf '# Unhandled error between tests\n 0 pass\n 1 fail\n 1 error\n' > "$FAKE/a.test.ts.out"
-close_failing_test_gaps x 0123456789abcdef "$DIR"; [ -s "$WRITES" ] && J="$J import:$(cat "$WRITES")"
+close_failing_test_gaps x 0123456789abcdef "$DIR"; marked && J="$J import:$(cat "$WRITES")"
 reset "$(row g-a x src/a.test.ts "$GEN" '["d > gone"]')"
 printf '(fail) d > (unnamed)\n 0 pass\n 1 fail\n' > "$FAKE/a.test.ts.out"
-close_failing_test_gaps x 0123456789abcdef "$DIR"; [ -s "$WRITES" ] && J="$J setup:$(cat "$WRITES")"
+close_failing_test_gaps x 0123456789abcdef "$DIR"; marked && J="$J setup:$(cat "$WRITES")"
 printf 'test("kept", () => {});\n' > "$DIR/src/a.test.ts"
 reset "$(row g-a x src/a.test.ts "$GEN" '["d > kept"]')"
 summary "(pass) d > other" > "$FAKE/a.test.ts.out"
-close_failing_test_gaps x 0123456789abcdef "$DIR"; [ -s "$WRITES" ] && J="$J source:$(cat "$WRITES")"
+close_failing_test_gaps x 0123456789abcdef "$DIR"; marked && J="$J source:$(cat "$WRITES")"
 : > "$DIR/src/a.test.ts"
 if [ -z "$J" ]; then ok "(j) a run broken before its tests, or a name the source still holds, is never marked absent"
 else bad "(j)$J"; fi
@@ -370,7 +379,7 @@ echo 1 > "$FAKE/w.test.ts.rc"
 close_failing_test_gaps x 1717171717171717 "$DIR"
 W1="$(ev g-w)"
 if printf '%s' "$W1" | jq -e --arg dir "$DIR" --arg sha "$WSHA" '.dir == $dir and .sha == $sha and .node_modules == false and .rc == "1" and .count == "1 pass, 1 fail"
-    and .names == [{name: "d > one", result: "pass"}, {name: "d > two", result: "fail", error: "error: expect(received).toBe(expected)"},
+    and .names == [{name: "d > one", result: "pass"}, {name: "d > two", result: "fail", error: "error: expect(received).toBe(expected)", got: ("Expected: " + ("0" * 399) + "1")[0:300]},
                    {name: "d > three", result: "absent"}]' >/dev/null \
   && grep -q 'g-w still red alone (1/3 named tests pass); left open | evidence ' "$LOG"; then
   ok "(w) a red verdict says where it ran, its exit code, its counts, and each name: pass, fail with its error line, absent"
@@ -423,5 +432,85 @@ if printf '%s' "$W7" | jq -e '.names == [{name: "d > one", result: "absent"}]' >
   && printf '%s' "$W8" | jq -e '.names == [{name: "d > one", result: "absent"}]' >/dev/null; then
   ok "(w) a name another test's name starts with is absent from a run that names only the longer one, passing or failing"
 else bad "(w) prefix: W7=$W7 W8=$W8 log=$(cat "$LOG")"; fi
+# (x) the evidence goes on the gap's row. bun prints a failing expect's source line first (here it names "error"), then
+# the matcher line, then what the assertion got; the row carries the matcher line and what it got, never the source.
+xout() { # received
+  printf 'src/x.test.ts:\n3 |   expect(r.error).toContain("wrote no report");\n                      ^\nerror: expect(received).toContain(expected)\n\n'
+  printf 'Expected to contain: "wrote no report"\nReceived: "%s"\n\n      at <anonymous> (src/x.test.ts:3:19)\n(fail) d > one\n 0 pass\n 1 fail\n' "$1"
+}
+xrow() { row g-x x src/x.test.ts "$GEN" '["d > one"]' | jq -c '. + {claim: {by: "walk"}, waits_for: "w"} | .meta.operator_hold = "h"'; }
+touch "$DIR/src/x.test.ts"; echo 1 > "$FAKE/x.test.ts.rc"
+xout "spawn ENOENT" > "$FAKE/x.test.ts.out"
+reset "$(xrow)"; XR="$(jq -c '.[0].meta.evidence_resolve' "$ROWS")"
+close_failing_test_gaps x 3131313131313131 "$DIR"; X1="$(cat "$WRITES")"
+touch "$DIR/src/x2.txt"; git -C "$DIR" add -A; git -C "$DIR" -c user.name=t -c user.email=t@t commit -qm x2
+close_failing_test_gaps x 3232323232323232 "$DIR"; X2="$(wc -l < "$WRITES")"
+[ "$(printf '%s' "$X1" | jq -r .meta.closer_evidence.sha)" != "$(git -C "$DIR" rev-parse HEAD)" ] || X2="sha unchanged"
+xout "spawn EACCES" > "$FAKE/x.test.ts.out"
+close_failing_test_gaps x 3333333333333333 "$DIR"; X3="$(sed -n 2p "$WRITES")"
+if [ "$(printf '%s\n' "$X1" | wc -l)" = 1 ] && printf '%s' "$X1" | jq -e --argjson er "$XR" '.status == "open" and .claim == null and .waits_for == "w"
+      and .meta.operator_hold == "h" and .meta.evidence_resolve == $er and .meta.closer_evidence.rc == "1"
+      and .meta.closer_evidence.names == [{name: "d > one", result: "fail", error: "error: expect(received).toContain(expected)",
+        got: "Expected to contain: \"wrote no report\"\nReceived: \"spawn ENOENT\""}]' >/dev/null \
+  && [ "$X2" = 1 ] && printf '%s' "$X3" | jq -e '.meta.closer_evidence.names[0].got | endswith("Received: \"spawn EACCES\"")' >/dev/null; then
+  ok "(x) a red verdict's row carries the matcher line and what the assertion got, keeps its holds, drops its claim; the same at a new HEAD writes nothing, a new received writes again"
+else bad "(x) X1=$X1 X2=$X2 X3=$X3 log=$(cat "$LOG")"; fi
+# twelve names, each failing with a long received: the row's metadata stays within gap_resolve's 4096, evidence_resolve
+# whole, at most 8 names, with how many there were
+XN="$(jq -cn '[range(12) | "d > n\(.)"]')"
+{ for i in $(seq 0 11); do printf 'error: expect(received).toBe(expected)\nExpected: 1\nReceived: %0400d\n(fail) d > n%s\n' "$i" "$i"; done; printf ' 0 pass\n 12 fail\n'; } > "$FAKE/x.test.ts.out"
+reset "$(row g-x x src/x.test.ts "$GEN" "$XN")"; XR="$(jq -c '.[0].meta.evidence_resolve' "$ROWS")"
+close_failing_test_gaps x 3434343434343434 "$DIR"
+if [ "$(wc -l < "$WRITES")" = 1 ] && jq -e --argjson er "$XR" '(.meta | tostring | length) <= 4096 and (.meta | has("cut") | not) and .meta.evidence_resolve == $er
+      and (.meta.closer_evidence.names | length) <= 8 and .meta.closer_evidence.names_cut == 12' "$WRITES" >/dev/null; then
+  ok "(x) twelve long failures: the row's metadata stays within 4096 with evidence_resolve whole, at most 8 names and names_cut 12"
+else bad "(x) long: $(jq -c '{n: (.meta | tostring | length), c: .meta.closer_evidence}' "$WRITES" | cut -c1-600)"; fi
+# metadata already at the bound takes no evidence, and a red verdict then writes nothing
+reset "$(row g-x x src/x.test.ts "$GEN" '["d > one"]' | jq -c --arg f "$(printf '%04000d' 0)" '.meta.note = $f')"
+xout "spawn ENOENT" > "$FAKE/x.test.ts.out"
+close_failing_test_gaps x 3535353535353535 "$DIR"
+if [ ! -s "$WRITES" ]; then ok "(x) metadata already at the bound takes no evidence, and its red verdict writes no row"
+else bad "(x) full meta: $(cut -c1-300 "$WRITES")"; fi
+# the close and the absent mark carry it as well
+summary "(pass) d > one" > "$FAKE/x.test.ts.out"; rm -f "$FAKE/x.test.ts.rc"
+reset "$(row g-x x src/x.test.ts "$GEN" '["d > one"]')" "$(row g-y x src/x.test.ts "$GEN" '["d > nowhere"]')"
+close_failing_test_gaps x 3636363636363636 "$DIR"
+if jq -e -s 'map({(.gap_id): .}) | add | .["g-x"].status == "closed" and .["g-x"].meta.closer_evidence.names == [{name: "d > one", result: "pass"}]
+      and .["g-y"].meta.check_runnable == false and .["g-y"].meta.closer_evidence.names == [{name: "d > nowhere", result: "absent"}]' "$WRITES" >/dev/null; then
+  ok "(x) a close and an absent mark carry the run's evidence on their rows"
+else bad "(x) close/mark: $(cat "$WRITES")"; fi
+
+# eight names whose matcher lines and received are long: past the bound the matcher lines go first and what each
+# assertion got stays; a matcher line is cut at 160 on the row
+{ for i in $(seq 0 7); do printf 'error: %0300d\nExpected: 1\nReceived: %0400d\n(fail) d > n%s\n' "$i" "$i" "$i"; done; printf ' 0 pass\n 8 fail\n'; } > "$FAKE/x.test.ts.out"
+echo 1 > "$FAKE/x.test.ts.rc"
+reset "$(row g-x x src/x.test.ts "$GEN" "$(jq -cn '[range(8) | "d > n\(.)"]')")"
+close_failing_test_gaps x 3737373737373737 "$DIR"
+X8="$(jq -c '.meta.closer_evidence' "$WRITES")"
+{ printf 'error: %0250d\n(fail) d > one\n 0 pass\n 1 fail\n' 0; } > "$FAKE/x.test.ts.out"
+reset "$(row g-x x src/x.test.ts "$GEN" '["d > one"]')"
+close_failing_test_gaps x 3838383838383838 "$DIR"
+X9="$(jq -c '.meta.closer_evidence' "$WRITES")"
+if printf '%s' "$X8" | jq -e '.evidence_cut == true and (.names | length) == 8 and all(.names[]; has("error") | not) and all(.names[]; .got | startswith("Expected: 1\nReceived: 0"))' >/dev/null \
+  && printf '%s' "$X9" | jq -e '(.names[0].error | length) == 160 and (.evidence_cut | not)' >/dev/null; then
+  ok "(x) past the bound the matcher lines go before what the assertions got; a matcher line on the row is cut at 160"
+else bad "(x) order: X8=$(printf '%s' "$X8" | cut -c1-300) X9=$(printf '%s' "$X9" | cut -c1-300)"; fi
+# a re-arm carries it too: names back and red, the closer's own mark ends; a person's ruling stays
+xout "spawn ENOENT" > "$FAKE/x.test.ts.out"
+reset "$(row g-x x src/x.test.ts "$GEN" '["d > one"]' | jq -c '.check_runnable = false | .meta.check_runnable = false | .meta.names_absent = ["d > one"]')" \
+  "$(row g-z x src/x.test.ts "$GEN" '["d > one"]' | jq -c '.check_runnable = false | .meta.check_runnable = false | .meta.names_absent = ["d > one"] | .meta.claim_rejected_by = "p"')"
+close_failing_test_gaps x 3939393939393939 "$DIR"
+if jq -e -s 'length == 2 and all(.[]; .meta.closer_evidence.names[0].got == "Expected to contain: \"wrote no report\"\nReceived: \"spawn ENOENT\"")' "$WRITES" >/dev/null; then
+  ok "(x) a re-arm row, and a ruled gap's row, carry the run's evidence"
+else bad "(x) re-arm: $(cat "$WRITES")"; fi
+# an evidence row the store did not take is not seen: the gap runs again at the same HEAD
+reset "$(row g-x x src/x.test.ts "$GEN" '["d > one"]')"
+WFAIL=1 close_failing_test_gaps x 4040404040404040 "$DIR"; : > "$FAKE/ran.txt"
+close_failing_test_gaps x 4040404040404040 "$DIR"
+if grep -q "g-x's evidence row was NOT written" "$LOG" && [ "$(wc -l < "$FAKE/ran.txt")" = 1 ] && [ "$(wc -l < "$WRITES")" = 1 ]; then
+  ok "(x) an evidence row the store refused is written on the next call at the same HEAD"
+else bad "(x) refused: ran=$(cat "$FAKE/ran.txt") writes=$(wc -l < "$WRITES") log=$(cat "$LOG")"; fi
+rm -f "$FAKE/x.test.ts.rc"
+
 [ "$FAILS" = 0 ] && { echo "PASS - pull-sync closes a generator gap once its named tests pass alone, and only then"; exit 0; }
 echo "$FAILS FAILED"; exit 1
