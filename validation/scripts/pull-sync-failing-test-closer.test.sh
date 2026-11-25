@@ -39,9 +39,9 @@
 #       ended does not come back;
 #   (v) a held gap (operator_hold) is marked with its hold kept: the mark ends a claim, never a hold;
 #   (w) every verdict line carries what it was judged on: the checkout and its sha, the alone run's exit code (124 when
-#       the bound cut it), the count lines, and each named test as pass, fail (with the first error line before its
-#       result, bounded) or absent, and whether the checkout has node_modules; an untracked file's line says nothing
-#       was run;
+#       the bound cut it), the count lines, and each named test, by its whole line, as pass, fail (with the first error
+#       line before its result, bounded) or absent, and whether the checkout has node_modules; an untracked file's line
+#       says nothing was run;
 #   (q) a row the store does not take is said not written (no "marked" line for a mark that did not happen) and is
 #       run again by the next run of the closer at the same HEAD (a re-gate; the closer runs only for a gated vessel):
 #       a mark, and a close.
@@ -55,7 +55,7 @@ FAILS=0
 ok()  { echo "ok   - $*"; }
 bad() { echo "FAIL - $*"; FAILS=$((FAILS+1)); }
 {
-  for f in shape_route gap_resolve dev_resolve emit_gap emit_gap_checked jq_ao test_tracked closer_evidence close_failing_test_gaps carry_gap_repo; do sed -n "/^$f() {/,/^}/p" "$SCRIPT"; done
+  for f in shape_route gap_resolve dev_resolve emit_gap emit_gap_checked jq_ao test_tracked closer_evidence closer_code close_failing_test_gaps carry_gap_repo; do sed -n "/^$f() {/,/^}/p" "$SCRIPT"; done
 } > "$T/fns.sh"
 grep -q '^close_failing_test_gaps()' "$T/fns.sh" && grep -q '^gap_resolve()' "$T/fns.sh" \
   || { echo "FAIL - could not extract close_failing_test_gaps and gap_resolve"; exit 1; }
@@ -409,5 +409,19 @@ if printf '%s' "$W4" | jq -e '.rc == "0" and .count == "1 pass, 0 fail" and .nam
   ok "(w) a close carries its evidence; an untracked file's line says it was not run"
 else bad "(w) close/untracked: W4=$W4 W5=$W5 log=$(cat "$LOG")"; fi
 
+# a name that is the start of another test's name is that name only: "d > one" is absent from a run that names only
+# "d > one two", passing or failing, as the closer's own exact-line rule reads it
+summary "(pass) d > one two" > "$FAKE/w.test.ts.out"; echo 0 > "$FAKE/w.test.ts.rc"
+reset "$(row g-w7 x src/w.test.ts "$GEN" '["d > one"]')"
+close_failing_test_gaps x 2222222222222222 "$DIR"
+W7="$(ev g-w7)"
+{ echo "error: expect(received).toBe(expected)"; echo "(fail) d > one two"; printf ' 0 pass\n 1 fail\n'; } > "$FAKE/w.test.ts.out"; echo 1 > "$FAKE/w.test.ts.rc"
+reset "$(row g-w8 x src/w.test.ts "$GEN" '["d > one"]')"
+close_failing_test_gaps x 2323232323232323 "$DIR"; rm -f "$FAKE/w.test.ts.rc"
+W8="$(ev g-w8)"
+if printf '%s' "$W7" | jq -e '.names == [{name: "d > one", result: "absent"}]' >/dev/null \
+  && printf '%s' "$W8" | jq -e '.names == [{name: "d > one", result: "absent"}]' >/dev/null; then
+  ok "(w) a name another test's name starts with is absent from a run that names only the longer one, passing or failing"
+else bad "(w) prefix: W7=$W7 W8=$W8 log=$(cat "$LOG")"; fi
 [ "$FAILS" = 0 ] && { echo "PASS - pull-sync closes a generator gap once its named tests pass alone, and only then"; exit 0; }
 echo "$FAILS FAILED"; exit 1
