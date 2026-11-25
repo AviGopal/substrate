@@ -73,6 +73,17 @@ async function ensureAbsent(row: Row, where: Row, label: string): Promise<string
   return ensure(row, where, label);
 }
 
+// A starting value the seed wrote before and has since changed: replaced only while the owner's newest row is still
+// exactly one an earlier seed wrote (priors, each field as written, a field it named none of absent too), so a row
+// anything else wrote, the owner's own revision included, is kept as ensureAbsent keeps it.
+async function ensureReplacing(row: Row, where: Row, priors: Row[], label: string): Promise<string | undefined> {
+  const rows = await read(row.shape as string, where);
+  const latest = rows[rows.length - 1];
+  const was = (p: Row) => latest !== undefined && Object.keys(p).every((k) => JSON.stringify(latest[k]) === JSON.stringify(p[k]));
+  if (latest && !priors.some(was)) { console.log(`[walk-owner-seed] ${label}: kept (${latest.id})`); return String(latest.id); }
+  return ensure(row, where, label);
+}
+
 // The clone's newest tree (the newest-tree landing ruling): the tree of the newest row of these shapes a tool recorded on the
 // request's clone (the same cwd) that names one; a newer moving row naming none leaves it unknown, and unknown meets
 // nothing; a gap opened again takes the clone of the earlier gap with its gap_id. Read by the walk and described alike.
@@ -691,14 +702,17 @@ await ensure({ shape: "failure_rule", target: "walk_failure", min_count: 3, min_
 // How long each of git_diff's two whole-suite runs (base, then tree) may take, read by local-tools at each call
 // (suite-bound.ts): the suite grows with its repository, so its bound is a row the owner revises, not the fixed step
 // bound git and the typecheck keep. A row may name a repo; one naming none holds for every repository. The starting
-// value is just over the runs measured on the node, whose mean per run was 250 to 297 s where both runs finished, while
-// runs were being cut at the 300 s step bound; not generously, since the whole walk writes no rows while a git_diff
-// runs. Read by effect: gitDiff rows say each run's ms, and a run stopped at the bound says status "bound". Written only
-// when the owner has no such row, so a value the owner revises is kept. Only the owner's rows count, as local-tools reads
+// value is about twice the longest whole run measured on the node (280 to 289 s per run, base or tree), since a run
+// past the bound is never kept, so a bound under an uncached run stops every diff on a new base and the next one starts
+// over; the earlier 330 s, just over the mean, was passed on a slower base. Its cost: a diff on a new base runs base
+// then tree, up to twice the bound, while the whole walk writes no rows. Read by effect: gitDiff rows say each run's
+// ms, and a run stopped at the bound says status "bound". Written when the owner has no such row, or when its newest is
+// still exactly the value an earlier seed wrote, so a value the owner revises is kept. Only the owner's rows count, as local-tools reads
 // only the owner's: another writer's row would stop the seed and leave the owner with none, so every suite at the step bound.
-// An owner row of any scope stops it, one naming a repository too: local-tools takes the newest owner row for a repository
+// An owner row of any scope stops it (but the earlier seed's own value, naming no repository), one naming a repository too: local-tools takes the newest owner row for a repository
 // or for none, so a repo-less row written after it would replace the owner's own bound for that repository.
-await ensureAbsent({ shape: "suite_bound", suite_step_ms: 330_000 }, { role: OWNER }, "suite_bound");
+await ensureReplacing({ shape: "suite_bound", suite_step_ms: 600_000 }, { role: OWNER },
+  [{ shape: "suite_bound", suite_step_ms: 330_000, repo: undefined }], "suite_bound");
 // The detector runs as the one call of an owner template that a rhythm names: records shares such a template with every
 // root, and the walk runs it on its idle root when due, so each run is a traced, graded move. A seeded template is the
 // bootstrap tier: a walk cannot earn a detector it has never been offered. It runs every SWEEP_ROWS rows, as the stall rule

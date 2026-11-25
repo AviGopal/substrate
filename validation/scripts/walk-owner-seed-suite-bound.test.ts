@@ -4,6 +4,8 @@
 //
 // WHAT IS JUDGED. The seed of this tree runs against a stub store (the drive of walk-owner-seed-attempt-explanation).
 //   rows: one suite_bound row naming no repo, as declared; a second run over a store where the owner revised it writes none;
+//     a store whose newest owner row is still the 330 s an earlier seed wrote (naming no repo) takes the new value; one
+//     naming a repo, or any other value, is kept; a store already at the new value takes nothing;
 //     another writer's row does not stop it (only the owner's rows count, as local-tools reads only the owner's).
 //   reader: local-tools' own suiteBoundOf over the seeded rows gives the seeded bound for any repository.
 //
@@ -42,10 +44,10 @@ const seedOver = async (rows: Row[]): Promise<Row[]> => {
 const bounds = (rows: Row[]) => rows.filter((r) => r.shape === "suite_bound")
 
 describe("the suite's bound, as the seed writes it", () => {
-  test("[MUST-FAIL] on an empty store the seed writes one suite_bound row, naming no repo, of 330 s", async () => {
+  test("[MUST-FAIL] on an empty store the seed writes one suite_bound row, naming no repo, of 600 s", async () => {
     const b = bounds(await seedOver([]))
     expect(b).toHaveLength(1)
-    expect(b[0]).toMatchObject({ shape: "suite_bound", suite_step_ms: 330_000, role: "owner" })
+    expect(b[0]).toMatchObject({ shape: "suite_bound", suite_step_ms: 600_000, role: "owner" })
     expect(b[0].repo).toBeUndefined()
   })
 
@@ -54,20 +56,40 @@ describe("the suite's bound, as the seed writes it", () => {
     expect(bounds(await seedOver([revised]))).toEqual([revised])
   })
 
+  test("[MUST-FAIL] the owner's newest still the 330 s an earlier seed wrote: the seed writes the new value after it", async () => {
+    const earlier = { shape: "suite_bound", id: "s1", seq: 0, role: "owner", suite_step_ms: 330_000 }
+    const b = bounds(await seedOver([earlier]))
+    expect(b).toEqual([earlier, expect.objectContaining({ role: "owner", suite_step_ms: 600_000 })])
+    expect(b[1].repo).toBeUndefined()
+  })
+
+  test("[GUARD] 330 s naming a repository, or 330 s under a newer owner value, is not the seed's: kept", async () => {
+    const scoped = { shape: "suite_bound", id: "s2", seq: 0, role: "owner", suite_step_ms: 330_000, repo: "local-tools-vessel" }
+    expect(bounds(await seedOver([scoped]))).toEqual([scoped])
+    const old = { shape: "suite_bound", id: "s3", seq: 0, role: "owner", suite_step_ms: 330_000 }
+    const revised = { shape: "suite_bound", id: "s4", seq: 1, role: "owner", suite_step_ms: 450_000 }
+    expect(bounds(await seedOver([old, revised]))).toEqual([old, revised])
+  })
+
+  test("[GUARD] a store already at the new value takes nothing more", async () => {
+    const now = { shape: "suite_bound", id: "s5", seq: 0, role: "owner", suite_step_ms: 600_000 }
+    expect(bounds(await seedOver([now]))).toEqual([now])
+  })
+
   test("[MUST-FAIL] another writer's row is not the owner's: the seed still writes the owner's, and the reader takes it", async () => {
     const stray = { shape: "suite_bound", id: "w1", seq: 0, role: "walk", suite_step_ms: 1 }
     const seeded = await seedOver([stray])
-    expect(bounds(seeded)).toEqual([stray, expect.objectContaining({ role: "owner", suite_step_ms: 330_000 })])
+    expect(bounds(seeded)).toEqual([stray, expect.objectContaining({ role: "owner", suite_step_ms: 600_000 })])
     const { suiteBoundOf } = await import(READER)
     const rows = async (q: { shape?: string }) => seeded.filter((r) => r.shape === q.shape)
-    expect(await suiteBoundOf(rows, "some-vessel")).toBe(330_000)
+    expect(await suiteBoundOf(rows, "some-vessel")).toBe(600_000)
   })
 
   test("[MUST-FAIL] local-tools' own reader, over the seeded rows, takes the seeded bound for any repository", async () => {
     const seeded = await seedOver([])
     const { suiteBoundOf } = await import(READER)
     const rows = async (q: { shape?: string }) => seeded.filter((r) => r.shape === q.shape)
-    expect(await suiteBoundOf(rows, "some-vessel")).toBe(330_000)
-    expect(await suiteBoundOf(rows, "local-tools-vessel")).toBe(330_000)
+    expect(await suiteBoundOf(rows, "some-vessel")).toBe(600_000)
+    expect(await suiteBoundOf(rows, "local-tools-vessel")).toBe(600_000)
   })
 })
