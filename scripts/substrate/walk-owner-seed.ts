@@ -116,6 +116,12 @@ const WHO_ANSWERS = "You are one step of the walk. The walk acts through the too
 const WHY_MAX = 800;
 const WHAT_FAILED_MAX = 1200;
 const NEXT_MUST_MAX = 800;
+// Which truncated means the change was not shown: the gitDiff row's own, beside its diff. Each run on it (typecheck,
+// check, suite) has a truncated of its own, saying only that its output was cut at its bound; read as the row's, it
+// refused changes that were shown whole.
+const DIFF_CUT_WORDS = "the gitDiff row's own truncated is true (the one beside its diff, not one inside its typecheck, " +
+  "check or suite), because then you were not shown the whole change; a truncated inside a run says only that the run's " +
+  "output was cut at its bound, and decides nothing by itself";
 const ROUTE_WORDS = "request_acts.path, when there is one, is the route from here toward what is wanted: path.next names " +
   "the calls that move this request along it. Ask for one of those next, unless a failure or refusal row names something " +
   "to read or fix first; then read or fix exactly that.";
@@ -344,8 +350,8 @@ const SCHEMAS: Row[] = [
     // from exactly the request and the walk's gitDiff of that tree, so this schema reads nothing else: no hop, no answer.
     // What else the grader must know of the tree rides on the gitDiff row, made with the tree: whether it typechecks.
     description: "Whether the change in the gitDiff row does what the world_changed row's `what` asks, correctly and " +
-      "completely, and nothing it should not: r is 1 when it does, 0 when it does not, and also 0 when the gitDiff's " +
-      "truncated is true, because then you were not shown the whole change, and 0 when its typecheck ran and did not " +
+      "completely, and nothing it should not: r is 1 when it does, 0 when it does not, and also 0 when " +
+      `${DIFF_CUT_WORDS}, and 0 when its typecheck ran and did not ` +
       "pass, because that tree does not compile. repo, tree and typecheck_ran (its typecheck.ran) are copied exactly " +
       "from the gitDiff row; when typecheck_ran is false the typecheck did not run (its why says why): say that, never " +
       `that it failed or passed. why says, in a sentence or two, what decided it. ${USES_WORDS} ${JSON_ONLY}`,
@@ -567,8 +573,8 @@ SCHEMAS.push({
   // counts only from exactly the request and the diff).
   inputs: [{ shape: "gap", latest_by: "gap_id" }, { shape: "gitDiff", latest_by: "shape", where: { tree: NEWEST_TREE, role: "walk" } }],
   description: "Whether the change in the gitDiff row fixes what the gap row says is failing, by changing the code its " +
-    "check tests, and nothing it should not: r is 1 when it does, 0 when it does not, and also 0 when the gitDiff's " +
-    "truncated is true, because then you were not shown the whole change, when its typecheck did not pass, or when its " +
+    "check tests, and nothing it should not: r is 1 when it does, 0 when it does not, and also 0 when " +
+    `${DIFF_CUT_WORDS}; when its typecheck did not pass; or when its ` +
     "check (the gap's own check, run on that tree) did not pass. repo, tree and typecheck_ran (its typecheck.ran) are " +
     "copied exactly from the gitDiff row; when typecheck_ran is false the typecheck did not run (its why says why): say " +
     `that, never that it failed or passed. why says, in a sentence or two, what decided it. ${USES_WORDS} ${JSON_ONLY}`,
