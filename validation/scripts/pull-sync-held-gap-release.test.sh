@@ -60,7 +60,7 @@ FAILS=0
 ok()  { echo "ok   - $*"; }
 bad() { echo "FAIL - $*"; FAILS=$((FAILS+1)); }
 {
-  for f in shape_route gap_resolve dev_resolve emit_gap emit_gap_checked jq_ao test_tracked close_failing_test_gaps test_size test_sources lift_held_gaps lift_held_gaps_each carry_gap_repo; do sed -n "/^$f() {/,/^}/p" "$SCRIPT"; done
+  for f in shape_route gap_resolve dev_resolve emit_gap emit_gap_checked jq_ao test_tracked closer_evidence close_failing_test_gaps test_size test_sources lift_held_gaps lift_held_gaps_each carry_gap_repo; do sed -n "/^$f() {/,/^}/p" "$SCRIPT"; done
 } > "$T/fns.sh"
 grep -q '^lift_held_gaps()' "$T/fns.sh" && grep -q '^test_size()' "$T/fns.sh" \
   || { echo "FAIL - could not extract lift_held_gaps and test_size"; exit 1; }

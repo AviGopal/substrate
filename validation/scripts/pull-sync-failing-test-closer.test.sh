@@ -38,6 +38,10 @@
 #   (u) a gap with a claim, marked absent, then back and red: the re-arm starts from the mark's row, so the claim the mark
 #       ended does not come back;
 #   (v) a held gap (operator_hold) is marked with its hold kept: the mark ends a claim, never a hold;
+#   (w) every verdict line carries what it was judged on: the checkout and its sha, the alone run's exit code (124 when
+#       the bound cut it), the count lines, and each named test as pass, fail (with the first error line before its
+#       result, bounded) or absent, and whether the checkout has node_modules; an untracked file's line says nothing
+#       was run;
 #   (q) a row the store does not take is said not written (no "marked" line for a mark that did not happen) and is
 #       run again by the next run of the closer at the same HEAD (a re-gate; the closer runs only for a gated vessel):
 #       a mark, and a close.
@@ -51,7 +55,7 @@ FAILS=0
 ok()  { echo "ok   - $*"; }
 bad() { echo "FAIL - $*"; FAILS=$((FAILS+1)); }
 {
-  for f in shape_route gap_resolve dev_resolve emit_gap emit_gap_checked jq_ao test_tracked close_failing_test_gaps carry_gap_repo; do sed -n "/^$f() {/,/^}/p" "$SCRIPT"; done
+  for f in shape_route gap_resolve dev_resolve emit_gap emit_gap_checked jq_ao test_tracked closer_evidence close_failing_test_gaps carry_gap_repo; do sed -n "/^$f() {/,/^}/p" "$SCRIPT"; done
 } > "$T/fns.sh"
 grep -q '^close_failing_test_gaps()' "$T/fns.sh" && grep -q '^gap_resolve()' "$T/fns.sh" \
   || { echo "FAIL - could not extract close_failing_test_gaps and gap_resolve"; exit 1; }
@@ -88,6 +92,7 @@ FAKE="$T/fake"; mkdir -p "$FAKE"
 cat > "$FAKE/bun" <<'B'
 #!/usr/bin/env bash
 f="$(basename "$2")"; echo "$f" >> "$(dirname "$0")/ran.txt"; cat "$(dirname "$0")/$f.out" 2>/dev/null
+exit "$(cat "$(dirname "$0")/$f.rc" 2>/dev/null || echo 0)"
 B
 chmod +x "$FAKE/bun"; BUN_BIN="$FAKE/bun"
 DIR="$T/checkout"; mkdir -p "$DIR/src"; git init -q "$DIR"
@@ -353,6 +358,56 @@ VL="$(tail -n 1 "$WRITES")"
 if [ "$(wc -l < "$WRITES")" = 1 ] && printf '%s' "$VL" | jq -e '.check_runnable == false and (has("claim") | not) and .meta.operator_hold == true
     and .meta.operator_hold_reason == "needs_localization"' >/dev/null; then ok "(v) a held gap's mark keeps its hold and ends its claim"
 else bad "(v) writes=$(cat "$WRITES") log=$(cat "$LOG")"; fi
+
+# (w) the evidence on each verdict line: a red run with one name passing, one failing and one the run does not name
+ev() { sed -n "s/^.*$1.* | evidence //p" "$LOG" | tail -n 1; }
+git -C "$DIR" add -A; git -C "$DIR" -c user.name=t -c user.email=t@t commit -qm w
+WSHA="$(git -C "$DIR" rev-parse HEAD)"
+printf 'test("three")\n' > "$DIR/src/w.test.ts"
+reset "$(row g-w x src/w.test.ts "$GEN" '["d > one","d > two","d > three"]')"
+{ echo "warn: an error before the first test"; echo "(pass) d > zero"; echo "warn: an error after zero"; echo "(pass) d > one"; echo "log: setup ran"; echo "error: expect(received).toBe(expected)"; printf 'Expected: %0400d\n' 1; echo "  at w.test.ts:3"; echo "(fail) d > two"; printf ' 1 pass\n 1 fail\n'; } > "$FAKE/w.test.ts.out"
+echo 1 > "$FAKE/w.test.ts.rc"
+close_failing_test_gaps x 1717171717171717 "$DIR"
+W1="$(ev g-w)"
+if printf '%s' "$W1" | jq -e --arg dir "$DIR" --arg sha "$WSHA" '.dir == $dir and .sha == $sha and .node_modules == false and .rc == "1" and .count == "1 pass, 1 fail"
+    and .names == [{name: "d > one", result: "pass"}, {name: "d > two", result: "fail", error: "error: expect(received).toBe(expected)"},
+                   {name: "d > three", result: "absent"}]' >/dev/null \
+  && grep -q 'g-w still red alone (1/3 named tests pass); left open | evidence ' "$LOG"; then
+  ok "(w) a red verdict says where it ran, its exit code, its counts, and each name: pass, fail with its error line, absent"
+else bad "(w) ev=$W1 log=$(cat "$LOG")"; fi
+# the first error line before a failure is bounded: no "error" line, so the first line is given, cut at 300
+{ printf 'Expected: %0400d\n' 1; echo "(fail) d > two"; printf ' 0 pass\n 1 fail\n'; } > "$FAKE/w.test.ts.out"
+reset "$(row g-w2 x src/w.test.ts "$GEN" '["d > two"]')"
+close_failing_test_gaps x 1818181818181818 "$DIR"
+W2="$(ev g-w2)"
+if printf '%s' "$W2" | jq -e '.names[0].result == "fail" and (.names[0].error | length) == 300 and (.names[0].error | startswith("Expected: 0"))' >/dev/null; then
+  ok "(w) a failing name's error line is bounded at 300 characters"
+else bad "(w) bounded: ev=$W2"; fi
+# a checkout with node_modules says so; an import that failed is told by its count line (an error, no test)
+mkdir -p "$DIR/node_modules"; printf 'error: Cannot find module "x"\n 0 pass\n 0 fail\n 1 error\n' > "$FAKE/w.test.ts.out"
+reset "$(row g-w6 x src/w.test.ts "$GEN" '["d > one"]')"
+close_failing_test_gaps x 2121212121212121 "$DIR"; rmdir "$DIR/node_modules"
+W6="$(ev g-w6)"
+if printf '%s' "$W6" | jq -e '.node_modules == true and .count == "0 pass, 0 fail, 1 error" and .names == [{name: "d > one", result: "absent"}]' >/dev/null; then
+  ok "(w) the evidence says whether the checkout has node_modules, and an import failure's count line"
+else bad "(w) modules: ev=$W6 log=$(cat "$LOG")"; fi
+# a run the bound cut (timeout's 124, no summary): the no-result line says rc 124
+printf '(pass) d > one\n' > "$FAKE/w.test.ts.out"; echo 124 > "$FAKE/w.test.ts.rc"
+reset "$(row g-w3 x src/w.test.ts "$GEN" '["d > one"]')"
+close_failing_test_gaps x 1919191919191919 "$DIR"
+W3="$(ev 'produced no result; g-w3')"
+if printf '%s' "$W3" | jq -e '.rc == "124" and .count == "" and .names == [{name: "d > one", result: "pass"}]' >/dev/null; then
+  ok "(w) a run cut at its bound says rc 124 on its no-result line"
+else bad "(w) 124: ev=$W3 log=$(cat "$LOG")"; fi
+# a close carries it too; an untracked file says nothing was run
+summary "(pass) d > one" > "$FAKE/w.test.ts.out"; rm -f "$FAKE/w.test.ts.rc"
+reset "$(row g-w4 x src/w.test.ts "$GEN" '["d > one"]')" "$(row g-w5 x src/none.test.ts "$GEN" '["d > one"]')"
+close_failing_test_gaps x 2020202020202020 "$DIR"
+W4="$(ev 'closed g-w4')"; W5="$(ev 'g-w5 names')"
+if printf '%s' "$W4" | jq -e '.rc == "0" and .count == "1 pass, 0 fail" and .names == [{name: "d > one", result: "pass"}]' >/dev/null \
+  && printf '%s' "$W5" | jq -e --arg sha "$WSHA" '.ran == false and .node_modules == false and .sha == $sha and (has("rc") | not)' >/dev/null; then
+  ok "(w) a close carries its evidence; an untracked file's line says it was not run"
+else bad "(w) close/untracked: W4=$W4 W5=$W5 log=$(cat "$LOG")"; fi
 
 [ "$FAILS" = 0 ] && { echo "PASS - pull-sync closes a generator gap once its named tests pass alone, and only then"; exit 0; }
 echo "$FAILS FAILED"; exit 1

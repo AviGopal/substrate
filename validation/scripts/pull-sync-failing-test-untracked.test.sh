@@ -17,7 +17,7 @@ T="$(mktemp -d)"; trap 'rm -rf "${T:?}"' EXIT
 FAILS=0
 ok()  { echo "ok   - $*"; }
 bad() { echo "FAIL - $*"; FAILS=$((FAILS+1)); }
-for f in shape_route gap_resolve dev_resolve emit_gap emit_gap_checked jq_ao test_tracked close_failing_test_gaps gen_failing_test_gaps; do sed -n "/^$f() {/,/^}/p" "$SCRIPT"; done > "$T/fns.sh"
+for f in shape_route gap_resolve dev_resolve emit_gap emit_gap_checked jq_ao test_tracked closer_evidence close_failing_test_gaps gen_failing_test_gaps; do sed -n "/^$f() {/,/^}/p" "$SCRIPT"; done > "$T/fns.sh"
 grep -q '^close_failing_test_gaps()' "$T/fns.sh" && grep -q '^gen_failing_test_gaps()' "$T/fns.sh" \
   || { echo "FAIL - could not extract the closer and the generator"; exit 1; }
 LOG="$T/log.txt"; log() { echo "$*" >> "$LOG"; }

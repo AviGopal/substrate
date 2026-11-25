@@ -30,7 +30,7 @@ T="$(mktemp -d)"; trap 'rm -rf "${T:?}"' EXIT
 FAILS=0
 ok()  { echo "ok   - $*"; }
 bad() { echo "FAIL - $*"; FAILS=$((FAILS+1)); }
-for f in shape_route gap_resolve dev_resolve emit_gap emit_gap_checked jq_ao test_tracked test_size closer_code close_failing_test_gaps \
+for f in shape_route gap_resolve dev_resolve emit_gap emit_gap_checked jq_ao test_tracked test_size closer_code closer_evidence close_failing_test_gaps \
          close_failing_test_gaps_each; do sed -n "/^$f() {/,/^}/p" "$SCRIPT"; sed -n "/^$f() { .*}$/p" "$SCRIPT"; done > "$T/fns.sh"
 grep -q '^close_failing_test_gaps()' "$T/fns.sh" || { echo "FAIL - could not extract close_failing_test_gaps"; exit 1; }
 LOG="$T/log.txt"; log() { echo "$*" >> "$LOG"; }
