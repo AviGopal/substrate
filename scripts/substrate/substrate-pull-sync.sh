@@ -1265,9 +1265,12 @@ closer_evidence() { # dir rc ("" when not run) "-"|"" names-json
 # (closerRed), so a row that says what this run judged must carry them even where its names do not fit.
 # Metadata past the bound even then gets no evidence, and never the evidence of an earlier run: a row whose verdict is
 # this run's beside a run that is not would show a red run under an absent mark, and credit from a count it did not read.
-# The journal keeps the whole evidence.
+# The journal keeps the whole evidence. A row left with none is said in a line naming the gap and its metadata's size
+# (on stderr: the row is this function's output): such a red row does not move records' credit episode, so a count of
+# these lines is the evidence for slimming classification_metadata.
 closer_fit() { # gap-write-json evidence-json
-  printf '%s' "$1" | jq -c --argjson e "$2" '
+  local _cf _cfn
+  _cf="$(printf '%s' "$1" | jq -c --argjson e "$2" '
     . as $w | (.impulse.pointer.gap.classification_metadata // {}) as $m | ($e.names // null) as $N
     | ($e | if $N == null then . else .names = ($N[:8] | map(if .error then .error |= .[0:160] else . end))
         | (if ($N | length) > 8 then .names_cut = ($N | length) else . end) end) as $e0
@@ -1278,7 +1281,12 @@ closer_fit() { # gap-write-json evidence-json
       + [($e | {sha, rc, count, ran} | with_entries(select(.value != null))
           | (if $N == null then . else (. + {names_cut: ($N | length), names_dropped: true, evidence_cut: true}) end))]
     | map($m + {closer_evidence: .}) | map(select(tostring | length <= 4096)) as $fit
-    | $w | .impulse.pointer.gap.classification_metadata = ($fit[0] // ($m | del(.closer_evidence)))' 2>/dev/null || printf '%s' "$1"
+    | $w | .impulse.pointer.gap.classification_metadata = ($fit[0] // ($m | del(.closer_evidence)))' 2>/dev/null)" \
+    || { printf '%s' "$1"; return 0; }
+  _cfn="$(jq -r '.impulse.pointer.gap | select(.classification_metadata | has("closer_evidence") | not)
+    | "\(.id) \(.classification_metadata | tostring | length)"' <<<"$_cf" 2>/dev/null)"
+  [ -z "$_cfn" ] || log "failing-test closer: ${_cfn%% *} carries no closer evidence: its metadata is ${_cfn##* } characters without it, past 4096 with even the run's sha, exit and counts" >&2
+  printf '%s' "$_cf"
 }
 
 # The closer's own code, with every function whose result decides its verdict (close, absent, not checkable): a change to

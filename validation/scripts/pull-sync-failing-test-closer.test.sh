@@ -49,7 +49,8 @@
 #       row is written on the next call; the close, the absent mark
 #       and the re-arms carry it; the row's metadata stays within gap_resolve's 4096 with evidence_resolve whole (at
 #       most 8 names, matcher lines cut at 160, past the bound the matcher lines dropped before what the assertions
-#       got), and metadata already at the bound takes none; the evidence on a row is its own run's, never an earlier
+#       got), and metadata already at the bound takes none, [MUST-FAIL] said in a line naming the gap and its
+#       metadata's size (no such line where the evidence fits); the evidence on a row is its own run's, never an earlier
 #       one's: [MUST-FAIL] a row near the bound that held an earlier run's evidence is marked absent without it,
 #       [MUST-FAIL] where only the run's sha, exit and counts fit the row carries those (names_dropped), and
 #       [MUST-FAIL] records' closerRed reads that row as red;
@@ -493,7 +494,8 @@ XN="$(jq -cn '[range(12) | "d > n\(.)"]')"
 reset "$(row g-x x src/x.test.ts "$GEN" "$XN")"; XR="$(jq -c '.[0].meta.evidence_resolve' "$ROWS")"
 close_failing_test_gaps x 3434343434343434 "$DIR"
 if [ "$(wc -l < "$WRITES")" = 1 ] && jq -e --argjson er "$XR" '(.meta | tostring | length) <= 4096 and (.meta | has("cut") | not) and .meta.evidence_resolve == $er
-      and (.meta.closer_evidence.names | length) <= 8 and .meta.closer_evidence.names_cut == 12' "$WRITES" >/dev/null; then
+      and (.meta.closer_evidence.names | length) <= 8 and .meta.closer_evidence.names_cut == 12' "$WRITES" >/dev/null \
+    && ! grep -q 'carries no closer evidence' "$LOG"; then
   ok "(x) twelve long failures: the row's metadata stays within 4096 with evidence_resolve whole, at most 8 names and names_cut 12"
 else bad "(x) long: $(jq -c '{n: (.meta | tostring | length), c: .meta.closer_evidence}' "$WRITES" | cut -c1-600)"; fi
 # metadata already at the bound takes no evidence, and a red verdict then writes nothing
@@ -502,6 +504,18 @@ xout "spawn ENOENT" > "$FAKE/x.test.ts.out"
 close_failing_test_gaps x 3535353535353535 "$DIR"
 if [ ! -s "$WRITES" ]; then ok "(x) metadata already at the bound takes no evidence, and its red verdict writes no row"
 else bad "(x) full meta: $(cut -c1-300 "$WRITES")"; fi
+XS0="$(jq -c '.[0].meta' "$ROWS" | jq -r 'tostring | length')"
+if grep -qx "failing-test closer: g-x carries no closer evidence: its metadata is $XS0 characters without it, past 4096 with even the run's sha, exit and counts" "$LOG"; then
+  ok "[MUST-FAIL] (x) a row left with no evidence is said in a line naming the gap and its metadata's size ($XS0)"
+else bad "(x) no-evidence line: $(grep -o 'failing-test closer: g-x[^|]*' "$LOG" | head -3)"; fi
+# under the script's own log (to stdout), the line still never enters the row closer_fit answers
+XO="$( (eval "$(sed -n '/^log() {/p' "$SCRIPT")"
+  closer_fit "$(jq -cn --arg f "$(printf '%04200d' 0)" '{impulse: {pointer: {type: "substrateGap_write", gap: {id: "g-o", classification_metadata: {note: $f}}}}}')" \
+    '{"sha":"s","rc":"1","count":"0 pass, 1 fail","names":[]}') 2>"$T/xo.err")"
+if jq -e -s 'length == 1 and .[0].impulse.pointer.gap.id == "g-o" and (.[0].impulse.pointer.gap.classification_metadata | has("closer_evidence") | not)' <<<"$XO" >/dev/null 2>&1 \
+    && grep -q 'g-o carries no closer evidence' "$T/xo.err"; then
+  ok "[MUST-FAIL] (x) under the script's own log the line goes to stderr, and closer_fit's answer is the row alone"
+else bad "(x) closer_fit's answer under the script's log: $(printf '%s' "$XO" | cut -c1-200) | stderr: $(cut -c1-200 "$T/xo.err")"; fi
 # the close and the absent mark carry it as well
 summary "(pass) d > one" > "$FAKE/x.test.ts.out"; rm -f "$FAKE/x.test.ts.rc"
 reset "$(row g-x x src/x.test.ts "$GEN" '["d > one"]')" "$(row g-y x src/x.test.ts "$GEN" '["d > nowhere"]')"
