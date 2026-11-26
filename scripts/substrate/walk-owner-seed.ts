@@ -738,6 +738,10 @@ for (const tool of CHANGE_TOOLS) {
 // an open gap, not instead of one. git_land still decides from the verdict rows themselves.
 await ensure({ shape: "requires", for: "git_land", needs: "land_verdict", where: { r: 1, tree: NEWEST_TREE }, latest_by: "tree", group: "verdict" },
   { for: "git_land", needs: "land_verdict" }, "requires git_land land_verdict");
+// git_land also waits for a gitDiff on its own clone (cwd) at NEWEST_TREE, so a land_verdict for one clone never
+// satisfies a stale git_land request naming an older clone.
+await ensure({ shape: "requires", for: "git_land", needs: "gitDiff", where: { cwd: { "x-pointer": "cwd" }, tree: NEWEST_TREE }, latest_by: "cwd", group: "diff" },
+  { for: "git_land", needs: "gitDiff" }, "requires git_land gitDiff");
 // A diff waits for a commit of the clone's newest edit, since it reads commits only: git_diff is called only once
 // the clone's newest committed tree is known, from a commit newer than every edit there, or a clean clone handed out and
 // not edited since. So after an edit the step named is git_commit, and planning puts the existing commit before the

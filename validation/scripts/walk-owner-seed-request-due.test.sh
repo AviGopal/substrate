@@ -190,8 +190,10 @@ leg(!!lvGap && !!lv && JSON.stringify(lvGap.inputs) === JSON.stringify([{ shape:
   && String(lvGap.description).includes("check (the gap's own check, run on that tree) did not pass")
   && rows.some((r) => r.shape === "requires" && r.for === "git_land" && r.needs === "land_verdict" && JSON.stringify(r.where) === JSON.stringify({ r: 1, tree: NEWEST_TREE })
     && r.latest_by === "tree" && r.group === "verdict")
-  && !rows.some((r) => r.shape === "requires" && r.for === "git_land" && r.needs !== "land_verdict" && r.group !== undefined),
-  "(p) a gap's change is judged from the gap and its diff, and git_land also waits for a land_verdict at r 1");
+  && rows.some((r) => r.shape === "requires" && r.for === "git_land" && r.needs === "gitDiff" && JSON.stringify(r.where) === JSON.stringify({ cwd: { "x-pointer": "cwd" }, tree: NEWEST_TREE })
+    && r.latest_by === "cwd" && r.group === "diff")
+  && !rows.some((r) => r.shape === "requires" && r.for === "git_land" && !["land_verdict", "gitDiff"].includes(String(r.needs)) && r.group !== undefined),
+  "(p) a gap's change is judged from the gap and its diff, and git_land also waits for a land_verdict at r 1 and a cwd-bound gitDiff at NEWEST_TREE");
 leg(rows.some((r) => r.shape === "requires" && r.for === "fs_edit" && r.needs === "fileContent" && r.group === "read" && r.latest_by === "path"
     && JSON.stringify(r.where) === JSON.stringify({ path: { "x-pointer": "path" } }))
   && !rows.some((r) => r.shape === "requires" && r.for === "fs_edit" && r.needs === "codeReadResult"),

@@ -11,7 +11,9 @@
 #   (e) second run is strictly idempotent (0 additional rows written);
 #   (f) conditional once-only fallback_order refresh: prepends SOTA order and strips :free when stale fallback_order is served
 #       (idempotent on second run), and writes nothing extra when policy has no fallback_order;
-#   (g) credits (target: "gap") declares Law 1 test_categories and test_reasons (including named_tests_pass and named_tests_absent).
+#   (g) credits (target: "gap") declares Law 1 test_categories and test_reasons (including named_tests_pass and named_tests_absent);
+#   (h) requires { for: "git_land", needs: "gitDiff", group: "diff", latest_by: "cwd", where: { cwd: { "x-pointer": "cwd" }, tree: NEWEST_TREE } }
+#       binds git_land to a fresh clone's gitDiff at NEWEST_TREE and rejects stale clones with absent or older gitDiff.
 # Driven against a stand-in discovery (loopback only, no fleet key).
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -188,6 +190,41 @@ leg(
     && gapCredits.test_reasons.includes("named_tests_pass")
     && gapCredits.test_reasons.includes("named_tests_absent"),
   "(g) credits (target: 'gap') declares test_categories and test_reasons (including named_tests_pass and named_tests_absent)",
+);
+
+const NEWEST_TREE = { "x-latest": { shapes: ["gitCommitResult", "gitWorktree", "gitDiff"], moves: ["gitCommitResult", "gitWorktree"], same: "cwd", field: "tree", continues: "gap_id" } };
+const landDiffReq = s1.rows.filter((r) => r.shape === "requires" && r.for === "git_land" && r.needs === "gitDiff").at(-1);
+const evalLandDiffReq = (reqRow: Row | undefined, pointer: Row, pool: Row[], newestTree: string): boolean => {
+  if (!reqRow || reqRow.latest_by !== "cwd" || reqRow.group !== "diff") return false;
+  const latestByCwd = new Map<string, Row>();
+  for (const r of [...pool].sort((a, b) => Number(a.seq ?? 0) - Number(b.seq ?? 0))) {
+    if (r.shape !== reqRow.needs) continue;
+    latestByCwd.set(String(r[reqRow.latest_by]), r);
+  }
+  const where = (reqRow.where ?? {}) as Row;
+  return [...latestByCwd.values()].some((r) =>
+    Object.entries(where).every(([k, v]) => {
+      if (typeof v === "object" && v !== null && "x-pointer" in v) return r[k] === pointer[String((v as Row)["x-pointer"])];
+      if (typeof v === "object" && v !== null && "x-latest" in v) return r[k] === newestTree;
+      return r[k] === v;
+    }),
+  );
+};
+const newestTreeSha = "a".repeat(40);
+const olderTreeSha = "b".repeat(40);
+const poolWithFreshAndStale: Row[] = [
+  { shape: "gitDiff", id: "d-stale", seq: 1, cwd: "/stale-clone", tree: olderTreeSha },
+  { shape: "gitDiff", id: "d-fresh", seq: 2, cwd: "/fresh-clone", tree: newestTreeSha },
+];
+leg(
+  !!landDiffReq
+    && landDiffReq.group === "diff"
+    && landDiffReq.latest_by === "cwd"
+    && JSON.stringify(landDiffReq.where) === JSON.stringify({ cwd: { "x-pointer": "cwd" }, tree: NEWEST_TREE })
+    && evalLandDiffReq(landDiffReq, { cwd: "/fresh-clone" }, poolWithFreshAndStale, newestTreeSha)
+    && !evalLandDiffReq(landDiffReq, { cwd: "/stale-clone" }, poolWithFreshAndStale, newestTreeSha)
+    && !evalLandDiffReq(landDiffReq, { cwd: "/missing-clone" }, poolWithFreshAndStale, newestTreeSha),
+  "(h) requires git_land gitDiff binds cwd and NEWEST_TREE (fresh clone passes; stale or absent clone is rejected)",
 );
 
 process.exit(failed === 0 ? 0 : 1);
