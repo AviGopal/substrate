@@ -1171,14 +1171,17 @@ close_failing_test_gaps() {
       else log "$v: failing-test closer: $id names tests absent from $tf at ${head:0:10}; the not-checkable row was NOT written; runs again the next time $v is gated (a new HEAD, or a re-gate of this one) | evidence $ev"; unsee; fi
       continue
     fi
-    names="$(printf '%s' "$g" | jq_ao "$ao" -r '($ao | split("\n")) as $L
-      | [.names[] | select(("(pass) " + .) as $x | $L | index($x)) | select(("(fail) " + .) as $x | $L | index($x) | not)] as $ok
-      | if ($ok | length) == (.names | length) then "all" else "\($ok | length)/\(.names | length)" end')"
-    # The output is the tested code's as much as the runner's, so a pass is the report's: every name the gap names passed
-    # in the runner's report of a run that was not killed. Output that says pass where the report does not is red.
-    if [ "$names" = all ] && ! printf '%s' "$reps" | jq -e --arg tf "$tf" --argjson n "$(printf '%s' "$g" | jq -c .names)" \
+    # A pass is the report's: every name the gap names passed in the runner's report of a run that was not killed. The
+    # output is evidence only: it is the tested code's as much as the runner's, and the runner keeps only its end, so a
+    # long run's "(pass)" lines may not be in it. Output that says pass where the report does not is red.
+    if printf '%s' "$reps" | jq -e --arg tf "$tf" --argjson n "$(printf '%s' "$g" | jq -c .names)" \
         '.[$tf] as $r | $r != null and $r.signalled == false and ($n | all(. as $x | $r.names[$x].result? == "pass"))' >/dev/null 2>&1; then
-      names="$(printf '%s' "$reps" | jq -r --arg tf "$tf" --argjson n "$(printf '%s' "$g" | jq -c .names)" \
+      names=all
+    else
+      names="$(printf '%s' "$g" | jq_ao "$ao" -r '($ao | split("\n")) as $L
+        | [.names[] | select(("(pass) " + .) as $x | $L | index($x)) | select(("(fail) " + .) as $x | $L | index($x) | not)] as $ok
+        | if ($ok | length) == (.names | length) then "all" else "\($ok | length)/\(.names | length)" end')"
+      [ "$names" = all ] && names="$(printf '%s' "$reps" | jq -r --arg tf "$tf" --argjson n "$(printf '%s' "$g" | jq -c .names)" \
         '.[$tf] as $r | "\([$n[] | select($r.names[.].result? == "pass")] | length)/\($n | length) by the runner'"'"'s report"')"
     fi
     if [ "$names" != "all" ]; then

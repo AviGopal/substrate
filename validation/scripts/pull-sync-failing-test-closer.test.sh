@@ -63,7 +63,9 @@
 #   (gc2) gap_check refusing (ran:false), or not answering: nothing written, said left open with the reason, and asked
 #       again at the same HEAD on the next call;
 #   (gc3) output saying every name passed while the runner's report says one failed, or a run the runner killed: not
-#       closed (the report decides a pass, never the tested code's output).
+#       closed (the report decides a pass, never the tested code's output);
+#   (gc4) the converse: the runner's report saying every name passed, of a run not killed, whose output (cut to its end)
+#       holds no "(pass)" line for them: closed. The output is evidence, not the verdict.
 # Run it under the node's own jq as well: jq 1.6 refuses an object merged with "+" inside an object's key without
 # parentheses, so a payload that builds here can be empty there.
 # usage: validation/scripts/pull-sync-failing-test-closer.test.sh [path/to/substrate-pull-sync.sh]
@@ -711,6 +713,16 @@ for mode in report signalled; do
     ok "[MUST-FAIL] (gc3) output saying every name passed, with the runner's report $([ "$mode" = report ] && echo "saying one failed" || echo "of a killed run"): not closed"
   else bad "(gc3) $mode: writes=$(cat "$WRITES") log=$(cat "$LOG")"; fi
 done
+
+# (gc4) the report's pass closes though the output, cut to its end, shows none of the names passing
+reset "$(row g-a x src/a.test.ts "$GEN" '["d > one","d > two"]')"
+printf 'test("one", () => {})\ntest("two", () => {})\n' > "$DIR/src/a.test.ts"
+printf '(pass) d > zz %s\n' $(seq 1 3) > "$FAKE/a.test.ts.out"; printf ' 41 pass\n 0 fail\n' >> "$FAKE/a.test.ts.out"
+GC_REPORT=pass GC_TRUNCATED=true close_failing_test_gaps x "$H40" "$DIR"
+if [ "$(jq -r '.gap_id + "/" + .status' "$WRITES" 2>/dev/null)" = "g-a/closed" ] && [ "$(open_ids)" = "[]" ]; then
+  ok "[MUST-FAIL] (gc4) the runner's report says every name passed, its output cut before their lines: closed"
+else bad "(gc4) writes=$(cat "$WRITES") log=$(tail -3 "$LOG")"; fi
+: > "$DIR/src/a.test.ts"
 
 # every row this file's legs wrote: none names a test absent that its own evidence reads as passing or failing
 ZC="$(jq -c 'select(.meta.names_absent != null and (.meta.closer_evidence.names | type) == "array")
