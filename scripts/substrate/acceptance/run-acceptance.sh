@@ -805,7 +805,7 @@ if [ "$have_container" -eq 1 ]; then
   # ends before the first scheduled tick, one tick is started here, bounded, after the
   # verdict was read, so it can never change the verdict.
   if eng exec "$ACCEPTANCE_CONTAINER" systemctl cat substrate-pull-sync.service >/dev/null 2>&1; then
-    if ! eng exec "$ACCEPTANCE_CONTAINER" journalctl -u substrate-pull-sync --no-pager -q 2>/dev/null | grep -q .; then
+    if ! eng exec "$ACCEPTANCE_CONTAINER" journalctl -u substrate-pull-sync -n 1 --no-pager -q 2>/dev/null | grep -q .; then
       log "no pull-sync tick has run yet; starting one for diagnostics (bounded to ${PULL_SYNC_DIAG_TIMEOUT:-600}s)"
       timeout "${PULL_SYNC_DIAG_TIMEOUT:-600}" env -i "${fence_env[@]}" "$ENGINE" exec "$ACCEPTANCE_CONTAINER" \
         systemctl start substrate-pull-sync.service >"$RESULT_DIR/diag/pull-sync-start.txt" 2>&1 || echo "exit $?" >>"$RESULT_DIR/diag/pull-sync-start.txt"
