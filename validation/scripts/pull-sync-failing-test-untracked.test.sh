@@ -22,7 +22,8 @@ grep -q '^close_failing_test_gaps()' "$T/fns.sh" && grep -q '^gen_failing_test_g
   || { echo "FAIL - could not extract the closer and the generator"; exit 1; }
 LOG="$T/log.txt"; log() { echo "$*" >> "$LOG"; }
 ROWS="$T/rows.json"; WRITES="$T/writes.txt"
-DISCOVERY=http://discovery.test; SHAPE_ROUTES=" "; SR_ROUTE=""; DEV_VESSEL=""
+DISCOVERY=http://discovery.test; SHAPE_ROUTES=" "; SR_ROUTE=""; DEV_VESSEL=""; BRANCH=dev
+source "$(dirname "$0")/lib/gap-check-stub.sh"
 export METABOB_API_KEY=""
 curl() {
   cat > /dev/null
@@ -36,6 +37,7 @@ curl() {
       row="$(printf '%s' "$d" | jq -c --argjson n "$n" '.pointer as $p | $p.row + {id: ("row-" + ($n | tostring)), seq: ($n + 1), writer: $p.writer, role: $p.role}')"
       jq -c --argjson r "$row" '. + [$r]' "$ROWS" > "$ROWS.new" && mv "$ROWS.new" "$ROWS"
       echo "$row" >> "$WRITES"; printf '%s' "$row" ;;
+    gap_check) gap_check_stub "$d" ;;
     *) printf '{}' ;;
   esac
 }
@@ -98,7 +100,12 @@ else bad "(d) writes=$(cat "$WRITES") log=$(cat "$LOG")"; fi
 # (e) the generator: a failing build copy is not filed; the tracked file failing beside it is
 EMITS="$T/emits.txt"; : > "$EMITS"; : > "$LOG"
 emit_gap() { printf '%s\n' "$1" >> "$EMITS"; }
-dev_resolve() { printf '{"body":{"gaps":[]}}'; }
+dev_resolve() {
+  case "$(printf '%s' "$1" | jq -r '.impulse.pointer.type')" in
+    gap_check) gap_check_stub "$(printf '%s' "$1" | jq -c '{pointer: .impulse.pointer}')" ;;
+    *) printf '{"body":{"gaps":[]}}' ;;
+  esac
+}
 cat > "$FAKE/bun" <<'B'
 #!/usr/bin/env bash
 case "$2" in */kept.test.ts) printf '(fail) two\n 0 pass\n 1 fail\n' ;; */copy.test.js) printf '(fail) three\n 0 pass\n 1 fail\n' ;; esac

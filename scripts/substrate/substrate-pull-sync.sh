@@ -1067,10 +1067,10 @@ gen_failing_test_gaps() {
 # the generator's baseline): a gap already run at this HEAD by this closer is not run again until either moves, and the
 # rest go least recently run first. A test file several gaps check runs once per call.
 close_failing_test_gaps() {
-  local v="$1" head="$2" dir="${3:-}" cap="${4:-3}" st gaps g id tf names ar ao arc n=0 seen runs="{}" rcs="{}" code ev
+  local v="$1" head="$2" dir="${3:-}" cap="${4:-3}" st gaps g id tf names ao arc n=0 seen runs="{}" rcs="{}" reps="{}" code ev only ans why
   code="$(closer_code)"
   command -v jq >/dev/null 2>&1 || return 0
-  [ -n "$dir" ] && [ -n "${BUN_BIN:-}" ] || return 0
+  [ -n "$dir" ] || return 0
   seen="${TEST_BASELINE_DIR:-/workspace/.test-baseline}/$v.closer"
   jq -e 'type == "object"' "$seen" >/dev/null 2>&1 || printf '{}' > "$seen" 2>/dev/null || true
   st="$(mktemp "${TMPDIR:-/tmp}/pullsync-close-XXXXXX")" || return 0
@@ -1090,7 +1090,7 @@ close_failing_test_gaps() {
   [ -n "$gaps" ] || return 0
   while IFS= read -r g; do
     [ -n "$g" ] || continue
-    if [ -n "${FAILTEST_GEN_DEADLINE:-}" ] && [ $(( $(date +%s) + 170 )) -gt "$FAILTEST_GEN_DEADLINE" ]; then log "$v: failing-test closer: tick budget spent; the rest wait for a later tick"; break; fi
+    if [ -n "${FAILTEST_GEN_DEADLINE:-}" ] && [ $(( $(date +%s) + 335 )) -gt "$FAILTEST_GEN_DEADLINE" ]; then log "$v: failing-test closer: tick budget spent; the rest wait for a later tick"; break; fi
     id="$(printf '%s' "$g" | jq -r .id)"; tf="$(printf '%s' "$g" | jq -r .tf)"
     ev="$(closer_evidence "$dir" "" "" '[]')"
     # A test file not tracked at this HEAD (removed since the gap was filed, or a build copy the suite also ran, such as
@@ -1107,13 +1107,26 @@ close_failing_test_gaps() {
       [ -f "$dir/$tf" ] || { log "$v: failing-test closer: $tf is not in the checkout; $id left open | evidence $ev"; continue; }
       ao="$(printf '%s' "$runs" | jq -r --arg tf "$tf" '.[$tf] // empty')"
       if [ -z "$ao" ]; then
-        ar="$(mktemp -d "${TMPDIR:-/tmp}/pullsync-close-alone-XXXXXX")"
-        ao="$(cd "$dir" && scrubbed_env "$ar" timeout --kill-after=15 150 "$BUN_BIN" test "./$tf" --timeout 20000 > "$ar.out" 2>&1; echo "$?" > "$ar.rc"; cat "$ar.out"; rm -f "$ar.out")"
-        ao="$(printf '%s\n' "$ao" | sed 's/\x1b\[[0-9;]*m//g; s/ \[[0-9.]*m*s\]$//; s/[[:space:]]*$//')"
-        arc="$(cat "$ar.rc" 2>/dev/null)"; rm -f "$ar.rc"
-        rm -rf "$ar" 2>/dev/null
+        # The run is the test runner's, never this script's: local-tools' gap_check, asked through discovery as a traced
+        # call, writes this HEAD's tree out and runs the file as the shell user, every name the file's gaps here name at
+        # once, and judges each name from the runner's own report. Not answered, refused, or not run, nothing is judged
+        # here: the gap is left open and not seen, so it is asked again the next time this vessel is gated. There is no
+        # run of its own to fall back to: a second runner under other conditions gives a second verdict. The call is
+        # bounded above the runner's own step bound, so the runner gives up first.
+        only="$(printf '%s\n' "$gaps" | jq -sc --arg tf "$tf" '[.[] | select(.tf == $tf) | .names[]] | unique')"
+        ans="$(dev_resolve "$(jq -nc --arg v "$v" --arg ref "$head" --arg br "$BRANCH" --arg tf "$tf" --argjson only "$only" \
+          '{impulse:{pointer:{type:"gap_check",repo:$v,ref:$ref,branch:$br,test_file:$tf,only_tests:$only}}}')" --max-time 330 2>/dev/null)"
+        ans="$(printf '%s' "$ans" | jq -c '(.content // .) | select(type == "object" and .shape == "gapCheck")' 2>/dev/null)"
+        if [ "$(printf '%s' "$ans" | jq -r '.ran // false' 2>/dev/null)" != true ]; then
+          why="$(printf '%s' "$ans" | jq -r '.why // empty' 2>/dev/null | cut -c1-200)"
+          log "$v: failing-test closer: the test runner did not check $tf (${why:-no answer}); $id left open, asked again the next time $v is gated | evidence $ev"
+          continue
+        fi
+        ao="$(printf '%s' "$ans" | jq -r '.out // ""' | sed 's/\x1b\[[0-9;]*m//g; s/ \[[0-9.]*m*s\]$//; s/[[:space:]]*$//')"
+        arc="$(printf '%s' "$ans" | jq -r '.exit_code // "?"')"
         runs="$(printf '%s' "$runs" | jq_ao "$ao" -c --arg tf "$tf" '. + {($tf): $ao}')"
         rcs="$(printf '%s' "$rcs" | jq -c --arg tf "$tf" --arg rc "${arc:-?}" '. + {($tf): $rc}')"
+        reps="$(printf '%s' "$reps" | jq -c --arg tf "$tf" --argjson a "$(printf '%s' "$ans" | jq -c '{signalled: (.signalled != false), names: (.names // {})}')" '. + {($tf): $a}')"
       fi
       ev="$(printf '%s' "$ao" | closer_evidence "$dir" "$(printf '%s' "$rcs" | jq -r --arg tf "$tf" '.[$tf] // "?"')" - "$(printf '%s' "$g" | jq -c .names)")"
       jq -c --arg id "$id" --arg head "${head:0:10}" --arg code "$code" --argjson at "$(date +%s%N)" '. + {($id): {head: $head, at: $at, code: $code}}' "$seen" > "$seen.new" 2>/dev/null && mv "$seen.new" "$seen"
@@ -1159,6 +1172,13 @@ close_failing_test_gaps() {
     names="$(printf '%s' "$g" | jq_ao "$ao" -r '($ao | split("\n")) as $L
       | [.names[] | select(("(pass) " + .) as $x | $L | index($x)) | select(("(fail) " + .) as $x | $L | index($x) | not)] as $ok
       | if ($ok | length) == (.names | length) then "all" else "\($ok | length)/\(.names | length)" end')"
+    # The output is the tested code's as much as the runner's, so a pass is the report's: every name the gap names passed
+    # in the runner's report of a run that was not killed. Output that says pass where the report does not is red.
+    if [ "$names" = all ] && ! printf '%s' "$reps" | jq -e --arg tf "$tf" --argjson n "$(printf '%s' "$g" | jq -c .names)" \
+        '.[$tf] as $r | $r != null and $r.signalled == false and ($n | all(. as $x | $r.names[$x].result? == "pass"))' >/dev/null 2>&1; then
+      names="$(printf '%s' "$reps" | jq -r --arg tf "$tf" --argjson n "$(printf '%s' "$g" | jq -c .names)" \
+        '.[$tf] as $r | "\([$n[] | select($r.names[.].result? == "pass")] | length)/\($n | length) by the runner'"'"'s report"')"
+    fi
     if [ "$names" != "all" ]; then
       # Every name is there again but not all pass: a gap this closer marked not checkable is worked again, said once
       # (the mark ends by the closer's own row, so no gap stays out of the walk once its tests are back). Not a gap a

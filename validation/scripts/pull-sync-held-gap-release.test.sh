@@ -66,7 +66,8 @@ grep -q '^lift_held_gaps()' "$T/fns.sh" && grep -q '^test_size()' "$T/fns.sh" \
   || { echo "FAIL - could not extract lift_held_gaps and test_size"; exit 1; }
 LOG="$T/log.txt"; log() { echo "$*" >> "$LOG"; }
 ROWS="$T/rows.json"; WRITES="$T/writes.txt"; DOWN=""
-DISCOVERY=http://discovery.test; SHAPE_ROUTES=" "; SR_ROUTE=""; DEV_VESSEL=""
+DISCOVERY=http://discovery.test; SHAPE_ROUTES=" "; SR_ROUTE=""; DEV_VESSEL=""; BRANCH=dev
+source "$(dirname "$0")/lib/gap-check-stub.sh"
 export METABOB_API_KEY=""
 curl() {
   cat > /dev/null
@@ -81,6 +82,7 @@ curl() {
       row="$(printf '%s' "$d" | jq -c --argjson n "$n" '.pointer as $p | $p.row + {id: ("row-" + ($n | tostring)), seq: ($n + 1), writer: $p.writer, role: $p.role}')"
       jq -c --argjson r "$row" '. + [$r]' "$ROWS" > "$ROWS.new" && mv "$ROWS.new" "$ROWS"
       echo "$row" >> "$WRITES"; printf '%s' "$row" ;;
+    gap_check) gap_check_stub "$d" ;;
     *) printf '{}' ;;
   esac
 }

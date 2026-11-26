@@ -2,7 +2,8 @@
 # pull-sync closes the failing-test gaps its generator opened (scripts/substrate/substrate-pull-sync.sh
 # close_failing_test_gaps): nothing else writes their closed row, and records works an open detector gap as a request,
 # so without this a fixed test stayed work forever. Runs the script's own functions with curl stubbed as discovery in
-# front of an in-memory records store, and bun stubbed to print what each test file would.
+# front of an in-memory records store and local-tools' gap_check, whose run is a bun stubbed to print what each test file
+# would.
 #   (a) every name a gap checks passes alone: one closed detector row, and the open read no longer lists it;
 #   (b) one name still fails alone: the gap stays open, and its one new row says what the run found;
 #   (c) a run that printed no bun summary (crashed, timed out): nothing written;
@@ -57,6 +58,12 @@
 #   (q) a row the store does not take is said not written (no "marked" line for a mark that did not happen) and is
 #       run again by the next run of the closer at the same HEAD (a re-gate; the closer runs only for a gated vessel):
 #       a mark, and a close.
+#   (gc1) the run is local-tools' gap_check's, asked once per test file with this HEAD's full sha, the branch, the vessel
+#       and every name that file's gaps here name; the closer runs no bun of its own;
+#   (gc2) gap_check refusing (ran:false), or not answering: nothing written, said left open with the reason, and asked
+#       again at the same HEAD on the next call;
+#   (gc3) output saying every name passed while the runner's report says one failed, or a run the runner killed: not
+#       closed (the report decides a pass, never the tested code's output).
 # Run it under the node's own jq as well: jq 1.6 refuses an object merged with "+" inside an object's key without
 # parentheses, so a payload that builds here can be empty there.
 # usage: validation/scripts/pull-sync-failing-test-closer.test.sh [path/to/substrate-pull-sync.sh]
@@ -73,7 +80,7 @@ grep -q '^close_failing_test_gaps()' "$T/fns.sh" && grep -q '^gap_resolve()' "$T
   || { echo "FAIL - could not extract close_failing_test_gaps and gap_resolve"; exit 1; }
 LOG="$T/log.txt"; log() { echo "$*" >> "$LOG"; }
 ROWS="$T/rows.json"; WRITES="$T/writes.txt"; ALLW="$T/all-writes.txt"
-DISCOVERY=http://discovery.test; SHAPE_ROUTES=" "; SR_ROUTE=""; DEV_VESSEL=""
+DISCOVERY=http://discovery.test; SHAPE_ROUTES=" "; SR_ROUTE=""; DEV_VESSEL=""; BRANCH=dev
 export METABOB_API_KEY=""
 curl() {
   cat > /dev/null
@@ -88,9 +95,11 @@ curl() {
       row="$(printf '%s' "$d" | jq -c --argjson n "$n" '.pointer as $p | $p.row + {id: ("row-" + ($n | tostring)), seq: ($n + 1), writer: $p.writer, role: $p.role}')"
       jq -c --argjson r "$row" '. + [$r]' "$ROWS" > "$ROWS.new" && mv "$ROWS.new" "$ROWS"
       echo "$row" >> "$WRITES"; echo "$row" >> "$ALLW"; printf '%s' "$row" ;;
+    gap_check) gap_check_stub "$d" ;;
     *) printf '{}' ;;
   esac
 }
+source "$(dirname "$0")/lib/gap-check-stub.sh"
 # shellcheck disable=SC1090
 source "$T/fns.sh"
 # The checkout tracks every file a leg puts in it (git add before each call), as a gated vessel's checkout tracks its
@@ -117,7 +126,7 @@ row() { # gap_id vessel test_file filed_by names-json
 }
 reset() { # rows...
   printf '%s\n' "$@" | jq -s -c 'to_entries | map(.value + {id: ("r" + (.key | tostring)), seq: (.key + 1)})' > "$ROWS"
-  : > "$WRITES"; : > "$FAKE/ran.txt"; : > "$LOG"; rm -f "$TEST_BASELINE_DIR"/*.closer
+  : > "$WRITES"; : > "$FAKE/ran.txt"; : > "$LOG"; : > "$T/gc-asks.txt"; rm -f "$TEST_BASELINE_DIR"/*.closer
 }
 GEN="pull-sync failing-test generator"
 summary() { printf '%s\n' "$@"; printf ' %s pass\n 0 fail\n' "$#"; }
@@ -664,6 +673,44 @@ if ! jq -e -s 'any(.[]; .meta.names_absent != null or .meta.check_runnable == fa
   ok "[MUST-FAIL] (z) a long run that broke before its tests (an unhandled error first) marks nothing absent"
 else bad "(z) broken: $(jq -c '.meta | {check_runnable, names_absent}' "$WRITES" | head -2)"; fi
 rm -f "$FAKE/z.test.ts.rc" "$DIR/src/z.test.ts"
+
+# (gc1) the ask, and no run of its own
+summary "(pass) d > one" "(pass) d > two" > "$FAKE/a.test.ts.out"
+reset "$(row g-1 x src/a.test.ts "$GEN" '["d > one"]')" "$(row g-2 x src/a.test.ts "$GEN" '["d > two"]')"
+H40=0123456789abcdef0123456789abcdef01234567
+close_failing_test_gaps x "$H40" "$DIR"
+if [ "$(wc -l < "$T/gc-asks.txt")" = 1 ] && jq -e --arg h "$H40" '.type == "gap_check" and .repo == "x" and .ref == $h and .branch == "dev"
+    and .test_file == "src/a.test.ts" and .only_tests == ["d > one","d > two"]' "$T/gc-asks.txt" >/dev/null \
+  && [ "$(jq -r .status "$WRITES" | sort -u)" = closed ]; then
+  ok "[MUST-FAIL] (gc1) one gap_check per test file, at the full HEAD on the branch, asking every name its gaps name; both close"
+else bad "(gc1) asks=$(cat "$T/gc-asks.txt") writes=$(cat "$WRITES")"; fi
+CLOSER_BODY="$(declare -f orig_close_failing_test_gaps)"
+if ! command grep -qE 'BUN_BIN|bun"? test|scrubbed_env' <<<"$CLOSER_BODY"; then ok "[MUST-FAIL] (gc1) the closer runs no test itself: no bun, no scrubbed run, in its body"
+else bad "(gc1) the closer still runs a test itself: $(command grep -nE 'BUN_BIN|bun"? test|scrubbed_env' <<<"$CLOSER_BODY" | head -3)"; fi
+
+# (gc2) refused, or no answer: left open, not seen
+summary "(pass) d > one" > "$FAKE/a.test.ts.out"
+for mode in refuse down; do
+  reset "$(row g-a x src/a.test.ts "$GEN" '["d > one"]')"
+  if [ "$mode" = refuse ]; then GC_REFUSE="ref is not on origin's branch" close_failing_test_gaps x "$H40" "$DIR"
+  else GC_DOWN=1 close_failing_test_gaps x "$H40" "$DIR"; fi
+  said="$(command grep -c "did not check src/a.test.ts (.*); g-a left open" "$LOG")"
+  [ "$mode" = refuse ] && { command grep -qF "(ref is not on origin's branch)" "$LOG" || said=0; }
+  close_failing_test_gaps x "$H40" "$DIR"
+  if [ "$said" = 1 ] && [ "$(jq -r '.gap_id + "/" + .status' "$WRITES")" = "g-a/closed" ] && [ "$(wc -l < "$T/gc-asks.txt")" = 2 ]; then
+    ok "[MUST-FAIL] (gc2) gap_check $mode: nothing written, said left open, and asked again at the same HEAD (then closes)"
+  else bad "(gc2) $mode: said=$said asks=$(wc -l < "$T/gc-asks.txt") writes=$(cat "$WRITES") log=$(cat "$LOG")"; fi
+done
+
+# (gc3) the report decides the pass
+for mode in report signalled; do
+  reset "$(row g-a x src/a.test.ts "$GEN" '["d > one"]')"
+  if [ "$mode" = report ]; then GC_REPORT=fail close_failing_test_gaps x "$H40" "$DIR"
+  else GC_SIGNALLED=true close_failing_test_gaps x "$H40" "$DIR"; fi
+  if [ -s "$WRITES" ] && [ -z "$(jq -r 'select(.status == "closed") | .gap_id' "$WRITES")" ] && [ "$(open_ids)" = '["g-a"]' ]; then
+    ok "[MUST-FAIL] (gc3) output saying every name passed, with the runner's report $([ "$mode" = report ] && echo "saying one failed" || echo "of a killed run"): not closed"
+  else bad "(gc3) $mode: writes=$(cat "$WRITES") log=$(cat "$LOG")"; fi
+done
 
 # every row this file's legs wrote: none names a test absent that its own evidence reads as passing or failing
 ZC="$(jq -c 'select(.meta.names_absent != null and (.meta.closer_evidence.names | type) == "array")

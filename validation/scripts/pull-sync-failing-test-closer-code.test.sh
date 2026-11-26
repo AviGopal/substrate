@@ -36,6 +36,7 @@ grep -q '^close_failing_test_gaps()' "$T/fns.sh" || { echo "FAIL - could not ext
 LOG="$T/log.txt"; log() { echo "$*" >> "$LOG"; }
 ROWS="$T/rows.json"; WRITES="$T/writes.txt"; READS="$T/reads.txt"
 DISCOVERY=http://discovery.test; SHAPE_ROUTES=" "; SR_ROUTE=""; DEV_VESSEL=""
+source "$(dirname "$0")/lib/gap-check-stub.sh"
 export METABOB_API_KEY=""
 curl() {
   cat > /dev/null
@@ -49,6 +50,7 @@ curl() {
       row="$(printf '%s' "$d" | jq -c --argjson n "$n" '.pointer as $p | $p.row + {id: ("row-" + ($n | tostring)), seq: ($n + 1), writer: $p.writer, role: $p.role}')"
       jq -c --argjson r "$row" '. + [$r]' "$ROWS" > "$ROWS.new" && mv "$ROWS.new" "$ROWS"
       echo "$row" >> "$WRITES"; printf '%s' "$row" ;;
+    gap_check) gap_check_stub "$d" ;;
     *) printf '{}' ;;
   esac
 }
