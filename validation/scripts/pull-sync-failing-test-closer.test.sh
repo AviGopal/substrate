@@ -462,8 +462,10 @@ if [ "$(printf '%s\n' "$X1" | wc -l)" = 1 ] && printf '%s' "$X1" | jq -e --argjs
 else bad "(x) X1=$X1 XS=$XS X2=$X2 X3=$X3 log=$(cat "$LOG")"; fi
 # (x) across repos: the rows this closer wrote, read by records' fold. Red at one HEAD, then a landing, then the same red
 # at the landed HEAD, then a closing (as a change to the closer's own run could cause): the closing credits nobody,
-# because the red row at the landed HEAD is the gap's last red. Runs with RECORDS_DIR naming a records-vessel checkout.
-if [ -n "${RECORDS_DIR:-}" ]; then
+# because the red row at the landed HEAD is the gap's last red. Reads the fold from RECORDS_DIR, by default this tree's
+# records-vessel submodule, so every run that guards a landing runs it; it is skipped only when no checkout holds the fold.
+RECORDS_DIR="${RECORDS_DIR:-$(cd "$(dirname "$0")/../.." && pwd)/repos/records-vessel}"
+if [ -f "$RECORDS_DIR/src/fold.ts" ]; then
   XROWS="$(jq -cn --argjson x1 "$X1" --arg x2 "$X2R" '
     [{shape: "credits", role: "owner", target: "gap", by_call: "git_land"}, ($x1 + {role: "detector"}),
      {shape: "selection", role: "walk", arm: "treated", cell: "land", pool_refs: ["r1"]},
@@ -480,7 +482,7 @@ if [ -n "${RECORDS_DIR:-}" ]; then
   if [ "$XF" = '[[{"cells":[],"refused":"no_change"}],[{"cells":[],"refused":"no_change"}]]' ]; then
     ok "(x) across repos: red, a landing, the same red at the landed HEAD, then a closing: records' fold credits nobody"
   else bad "(x) across repos: fold=$XF rows=$XROWS"; fi
-else printf 'SKIP - (x) across repos: RECORDS_DIR is not set\n'; fi
+else printf 'SKIP - (x) across repos: no records-vessel checkout at %s\n' "$RECORDS_DIR"; fi
 # twelve names, each failing with a long received: the row's metadata stays within gap_resolve's 4096, evidence_resolve
 # whole, at most 8 names, with how many there were
 XN="$(jq -cn '[range(12) | "d > n\(.)"]')"
