@@ -10,7 +10,8 @@
 #       x-shape-in also ["activity_template"];
 #   (e) second run is strictly idempotent (0 additional rows written);
 #   (f) conditional once-only fallback_order refresh: prepends SOTA order and strips :free when stale fallback_order is served
-#       (idempotent on second run), and writes nothing extra when policy has no fallback_order.
+#       (idempotent on second run), and writes nothing extra when policy has no fallback_order;
+#   (g) credits (target: "gap") declares Law 1 test_categories and test_reasons (including named_tests_pass and named_tests_absent).
 # Driven against a stand-in discovery (loopback only, no fleet key).
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -171,6 +172,22 @@ leg(
   s2.firstCode === 0 && s2.writesAfterFirst === 0 && s2.writesAfterSecond === 0
     && !s2.rows.some((r) => r.shape === "owner_seeded" && r.what === "fallback_order_sota_v1"),
   "(f2) policy without fallback_order triggers zero fallback_order writes",
+);
+
+const gapCredits = s1.rows.filter((r) => r.shape === "credits" && r.target === "gap").at(-1);
+leg(
+  !!gapCredits
+    && gapCredits.by_call === "git_land"
+    && JSON.stringify(gapCredits.test_categories) === JSON.stringify(["failing_test", "typecheck_error"])
+    && JSON.stringify(gapCredits.test_reasons) === JSON.stringify([
+      "named_tests_pass",
+      "named_tests_absent",
+      "suite_passes_again",
+      "testgate_budget_recovered",
+    ])
+    && gapCredits.test_reasons.includes("named_tests_pass")
+    && gapCredits.test_reasons.includes("named_tests_absent"),
+  "(g) credits (target: 'gap') declares test_categories and test_reasons (including named_tests_pass and named_tests_absent)",
 );
 
 process.exit(failed === 0 ? 0 : 1);

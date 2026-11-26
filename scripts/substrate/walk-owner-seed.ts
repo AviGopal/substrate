@@ -890,8 +890,15 @@ await ensure({
 }, { of: "gap" }, "shape_description gap");
 // What a gap's closing credits: no one grades the walk's work on a gap, so records counts the detector closing it as the
 // grade, but only when a call of this shape ended among the walk's steps on it first (the walk changed something there).
+// test_categories and test_reasons declare the test-verdict categories and closure reasons in owner configuration (law 1).
 // Configuration records reads (its fold), never a request.
-await ensure({ shape: "credits", target: "gap", by_call: "git_land" }, { target: "gap" }, "credits gap");
+await ensure({
+  shape: "credits",
+  target: "gap",
+  by_call: "git_land",
+  test_categories: ["failing_test", "typecheck_error"],
+  test_reasons: ["named_tests_pass", "named_tests_absent", "suite_passes_again", "testgate_budget_recovered"],
+}, { target: "gap" }, "credits gap");
 // How credit travels to the walk's selections (records' fold): the weight a person's verdict, a lapse and a gap's
 // closing each carry, the discount per step back along what each step used (gamma) and how many steps it goes (depth).
 // w_check and promise_window settle an answer's promised next act (records: kept r 1, broken r 0, at w_check, judged
