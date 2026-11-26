@@ -80,6 +80,20 @@ describe("the model service on the protected list", () => {
   });
 });
 
+// What decides a failing-test gap's verdict (USER ruling, the protect list for the test runner): the runner and the land
+// gate's file, and the shell user it runs as, are on the list, so a walk change to what judges walk changes needs a
+// person; the tool registry, where the walk adds tools, stays off it.
+describe("the test runner on the protected list", () => {
+  const excluded = (): string[] => JSON.parse(readFileSync(SCOPE_FILE, "utf8")).autonomyScope.excluded_paths;
+  it("[MUST-FAIL] the runner's file and the shell user's are each named by their own entry", () => {
+    expect(entryFor("repos/local-tools-vessel/src/git-land.ts", excluded())).toBe("repos/local-tools-vessel/src/git-land.ts");
+    expect(entryFor("repos/local-tools-vessel/src/shell-privilege.ts", excluded())).toBe("repos/local-tools-vessel/src/shell-privilege.ts");
+  });
+  it("[GUARD] the tool registry and the runner's own tests are not", () => {
+    expect(entryFor("repos/local-tools-vessel/src/index.ts", excluded())).toBeNull();
+    expect(entryFor("repos/local-tools-vessel/src/git-land.test.ts", excluded())).toBeNull();
+  });
+});
 describe("bootstrap-seeder --pool-policy", () => {
   it("seeds a fresh pool with exactly the committed file's autonomyScope and spendEnvelope (reason aside)", () => {
     const root = mkdtempSync(join(tmpdir(), "seed-policy-"));

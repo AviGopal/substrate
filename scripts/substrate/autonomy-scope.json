@@ -16,7 +16,9 @@
       "repos/boredom-vessel/src/spend-envelope.ts",
       "repos/boredom-vessel/src/spend-envelope.test.ts",
       "repos/llm-resolver-vessel/src/dispatch-budget.ts",
-      "repos/llm-resolver-vessel/src/dispatch-budget.test.ts"
+      "repos/llm-resolver-vessel/src/dispatch-budget.test.ts",
+      "repos/local-tools-vessel/src/git-land.ts",
+      "repos/local-tools-vessel/src/shell-privilege.ts"
     ],
     "require_falsifier_classes": [
       "class2"
