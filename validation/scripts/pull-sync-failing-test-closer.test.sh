@@ -43,8 +43,10 @@
 #       line and what the assertion got, each bounded) or absent, and whether the checkout has node_modules; an
 #       untracked file's line says nothing was run;
 #   (x) the evidence goes on the gap's row: a red verdict writes one row with it (a failing expect's matcher line and
-#       its expected and received, never its source line; holds kept, claim dropped), the same found at a new sha writes
-#       nothing, a new received writes again, and a refused row is written on the next call; the close, the absent mark
+#       its expected and received, never its source line; holds kept, claim dropped), the same found again at the same
+#       sha writes nothing, the same found at a new sha writes a row with that sha (a landing that left it red is followed
+#       by a red verdict, which records' fold reads as the gap's last red), a new received writes again, and a refused
+#       row is written on the next call; the close, the absent mark
 #       and the re-arms carry it; the row's metadata stays within gap_resolve's 4096 with evidence_resolve whole (at
 #       most 8 names, matcher lines cut at 160, past the bound the matcher lines dropped before what the assertions
 #       got), and metadata already at the bound takes none;
@@ -443,18 +445,42 @@ touch "$DIR/src/x.test.ts"; echo 1 > "$FAKE/x.test.ts.rc"
 xout "spawn ENOENT" > "$FAKE/x.test.ts.out"
 reset "$(xrow)"; XR="$(jq -c '.[0].meta.evidence_resolve' "$ROWS")"
 close_failing_test_gaps x 3131313131313131 "$DIR"; X1="$(cat "$WRITES")"
+# run again at the same sha (a re-gate): the same found writes nothing
+close_failing_test_gaps x 3434343434343434 "$DIR"; XS="$(wc -l < "$WRITES")"
 touch "$DIR/src/x2.txt"; git -C "$DIR" add -A; git -C "$DIR" -c user.name=t -c user.email=t@t commit -qm x2
-close_failing_test_gaps x 3232323232323232 "$DIR"; X2="$(wc -l < "$WRITES")"
+close_failing_test_gaps x 3232323232323232 "$DIR"; X2="$(wc -l < "$WRITES")"; X2R="$(sed -n 2p "$WRITES")"
 [ "$(printf '%s' "$X1" | jq -r .meta.closer_evidence.sha)" != "$(git -C "$DIR" rev-parse HEAD)" ] || X2="sha unchanged"
+[ "$(printf '%s' "$X2R" | jq -r .meta.closer_evidence.sha)" = "$(git -C "$DIR" rev-parse HEAD)" ] || X2="row not at the new sha"
 xout "spawn EACCES" > "$FAKE/x.test.ts.out"
-close_failing_test_gaps x 3333333333333333 "$DIR"; X3="$(sed -n 2p "$WRITES")"
+close_failing_test_gaps x 3333333333333333 "$DIR"; X3="$(sed -n 3p "$WRITES")"
 if [ "$(printf '%s\n' "$X1" | wc -l)" = 1 ] && printf '%s' "$X1" | jq -e --argjson er "$XR" '.status == "open" and .claim == null and .waits_for == "w"
       and .meta.operator_hold == "h" and .meta.evidence_resolve == $er and .meta.closer_evidence.rc == "1"
       and .meta.closer_evidence.names == [{name: "d > one", result: "fail", error: "error: expect(received).toContain(expected)",
         got: "Expected to contain: \"wrote no report\"\nReceived: \"spawn ENOENT\""}]' >/dev/null \
-  && [ "$X2" = 1 ] && [ "$(wc -l < "$WRITES")" = 2 ] && printf '%s' "$X3" | jq -e '.meta.closer_evidence.names[0].got | endswith("Received: \"spawn EACCES\"")' >/dev/null; then
-  ok "(x) a red verdict's row carries the matcher line and what the assertion got, keeps its holds, drops its claim; the same at a new HEAD writes nothing, a new received writes again"
-else bad "(x) X1=$X1 X2=$X2 X3=$X3 log=$(cat "$LOG")"; fi
+  && [ "$XS" = 1 ] && [ "$X2" = 2 ] && [ "$(wc -l < "$WRITES")" = 3 ] && printf '%s' "$X3" | jq -e '.meta.closer_evidence.names[0].got | endswith("Received: \"spawn EACCES\"")' >/dev/null; then
+  ok "(x) a red verdict's row carries the matcher line and what the assertion got, keeps its holds, drops its claim; the same at the same HEAD writes nothing, the same at a new HEAD writes a row at that sha, a new received writes again"
+else bad "(x) X1=$X1 XS=$XS X2=$X2 X3=$X3 log=$(cat "$LOG")"; fi
+# (x) across repos: the rows this closer wrote, read by records' fold. Red at one HEAD, then a landing, then the same red
+# at the landed HEAD, then a closing (as a change to the closer's own run could cause): the closing credits nobody,
+# because the red row at the landed HEAD is the gap's last red. Runs with RECORDS_DIR naming a records-vessel checkout.
+if [ -n "${RECORDS_DIR:-}" ]; then
+  XROWS="$(jq -cn --argjson x1 "$X1" --arg x2 "$X2R" '
+    [{shape: "credits", role: "owner", target: "gap", by_call: "git_land"}, ($x1 + {role: "detector"}),
+     {shape: "selection", role: "walk", arm: "treated", cell: "land", pool_refs: ["r1"]},
+     {shape: "hop", role: "walk", phase: "started", call_id: "c1", pointer_type: "git_land", selection_ref: "r2"},
+     {shape: "hop", role: "walk", phase: "ended", call_id: "c1"}]
+    + (if $x2 == "" then [] else [($x2 | fromjson) + {role: "detector"}] end)
+    + [{shape: "gap", role: "detector", gap_id: "g-x", status: "closed"}]
+    | to_entries | map(.value + {id: ("r" + (.key | tostring)), seq: (.key + 1), t: "", writer: .value.role, input_refs: []})')"
+  XF="$(cd "$RECORDS_DIR" && printf '%s' "$XROWS" | bun -e '
+    const { gapClosures, gapClosuresScan } = await import(process.cwd() + "/src/fold.ts")
+    const rows = JSON.parse(await Bun.stdin.text())
+    const read = (gs) => gs.map((g) => ({ cells: [...g.cells], refused: g.refused ?? null }))
+    console.log(JSON.stringify([read(gapClosures(rows, 1e9, 1e9)), read(gapClosuresScan(rows, 1e9, 1e9))]))' 2>&1)"
+  if [ "$XF" = '[[{"cells":[],"refused":"no_change"}],[{"cells":[],"refused":"no_change"}]]' ]; then
+    ok "(x) across repos: red, a landing, the same red at the landed HEAD, then a closing: records' fold credits nobody"
+  else bad "(x) across repos: fold=$XF rows=$XROWS"; fi
+else printf 'SKIP - (x) across repos: RECORDS_DIR is not set\n'; fi
 # twelve names, each failing with a long received: the row's metadata stays within gap_resolve's 4096, evidence_resolve
 # whole, at most 8 names, with how many there were
 XN="$(jq -cn '[range(12) | "d > n\(.)"]')"

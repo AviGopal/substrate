@@ -1187,12 +1187,15 @@ close_failing_test_gaps() {
         continue
       fi
       log "$v: failing-test closer: $id still red alone ($names named tests pass); left open | evidence $ev"
-      # The red verdict goes on the gap's row only when what the run found changed (its exit code, counts, and each name's
-      # result and assertion), never for the checkout or the sha alone: a new gap row moves the gap's root (the walk counts
-      # its stall and age from it), so a HEAD that changed nothing the test says writes nothing. The row is the gap's
-      # latest as it is, with its claim left out as the closer's other marks leave it.
+      # The red verdict goes on the gap's row when what the run found changed (its exit code, counts, and each name's
+      # result and assertion) or when it was found at another sha, never for the checkout alone: a red read again at a
+      # new HEAD is the closer's verdict on whatever landed there, and a closing credits only a landing made after the
+      # gap's last red verdict (records' fold), so a landing that left the test red must be followed by a red row. That
+      # row moves the gap's root (the walk counts its stall and age from it): one row per red gap per vessel HEAD. The
+      # same found again at the same sha writes nothing. The row is the gap's latest as it is, with its claim left out as
+      # the closer's other marks leave it.
       local erow; erow="$(closer_fit "$(printf '%s' "$g" | jq -c '{impulse:{pointer:{type:"substrateGap_write",gap:((.row // {} | del(.claim)) + {id:.id, classification_metadata:(.meta // {})})}}}')" "$ev")"
-      if ! printf '%s' "$g" | jq -e --argjson w "$erow" 'def p: {rc, count, names: [(.names // [])[] | {name, result, error, got}], names_cut};
+      if ! printf '%s' "$g" | jq -e --argjson w "$erow" 'def p: {sha, rc, count, names: [(.names // [])[] | {name, result, error, got}], names_cut};
           ((.meta.closer_evidence // {}) | p) == (($w.impulse.pointer.gap.classification_metadata.closer_evidence // {}) | p)' >/dev/null 2>&1; then
         if emit_gap_checked "$erow"; then log "$v: failing-test closer: $id's row now says what its run found"
         else log "$v: failing-test closer: $id's evidence row was NOT written; runs again the next time $v is gated (a new HEAD, or a re-gate of this one)"; unsee; fi
