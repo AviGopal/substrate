@@ -35,7 +35,7 @@ else bad "(b) clean rc=$rc1 unset rc=$rc2"; fi
 
 line="$(grep -n 'container-inspect.json' "$ROOT/scripts/substrate/acceptance/run-acceptance.sh" | head -1)"
 block="$(grep -B2 'container-inspect.json' "$ROOT/scripts/substrate/acceptance/run-acceptance.sh")"
-if printf '%s' "$block" | grep -qE 'container inspect -f ' && ! printf '%s' "$block" | grep -qE 'container inspect "\$ACCEPTANCE_CONTAINER" 2>/dev/null \\$'; then
+if grep -qE 'container inspect -f ' <<<"$block" && ! grep -qE 'container inspect "\$ACCEPTANCE_CONTAINER" 2>/dev/null \\$' <<<"$block"; then
   ok "(c) the container's inspect is written through named fields only"
 else bad "(c) ${line:-no container-inspect.json line}"; fi
 

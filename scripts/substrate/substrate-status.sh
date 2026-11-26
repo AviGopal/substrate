@@ -397,7 +397,7 @@ probe_goal() {
         | jq -r 'if type == "array" then .[] | select(.shape == "answer") | (.text // "") else empty end' 2>/dev/null || true)"
       GOAL_COUNTS="$GOAL_COUNTS $(registry_count)"
       for n in $GOAL_COUNTS; do
-        printf '%s' "$texts" | grep -Eq "(^|[^0-9])$n([^0-9]|\$)" && { said="$n"; break; }
+        grep -Eq "(^|[^0-9])$n([^0-9]|\$)" <<<"$texts" && { said="$n"; break; }
       done
       if [ -n "$said" ]; then
         P_VAL=pass; P_EVID="known-answer goal reached: the walk graded ask $id r 1 (outcome ${GOAL_LAST_EXEC:-?}) and its answer states the registry's $said vessels"

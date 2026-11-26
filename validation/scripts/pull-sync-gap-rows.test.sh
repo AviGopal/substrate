@@ -133,7 +133,7 @@ if [ "$(( $(wc -l < "$WRITES") - w1 ))" = 3 ] && printf '%s' "$r8" | jq -e '.rep
   ok "(l) a top-level fact the latest row lacks (repo, then severity) is written though status, summary and meta are unchanged; a repeat is not"
 else bad "(l) writes $(( $(wc -l < "$WRITES") - w1 )) of 3, row=$r8"; fi
 gen="$(sed -n '/FAILING-TEST GAP GENERATOR/,/^  rm -f "$st"/p' "$SCRIPT")"
-if bash -n "$SCRIPT" && printf '%s' "$gen" | grep -q 'evidence_resolve: {shape: "test_suite", input: {vessel: $v,' && printf '%s' "$gen" | grep -qE '^ *repo: \$v,$'; then
+if bash -n "$SCRIPT" && grep -q 'evidence_resolve: {shape: "test_suite", input: {vessel: $v,' <<<"$gen" && grep -qE '^ *repo: \$v,$' <<<"$gen"; then
   ok "(k) the failing-test generator states repo from the vessel its evidence_resolve runs"
 else bad "(k) the script does not parse, or the generator does not set repo: \$v beside evidence_resolve.input.vessel"; fi
 before="$(wc -l < "$WRITES")"

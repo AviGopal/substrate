@@ -68,7 +68,7 @@ bad() { echo "FAIL - $*"; FAILS=$((FAILS+1)); }
 grep -q '^close_failing_test_gaps()' "$T/fns.sh" && grep -q '^gap_resolve()' "$T/fns.sh" \
   || { echo "FAIL - could not extract close_failing_test_gaps and gap_resolve"; exit 1; }
 LOG="$T/log.txt"; log() { echo "$*" >> "$LOG"; }
-ROWS="$T/rows.json"; WRITES="$T/writes.txt"
+ROWS="$T/rows.json"; WRITES="$T/writes.txt"; ALLW="$T/all-writes.txt"
 DISCOVERY=http://discovery.test; SHAPE_ROUTES=" "; SR_ROUTE=""; DEV_VESSEL=""
 export METABOB_API_KEY=""
 curl() {
@@ -83,7 +83,7 @@ curl() {
       local n row; n="$(jq length "$ROWS")"
       row="$(printf '%s' "$d" | jq -c --argjson n "$n" '.pointer as $p | $p.row + {id: ("row-" + ($n | tostring)), seq: ($n + 1), writer: $p.writer, role: $p.role}')"
       jq -c --argjson r "$row" '. + [$r]' "$ROWS" > "$ROWS.new" && mv "$ROWS.new" "$ROWS"
-      echo "$row" >> "$WRITES"; printf '%s' "$row" ;;
+      echo "$row" >> "$WRITES"; echo "$row" >> "$ALLW"; printf '%s' "$row" ;;
     *) printf '{}' ;;
   esac
 }
@@ -590,6 +590,34 @@ if [ "$(wc -l < "$WRITES")" = 1 ] && jq -e '.meta.closer_evidence.rc == "124"' "
   ok "(y) the same names and counts under another exit code write a new row"
 else bad "(y) rc: writes=$(wc -l < "$WRITES") $(jq -c .meta.closer_evidence "$WRITES" | cut -c1-300) log=$(tail -3 "$LOG")"; fi
 rm -f "$FAKE/x.test.ts.rc"
+
+# (z) a long run read under the script's pipefail: the closer reads its run's lines from a here-string, so a line that is
+# there is never read as missing because the reader stopped first. Five names failing on a thrown error, their titles
+# not in the source as the runner prints them (an escaped quote, a title built by a template), the run long.
+printf "test('a guard writes on this file\\'s client', () => { guard() })\nfor (const w of ['k1', 'k2']) test(\`AUTH=\${w} → writes\`, () => { guard() })\n" > "$DIR/src/z.test.ts"
+ZN="[\"Z > a guard writes on this file's client\",\"Z > AUTH=k1 → writes\",\"Z > AUTH=k2 → writes\"]"
+long() { head -c 2097152 /dev/zero | tr '\0' 'p' | fold -w 100 | sed 's/^/(pass) OTHER > /'; }
+{ printf 'error: NETWORK GUARD tripped: a request left the box\n      at guard (/w/src/z.test.ts:1:9)\n(fail) %s [0.42ms]\n' "Z > a guard writes on this file's client" "Z > AUTH=k1 → writes" "Z > AUTH=k2 → writes"
+  long; printf '\n 20972 pass\n 3 fail\n'; } > "$FAKE/z.test.ts.out"; echo 1 > "$FAKE/z.test.ts.rc"
+reset "$(row g-z x src/z.test.ts "$GEN" "$ZN")"
+close_failing_test_gaps x 7e58b13675aaaaaa "$DIR"
+if ! jq -e -s 'any(.[]; .meta.names_absent != null or .meta.check_runnable == false)' "$WRITES" >/dev/null && grep -q 'g-z still red alone (0/3 named tests pass)' "$LOG"; then
+  ok "[MUST-FAIL] (z) a long run whose named tests fail on a thrown error is red, never absent, though their titles are not in the source as printed"
+else bad "(z) red: writes=$(jq -c '.meta | {check_runnable, names_absent}' "$WRITES" | head -2) log=$(grep -o 'g-z[^|]*' "$LOG" | head -2)"; fi
+{ printf '# Unhandled error between tests\n'; long; printf '\n 20972 pass\n 0 fail\n 1 error\n'; } > "$FAKE/z.test.ts.out"
+reset "$(row g-z x src/z.test.ts "$GEN" "$ZN")"
+close_failing_test_gaps x 7e58b13675bbbbbb "$DIR"
+if ! jq -e -s 'any(.[]; .meta.names_absent != null or .meta.check_runnable == false)' "$WRITES" >/dev/null; then
+  ok "[MUST-FAIL] (z) a long run that broke before its tests (an unhandled error first) marks nothing absent"
+else bad "(z) broken: $(jq -c '.meta | {check_runnable, names_absent}' "$WRITES" | head -2)"; fi
+rm -f "$FAKE/z.test.ts.rc" "$DIR/src/z.test.ts"
+
+# every row this file's legs wrote: none names a test absent that its own evidence reads as passing or failing
+ZC="$(jq -c 'select(.meta.names_absent != null and (.meta.closer_evidence.names | type) == "array")
+  | . as $r | $r.meta.names_absent as $a | [$r.meta.closer_evidence.names[] | select(.result == "pass" or .result == "fail") | .name | select(IN($a[]))]
+  | select(length > 0) | {gap: $r.gap_id, both: .}' "$ALLW")"; ZRC=$?
+if [ -s "$ALLW" ] && [ "$ZRC" = 0 ] && [ -z "$ZC" ]; then ok "(z) no row names a test absent that its own evidence reads as passing or failing ($(wc -l < "$ALLW") rows)"
+else bad "(z) self-contradicting rows (jq exit $ZRC): ${ZC:-none read}"; fi
 
 [ "$FAILS" = 0 ] && { echo "PASS - pull-sync closes a generator gap once its named tests pass alone, and only then"; exit 0; }
 echo "$FAILS FAILED"; exit 1

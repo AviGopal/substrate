@@ -49,6 +49,6 @@ for c in "d.ts 1 1 bracket ?? default" "d.ts 2 1 bracket || default" "d.ts 3 1 d
 done
 [ "$(printf '%s\n' "$out" | awk -F'\t' '$2=="scripts/e.sh" && $3==3' | wc -l)" = 1 ] && ok "a line with two old-name reads and a default is ONE row" || bad "e.sh:3 counted more than once"
 [ "$(row docs/x.md 1 | cut -f6)" = doc ] && [ "$(row validation/t.test.sh 1 | cut -f6)" = test ] && ok "doc and test kinds" || bad "kinds: $(row docs/x.md 1) / $(row validation/t.test.sh 1)"
-printf '%s\n' "$out" | grep -q "^vx	src/v.ts	1	API_KEY" && ok "submodule repos under repos/ are read" || bad "submodule row missing"
-printf '%s\n' "$out" | grep -q uncommitted.ts && bad "working-tree file counted" || ok "only the committed ref counts (an uncommitted file is ignored)"
+grep -q "^vx	src/v.ts	1	API_KEY" <<<"$out" && ok "submodule repos under repos/ are read" || bad "submodule row missing"
+grep -q uncommitted.ts <<<"$out" && bad "working-tree file counted" || ok "only the committed ref counts (an uncommitted file is ignored)"
 echo; [ "$FAILS" = 0 ] && { echo PASS; exit 0; } || { echo "$FAILS FAILED"; exit 1; }

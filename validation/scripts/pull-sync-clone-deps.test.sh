@@ -423,7 +423,7 @@ else
   bad "(k) refresh_clone_dependants is not defined in the script"
 fi
 NOOP="$(awk '/^  if \[ "\$CLONE_HASH" = "\$RUNTIME_HASH" \]; then/{on=1} on{print} on && /re-running fan-out/{exit}' "$SCRIPT")"
-printf '%s' "$NOOP" | grep -q 'refresh_clone_dependants "\$v" "\$d"' && ok "(k6) called from the no-op (already converged) branch" || bad "(k6) not called from the no-op branch"
+grep -q 'refresh_clone_dependants "\$v" "\$d"' <<<"$NOOP" && ok "(k6) called from the no-op (already converged) branch" || bad "(k6) not called from the no-op branch"
 grep -B2 -A2 'echo "\$HEAD" > "\$LAST_GOOD_DIR/\$v"; rm -f "\$MARKER_DIR/\$v.fanout-fail"; log "\$v: fan-out healthy' "$SCRIPT" | grep -q 'refresh_clone_dependants "\$v" "\$d"' && ok "(k6) called after a credited fan-out" || bad "(k6) not called after a credited fan-out"
 
 

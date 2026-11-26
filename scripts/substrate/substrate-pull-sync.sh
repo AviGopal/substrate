@@ -547,7 +547,7 @@ tuning_param() {
         TP_VALUE="$(printf '%s' "$_tp_body" | sed -n 's/.*"value"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\)\(\.[0-9]*\)\{0,1\}[[:space:]]*[,}].*/\1/p' | head -1)"
       fi
       if [ -z "$TP_VALUE" ]; then
-        if printf '%s' "$_tp_body" | grep -q '"value"[[:space:]]*:[[:space:]]*null'; then _tp_why=null; elif [ "${3:-}" = string ]; then _tp_why=non_string; else _tp_why=non_numeric; fi
+        if grep -q '"value"[[:space:]]*:[[:space:]]*null' <<<"$_tp_body"; then _tp_why=null; elif [ "${3:-}" = string ]; then _tp_why=non_string; else _tp_why=non_numeric; fi
       fi ;;
     no_producer) _tp_why=no_producer ;;
     ''|000|*[!0-9]*) _tp_why=unreachable ;;
@@ -1038,7 +1038,7 @@ gen_failing_test_gaps() {
     rm -rf "$ar" 2>/dev/null
     # A run that printed no bun summary (unloadable alone, crashed, timed out) proves nothing: neither red nor
     # polluted. A name is red on "(fail) <name>" and polluted only on POSITIVE "(pass) <name>".
-    if ! printf '%s\n' "$ao" | command grep -qE '^ *[0-9]+ (pass|fail)$'; then log "$v: failing-test generator: alone run of $tf produced no result; not filing $id, not marking polluted"; continue; fi
+    if ! command grep -qE '^ *[0-9]+ (pass|fail)$' <<<"$ao"; then log "$v: failing-test generator: alone run of $tf produced no result; not filing $id, not marking polluted"; continue; fi
     keep="$(printf '%s' "$p" | jq_ao "$ao" -c '($ao | split("\n")) as $L | [.impulse.pointer.gap.classification_metadata.evidence_resolve.input.only_tests[] | select(("(fail) " + .) as $x | $L | index($x))]')"
     passed="$(printf '%s' "$p" | jq_ao "$ao" -r '($ao | split("\n")) as $L | .impulse.pointer.gap.classification_metadata.evidence_resolve.input.only_tests[] | select(("(pass) " + .) as $x | $L | index($x))')"
     [ -n "$passed" ] && printf '%s\n' "$passed" >> "$poll" 2>/dev/null
@@ -1121,7 +1121,7 @@ close_failing_test_gaps() {
       # vessel is gated, at this HEAD too (a budget deferral or a gate-only re-run), not only once the HEAD moves. The
       # closer runs only for a gated vessel, so at a converged HEAD that is no sooner than the next gate.
       unsee() { jq -c --arg id "$id" 'del(.[$id])' "$seen" > "$seen.new" 2>/dev/null && mv "$seen.new" "$seen"; }
-      if ! printf '%s\n' "$ao" | command grep -qE '^ *[0-9]+ (pass|fail)$'; then log "$v: failing-test closer: alone run of $tf produced no result; $id left open | evidence $ev"; continue; fi
+      if ! command grep -qE '^ *[0-9]+ (pass|fail)$' <<<"$ao"; then log "$v: failing-test closer: alone run of $tf produced no result; $id left open | evidence $ev"; continue; fi
       # A named test the file no longer has (renamed or removed since the gap was filed) neither passes nor fails. Counted
       # as red, the gap could never close, and the walk was sent to change the source to make a test pass that does not
       # exist. So the closer says what it found: the gap is not checkable here (check_runnable false, which records'
@@ -1130,10 +1130,10 @@ close_failing_test_gaps() {
       # the last " > "): a file that fails to load names no test at all, and its gaps are red, not absent. And a run that
       # broke before its tests (an error summary line, an unhandled error, a hook's "(unnamed)" failure) proves nothing
       # absent. Written once per set of names.
-      printf '%s\n' "$ao" | command grep -qE '^ *[0-9]+ errors?$|^# Unhandled error|^\(fail\) .*\(unnamed\)$' \
+      command grep -qE '^ *[0-9]+ errors?$|^# Unhandled error|^\(fail\) .*\(unnamed\)$' <<<"$ao" \
         || while IFS= read -r nm; do
         [ -n "$nm" ] || continue
-        printf '%s\n' "$ao" | command grep -qxF -e "(pass) $nm" -e "(fail) $nm" && continue
+        command grep -qxF -e "(pass) $nm" -e "(fail) $nm" <<<"$ao" && continue
         command grep -qF -- "${nm##* > }" "$dir/$tf" && continue
         absent="$(printf '%s' "$absent" | jq -c --arg n "$nm" '. + [$n]')"
       done < <(printf '%s' "$g" | jq -r '.names[]')
@@ -3906,7 +3906,7 @@ ensure_clone_nested_deps() { # vessel clone-dir
       done | LC_ALL=C sort -u || true)"
   while IFS= read -r _nd_n; do
     [ -n "$_nd_n" ] || continue
-    printf '%s\n' "$_nd_decl" | grep -qxF -- "$_nd_n" \
+    grep -qxF -- "$_nd_n" <<<"$_nd_decl" \
       || log "$_nd_v: nested package $_nd_n (package.json + lockfile) is NOT declared in the inventory's nested_packages for $_nd_v — not installed; its tests cannot resolve what only it declares (declare it in vessels.inventory.json)"
   done <<< "$_nd_scan"
   while IFS= read -r _nd_n; do
@@ -5059,7 +5059,7 @@ EOF
       && mv -f "$SUITE_WALL_FILE.tmp" "$SUITE_WALL_FILE" 2>/dev/null || true
   }
   # killed_at_wall <run output>: the run was killed by the per-run wall (timeout 124, or 137 after the grace).
-  killed_at_wall() { printf '%s' "$1" | grep -qE '^__PULLSYNC_RC=(124|137) '; }
+  killed_at_wall() { grep -qE '^__PULLSYNC_RC=(124|137) ' <<<"$1"; }
   SUITE_EFF_WALL_S="${TEST_TIMEOUT_SECONDS:-$SUITE_WALL_S}"; SUITE_WALL_CAP_S="$_sw_cap"; SUITE_WALL_LAST_S="${_sw_last:-null}"
   SUITE_COST_S=$(( SUITE_EFF_WALL_S + ${TEST_KILL_GRACE_SECONDS:-30} ))
   # THE SLOW LANE (see slow_lane_run): the gate's runs measure only the fast files of a vessel that declares slow ones.
@@ -5838,7 +5838,7 @@ EOF
     case "$3" in ''|*[!0-9]*) return 1 ;; esac
     [ "$3" -gt 0 ] || return 1
     local _pto; _pto="$(printf '%s\n' "$1" | sed 's/\x1b\[[0-9;]*m//g')"
-    printf '%s\n' "$_pto" | grep -q '^# Unhandled error between tests' && return 1
+    grep -q '^# Unhandled error between tests' <<<"$_pto" && return 1
     printf '%s\n' "$_pto" | awk -v n="$3" '/^\(fail\) /{f++; prev=1; next} { if (prev && $0 ~ /^[[:space:]]*\^ this test timed out after [0-9]+ms/) t++; prev=0 } END{exit !(f > 0 && f == t && f == n)}'
   }
   prot_retry_settle() { [ -f "$PT_FILE" ] && { grep -vxF "$HEAD $1" "$PT_FILE" > "$PT_FILE.tmp" 2>/dev/null; mv -f "$PT_FILE.tmp" "$PT_FILE" 2>/dev/null; } || true; }
@@ -6678,7 +6678,7 @@ if [ "$SUPER_FETCH_OK" = 1 ]; then
           [ -n "$_svdir" ] || continue
           # Only when THIS vessel's tree moved. "all" is the first-convergence
           # case, where there is no baseline to diff against.
-          if [ "$CHANGED" != "all" ] && ! echo "$CHANGED" | grep -q "^repos/$_svdir/"; then continue; fi
+          if [ "$CHANGED" != "all" ] && ! grep -q "^repos/$_svdir/" <<<"$CHANGED"; then continue; fi
           restart_breadcrumb "$_sv" "super-repo convergence to ${SHEAD:0:10}" 2>/dev/null || true
           systemctl restart "$_sv.service" 2>/dev/null || true
           log "super-repo: restarted $_sv — it runs from repos/$_svdir in this clone and bun does not hot-reload a pulled change"

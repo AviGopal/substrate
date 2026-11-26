@@ -165,9 +165,9 @@ grep -q "^INSTALL ${d}ui install .*--ignore-scripts" "$CALLS" && ok "(n1) the ne
   || bad "(n1) the nested install passes --ignore-scripts, like the root install"
 [ -e "$d/ui/node_modules/nested-dep/index.js" ] && ok "(n1) ui/node_modules holds the nested dependency" || bad "(n1) ui/node_modules holds the nested dependency"
 grep -q "nested package ui" "$LOG" && ok "(n1) the nested install is logged by directory" || bad "(n1) the nested install is logged by directory"
-printf '%s\n' "$(all_runs)" | grep -q "Cannot find package 'nested-dep'" && bad "(n1) the suite resolves nested-dep (it printed Cannot find package)" \
+grep -q "Cannot find package 'nested-dep'" <<<"$(all_runs)" && bad "(n1) the suite resolves nested-dep (it printed Cannot find package)" \
   || ok "(n1) the suite resolves nested-dep (no Cannot find package)"
-printf '%s\n' "$(all_runs)" | grep -qE '^\(pass\) nested > resolves its own dependency|✓ nested > resolves its own dependency' \
+grep -qE '^\(pass\) nested > resolves its own dependency|✓ nested > resolves its own dependency' <<<"$(all_runs)" \
   && ok "(n1) the nested-dependent test ran and was graded (pass)" || bad "(n1) the nested-dependent test ran and was graded (pass)"
 grep -q 'TEST GATE BLIND' "$LOG" && bad "(n1) no TEST GATE BLIND line ($(grep -m1 'TEST GATE BLIND' "$LOG" | cut -c1-160))" \
   || ok "(n1) no TEST GATE BLIND line"
@@ -190,10 +190,10 @@ sed -i 's/toBe(42)/toBe(43)/' "$d/test/ui.test.ts"; g commit -am "break the nest
 printf '(fail) old > one\n' > "$TEST_BASELINE_DIR/$VESSEL.failnames"; echo "1 2 0" > "$TEST_BASELINE_DIR/$VESSEL"
 run
 WT_PARENT="$(worktree_runs_at "$P_SHA")"
-printf '%s\n' "$WT_PARENT" | grep -q . && ok "(n2) the overlay measured the parent in a worktree" || bad "(n2) the overlay measured the parent in a worktree"
-printf '%s\n' "$WT_PARENT" | grep -q "Cannot find package 'nested-dep'" && bad "(n2) the parent worktree resolves nested-dep (its ui/node_modules is linked)" \
+grep -q . <<<"$WT_PARENT" && ok "(n2) the overlay measured the parent in a worktree" || bad "(n2) the overlay measured the parent in a worktree"
+grep -q "Cannot find package 'nested-dep'" <<<"$WT_PARENT" && bad "(n2) the parent worktree resolves nested-dep (its ui/node_modules is linked)" \
   || ok "(n2) the parent worktree resolves nested-dep (its ui/node_modules is linked)"
-printf '%s\n' "$WT_PARENT" | grep -qE '^\(pass\) nested > resolves its own dependency|✓ nested > resolves its own dependency' \
+grep -qE '^\(pass\) nested > resolves its own dependency|✓ nested > resolves its own dependency' <<<"$WT_PARENT" \
   && ok "(n2) the nested-dependent test passes at the parent worktree" || bad "(n2) the nested-dependent test passes at the parent worktree"
 grep -q 'overlay comparison .* 1 attributable to this commit' "$LOG" && ok "(n2) the overlay attributes the one new failure to the commit" \
   || bad "(n2) the overlay attributes the one new failure to the commit ($(grep -m1 'overlay' "$LOG" | cut -c1-200))"
@@ -207,7 +207,7 @@ run
 grep -q "^INSTALL " "$CALLS" && bad "(n3) control: no install at all (root node_modules satisfies, nothing nested)" \
   || ok "(n3) control: no install at all (root node_modules satisfies, nothing nested)"
 grep -qi 'nested' "$LOG" && bad "(n3) control: no nested-package log line ($(grep -mi1 nested "$LOG" | cut -c1-160))" || ok "(n3) control: no nested-package log line"
-printf '%s\n' "$(all_runs)" | grep -qE '^\(pass\) root > works|✓ root > works' && ok "(n3) control: the root suite runs" || bad "(n3) control: the root suite runs"
+grep -qE '^\(pass\) root > works|✓ root > works' <<<"$(all_runs)" && ok "(n3) control: the root suite runs" || bad "(n3) control: the root suite runs"
 grep -q "^CONVERGED $VESSEL" "$CALLS" && ok "(n3) control: converges" || bad "(n3) control: converges"
 # The same vessel absent from the inventory (or no inventory at all) is the same control.
 setup 0 '[]'; INV="$T/no-such-inventory.json"

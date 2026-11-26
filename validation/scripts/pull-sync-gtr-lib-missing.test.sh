@@ -126,7 +126,7 @@ AFTER="$(snap)"
 grep -q 'systemctl restart' "$CALLS" && bad "missing: a unit was restarted" || ok "missing: zero restart calls"
 grep -q '^MIRROR' "$CALLS" && bad "missing: mirror-to-live ran" || ok "missing: zero mirrors"
 [ "$(cat "$T/ws/.test-baseline/$V")" = baseline-sentinel ] && ok "missing: zero baseline writes" || bad "missing: the baseline was written"
-cat "$T/out1.txt" "$T/out.txt" | grep -q 'TEST REGRESSION' && bad "missing: a TEST REGRESSION was reported" || ok "missing: no TEST REGRESSION"
+grep -q 'TEST REGRESSION' "$T/out1.txt" "$T/out.txt" && bad "missing: a TEST REGRESSION was reported" || ok "missing: no TEST REGRESSION"
 [ "$(grep -c 'TRACKED-RED LIB MISSING' "$T/out1.txt")" = 1 ] && [ "$(grep -c 'TRACKED-RED LIB MISSING' "$T/out.txt")" = 1 ] \
   && ok "missing: one TRACKED-RED LIB MISSING line per tick" || { bad "missing: not one line per tick"; show; }
 G="$(gaps)"

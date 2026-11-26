@@ -127,7 +127,7 @@ grep -E '^\[placement-gate\].*(401|credential refused)' "$T/env401.err" | grep -
 sed -n '/^pending_reports() {/,/^}/p' "$STATUS" > "$T/pending.sh"
 if [ -s "$T/pending.sh" ]; then
   out="$( . "$T/pending.sh"; SUBSTRATE_INSTALL_DIR="$T/install-env401" pending_reports )"
-  printf '%s' "$out" | grep -qF "$ID_ENV" && ok "(c) substrate-status's pending_reports lists the spooled gap by id" \
+  grep -qF "$ID_ENV" <<<"$out" && ok "(c) substrate-status's pending_reports lists the spooled gap by id" \
     || bad "(c) pending_reports does not list $ID_ENV: $(printf '%s' "$out" | head -c 200)"
   out="$( . "$T/pending.sh"; SUBSTRATE_INSTALL_DIR="$T/install-none" pending_reports )"
   [ -z "$out" ] && ok "(c) control: no spool, pending_reports prints nothing" || bad "(c) control: pending_reports printed '$out' with no spool"

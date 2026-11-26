@@ -65,7 +65,7 @@ rec node-test "$start" "$future" > "$RESP"; run   # remember pw-x as last open
 printf 'not json' > "$RESP"; run
 [ "$RA_PROBE" = 0 ] && grep -q "unreadable" "$LOG" && grep -q "pw-x" "$LOG" && ok "(f) unreadable: no hold, logged with the last window seen open" || bad "(f) RA_PROBE=$RA_PROBE log=$(cat "$LOG")"
 loop="$(awk '/^for d in "\$.PASS_ORDER\[@\].\"; do/{on=1} on{print} on && /git -C "\$d" fetch/{exit}' "$SCRIPT")"
-printf '%s' "$loop" | grep -q 'probe_window_open' && ok "(g) the vessel loop checks the window before any fetch" || bad "(g) no window check before fetch"
+grep -q 'probe_window_open' <<<"$loop" && ok "(g) the vessel loop checks the window before any fetch" || bad "(g) no window check before fetch"
 rec node-test "$old" "" > "$RESP"; run
 [ "$RA_PROBE" = 0 ] && grep -q "probe_window_max_seconds" "$LOG" && ok "(h) open-ended window older than the cap stops holding, logged" || bad "(h) RA_PROBE=$RA_PROBE log=$(cat "$LOG")"
 rec node-test "$start" "" > "$RESP"; run

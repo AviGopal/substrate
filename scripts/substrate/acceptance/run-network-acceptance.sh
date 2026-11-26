@@ -230,7 +230,7 @@ if [ "$spoke_rc" = 0 ] || [ "$spoke_rc" = 20 ]; then
     answer="$(eng exec "$HUB_C" curl -s -m40 -H 'Content-Type: application/json' -X POST \
       "http://127.0.0.1:8401/egress/resolve?vessel=${target}" \
       -d "{\"pointer\":{\"type\":\"fileContent\",\"path\":\"$marker_path\"}}" 2>/dev/null)"
-    printf '%s' "$answer" | grep -qF "$marker"
+    grep -qF "$marker" <<<"$answer"
   }
   if [ -n "$target" ] && poll 120 read_via_spoke; then
     set_check hub_to_spoke pass "$(jq -nc --arg t "$target" --arg p "$(printf '%s' "$answer" | jq -r '.content.produced_by // empty')" '{vessel: $t, produced_by: $p}')"

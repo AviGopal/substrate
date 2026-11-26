@@ -46,7 +46,7 @@ jq -e '[.vessels[] | .name] | (index("records-vessel") or index("walk-vessel") o
 selected() { # profile -> the three's units apply-inventory keeps selected, sorted
   local out; out="$(cd "$ROOT" && env -i PATH="$PATH" HOME="$T" VESSELS_INVENTORY="$INV" PROFILE="$1" DRY_RUN=1 bash "$S/apply-inventory.sh" 2>&1)"
   for u in described-shape-vessel.service records-vessel.service walk-vessel.service; do
-    printf '%s' "$out" | grep -qE "(would disable|masked whatever the selection\)): $u\$" || echo "$u"
+    grep -qE "(would disable|masked whatever the selection\)): $u\$" <<<"$out" || echo "$u"
   done | tr '\n' ' '
 }
 [ "$(selected hub)" = "records-vessel.service " ] && ok "PROFILE=hub selects records alone" || bad "PROFILE=hub selects: $(selected hub)"

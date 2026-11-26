@@ -67,6 +67,6 @@ r="$(set -o pipefail; CHANGED="$big"; eval "$line"; echo "$_fed_changed")"
 old="$(set -o pipefail; CHANGED="$big"; _f=0; { echo "$CHANGED" | grep -q '^scripts/substrate/federation-relay/'; } && _f=1; echo "$_f")"
 [ "$old" = 0 ] && ok "(j) control: the echo|grep -q form misses it under pipefail (the race is real)" || echo "  note: (j) the echo|grep -q control did not race on this host (got $old); (i) still holds"
 fedblk="$(sed -n '/# The relay is restarted ONLY on a real relay.ts change/,/healthy 8401/p' "$SCRIPT")"
-printf '%s\n' "$fedblk" | grep -q 'echo "\$CHANGED" | grep -q' && bad "(k) the federation block still pipes echo into grep -q" || ok "(k) the federation block uses no echo|grep -q"
+grep -q 'echo "\$CHANGED" | grep -q' <<<"$fedblk" && bad "(k) the federation block still pipes echo into grep -q" || ok "(k) the federation block uses no echo|grep -q"
 
 [ "$FAILS" = 0 ] && { echo "PASS"; exit 0; } || { echo "$FAILS failure(s)"; exit 1; }

@@ -3,7 +3,9 @@
 # localizes with the fact that says so, never a hold (the USER: "Read as facts"):
 #   (a) an assertion failure with no source frame: localized false, needs_information, the test protected, no
 #       operator_hold and no operator_hold_reason, no edit_site;
-#   (b) one with a source frame: edit_site at that frame, and no localized false.
+#   (b) one with a source frame: edit_site at that frame, and no localized false;
+#   (c) [MUST-FAIL] a run whose summary is followed by a long tail (a teardown's output past the pipe's buffer) is a run
+#       with a result: its summary line is read from a here-string, so the script's pipefail cannot read it as missing.
 # Runs the script's own function with the store, the alone run and the write stubbed.
 # usage: validation/scripts/pull-sync-failing-test-generator-fact.test.sh [path/to/substrate-pull-sync.sh]
 set -uo pipefail
@@ -24,17 +26,20 @@ export TEST_BASELINE_DIR="$T/baseline"; mkdir -p "$TEST_BASELINE_DIR"
 DIR="$T/checkout"; mkdir -p "$DIR/src"
 printf 'test("one", () => { expect(1).toBe(2) })\n' > "$DIR/src/a.test.ts"
 printf 'test("two", () => { expect(1).toBe(2) })\n' > "$DIR/src/b.test.ts"
+printf 'test("three", () => { expect(1).toBe(2) })\n' > "$DIR/src/c.test.ts"
 # the generator files only files tracked at HEAD, as a gated checkout's tests are
 git init -q "$DIR"; git -C "$DIR" add -A
 FAKE="$T/fake"; mkdir -p "$FAKE"
 cat > "$FAKE/bun" <<'B'
 #!/usr/bin/env bash
-case "$2" in */a.test.ts) printf '(fail) one\n 0 pass\n 1 fail\n' ;; */b.test.ts) printf '(fail) two\n 0 pass\n 1 fail\n' ;; esac
+case "$2" in */a.test.ts) printf '(fail) one\n 0 pass\n 1 fail\n' ;; */b.test.ts) printf '(fail) two\n 0 pass\n 1 fail\n' ;;
+  */c.test.ts) printf '(fail) three\n 0 pass\n 1 fail\n'; head -c 2097152 /dev/zero | tr '\0' 't' | fold -w 100 ;; esac
 B
 chmod +x "$FAKE/bun"; BUN_BIN="$FAKE/bun"
 OUT="$(printf '%s\n' "src/a.test.ts:" "error: expect(received).toBe(expected)" "Expected: 2" "Received: 1" "(fail) one [1.00ms]" \
-  "src/b.test.ts:" "error: expect(received).toBe(expected)" "      at check (/w/src/lib/b.ts:3:5)" "(fail) two [1.00ms]" " 0 pass" " 2 fail")"
-printf '%s\n' "(fail) one" "(fail) two" > "$T/prev"
+  "src/b.test.ts:" "error: expect(received).toBe(expected)" "      at check (/w/src/lib/b.ts:3:5)" "(fail) two [1.00ms]" \
+  "src/c.test.ts:" "error: expect(received).toBe(expected)" "(fail) three [1.00ms]" " 0 pass" " 3 fail")"
+printf '%s\n' "(fail) one" "(fail) two" "(fail) three" > "$T/prev"
 : > "$EMITS"; : > "$LOG"
 gen_failing_test_gaps x "$OUT" "$T/prev" 0123456789abcdef "$DIR"
 A="$(jq -c 'select(.impulse.pointer.gap.classification_metadata.evidence_resolve.input.test_file == "src/a.test.ts") | .impulse.pointer.gap.classification_metadata' "$EMITS")"
@@ -46,5 +51,9 @@ else bad "(a) emitted: ${A:-nothing} log=$(cat "$LOG")"; fi
 if printf '%s' "$Bm" | jq -e '.edit_site == "repos/x/src/lib/b.ts" and (has("localized") or has("operator_hold") | not)' >/dev/null; then
   ok "(b) a gap with a source frame is filed with its edit_site, no fact of not being localized"
 else bad "(b) emitted: ${Bm:-nothing} log=$(cat "$LOG")"; fi
+C="$(jq -c 'select(.impulse.pointer.gap.classification_metadata.evidence_resolve.input.test_file == "src/c.test.ts")' "$EMITS")"
+if [ -n "$C" ] && ! grep -q 'alone run of src/c.test.ts produced no result' "$LOG"; then
+  ok "[MUST-FAIL] (c) a run with a long tail after its summary is read as a run with a result, and its gap is filed"
+else bad "(c) c.test.ts: emitted ${C:-nothing}; log=$(grep c.test.ts "$LOG" | head -3)"; fi
 echo; [ "$FAILS" = 0 ] && { echo "PASS - the generator files the fact, never a hold"; exit 0; }
 echo "$FAILS FAILED"; exit 1
