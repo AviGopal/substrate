@@ -49,7 +49,10 @@
 #       row is written on the next call; the close, the absent mark
 #       and the re-arms carry it; the row's metadata stays within gap_resolve's 4096 with evidence_resolve whole (at
 #       most 8 names, matcher lines cut at 160, past the bound the matcher lines dropped before what the assertions
-#       got), and metadata already at the bound takes none;
+#       got), and metadata already at the bound takes none; the evidence on a row is its own run's, never an earlier
+#       one's: [MUST-FAIL] a row near the bound that held an earlier run's evidence is marked absent without it,
+#       [MUST-FAIL] where only the run's sha, exit and counts fit the row carries those (names_dropped), and
+#       [MUST-FAIL] records' closerRed reads that row as red;
 #   (q) a row the store does not take is said not written (no "marked" line for a mark that did not happen) and is
 #       run again by the next run of the closer at the same HEAD (a re-gate; the closer runs only for a gated vessel):
 #       a mark, and a close.
@@ -590,6 +593,42 @@ if [ "$(wc -l < "$WRITES")" = 1 ] && jq -e '.meta.closer_evidence.rc == "124"' "
   ok "(y) the same names and counts under another exit code write a new row"
 else bad "(y) rc: writes=$(wc -l < "$WRITES") $(jq -c .meta.closer_evidence "$WRITES" | cut -c1-300) log=$(tail -3 "$LOG")"; fi
 rm -f "$FAKE/x.test.ts.rc"
+
+# (x) a row near the bound holding an earlier run's evidence; its names are gone from the source and from the run
+WN='["ISOLATION > a","ISOLATION > b","ISOLATION > c","ISOLATION > d","ISOLATION > e"]'
+: > "$DIR/src/w.test.ts"; printf '(pass) OTHER > p1\n 1 pass\n 0 fail\n' > "$FAKE/w.test.ts.out"; rm -f "$FAKE/w.test.ts.rc"
+reset "$(row g-w x src/w.test.ts "$GEN" "$WN" | jq -c --arg b "$(printf '%03600d' 0)" '.meta.pad = $b
+  | .meta.closer_evidence = {sha: "OLDSHA", rc: "1", count: "0 pass, 1 fail", names: [{name: "ISOLATION > a", result: "fail"}]}')"
+close_failing_test_gaps x 7e58b13aaaaaaaaa "$DIR"
+if [ -s "$WRITES" ] && jq -e -s 'all(.[]; (.meta | tostring | length) <= 4096 and .meta.names_absent != null
+      and .meta.closer_evidence.sha != "OLDSHA" and .meta.closer_evidence.count != "0 pass, 1 fail")' "$WRITES" >/dev/null; then
+  ok "[MUST-FAIL] (x) a row near the bound that held an earlier run's evidence is marked absent without it"
+else bad "(x) old evidence: $(jq -c '{n: (.meta | tostring | length), a: .meta.names_absent, e: .meta.closer_evidence}' "$WRITES" | cut -c1-400)"; fi
+rm -f "$DIR/src/w.test.ts"
+# where only the run's sha, exit and counts fit (a checkout path too long for the rest), the row carries those
+LD="$T/$(printf 'l%.0s' $(seq 200))/$(printf 'm%.0s' $(seq 200))/$(printf 'n%.0s' $(seq 200))"
+mkdir -p "$LD/src"; git init -q "$LD"; touch "$LD/src/w.test.ts"; git -C "$LD" add src/w.test.ts
+git -C "$LD" -c user.name=t -c user.email=t@t commit -q -m w; LSHA="$(git -C "$LD" rev-parse HEAD)"
+{ for n in a b c; do printf 'error: expect(received).toBe(expected)\n(fail) ISOLATION > %s\n' "$n"; done; printf ' 0 pass\n 3 fail\n'; } > "$FAKE/w.test.ts.out"
+echo 1 > "$FAKE/w.test.ts.rc"
+WR="$(row g-w x src/w.test.ts "$GEN" '["ISOLATION > a","ISOLATION > b","ISOLATION > c"]' \
+  | jq -c '.meta.closer_evidence = {sha: "OLDSHA", rc: "0", count: "3 pass, 0 fail", names: []}')"
+WP=$((3700 - $(printf '%s' "$WR" | jq '.meta | tostring | length')))
+reset "$(printf '%s' "$WR" | jq -c --arg b "$(printf "%0${WP}d" 0)" '.meta.pad = $b')"
+close_failing_test_gaps x 7e58b13bbbbbbbbb "$LD"
+if [ "$(wc -l < "$WRITES")" = 1 ] && jq -e --arg s "$LSHA" '(.meta | tostring | length) <= 4096 and (.meta.closer_evidence
+      | .sha == $s and .rc == "1" and .count == "0 pass, 3 fail" and .names_dropped == true and .names_cut == 3
+        and (has("names") | not) and (has("dir") | not))' "$WRITES" >/dev/null; then
+  ok "[MUST-FAIL] (x) where only the run's sha, exit and counts fit, the row carries this run's, with no names"
+else bad "(x) fallback: $(jq -c '{n: (.meta | tostring | length), e: .meta.closer_evidence}' "$WRITES" | cut -c1-400)"; fi
+if [ -f "$RECORDS_DIR/src/fold.ts" ]; then
+  WF="$(cd "$RECORDS_DIR" && jq -c -s '[.[0], (.[0] | .meta.closer_evidence.count = "3 pass, 0 fail")]' "$WRITES" | bun -e '
+    const { closerRed } = await import(process.cwd() + "/src/fold.ts")
+    console.log(JSON.stringify(JSON.parse(await Bun.stdin.text()).map(closerRed)))' 2>&1)"
+  if [ "$WF" = "[true,false]" ]; then ok "[MUST-FAIL] (x) records' closerRed reads that row as red (and the same row with no fails as not)"
+  else bad "(x) closerRed on the fallback row: $WF"; fi
+else printf 'SKIP - (x) closerRed: no records-vessel checkout at %s\n' "$RECORDS_DIR"; fi
+rm -f "$FAKE/w.test.ts.rc"
 
 # (z) a long run read under the script's pipefail: the closer reads its run's lines from a here-string, so a line that is
 # there is never read as missing because the reader stopped first. Five names failing on a thrown error, their titles

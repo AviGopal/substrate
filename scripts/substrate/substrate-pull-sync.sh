@@ -1261,7 +1261,11 @@ closer_evidence() { # dir rc ("" when not run) "-"|"" names-json
 # evidence is fitted, never the metadata: at most 8 names (names_cut: how many there were), each error line within 160
 # characters; past the bound, the error lines go first, then what each assertion got, then the names (evidence_cut):
 # what the run returned is the fact a drafter can act on, and its matcher line is the least of it.
-# Metadata already past the bound gets none. The journal keeps the whole evidence.
+# Last, the run's own sha, exit and counts with no names (names_dropped): records reads a red verdict from the counts
+# (closerRed), so a row that says what this run judged must carry them even where its names do not fit.
+# Metadata past the bound even then gets no evidence, and never the evidence of an earlier run: a row whose verdict is
+# this run's beside a run that is not would show a red run under an absent mark, and credit from a count it did not read.
+# The journal keeps the whole evidence.
 closer_fit() { # gap-write-json evidence-json
   printf '%s' "$1" | jq -c --argjson e "$2" '
     . as $w | (.impulse.pointer.gap.classification_metadata // {}) as $m | ($e.names // null) as $N
@@ -1271,8 +1275,10 @@ closer_fit() { # gap-write-json evidence-json
         ($e0 | .names |= map(del(.error)) | .evidence_cut = true),
         ($e0 | .names |= map(del(.got, .error)) | .evidence_cut = true),
         ($e0 | .names = [] | .names_cut = ($N | length) | .evidence_cut = true)] end)
+      + [($e | {sha, rc, count, ran} | with_entries(select(.value != null))
+          | (if $N == null then . else (. + {names_cut: ($N | length), names_dropped: true, evidence_cut: true}) end))]
     | map($m + {closer_evidence: .}) | map(select(tostring | length <= 4096)) as $fit
-    | $w | .impulse.pointer.gap.classification_metadata = ($fit[0] // $m)' 2>/dev/null || printf '%s' "$1"
+    | $w | .impulse.pointer.gap.classification_metadata = ($fit[0] // ($m | del(.closer_evidence)))' 2>/dev/null || printf '%s' "$1"
 }
 
 # The closer's own code, with every function whose result decides its verdict (close, absent, not checkable): a change to
