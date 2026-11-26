@@ -8,8 +8,7 @@
 # jq) said each one failed. pull-sync's federation block had the same race fixed once (pull-sync-fed-baked-tree); the
 # check there covered only that block, so the closer kept it. This check covers every such script.
 #
-#   (a) [MUST-FAIL] every script in the tree (outside repos/ and validation/scripts/gate/fixtures/) that sets pipefail
-#       has no such site, except those KNOWN
+#   (a) [MUST-FAIL] every script in the tree (outside repos/) that sets pipefail has no such site, except those KNOWN
 #       below, whose value is small by what it is (a name list, one row, a capped reply): a value that can be long is
 #       read from a here-string (grep -q … <<<"$v"), which has no writer to kill
 #   (b) every KNOWN entry still names a site: an entry nothing matches is removed, so the list stays what is there
@@ -23,8 +22,8 @@
 # A site is any single `|` into grep -q, whatever writes into it (the class is a writer killed by grep's early exit,
 # not one command). It is keyed by its file and the value fed to grep where the writer is printf, echo or cat of a
 # "$…" (a value is small or not by what it is, wherever in the file it is read), else by its whole line.
-# The gate's fixtures (validation/scripts/gate/fixtures/) are not scanned: the gate runs its accepted copies of them,
-# which change only on the person's acceptance, and the value each one tests is a short drive's output.
+# The gate's fixtures are scanned like any script: a new one with an early-match site fails (a). The accepted ones are
+# KNOWN by why their sites cannot race, never by where they are.
 # usage: validation/scripts/pipefail-grep-q.test.sh [tree root]
 set -uo pipefail
 ROOT="${1:-$(cd "$(dirname "$0")/../.." && pwd)}"
@@ -39,7 +38,7 @@ SITE='(^|[^|])\|[[:space:]]*(command[[:space:]]+)?grep[[:space:]]+(-[a-zA-Z]*q|[
 sites() {
   local root="$1"; shift
   { if [ "$#" -gt 0 ]; then printf '%s\n' "$@"
-    else (cd "$root" && find . -path ./repos -prune -o -path ./.git -prune -o -path ./validation/scripts/gate/fixtures -prune -o -name node_modules -prune -o -type f -print | sed 's#^\./##'); fi; } \
+    else (cd "$root" && find . -path ./repos -prune -o -path ./.git -prune -o -name node_modules -prune -o -type f -print | sed 's#^\./##'); fi; } \
   | while IFS= read -r f; do
       [ "$f" = "$SELF" ] && continue
       command grep -qsE 'set -[a-zA-Z]*o pipefail|shopt -so pipefail' "$root/$f" || continue
@@ -175,6 +174,11 @@ validation/scripts/secret-dir-mask.test.sh	exempt_list | grep -qx "$u" || bad "(
 validation/scripts/secret-scope-lint.test.sh	consumers_of "$n" | grep -qx "$un" || bad "$u's resolved env holds $n, and the manifest does not name it a consumer"	unit or env names
 validation/scripts/status-boot-stall-window.test.sh	grep -q 'boot_jobs_sample' "$T/blk.sh" 2>/dev/null && grep -q 'boot_jobs_sample() {' "$T/sample.sh" && tail -1 "$T/blk.sh" | grep -q 'esac' \	a test fixture's own lines (its calls, log, gap rows, or a block cut from a script)
 validation/scripts/status-usable-walk.test.sh	if grep -q -- '--ask-rows' "$T/rows-block.sh" && tail -1 "$T/rows-block.sh" | grep -q '^    fi$'; then	a test fixture's own lines (its calls, log, gap rows, or a block cut from a script)
+validation/scripts/gate/fixtures/walk-owner-seed-clone-repo.sh	$out	matches the drive's one VERDICT line, its last, so the writer has finished before grep can exit (an accepted gate fixture)
+validation/scripts/gate/fixtures/walk-owner-seed-gap-site.sh	$out	matches the drive's one VERDICT line, its last, so the writer has finished before grep can exit (an accepted gate fixture)
+validation/scripts/gate/fixtures/walk-owner-seed-repositories.sh	$out	matches the drive's one VERDICT line, its last, so the writer has finished before grep can exit (an accepted gate fixture)
+validation/scripts/gate/fixtures/walk-owner-seed-rows.sh	$out	matches the drive's one VERDICT line, its last, so the writer has finished before grep can exit (an accepted gate fixture)
+validation/scripts/gate/fixtures/walk-owner-seed-wait-bound.sh	$out	matches the drive's one VERDICT line, its last, so the writer has finished before grep can exit (an accepted gate fixture)
 K
 cut -f1,2 "$T/known" | sort -u > "$T/known.keys"
 sites "$ROOT" > "$T/found"
