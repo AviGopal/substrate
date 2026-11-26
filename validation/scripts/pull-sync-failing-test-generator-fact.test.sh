@@ -6,7 +6,12 @@
 #   (b) one with a source frame: edit_site at that frame, and no localized false;
 #   (c) [MUST-FAIL] a run whose summary is followed by a long tail (a teardown's output past the pipe's buffer) is a run
 #       with a result: its summary line is read from a here-string, so the script's pipefail cannot read it as missing.
-# Runs the script's own function with the store, the alone run and the write stubbed.
+#   (d) [MUST-FAIL] red alone is the test runner's: local-tools' gap_check is asked for the file at the full HEAD with the
+#       payload's names, and the generator runs no bun of its own;
+#   (e) [MUST-FAIL] gap_check refusing, or not answering: nothing filed, nothing marked polluted;
+#   (f) [MUST-FAIL] a name the runner's report passes alone is not filed, though the run's output says it failed, and is
+#       marked polluted: the closer, reading the same report, would close it on the next tick.
+# Runs the script's own function with the store, the alone run (gap_check) and the write stubbed.
 # usage: validation/scripts/pull-sync-failing-test-generator-fact.test.sh [path/to/substrate-pull-sync.sh]
 set -uo pipefail
 SCRIPT="${1:-$(cd "$(dirname "$0")/../.." && pwd)/scripts/substrate/substrate-pull-sync.sh}"
@@ -20,7 +25,15 @@ grep -q '^gen_failing_test_gaps()' "$T/fns.sh" || { echo "FAIL - could not extra
 source "$T/fns.sh"
 LOG="$T/log.txt"; log() { echo "$*" >> "$LOG"; }
 EMITS="$T/emits.txt"; emit_gap() { printf '%s\n' "$1" >> "$EMITS"; }
-dev_resolve() { printf '{"body":{"gaps":[]}}'; }
+# discovery: an empty gap store, and local-tools' gap_check running the fake bun (lib/gap-check-stub.sh)
+source "$(dirname "$0")/lib/gap-check-stub.sh"
+BRANCH=dev
+dev_resolve() {
+  case "$(printf '%s' "$1" | jq -r '.impulse.pointer.type')" in
+    gap_check) gap_check_stub "$(printf '%s' "$1" | jq -c '{pointer: .impulse.pointer}')" ;;
+    *) printf '{"body":{"gaps":[]}}' ;;
+  esac
+}
 scrubbed_env() { shift; "$@"; }
 export TEST_BASELINE_DIR="$T/baseline"; mkdir -p "$TEST_BASELINE_DIR"
 DIR="$T/checkout"; mkdir -p "$DIR/src"
@@ -55,5 +68,26 @@ C="$(jq -c 'select(.impulse.pointer.gap.classification_metadata.evidence_resolve
 if [ -n "$C" ] && ! grep -q 'alone run of src/c.test.ts produced no result' "$LOG"; then
   ok "[MUST-FAIL] (c) a run with a long tail after its summary is read as a run with a result, and its gap is filed"
 else bad "(c) c.test.ts: emitted ${C:-nothing}; log=$(grep c.test.ts "$LOG" | head -3)"; fi
+H40=0123456789abcdef0123456789abcdef01234567
+OUT1="$(printf '%s\n' "src/a.test.ts:" "error: expect(received).toBe(expected)" "(fail) one [1.00ms]" " 0 pass" " 1 fail")"
+printf '%s\n' "(fail) one" > "$T/prev"
+again() { : > "$EMITS"; : > "$LOG"; : > "$T/gc-asks.txt"; rm -f "$TEST_BASELINE_DIR/x.polluted"; gen_failing_test_gaps x "$OUT1" "$T/prev" "$H40" "$DIR"; }
+again
+if [ "$(wc -l < "$T/gc-asks.txt")" = 1 ] && jq -e --arg h "$H40" '.type == "gap_check" and .repo == "x" and .ref == $h and .branch == "dev"
+    and .test_file == "src/a.test.ts" and .only_tests == ["one"]' "$T/gc-asks.txt" >/dev/null && [ "$(wc -l < "$EMITS")" = 1 ] \
+  && ! command grep -qE 'BUN_BIN|bun"? test|scrubbed_env' <<<"$(declare -f gen_failing_test_gaps)"; then
+  ok "[MUST-FAIL] (d) red alone is asked of gap_check (full HEAD, branch, the names), and the generator runs no bun itself"
+else bad "(d) asks=$(cat "$T/gc-asks.txt") emits=$(wc -l < "$EMITS") log=$(cat "$LOG")"; fi
+for mode in refuse down; do
+  if [ "$mode" = refuse ]; then GC_REFUSE="the test run wrote no report" again; else GC_DOWN=1 again; fi
+  if [ ! -s "$EMITS" ] && ! command grep -qxF "one" "$TEST_BASELINE_DIR/x.polluted" 2>/dev/null \
+     && command grep -q "did not check src/a.test.ts alone" "$LOG"; then
+    ok "[MUST-FAIL] (e) gap_check $mode: nothing filed, nothing marked polluted"
+  else bad "(e) $mode: emits=$(cat "$EMITS") polluted=$(cat "$TEST_BASELINE_DIR/x.polluted" 2>/dev/null) log=$(cat "$LOG")"; fi
+done
+GC_REPORT=pass again
+if [ ! -s "$EMITS" ] && command grep -qxF "one" "$TEST_BASELINE_DIR/x.polluted"; then
+  ok "[MUST-FAIL] (f) a name the runner's report passes alone is not filed, though the output said it failed, and is marked polluted"
+else bad "(f) emits=$(cat "$EMITS") polluted=$(cat "$TEST_BASELINE_DIR/x.polluted" 2>/dev/null) log=$(cat "$LOG")"; fi
 echo; [ "$FAILS" = 0 ] && { echo "PASS - the generator files the fact, never a hold"; exit 0; }
 echo "$FAILS FAILED"; exit 1

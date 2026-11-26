@@ -1029,18 +1029,20 @@ gen_failing_test_gaps() {
       id="$(printf '%s' "$p" | jq -r '.impulse.pointer.gap.id')"
     fi
     tf="$(printf '%s' "$p" | jq -r '.impulse.pointer.gap.classification_metadata.evidence_resolve.input.test_file')"
-    if [ -z "$dir" ] || [ -z "${BUN_BIN:-}" ]; then log "$v: failing-test generator: cannot run $tf alone (no checkout or bun); not filing $id"; continue; fi
-    if [ -n "${FAILTEST_GEN_DEADLINE:-}" ] && [ $(( $(date +%s) + 170 )) -gt "$FAILTEST_GEN_DEADLINE" ]; then log "$v: failing-test generator: tick budget spent; $id left for a later tick"; break; fi
-    local ar ao keep passed
-    ar="$(mktemp -d "${TMPDIR:-/tmp}/pullsync-alone-XXXXXX")"
-    ao="$(cd "$dir" && scrubbed_env "$ar" timeout --kill-after=15 150 "$BUN_BIN" test "./$tf" --timeout 20000 > "$ar.out" 2>&1; cat "$ar.out"; rm -f "$ar.out")"
-    ao="$(printf '%s\n' "$ao" | sed 's/\x1b\[[0-9;]*m//g; s/ \[[0-9.]*m*s\]$//; s/[[:space:]]*$//')"
-    rm -rf "$ar" 2>/dev/null
-    # A run that printed no bun summary (unloadable alone, crashed, timed out) proves nothing: neither red nor
-    # polluted. A name is red on "(fail) <name>" and polluted only on POSITIVE "(pass) <name>".
-    if ! command grep -qE '^ *[0-9]+ (pass|fail)$' <<<"$ao"; then log "$v: failing-test generator: alone run of $tf produced no result; not filing $id, not marking polluted"; continue; fi
-    keep="$(printf '%s' "$p" | jq_ao "$ao" -c '($ao | split("\n")) as $L | [.impulse.pointer.gap.classification_metadata.evidence_resolve.input.only_tests[] | select(("(fail) " + .) as $x | $L | index($x))]')"
-    passed="$(printf '%s' "$p" | jq_ao "$ao" -r '($ao | split("\n")) as $L | .impulse.pointer.gap.classification_metadata.evidence_resolve.input.only_tests[] | select(("(pass) " + .) as $x | $L | index($x))')"
+    if [ -n "${FAILTEST_GEN_DEADLINE:-}" ] && [ $(( $(date +%s) + 335 )) -gt "$FAILTEST_GEN_DEADLINE" ]; then log "$v: failing-test generator: tick budget spent; $id left for a later tick"; break; fi
+    local ans keep passed
+    # Red alone is the test runner's verdict, the same one the closer reads: local-tools' gap_check on this HEAD's tree,
+    # asked through discovery, each name judged from the runner's report. A name filed here as red is one the closer
+    # would keep open, and one green there is not filed only to be closed on the next tick. Not answered, refused, or
+    # not run (unloadable alone, killed at the runner's bound) proves nothing: neither red nor polluted, and not filed.
+    ans="$(dev_resolve "$(printf '%s' "$p" | jq -c --arg v "$v" --arg ref "$head" --arg br "$BRANCH" --arg tf "$tf" \
+      '{impulse:{pointer:{type:"gap_check",repo:$v,ref:$ref,branch:$br,test_file:$tf,only_tests:.impulse.pointer.gap.classification_metadata.evidence_resolve.input.only_tests}}}')" --max-time 330 2>/dev/null \
+      | jq -c '(.content // .) | select(type == "object" and .shape == "gapCheck") | {ran, signalled, why, names}' 2>/dev/null)"
+    if [ "$(printf '%s' "$ans" | jq -r '.ran == true and .signalled == false' 2>/dev/null)" != true ]; then
+      log "$v: failing-test generator: the test runner did not check $tf alone ($(printf '%s' "$ans" | jq -r '.why // empty' 2>/dev/null | cut -c1-200 | grep . || echo no answer)); not filing $id, not marking polluted"; continue
+    fi
+    keep="$(printf '%s' "$ans" | jq -c '[.names | to_entries[] | select(.value.result == "fail") | .key]')"
+    passed="$(printf '%s' "$ans" | jq -r '.names | to_entries[] | select(.value.result == "pass") | .key')"
     [ -n "$passed" ] && printf '%s\n' "$passed" >> "$poll" 2>/dev/null
     if [ "$keep" = "[]" ] || [ -z "$keep" ]; then
       if [ -n "$passed" ]; then log "$v: failing-test generator: $tf passes when run ALONE (suite-only failure: cross-file mock pollution); not filing $id"
