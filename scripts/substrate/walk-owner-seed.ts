@@ -15,14 +15,96 @@
 
 const DISCOVERY_URL = process.env.DISCOVERY_URL ?? "http://127.0.0.1:8100";
 const KEY = process.env.METABOB_API_KEY;
-if (!KEY) throw new Error("METABOB_API_KEY is not set: the node key comes from /etc/substrate/env");
 const OWNER = "owner";
 // Two LLM channels with different requested models (§9 step 3.2). The producer is the model the resolver reports, so
 // two channels share a producer while the resolver serves both from one fallback model.
-const CHANNEL_MODELS = ["google/gemini-2.5-flash", "deepseek/deepseek-v4.1-flash-1017"];
+export const CHANNEL_MODELS = [
+  "google/gemini-3.8-flash",
+  "deepseek/deepseek-v4-pro-0813",
+];
+export const CHANNEL_MAX_TOKENS = 16384;
 const MAX_SEQ = 9007199254740991;
 
 type Row = Record<string, unknown>;
+
+export function channelKey(row: Row): string {
+  const calls = Array.isArray(row.calls) ? (row.calls as Row[]) : undefined;
+  const first = calls?.[0];
+  const pointer = first && typeof first === "object" ? (first.pointer as Row | undefined) : undefined;
+  const model = pointer && typeof pointer === "object" ? pointer.model : undefined;
+  if (typeof model === "string" && model !== "") return model;
+  return JSON.stringify(row.calls ?? null);
+}
+
+export function channelCallsFor(model: string, maxTokens = CHANNEL_MAX_TOKENS): Row[] {
+  return [{
+    pointer: { type: "llm_completion", model, max_tokens: maxTokens },
+    input_field: "prompt",
+    output_field: "content",
+    producer_field: "model",
+  }];
+}
+
+export interface PlannedChannelWrite {
+  row: Row;
+  label: string;
+}
+
+function latestChannelsByKey(existingChannelRows: readonly Row[]): Map<string, Row> {
+  const seqOf = (r: Row): number => (typeof r.seq === "number" && Number.isFinite(r.seq) ? r.seq : Number.NEGATIVE_INFINITY);
+  const sorted = [...existingChannelRows].sort((a, b) => {
+    const sa = seqOf(a);
+    const sb = seqOf(b);
+    return sa === sb ? 0 : sa - sb;
+  });
+  const latestByKey = new Map<string, Row>();
+  for (const r of sorted) {
+    if (r.shape !== undefined && r.shape !== "channel") continue;
+    latestByKey.set(channelKey(r), r);
+  }
+  return latestByKey;
+}
+
+// Latest-by-key channel reconciliation (matching walk-vessel's channelKey and repository retirement):
+// - sorts existing channel rows by seq ascending (stable when seq is absent) to find the latest row per channelKey;
+// - writes a new active channel row when absent, previously retired, or whose calls differ (e.g. max_tokens upgrade);
+// - retires any active llm_completion channel not in desiredModels (non-LLM channels are left untouched).
+export function planChannelWrites(
+  existingChannelRows: readonly Row[],
+  desiredModels: readonly string[] = CHANNEL_MODELS,
+  maxTokens: number = CHANNEL_MAX_TOKENS,
+): PlannedChannelWrite[] {
+  const latestByKey = latestChannelsByKey(existingChannelRows);
+
+  const writes: PlannedChannelWrite[] = [];
+  const desiredKeys = new Set<string>();
+  for (const model of desiredModels) {
+    const calls = channelCallsFor(model, maxTokens);
+    const desiredRow: Row = { shape: "channel", calls };
+    const key = channelKey(desiredRow);
+    if (desiredKeys.has(key)) continue;
+    desiredKeys.add(key);
+    const latest = latestByKey.get(key);
+    const isCurrent = latest !== undefined && latest.retired !== true && JSON.stringify(latest.calls) === JSON.stringify(calls);
+    if (!isCurrent) {
+      writes.push({ row: desiredRow, label: `channel ${model}` });
+    }
+  }
+
+  for (const [key, latest] of latestByKey) {
+    if (desiredKeys.has(key) || latest.retired === true) continue;
+    const calls = Array.isArray(latest.calls) ? (latest.calls as Row[]) : undefined;
+    const first = calls?.[0];
+    const pointer = first && typeof first === "object" ? (first.pointer as Row | undefined) : undefined;
+    if (pointer?.type !== "llm_completion") continue;
+    writes.push({
+      row: { shape: "channel", calls: latest.calls, retired: true },
+      label: `channel ${key} (retired)`,
+    });
+  }
+
+  return writes;
+}
 
 async function post(url: string, payload: object): Promise<unknown> {
   const r = await fetch(url, {
@@ -435,6 +517,9 @@ const SCHEMAS: Row[] = [
 // connection error is retried here for up to READY_WAIT_MS; anything else, or the wait running out, fails as before.
 const READY_WAIT_MS = 300_000;
 const READY_RETRY_MS = 2_000;
+
+async function main(): Promise<void> {
+if (!KEY) throw new Error("METABOB_API_KEY is not set: the node key comes from /etc/substrate/env");
 for (const deadline = Date.now() + READY_WAIT_MS; ; ) {
   try { await read("arm"); break; } catch (e) {
     const msg = String((e as Error)?.message ?? e);
@@ -446,12 +531,23 @@ for (const deadline = Date.now() + READY_WAIT_MS; ; ) {
 }
 
 // A channel names a shape and its arguments; discovery places each call, so the row holds no address.
+// Reconciled latest-by-key so upgraded or re-enabled models write a superseding row, then dropped models are retired.
 for (const model of CHANNEL_MODELS) {
-  const calls = [{
-    pointer: { type: "llm_completion", model },
-    input_field: "prompt", output_field: "content", producer_field: "model",
-  }];
-  await ensure({ shape: "channel", calls }, undefined, `channel ${model}`);
+  const existing = await read("channel");
+  const planned = planChannelWrites(existing, [model], CHANNEL_MAX_TOKENS).filter((w) => w.row.retired !== true);
+  if (planned.length === 0) {
+    const latest = latestChannelsByKey(existing).get(model);
+    console.log(`[walk-owner-seed] channel ${model}: present (${latest?.id ?? ""})`);
+    continue;
+  }
+  for (const { row, label } of planned) {
+    const w = (await records("record_write", { row: { ...row, input_refs: [] }, writer: OWNER, role: OWNER })) as Row;
+    console.log(`[walk-owner-seed] ${label}: wrote ${w.id ?? JSON.stringify(w).slice(0, 80)}`);
+  }
+}
+for (const { row, label } of planChannelWrites(await read("channel"), CHANNEL_MODELS, CHANNEL_MAX_TOKENS)) {
+  const w = (await records("record_write", { row: { ...row, input_refs: [] }, writer: OWNER, role: OWNER })) as Row;
+  console.log(`[walk-owner-seed] ${label}: wrote ${w.id ?? JSON.stringify(w).slice(0, 80)}`);
 }
 // A schema row may name a variant: another way to make the same target, from other inputs. A request can come from a
 // detector's gap as well as from a person's ask, with the same words and checks: the gap row carries its specifics.
@@ -906,3 +1002,8 @@ try {
   console.log(`[walk-owner-seed] model denial: not set (${String((e as Error)?.message ?? e).slice(0, 200)})`);
 }
 console.log("[walk-owner-seed] owner rows in place");
+}
+
+if (import.meta.main) {
+  await main();
+}
