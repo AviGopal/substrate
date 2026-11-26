@@ -536,8 +536,11 @@ SCHEMAS.push({
 // gitDiff row carries it, made with the tree), so the words here are the grader's hint, not the gate.
 // The "An explanation shape is required" ruling: a refused attempt is explained in a row of its own, which the request
 // keeps in view (above) after the verdict it explains has dropped out with its tree. Made from the newest tree's diff and
-// the grader's r 0 verdict on that tree; what_failed quotes the diff's own words (x-quotes: its check's and typecheck's
-// output, or why each did not run), never the verdict's why, which is a reading of them. Its earlier explanations and its
+// the grader's r 0 verdict on that tree; what_failed quotes the diff's own words (x-quotes, any text of the gitDiff row:
+// its check's or typecheck's output, why either did not run, or the suite's regressed names, wherever the failure shows),
+// never the verdict's why, which is a reading of them. A list of the fields that may be quoted refused the explanation
+// of a diff whose only failure was its suite; the quote proves the row shown was read, and whether it names the failure
+// is graded by the outcome, not gated. Its earlier explanations and its
 // acts are in view, so next_must can say what this change already did and what it did not. The acts are listed first: a
 // root refused many times has more explanations than the share holds, and listed first they would push out the one row
 // saying what the change did. The kept rows are fitted first only with a share; the explainer reads no other rows, so
@@ -549,8 +552,9 @@ const explained: Row = {
   description: "Why the attempt in the gitDiff row was refused, for whoever drafts the next one. The land_verdict row " +
     "says it was refused (r 0) and why, in the grader's reading. what_failed copies exactly, from the gitDiff row, the " +
     "first failing line or error with its file and line, not the whole block: from its check.out or typecheck.out (a " +
-    "failing assertion, an error with its file and line), or, when the check or typecheck did not run, its check.why or " +
-    `typecheck.why; at least 20 and at most ${WHAT_FAILED_MAX} characters, and never the verdict's words. next_must, at most ` +
+    "failing assertion, an error with its file and line), when the check or typecheck did not run its check.why or " +
+    "typecheck.why, and when the suite failed a name from its suite.regressed or a line of suite.out; at least 20"
+    + ` and at most ${WHAT_FAILED_MAX} characters, and never the verdict's words. next_must, at most ` +
     `${NEXT_MUST_MAX} characters, says what the next attempt must do that this ` +
     "one did not, and what this change already did on its clone that the next attempt must not redo or undo (the " +
     "request_acts row lists it); the earlier attempt_explanation rows say what earlier attempts tried, so do not send the " +
@@ -561,7 +565,7 @@ const explained: Row = {
     properties: {
       tree: { type: "string", pattern: "^[0-9a-f]{40}$", "x-equals": { shape: "gitDiff", path: "tree" } },
       what_failed: { type: "string", minLength: 20, maxLength: WHAT_FAILED_MAX,
-        "x-quotes": { shape: "gitDiff", paths: ["check.out", "typecheck.out", "check.why", "typecheck.why"], min: 20 } },
+        "x-quotes": { shape: "gitDiff", min: 20 } },
       next_must: { type: "string", minLength: 1, maxLength: NEXT_MUST_MAX },
       uses: USES,
     },

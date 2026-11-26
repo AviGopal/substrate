@@ -67,7 +67,8 @@ describe("the seed's rows", () => {
       expect(s?.schema?.required).toEqual(["tree", "what_failed", "next_must"])
       expect(s?.schema?.properties?.tree?.["x-equals"]).toEqual({ shape: "gitDiff", path: "tree" })
       // the diff's own words, never the verdict's why: only the gitDiff row's fields are named
-      expect(s?.schema?.properties?.what_failed?.["x-quotes"]).toEqual({ shape: "gitDiff", paths: ["check.out", "typecheck.out", "check.why", "typecheck.why"], min: 20 })
+      // no list of fields: any text of the gitDiff row may be quoted (described reads a rule with no paths so)
+      expect(s?.schema?.properties?.what_failed?.["x-quotes"]).toEqual({ shape: "gitDiff", min: 20 })
       expect([s?.schema?.properties?.what_failed?.maxLength, s?.schema?.properties?.next_must?.maxLength]).toEqual([1200, 800])
       expect(s?.context).toEqual([{ shape: "request_acts", latest_by: "shape", keep: true }, { shape: "attempt_explanation", keep: true },
         { shape: "failure", where: { refused: "schema" }, keep: true }])
@@ -268,6 +269,20 @@ describe("described producing them", () => {
       paraphrased: await said("the test runner was missing from the environment, so nothing ran"),
       verdictWords: await said("the check did not run, said the verdict"),
     }).toEqual({ quoted: 200, paraphrased: 422, verdictWords: 422 })
+  })
+
+  test("[MUST-FAIL] an explanation of a diff whose only failure is its suite quotes a regressed name, and a paraphrase of it is refused", async () => {
+    const name = "write containment > a write outside the zones is refused"
+    const diff = tool("gitDiff", 20, { cwd, repo: "some-vessel", tree: T1, check: { ran: true, passed: true, out: "1 pass" },
+      typecheck: { ran: true, passed: true, out: "" }, suite: { ran: true, passed: false, exit_code: 1, regressed: [name, "b", "c"] } })
+    const verdict = { shape: "land_verdict", id: "lv-21", seq: 21, role: "described", root: "w1", repo: "some-vessel", tree: T1, r: 0, why: "the suite regressed", input_refs: ["w1", diff.id] }
+    rows = [ask, selT, sel, clone, diff, verdict]
+    const ids = rows.map((r) => r.id)
+    const said = async (what_failed: string) => { llm = JSON.stringify({ tree: T1, what_failed, next_must: "keep the write inside the zones" }); return await produce("attempt_explanation", ids) }
+    expect({
+      quoted: await said(`the suite regressed ${name}`),
+      paraphrased: await said("a containment test began failing after this change was made"),
+    }).toEqual({ quoted: 200, paraphrased: 422 })
   })
 
   // what the request's prompt holds of its own rows, with n explanations of its root near their bounds, on a root as old
