@@ -20,7 +20,7 @@ const OWNER = "owner";
 // two channels share a producer while the resolver serves both from one fallback model.
 export const CHANNEL_MODELS = [
   "google/gemini-3.8-flash",
-  "deepseek/deepseek-v4-pro-0813",
+  "z-ai/glm-5.3",
 ];
 export const CHANNEL_MAX_TOKENS = 16384;
 const MAX_SEQ = 9007199254740991;
@@ -322,7 +322,12 @@ const SCHEMAS: Row[] = [
       "the path it names, so a read of the same file in an earlier clone (another cwd) does not count, and an edit " +
       "drafted from it is held; when a failure row says the call's path differs from a fileContent's, read the file at " +
       "the call's path. A change_wanted row is this request's own judgment of which repository a change " +
-      "belongs in. " + USES_WORDS + " " + JSON_ONLY,
+      "belongs in. Before non-trivial code edits, call conceptSearch when architectural priors are not yet in view: " +
+      "treat docSection, vessel_construction_pattern and impulse_activity_pattern rows as required idioms, and treat " +
+      "rejected_approach rows as explicitly forbidden approaches never to repeat; cite relied-on rows in uses. " +
+      USES_WORDS + " " + JSON_ONLY,
+    context_budget: 98304,
+    rank_context: true,
     // A request either names the next call or declines (none); the walk reads a request without a pointer as a decline.
     schema: {
       type: "object",
@@ -479,6 +484,8 @@ const SCHEMAS: Row[] = [
       "\"{{ calls.N.output.field }}\" is a field of the answer of this run's call N (from 0): after a first call to " +
       "git_worktree, \"{{ calls.0.output.cwd }}\". Write a literal only for what is the same in every run (a tool's " +
       "mode, a fixed flag): a literal copied from the run you saw makes the template fail everywhere else. " +
+      "To compose a proven shared activity_template as a step, set shape to \"activity_template\" and pointer to " +
+      "{\"template_ref\": \"<template row id>\"}. " +
       JSON_ONLY,
     schema: {
       type: "object",
@@ -493,18 +500,18 @@ const SCHEMAS: Row[] = [
           items: {
             type: "object", required: ["shape"],
             properties: {
-              // Held to the read below by described-shape: only a served, callable shape passes, never the walk's
-              // move kinds or a written-only shape such as hop.
-              shape: { type: "string", "x-shape-in": { read: "shapeDescriptions", keys_of: "content.shape_descriptions" } },
+              // Held to the read below by described-shape: only a served, callable shape (or activity_template for
+              // composition) passes, never the walk's move kinds or a written-only shape such as hop.
+              shape: { type: "string", "x-shape-in": { read: "shapeDescriptions", keys_of: "content.shape_descriptions", also: ["activity_template"] } },
               pointer: { type: "object" },
             },
           },
         },
       },
     },
-    // The newest grade only (latest_by shape): inputs are shown whole and never fitted to the prompt budget, so every
-    // grade of a long root went into each fill until it passed the model's ceiling (d929, 489: prompt_too_large).
-    inputs: [{ shape: "outcome", latest_by: "shape" }],
+    // The newest reached grade only (where r: 1, latest_by shape): inputs are shown whole and never fitted to the
+    // prompt budget, and activities are earned only from reached executions (law 4).
+    inputs: [{ shape: "outcome", where: { r: 1 }, latest_by: "shape" }],
     context: ["hop"],
     // The callable shapes and their inputs, as the request reads them (discovery resolvers.ts, declared: true).
     reads: [{ type: "shapeDescriptions", declared: true }],
@@ -692,6 +699,21 @@ SCHEMAS.push({
 });
 // Each target and variant is its own row; the plain one is the variant "" (records matches it exactly, so a row
 // written before variants is rewritten once with it, and the two request rows never rewrite each other).
+const tmplBase = SCHEMAS.find((s) => s.target === "activity_template") as Row;
+SCHEMAS.push({
+  ...tmplBase,
+  variant: "gap",
+  description: "A reusable template extracted from the exact call sequence that fixed and landed the closed gap row: " +
+    "sig.in and sig.out are the shapes it consumes and produces, and calls lists each call in order with its shape and " +
+    "pointer arguments filling that shape's shape_inputs from reads. Bind per-request values with placeholders " +
+    "(\"{{ sig.in[i].field }}\" for template inputs, \"{{ calls.N.output.field }}\" for earlier call outputs) and write " +
+    "literals only for run-invariant arguments. To compose a proven shared activity_template as a step, set shape to " +
+    "\"activity_template\" and pointer to {\"template_ref\": \"<template row id>\"}. " +
+    JSON_ONLY,
+  inputs: [{ shape: "gap", where: { status: "closed" }, latest_by: "gap_id" }],
+  context: ["hop", "gitDiff", "land_verdict"],
+  reads: [{ type: "shapeDescriptions", declared: true }],
+});
 for (const s of SCHEMAS) {
   const variant = String(s.variant ?? "");
   await ensure({ shape: "shape_schema", ...s, variant }, { target: s.target, variant }, `shape_schema ${s.target}${variant ? `/${variant}` : ""}`);
@@ -1000,6 +1022,56 @@ try {
   }
 } catch (e) {
   console.log(`[walk-owner-seed] model denial: not set (${String((e as Error)?.message ?? e).slice(0, 200)})`);
+}
+// Once-only conditional fallback_order refresh: if llm-resolver serves an existing fallback_order lacking the current
+// SOTA channels, prepend SOTA_FALLBACK_ORDER (dropping any ":free" entries) and record an owner_seeded marker so later
+// boots never overwrite owner revisions. Skipped when fallback_order is absent or llm-resolver is unreachable.
+const SOTA_FALLBACK_ORDER = [
+  "google/gemini-3.8-flash",
+  "z-ai/glm-5.3",
+  "qwen/qwen3.8-flash",
+  "google/gemini-4-hydrogen",
+  "deepseek/deepseek-v4-pro-0813",
+  "qwen/qwen4-max",
+];
+const SEEDED_FALLBACK = { shape: "owner_seeded", what: "fallback_order_sota_v1" };
+const markFallbackSeeded = async (): Promise<void> => {
+  const m = (await records("record_write", { row: { ...SEEDED_FALLBACK, input_refs: [] }, writer: OWNER, role: OWNER })) as Row;
+  if (m.resolved === false || (m.failure as Row | undefined) !== undefined) {
+    console.log(`[walk-owner-seed] fallback_order: the once-only marker was not stored (${String(m.error ?? JSON.stringify(m.failure ?? "")).slice(0, 200)})`);
+  }
+};
+try {
+  const onceFallback = await read(SEEDED_FALLBACK.shape, { what: SEEDED_FALLBACK.what });
+  if (onceFallback.length > 0) {
+    console.log(`[walk-owner-seed] fallback_order: refreshed once before (${String(onceFallback[onceFallback.length - 1]?.id ?? "")}); the owner's value since stands`);
+  } else {
+    const gotFallback = (await records("llmModelPolicy", {})) as Row;
+    const policyBody = (gotFallback.body ?? (gotFallback.content as Row | undefined)?.body ?? gotFallback) as Row;
+    if (gotFallback?.resolved === false) {
+      console.log(`[walk-owner-seed] fallback_order: llm-resolver's policy could not be read (${String(gotFallback.error ?? "").slice(0, 200)}); nothing written`);
+    } else if (Array.isArray(policyBody?.fallback_order)) {
+      const existingOrder = policyBody.fallback_order.filter((m): m is string => typeof m === "string");
+      if (!existingOrder.includes("google/gemini-3.8-flash") || !existingOrder.includes("z-ai/glm-5.3")) {
+        const nextOrder = [
+          ...SOTA_FALLBACK_ORDER,
+          ...existingOrder.filter((m) => !SOTA_FALLBACK_ORDER.includes(m) && !m.includes(":free")),
+        ];
+        const w = (await records("llmModelPolicy_write", { fallback_order: nextOrder })) as Row;
+        if (w.resolved === false) {
+          console.log(`[walk-owner-seed] fallback_order: refused by llm-resolver (${String(w.error ?? "").slice(0, 200)})`);
+        } else {
+          console.log(`[walk-owner-seed] fallback_order: written ${JSON.stringify(nextOrder)}`);
+          await markFallbackSeeded();
+        }
+      } else {
+        console.log("[walk-owner-seed] fallback_order: already includes SOTA channels; left as it is");
+        await markFallbackSeeded();
+      }
+    }
+  }
+} catch (e) {
+  console.log(`[walk-owner-seed] fallback_order: not refreshed (${String((e as Error)?.message ?? e).slice(0, 200)})`);
 }
 console.log("[walk-owner-seed] owner rows in place");
 }

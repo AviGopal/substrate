@@ -3,7 +3,7 @@
 // WHAT IS JUDGED.
 //   Pure planner (planChannelWrites / channelKey / channelCallsFor / CHANNEL_MODELS / CHANNEL_MAX_TOKENS) and end-to-end
 //   seeder runs against a loopback stub store:
-//   - [MUST-FAIL] CHANNEL_MODELS is the 2-channel SOTA paid lineup (google/gemini-3.8-flash, deepseek/deepseek-v4-pro-0813)
+//   - [MUST-FAIL] CHANNEL_MODELS is the 2-channel SOTA paid lineup (google/gemini-3.8-flash, z-ai/glm-5.3)
 //     and every desired channel carries max_tokens: 16384;
 //   - [MUST-FAIL] dropped llm_completion models (e.g., google/gemini-2.5-flash, deepseek/deepseek-v4.1-flash-1017) emit
 //     { shape: "channel", calls: latest.calls, retired: true };
@@ -28,7 +28,7 @@ const INVENTORY = join(ROOT, "scripts/substrate/vessels.inventory.json")
 
 const EXPECTED_MODELS = [
   "google/gemini-3.8-flash",
-  "deepseek/deepseek-v4-pro-0813",
+  "z-ai/glm-5.3",
 ] as const
 const EXPECTED_MAX_TOKENS = 16384
 

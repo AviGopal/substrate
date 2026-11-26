@@ -144,8 +144,8 @@ leg(!!answerSchema && (answerSchema.context ?? []).some((e: Row) => e?.shape ===
   "(sk) the answer producer is shown its request's skips, kept and bounded (newest per request call)");
 const schemaOf = (target: string) => rows.filter((r) => r.shape === "shape_schema" && r.target === target && (r.variant ?? "") === "").at(-1);
 const tmpl = schemaOf("activity_template");
-leg(JSON.stringify(tmpl?.inputs) === JSON.stringify([{ shape: "outcome", latest_by: "shape" }]),
-  "(pt) the template takes only the newest grade (prompt_too_large); the grader's request_acts stays whole (the USER, keep-visibility a2)");
+leg(JSON.stringify(tmpl?.inputs) === JSON.stringify([{ shape: "outcome", where: { r: 1 }, latest_by: "shape" }]),
+  "(pt) the template takes only the newest reached grade (r: 1, prompt_too_large); the grader's request_acts stays whole (the USER, keep-visibility a2)");
 const gradeSchema = schemaOf("outcome");
 leg(JSON.stringify(gradeSchema?.evidence) === JSON.stringify([{ shape: "answer", deferred_by: "next_act" }]),
   "(ev) an answer carrying next_act is a promise, as the owner's outcome schema says (records reads it)");
