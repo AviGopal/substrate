@@ -11,6 +11,9 @@
 #   (e) [MUST-FAIL] gap_check refusing, or not answering: nothing filed, nothing marked polluted;
 #   (f) [MUST-FAIL] a name the runner's report passes alone is not filed, though the run's output says it failed, and is
 #       marked polluted: the closer, reading the same report, would close it on the next tick.
+#   (g) [GUARD] a run the runner killed (signalled) proves nothing, whatever its report says: nothing filed, nothing
+#       marked polluted;
+#   (h) [GUARD] a name the runner's report says is absent (not run) is neither filed nor marked polluted.
 # Runs the script's own function with the store, the alone run (gap_check) and the write stubbed.
 # usage: validation/scripts/pull-sync-failing-test-generator-fact.test.sh [path/to/substrate-pull-sync.sh]
 set -uo pipefail
@@ -89,5 +92,16 @@ GC_REPORT=pass again
 if [ ! -s "$EMITS" ] && command grep -qxF "one" "$TEST_BASELINE_DIR/x.polluted"; then
   ok "[MUST-FAIL] (f) a name the runner's report passes alone is not filed, though the output said it failed, and is marked polluted"
 else bad "(f) emits=$(cat "$EMITS") polluted=$(cat "$TEST_BASELINE_DIR/x.polluted" 2>/dev/null) log=$(cat "$LOG")"; fi
+for rep in "" pass; do
+  GC_SIGNALLED=true GC_REPORT="$rep" again
+  if [ ! -s "$EMITS" ] && ! command grep -qxF "one" "$TEST_BASELINE_DIR/x.polluted" 2>/dev/null \
+     && command grep -q "did not check src/a.test.ts alone" "$LOG"; then
+    ok "[GUARD] (g) a signalled run, its report ${rep:-as the output gives it}: nothing filed, nothing marked polluted"
+  else bad "(g) ${rep:-output}: emits=$(cat "$EMITS") polluted=$(cat "$TEST_BASELINE_DIR/x.polluted" 2>/dev/null) log=$(cat "$LOG")"; fi
+done
+GC_REPORT=absent again
+if [ ! -s "$EMITS" ] && ! command grep -qxF "one" "$TEST_BASELINE_DIR/x.polluted" 2>/dev/null; then
+  ok "[GUARD] (h) a name the runner's report says is absent is neither filed nor marked polluted"
+else bad "(h) emits=$(cat "$EMITS") polluted=$(cat "$TEST_BASELINE_DIR/x.polluted" 2>/dev/null) log=$(cat "$LOG")"; fi
 echo; [ "$FAILS" = 0 ] && { echo "PASS - the generator files the fact, never a hold"; exit 0; }
 echo "$FAILS FAILED"; exit 1
