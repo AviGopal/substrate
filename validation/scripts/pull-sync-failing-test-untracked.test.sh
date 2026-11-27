@@ -2,12 +2,12 @@
 # A failing-test gap whose test file is not tracked at the gated HEAD checks nothing the repository holds (a file since
 # removed, or a build copy such as dist/*.test.js the suite also ran): no change to the source can make it pass
 # (scripts/substrate/substrate-pull-sync.sh close_failing_test_gaps, gen_failing_test_gaps).
-#   (a) [MUST-FAIL] the closer marks a gap whose file was removed at HEAD not checkable (check_runnable false, every
-#       name absent, the HEAD, "not tracked" in its summary), runs nothing, and never writes it closed;
-#   (b) [MUST-FAIL] the closer marks a gap on a build copy (on disk, gitignored) the same way, and does not run it,
+#   (a) [MUST-FAIL] the closer closes a gap whose file was removed at HEAD as one whose every named test is gone
+#       (named_tests_absent, every name, the HEAD, "not tracked" in its summary), and runs nothing;
+#   (b) [MUST-FAIL] the closer closes a gap on a build copy (on disk, gitignored) the same way, and does not run it,
 #       though it would pass;
-#   (c) [GUARD] said once: the same gap at the same HEAD again, and at a new HEAD while still untracked, writes nothing;
-#   (d) [GUARD] tracked again with its names red: checkable again;
+#   (c) [GUARD] said once: the closed gap at the same HEAD again, and at a new HEAD while still untracked, writes nothing;
+#   (d) [GUARD] a gap an earlier closer marked untracked, tracked again with its names red: checkable again;
 #   (e) [MUST-FAIL] the generator files no gap for a failing file not tracked at HEAD, says so, and still files the
 #       tracked file failing in the same run.
 # usage: validation/scripts/pull-sync-failing-test-untracked.test.sh [path/to/substrate-pull-sync.sh]
@@ -63,13 +63,13 @@ row() { # gap_id test_file names-json
 }
 unseen() { rm -f "${TEST_BASELINE_DIR:?}"/*.closer; }
 reset() { printf '%s\n' "$@" | jq -s -c 'to_entries | map(.value + {id: ("r" + (.key | tostring)), seq: (.key + 1)})' > "$ROWS"; : > "$WRITES"; : > "$FAKE/ran.txt"; : > "$LOG"; unseen; }
-marked() { [ "$(wc -l < "$WRITES")" = 1 ] && jq -e --argjson n "$1" --arg h "$2" '.status == "open" and .check_runnable == false and .meta.check_runnable == false
-  and .meta.names_absent == $n and .meta.absent_at_head == $h and (.summary | contains("not tracked"))' "$WRITES" >/dev/null && [ ! -s "$FAKE/ran.txt" ]; }
+closed() { [ "$(wc -l < "$WRITES")" = 1 ] && jq -e --argjson n "$1" --arg h "$2" '.status == "closed" and .closed_reason == "named_tests_absent"
+  and .meta.names_absent == $n and .meta.closed_at_head == $h and (.summary | contains("not tracked"))' "$WRITES" >/dev/null && [ ! -s "$FAKE/ran.txt" ]; }
 
 # (a) removed at HEAD (no file, not tracked)
 reset "$(row g-rm src/removed.test.ts '["d > one","d > two"]')"
 close_failing_test_gaps x 1111111111abcdef "$DIR"
-if marked '["d > one","d > two"]' 1111111111; then ok "(a) a removed test file's gap is marked not checkable, every name absent, nothing run or closed"
+if closed '["d > one","d > two"]' 1111111111; then ok "(a) a removed test file's gap closes as every named test gone, and nothing is run"
 else bad "(a) writes=$(cat "$WRITES") ran=$(cat "$FAKE/ran.txt") log=$(cat "$LOG")"; fi
 
 # (b) a build copy on disk, gitignored
@@ -77,19 +77,19 @@ printf 'test("one", () => {})\n' > "$DIR/dist/copy.test.js"
 printf '(pass) one\n 1 pass\n 0 fail\n' > "$FAKE/copy.test.js.out"
 reset "$(row g-dist dist/copy.test.js '["one"]')"
 close_failing_test_gaps x 1111111111abcdef "$DIR"
-if marked '["one"]' 1111111111; then ok "(b) a build copy's gap is marked not checkable and not run, though it would pass"
+if closed '["one"]' 1111111111; then ok "(b) a build copy's gap closes the same and is not run, though it would pass"
 else bad "(b) writes=$(cat "$WRITES") ran=$(cat "$FAKE/ran.txt") log=$(cat "$LOG")"; fi
 
-# (c) said once: the marked row is the gap's latest; again at this HEAD and at a new one, nothing
+# (c) said once: the closed row is the gap's latest; again at this HEAD and at a new one, nothing
 M="$(cat "$WRITES")"
 reset "$M"
 close_failing_test_gaps x 1111111111abcdef "$DIR"; n1="$(wc -l < "$WRITES")"
 unseen
 close_failing_test_gaps x 2222222222abcdef "$DIR"; n2="$(wc -l < "$WRITES")"
-if [ "$n1" = 0 ] && [ "$n2" = 0 ]; then ok "(c) an untracked gap already marked is not marked again, at this HEAD or a new one"
+if [ "$n1" = 0 ] && [ "$n2" = 0 ]; then ok "(c) an untracked gap already closed is not written again, at this HEAD or a new one"
 else bad "(c) n1=$n1 n2=$n2 writes=$(cat "$WRITES") log=$(cat "$LOG")"; fi
 
-# (d) tracked again, its name red: checkable again
+# (d) marked untracked by an earlier closer, tracked again, its name red: checkable again
 printf 'test("one", () => { expect(1).toBe(2) })\n' > "$DIR/src/back.test.ts"; git -C "$DIR" add src/back.test.ts
 printf '(fail) one\n 0 pass\n 1 fail\n' > "$FAKE/back.test.ts.out"
 reset "$(row g-back src/back.test.ts '["one"]' | jq -c '. + {check_runnable: false, waits_for: "person", meta: (.meta + {check_runnable: false, names_absent: ["one"], absent_at_head: "1111111111"})}')"
@@ -119,5 +119,5 @@ if [ "$files" = "src/kept.test.ts " ] && grep -q 'dist/copy.test.js fails but is
   ok "(e) the generator files the tracked file only, and says the build copy is not filed"
 else bad "(e) filed: ${files:-nothing} log=$(cat "$LOG")"; fi
 
-echo; [ "$FAILS" = 0 ] && { echo "PASS - an untracked test file's gap is not checkable, and is not filed"; exit 0; }
+echo; [ "$FAILS" = 0 ] && { echo "PASS - an untracked test file's gap is closed as every named test gone, and is not filed"; exit 0; }
 echo "$FAILS FAILED"; exit 1

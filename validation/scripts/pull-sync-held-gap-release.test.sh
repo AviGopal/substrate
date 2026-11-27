@@ -47,8 +47,8 @@
 #       counts writes: a decision refused by the checks is counted not released, never released; [MUST-FAIL] a gap
 #       held again after its release (its claim refused, the old site still in its meta) is released again at that site;
 #   (y) [MUST-FAIL] a test file on disk but not tracked at HEAD (a build copy, ignored) is never released, by a person's
-#       r 1 or the walk's site, and nothing is written for it on a later tick; the closer marks it not checkable, and a
-#       tick after the mark writes nothing either, and it is counted not released; the same gap on a tracked file
+#       r 1 or the walk's site, and nothing is written for it on a later tick; the closer closes it (every named test
+#       gone), and a tick after the close writes nothing either, and it is counted not released; the same gap on a tracked file
 #       releases as before.
 #   (x7) [GUARD] after the closer's re-arm, the claim is stated once and then nothing is written
 #   (y2) [MUST-FAIL] a tracked test file missing from the checkout is not released, and is counted not released.
@@ -663,13 +663,13 @@ lift_held_gaps x 0123456789abcdef "$DIR"; y2="$(wc -l < "$WRITES")"
 ylog="$(grep -c 'dist/u.test.js is not tracked' "$LOG")"
 reset "$(held g-u x dist/u.test.js "$GEN")" "$(cw true repos/x/src/b.ts r0)"
 lift_held_gaps x 0123456789abcdef "$DIR"; y3="$(wc -l < "$WRITES")"
-close_failing_test_gaps x 0123456789abcdef "$DIR"; ymark="$(latest g-u | jq -c '[.check_runnable, .meta.operator_hold]')"
+close_failing_test_gaps x 0123456789abcdef "$DIR"; ymark="$(latest g-u | jq -c '[.status, .closed_reason]')"
 : > "$WRITES"; lift_held_gaps x 0123456789abcdef "$DIR"; lift_held_gaps x 0123456789abcdef "$DIR"; y4="$(wc -l < "$WRITES")"
 reset "$(held g-u x src/a.test.ts "$GEN")" "$(outcome 1 r0)"
 lift_held_gaps x 0123456789abcdef "$DIR"; ytr="$(latest g-u | jq -r '.meta.localized_by // "none"')"
-if [ "$y1" = 0 ] && [ "$y2" = 0 ] && [ "$y3" = 0 ] && [ "$ymark" = '[false,true]' ] && [ "$y4" = 0 ] && [ "$ytr" = r1 ] \
+if [ "$y1" = 0 ] && [ "$y2" = 0 ] && [ "$y3" = 0 ] && [ "$ymark" = '["closed","named_tests_absent"]' ] && [ "$y4" = 0 ] && [ "$ytr" = r1 ] \
    && [ "$ylog" -ge 1 ] && [ "$ycount" = 1 ]; then
-  ok "(y) an untracked test file is never released (r 1 or a site) and is counted not released; the closer marks it, nothing more is written; tracked releases"
+  ok "(y) an untracked test file is never released (r 1 or a site) and is counted not released; the closer closes it, nothing more is written; tracked releases"
 else bad "(y) logged=$ylog counted=$ycount r1=$y1 again=$y2 site=$y3 mark=$ymark after=$y4 tracked=$ytr log=$(tail -3 "$LOG")"; fi
 rm -rf "${DIR:?}/dist" "$DIR/.gitignore"
 

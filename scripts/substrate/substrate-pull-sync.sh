@@ -1097,9 +1097,7 @@ close_failing_test_gaps() {
     ev="$(closer_evidence "$dir" "" "" '[]')"
     # A test file not tracked at this HEAD (removed since the gap was filed, or a build copy the suite also ran, such as
     # dist/*.test.js) checks nothing this repository holds: no change to its source can make it pass, and a pass would
-    # be a copy's. So every name it checks is absent, said as the closer says absent names (check_runnable false, the
-    # names and the HEAD), never a close: a close credits the walk's work on the gap, and nothing was fixed. Tracked again
-    # with its names red, the gap is checkable again by the same path as names that came back.
+    # be a copy's. So every name it checks is absent, and the gap closes as one whose every named test is gone (below).
     local absent="[]" nm untracked=""
     if ! test_tracked "$dir" "$tf"; then
       untracked=1; absent="$(printf '%s' "$g" | jq -c '.names')"
@@ -1109,12 +1107,14 @@ close_failing_test_gaps() {
       [ -f "$dir/$tf" ] || { log "$v: failing-test closer: $tf is not in the checkout; $id left open | evidence $ev"; continue; }
       ao="$(printf '%s' "$runs" | jq -r --arg tf "$tf" '.[$tf] // empty')"
       if [ -z "$ao" ]; then
-        # The run is the test runner's, never this script's: local-tools' gap_check, asked through discovery as a traced
-        # call, writes this HEAD's tree out and runs the file as the shell user, every name the file's gaps here name at
-        # once, and judges each name from the runner's own report. Not answered, refused, or not run, nothing is judged
-        # here: the gap is left open and not seen, so it is asked again the next time this vessel is gated. There is no
-        # run of its own to fall back to: a second runner under other conditions gives a second verdict. The call is
-        # bounded above the runner's own step bound, so the runner gives up first.
+        # The run is the test runner's, never this script's: local-tools' gap_check, asked through discovery, writes this
+        # HEAD's tree out and runs the file as the shell user, every name the file's gaps here name at once, and judges
+        # each name from the runner's own report. Neither the ask nor discovery writes a row: what it was asked and what
+        # the runner answered go on the gap's row as its closer evidence when the verdict is written, and in the journal
+        # line each time. Not answered, refused, or not run, nothing is judged here: the gap is left open and not seen,
+        # so it is asked again the next time this vessel is gated. There is no run of its own to fall back to: a second
+        # runner under other conditions gives a second verdict. The call is bounded above the runner's own step bound, so
+        # the runner gives up first.
         only="$(printf '%s\n' "$gaps" | jq -sc --arg tf "$tf" '[.[] | select(.tf == $tf) | .names[]] | unique')"
         ans="$(dev_resolve "$(jq -nc --arg v "$v" --arg ref "$head" --arg br "$BRANCH" --arg tf "$tf" --argjson only "$only" \
           '{impulse:{pointer:{type:"gap_check",repo:$v,ref:$ref,branch:$br,test_file:$tf,only_tests:$only}}}')" --max-time 330 2>/dev/null)"
@@ -1130,7 +1130,8 @@ close_failing_test_gaps() {
         rcs="$(printf '%s' "$rcs" | jq -c --arg tf "$tf" --arg rc "${arc:-?}" '. + {($tf): $rc}')"
         reps="$(printf '%s' "$reps" | jq -c --arg tf "$tf" --argjson a "$(printf '%s' "$ans" | jq -c '{signalled: (.signalled != false), names: (.names // {})}')" '. + {($tf): $a}')"
       fi
-      ev="$(printf '%s' "$ao" | closer_evidence "$dir" "$(printf '%s' "$rcs" | jq -r --arg tf "$tf" '.[$tf] // "?"')" - "$(printf '%s' "$g" | jq -c .names)")"
+      ev="$(printf '%s' "$ao" | closer_evidence "$dir" "$(printf '%s' "$rcs" | jq -r --arg tf "$tf" '.[$tf] // "?"')" - "$(printf '%s' "$g" | jq -c .names)" \
+        "$(printf '%s' "$reps" | jq -c --arg tf "$tf" '.[$tf].names // null')")"
       jq -c --arg id "$id" --arg head "${head:0:10}" --arg code "$code" --argjson at "$(date +%s%N)" '. + {($id): {head: $head, at: $at, code: $code}}' "$seen" > "$seen.new" 2>/dev/null && mv "$seen.new" "$seen"
       # A row this run was due to write and the store did not take is not seen: the gap runs again the next time this
       # vessel is gated, at this HEAD too (a budget deferral or a gate-only re-run), not only once the HEAD moves. The
@@ -1139,19 +1140,41 @@ close_failing_test_gaps() {
       if ! command grep -qE '^ *[0-9]+ (pass|fail)$' <<<"$ao"; then log "$v: failing-test closer: alone run of $tf produced no result; $id left open | evidence $ev"; continue; fi
       # A named test the file no longer has (renamed or removed since the gap was filed) neither passes nor fails. Counted
       # as red, the gap could never close, and the walk was sent to change the source to make a test pass that does not
-      # exist. So the closer says what it found: the gap is not checkable here (check_runnable false, which records'
-      # open-gap read leaves out), with the names it could not find and the HEAD it ran at. A name is absent only when the
-      # run names it in neither "(pass)" nor "(fail)" AND the file's source does not hold its test's title (the part after
-      # the last " > "): a file that fails to load names no test at all, and its gaps are red, not absent. And a run that
-      # broke before its tests (an error summary line, an unhandled error, a hook's "(unnamed)" failure) proves nothing
-      # absent. Written once per set of names.
+      # exist. So the closer says what it found, with the names it could not find and the HEAD it ran at: every name
+      # gone, the gap closes; some, it is not checkable here (check_runnable false, which records' open-gap read leaves
+      # out). Both are below. A name is absent only when the
+      # runner's report says it is (in neither its passes nor its failures) AND the file's source does not hold its test's
+      # title (the part after the last " > "): a file that fails to load names no test at all, and its gaps are red, not
+      # absent. The report, not the output: the runner keeps only the output's end, so a long run's lines for a name can
+      # be cut away, and a title built at run time is not in the source either. A name the report does not give is not
+      # absent. And a run that broke before its tests (an error summary line, an unhandled error, a hook's "(unnamed)"
+      # failure) proves nothing absent. Written once per set of names.
       command grep -qE '^ *[0-9]+ errors?$|^# Unhandled error|^\(fail\) .*\(unnamed\)$' <<<"$ao" \
         || while IFS= read -r nm; do
         [ -n "$nm" ] || continue
-        command grep -qxF -e "(pass) $nm" -e "(fail) $nm" <<<"$ao" && continue
+        [ "$(printf '%s' "$reps" | jq -r --arg tf "$tf" --arg n "$nm" '.[$tf].names[$n].result? // empty' 2>/dev/null)" = absent ] || continue
         command grep -qF -- "${nm##* > }" "$dir/$tf" && continue
         absent="$(printf '%s' "$absent" | jq -c --arg n "$nm" '. + [$n]')"
       done < <(printf '%s' "$g" | jq -r '.names[]')
+    fi
+    # Every named test gone (absent by the report with no title in the source, or the file not tracked): the gap closes
+    # at this HEAD, as named_tests_absent. Nothing can make a test that does not exist pass, so left open it was worked
+    # for ever; a test that checks it again, added later, is filed as a new gap. The close credits no one: no landing
+    # fixed it (records' fold credits a detector's close only over a landing among the steps). Some names gone, the gap
+    # still checks the rest: marked not checkable below, and worked again once its names are back. A gap a person ruled
+    # on (against its claim, or for it: localized_by with no edit_site, as the walk's own site release always writes
+    # one) never closes by the closer, as a person's gap never closes by itself: it is marked the same. The system's
+    # own hold (operator_hold) is no person's, and closes.
+    if [ "$absent" != "[]" ] && printf '%s' "$g" | jq -e --argjson a "$absent" '($a | unique) == (.names | unique)
+        and .meta.claim_rejected_by == null and (.meta.localized_by == null or .meta.edit_site != null)' >/dev/null 2>&1; then
+      emit_gap_checked "$(closer_fit "$(jq -cn --arg id "$id" --arg v "$v" --arg tf "$tf" --arg head "${head:0:10}" --argjson absent "$absent" --arg untracked "$untracked" \
+        '{impulse:{pointer:{type:"substrateGap_write",gap:{id:$id,category:"failing_test",source:"substrate_detected",status:"closed",closed_reason:"named_tests_absent",
+          summary:(if $untracked == "" then "Every test this gap checks (" + ($absent | join("; ")) + ") is gone from repos/" + $v + "/" + $tf + " at " + $head + ": closed, with nothing fixed."
+            else "The test file repos/" + $v + "/" + $tf + " this gap checks is not tracked at " + $head + " (removed, or a build copy): closed, with nothing fixed." end),
+          classification_metadata:{filed_by:"pull-sync failing-test generator",closed_at_head:$head,names_absent:$absent}}}}}')" "$ev")"
+      if [ "$?" != 0 ]; then log "$v: failing-test closer: every test $id names is absent from $tf at ${head:0:10}; the closed row was NOT written; runs again the next time $v is gated (a new HEAD, or a re-gate of this one) | evidence $ev"; unsee; continue; fi
+      log "$v: failing-test closer: closed $id (every named test absent from $tf at ${head:0:10}${untracked:+, the file not tracked}) | evidence $ev"
+      n=$((n + 1)); continue
     fi
     if [ "$absent" != "[]" ]; then
       # Said once per set of names while the mark holds: a later row that made the gap checkable again (a person's r 1
@@ -1256,18 +1279,23 @@ close_failing_test_gaps() {
 # bounded to 300 characters. The runner prints the failing source line first, so a test whose source names an error
 # would otherwise be read as its own source, not as what the run returned. A verdict recorded without its input can't
 # be rechecked by anyone reading it. With no exit code, nothing was run: only where. The run's output is read from stdin
-# when its third argument is "-".
-closer_evidence() { # dir rc ("" when not run) "-"|"" names-json
+# when its third argument is "-". Given the runner's report (its fifth argument, each name's result), a name's result is
+# the report's, as the verdict's is: the output is cut to its end, so a name it does not show may have passed or failed.
+# A failure the output still shows carries its lines from there; one it does not, the report's message.
+closer_evidence() { # dir rc ("" when not run) "-"|"" names-json [report-names-json]
   local sha mods=false; sha="$(git -C "$1" rev-parse HEAD 2>/dev/null || echo none)"
   [ -e "$1/node_modules" ] && mods=true
   if [ -z "$2" ]; then jq -cn --arg dir "$1" --arg sha "$sha" --argjson mods "$mods" '{dir: $dir, sha: $sha, node_modules: $mods, ran: false}'; return 0; fi
-  { [ "$3" = - ] && cat; } | jq -Rsc --arg dir "$1" --arg sha "$sha" --argjson mods "$mods" --arg rc "$2" --argjson names "$4" '
+  { [ "$3" = - ] && cat; } | jq -Rsc --arg dir "$1" --arg sha "$sha" --argjson mods "$mods" --arg rc "$2" --argjson names "$4" --argjson R "${5:-null}" '
     split("\n") as $L
     | {dir: $dir, sha: $sha, node_modules: $mods, rc: $rc,
        count: ([$L[] | select(test("^ *[0-9]+ (pass|fail|skip|todo|errors?)$")) | sub("^ +"; "")] | join(", ")),
        names: [$names[] as $n
          | ($L | index("(pass) " + $n)) as $p | ($L | index("(fail) " + $n)) as $f
-         | if $f != null then
+         | ($R[$n].result? // null) as $r
+         | if $r == "pass" or $r == "absent" then {name: $n[0:300], result: $r}
+           elif $r == "fail" and $f == null then {name: $n[0:300], result: "fail", error: (($R[$n].error // "") | tostring | .[0:300])}
+           elif $f != null then
              ([range(0; $f) | select($L[.] | test("^\\((pass|fail|skip|todo)\\) "))] | last // -1) as $s
              | ($L[($s + 1):$f] | map(select(length > 0))) as $B
              | ([range(0; $B | length) | select($B[.] | test("^error:"))] | first) as $m
@@ -1483,8 +1511,9 @@ lift_held_gaps() {
     local tf size
     tf="$(printf '%s' "$p" | jq -r '.tf')"
     # A test file not tracked at HEAD is never released or restated: no change to the source can make it pass, and the
-    # closer marks it not checkable (test_tracked). A row written here would be written again every tick.
-    test_tracked "$dir" "$tf" || { log "$v: held-gap release: $tf is not tracked at ${head:0:10}; $(printf '%s' "$p" | jq -r .gap.id) is not released (the failing-test closer marks it not checkable)"; nx=$((nx + 1)); continue; }
+    # closer closes its gap, every test it names gone, or marks it not checkable where a person ruled on it (test_tracked).
+    # A row written here would be written again every tick.
+    test_tracked "$dir" "$tf" || { log "$v: held-gap release: $tf is not tracked at ${head:0:10}; $(printf '%s' "$p" | jq -r .gap.id) is not released (every test it names is gone: the failing-test closer closes it, or marks it where a person ruled)"; nx=$((nx + 1)); continue; }
     local site; site="$(printf '%s' "$p" | jq -r '.by.site // empty')"
     if [ -n "$site" ]; then
       # Judged by the file the site resolves to, not by its spelling: "./", "//", ".." and links all resolve to one

@@ -8,22 +8,23 @@
 #   (b) one name still fails alone: the gap stays open, and its one new row says what the run found;
 #   (c) a run that printed no bun summary (crashed, timed out): nothing written;
 #   (d) another vessel's gap, and a gap the generator did not file, are not run or touched;
-#   (e) a test file missing from the checkout and not tracked (removed): marked not checkable, never closed;
+#   (e) a test file missing from the checkout and not tracked (removed): closed as named_tests_absent, nothing fixed;
 #   (f) at most the cap it is given gaps are run per call;
 #   (g) a gap behind ones that stay red is still run: four open, the first three red, the fourth green closes within two
 #       calls at one HEAD, and on the first call at a new HEAD when HEAD moves every call;
 #   (h) a test file two gaps check runs once per call;
-#   (i) a gap naming a test the file no longer has (neither passed nor failed in the run) is marked not checkable:
-#       one open detector row with check_runnable false, the absent names and the HEAD, written once per set of names;
-#       and once the named test is there and passes, the gap closes as before;
+#   (i) a gap naming a test the file no longer has (neither passed nor failed in the run) beside one it has is marked
+#       not checkable: one open detector row with check_runnable false, the absent names and the HEAD, written once per
+#       set of names; and once the named test is there and every name passes, the gap closes as before. From (i) to (v)
+#       each gap names a second test that is red, so it still checks one: the mark's legs, not the close's;
 #   (j) a run that broke before its tests (an import that throws: an error summary and no named line; a beforeAll that
 #       throws: an "(unnamed)" failure) proves nothing absent: no mark; nor a name the run omits whose test title the
 #       file's source still holds;
 #   (k) a gap marked not checkable whose names are back but red is written checkable again, once;
 #   (l) a re-armed gap whose names go absent again is marked again (the once-guard is the current names_absent, not
 #       "ever marked");
-#   (m) an untracked test file (build output, not at any git ref) is marked not checkable whatever its source holds: it
-#       checks nothing the repository holds (pull-sync-failing-test-untracked.test.sh).
+#   (m) an untracked test file (build output, not at any git ref) closes as named_tests_absent whatever its source
+#       holds: it checks nothing the repository holds (pull-sync-failing-test-untracked.test.sh).
 #   (n) a gap a person ruled against (claim_rejected_by, check_runnable false) is never made checkable again by the
 #       closer: ruled against, then absent, then back and red, it stays not checkable (one row clears the absent names,
 #       keeps the ruling, never says it is worked again; then nothing more);
@@ -66,6 +67,16 @@
 #       closed (the report decides a pass, never the tested code's output);
 #   (gc4) the converse: the runner's report saying every name passed, of a run not killed, whose output (cut to its end)
 #       holds no "(pass)" line for them: closed. The output is evidence, not the verdict.
+#   (ab) every test a gap names gone (absent by the report, no title in the source): it closes at the HEAD as
+#       named_tests_absent, once, held by the system or not; a gap a person ruled on (r 0, or r 1 with no edit_site) is
+#       marked instead, as no person's ruling is undone by the closer; a close the store refused runs again at the HEAD; one
+#       name gone and one passing is marked, not closed; and records' fold credits no one for the close (no_change)
+#       when no landing came between the red row and it;
+#   (gc5) absent is the report's word too: names whose titles are built at run time (so not in the source as named),
+#       the output cut before their lines, are closed when the report says they passed and red when it says they failed,
+#       never absent; absent when the report says so, even under output showing them pass (both gone: closed); never
+#       when the source holds their titles, nor when the report gives no result for them; and a red row's evidence
+#       gives each name the report's result.
 # Run it under the node's own jq as well: jq 1.6 refuses an object merged with "+" inside an object's key without
 # parentheses, so a payload that builds here can be empty there.
 # usage: validation/scripts/pull-sync-failing-test-closer.test.sh [path/to/substrate-pull-sync.sh]
@@ -162,7 +173,8 @@ else bad "(d) writes=$(cat "$WRITES") ran=$(cat "$FAKE/ran.txt")"; fi
 
 reset "$(row g-gone x src/gone.test.ts "$GEN" '["d > one"]')"
 close_failing_test_gaps x 0123456789abcdef "$DIR"
-if [ "$(wc -l < "$WRITES")" = 1 ] && jq -e '.status == "open" and .check_runnable == false' "$WRITES" >/dev/null; then ok "(e) a test file removed from the checkout closes nothing: marked not checkable"
+if [ "$(wc -l < "$WRITES")" = 1 ] && jq -e '.status == "closed" and .closed_reason == "named_tests_absent" and .meta.names_absent == ["d > one"]
+    and (.summary | contains("not tracked"))' "$WRITES" >/dev/null; then ok "[MUST-FAIL] (e) a test file removed from the checkout: every test it checks is gone, so the gap closes, with nothing fixed"
 else bad "(e) writes=$(cat "$WRITES")"; fi
 
 summary "(pass) d > one" > "$FAKE/b.test.ts.out"
@@ -195,14 +207,17 @@ close_failing_test_gaps x 0123456789abcdef "$DIR"
 if [ "$(wc -l < "$FAKE/ran.txt")" = 1 ] && [ "$(wc -l < "$WRITES")" = 2 ]; then ok "(h) a test file two gaps check runs once, and both close"
 else bad "(h) ran=$(wc -l < "$FAKE/ran.txt") writes=$(wc -l < "$WRITES")"; fi
 
-echo; # (i) the gap names "d > old", which the file no longer has: marked not checkable, once; then the test is back and passes
-reset "$(row g-a x src/a.test.ts "$GEN" '["d > old"]')"
+echo; # (i) the gap names "d > old", which the file no longer has, beside "d > red", which fails: marked not checkable, once;
+# then the test is back and both pass. From here to (w) each gap names "d > red" too, red in every run unless a call says
+# otherwise, so a gap with a name gone still checks one: the mark, and not the close of a gap whose every test is gone.
+export GC_NAMES='{"d > red":"fail"}'
+reset "$(row g-a x src/a.test.ts "$GEN" '["d > old","d > red"]')"
 summary "(pass) d > new" > "$FAKE/a.test.ts.out"
 close_failing_test_gaps x 0123456789abcdef "$DIR"
 L="$(tail -n 1 "$WRITES")"; n1="$(wc -l < "$WRITES")"
 if [ "$n1" = 1 ] && printf '%s' "$L" | jq -e '.gap_id == "g-a" and .status == "open" and .role == "detector" and .check_runnable == false
     and .meta.check_runnable == false and .meta.names_absent == ["d > old"] and .meta.absent_at_head == "0123456789"
-    and (.meta.evidence_resolve.input.only_tests == ["d > old"]) and (.summary | contains("Not checkable here"))
+    and (.meta.evidence_resolve.input.only_tests == ["d > old","d > red"]) and (.summary | contains("Not checkable here"))
     and .waits_for == null' >/dev/null; then
   ok "[MUST-FAIL] (i) a named test the file no longer has: one open row, not checkable, naming it, waiting for no one"
 else bad "(i) writes=$(cat "$WRITES") log=$(cat "$LOG")"; fi
@@ -210,12 +225,12 @@ else bad "(i) writes=$(cat "$WRITES") log=$(cat "$LOG")"; fi
 if [ ! -s "$WRITES" ]; then ok "(i) said once: a later run finding the same names absent writes nothing"
 else bad "(i) again: writes=$(cat "$WRITES")"; fi
 summary "(pass) d > old" > "$FAKE/a.test.ts.out"
-: > "$WRITES"; close_failing_test_gaps x 1111111111111111 "$DIR"
+: > "$WRITES"; GC_NAMES='{"d > red":"pass"}' close_failing_test_gaps x 1111111111111111 "$DIR"
 if [ "$(wc -l < "$WRITES")" = 1 ] && [ "$(jq -r '.status' "$WRITES")" = closed ]; then ok "(i) the named test back and passing: the gap closes"
 else bad "(i) back: writes=$(cat "$WRITES") log=$(cat "$LOG")"; fi
 
 # (i2) a not-checkable mark that still says it waits for a person is written once more without it, then never again
-reset "$(row g-a x src/a.test.ts "$GEN" '["d > old"]')"
+reset "$(row g-a x src/a.test.ts "$GEN" '["d > old","d > red"]')"
 summary "(pass) d > new" > "$FAKE/a.test.ts.out"
 close_failing_test_gaps x 0123456789abcdef "$DIR"
 jq -c 'map(if .shape == "gap" then . + {waits_for: "person"} else . end)' "$ROWS" > "$ROWS.new" && mv "$ROWS.new" "$ROWS"
@@ -243,7 +258,7 @@ if [ -z "$J" ]; then ok "(j) a run broken before its tests, or a name the source
 else bad "(j)$J"; fi
 
 # (k) marked not checkable, then the name is back and red: one checkable row, and nothing more after it
-reset "$(row g-a x src/a.test.ts "$GEN" '["d > old"]')"
+reset "$(row g-a x src/a.test.ts "$GEN" '["d > old","d > red"]')"
 summary "(pass) d > new" > "$FAKE/a.test.ts.out"
 close_failing_test_gaps x 0123456789abcdef "$DIR"
 printf '(fail) d > old\n 0 pass\n 1 fail\n' > "$FAKE/a.test.ts.out"
@@ -271,12 +286,12 @@ printf 'test("forwards", () => {});\n' > "$U/dist/u.test.js"
 reset "$(row g-u x dist/u.test.js "$GEN" '["d > forwards"]')"
 summary "(pass) d > other" > "$FAKE/u.test.js.out"
 close_failing_test_gaps x 0123456789abcdef "$U"
-if [ "$(wc -l < "$WRITES")" = 1 ] && jq -e '.check_runnable == false and (.summary | contains("not tracked"))' "$WRITES" >/dev/null && [ ! -s "$FAKE/ran.txt" ]; then
-  ok "(m) untracked test file holding the title on disk: marked not checkable as not tracked, and not run"
+if [ "$(wc -l < "$WRITES")" = 1 ] && jq -e '.status == "closed" and .closed_reason == "named_tests_absent" and (.summary | contains("not tracked"))' "$WRITES" >/dev/null && [ ! -s "$FAKE/ran.txt" ]; then
+  ok "[MUST-FAIL] (m) untracked test file holding the title on disk: closed as not tracked, and not run"
 else bad "(m) writes=$(cat "$WRITES") ran=$(cat "$FAKE/ran.txt") log=$(cat "$LOG")"; fi
 
 # (n) a person ruled against the gap's claim: marked absent, then back and red, it stays not checkable (no true row)
-reset "$(row g-p x src/a.test.ts "$GEN" '["d > old"]' | jq -c '.check_runnable = false | .meta.claim_rejected_by = "person-row" | .meta.check_runnable = false')"
+reset "$(row g-p x src/a.test.ts "$GEN" '["d > old","d > red"]' | jq -c '.check_runnable = false | .meta.claim_rejected_by = "person-row" | .meta.check_runnable = false')"
 summary "(pass) d > new" > "$FAKE/a.test.ts.out"
 close_failing_test_gaps x 7777777777777777 "$DIR"
 printf '(fail) d > old\n 0 pass\n 1 fail\n' > "$FAKE/a.test.ts.out"
@@ -291,7 +306,7 @@ else bad "(n) N1=$N1 NL=$NL again=$(cat "$WRITES") log=$(cat "$LOG")"; fi
 
 # (o) marked absent, then ruled against by a person (lift_held_gaps keeps names_absent), then back and red: no true row
 # (a row from before no gap waited on a person: it says waits_for person, and the row this branch writes says null)
-reset "$(row g-q x src/a.test.ts "$GEN" '["d > old"]' | jq -c '.check_runnable = false | .waits_for = "person" | .meta += {names_absent: ["d > old"], absent_at_head: "0123456789", claim_rejected_by: "person-row", check_runnable: false}')"
+reset "$(row g-q x src/a.test.ts "$GEN" '["d > old","d > red"]' | jq -c '.check_runnable = false | .waits_for = "person" | .meta += {names_absent: ["d > old"], absent_at_head: "0123456789", claim_rejected_by: "person-row", check_runnable: false}')"
 printf '(fail) d > old\n 0 pass\n 1 fail\n' > "$FAKE/a.test.ts.out"
 close_failing_test_gaps x 9999999999999999 "$DIR"
 O1="$(wc -l < "$WRITES")"; OL="$(tail -n 1 "$WRITES")"
@@ -304,7 +319,7 @@ else bad "(o) O1=$O1 OL=$OL again=$(cat "$WRITES") log=$(cat "$LOG")"; fi
 
 # (p) marked absent, then a person's r 1 (localized_by; check_runnable dropped; names_absent kept), names still absent:
 # marked again once; then back and red: checkable again
-reset "$(row g-r x src/a.test.ts "$GEN" '["d > old"]' | jq -c '.meta += {names_absent: ["d > old"], absent_at_head: "0123456789", localized_by: "person-r1"}')"
+reset "$(row g-r x src/a.test.ts "$GEN" '["d > old","d > red"]' | jq -c '.meta += {names_absent: ["d > old"], absent_at_head: "0123456789", localized_by: "person-r1"}')"
 summary "(pass) d > new" > "$FAKE/a.test.ts.out"
 close_failing_test_gaps x aaaaaaaaaaaaaaaa "$DIR"
 P1="$(wc -l < "$WRITES")"; PL="$(tail -n 1 "$WRITES")"
@@ -317,7 +332,7 @@ if [ "$P1" = 1 ] && [ "$P2" = 0 ] && printf '%s' "$PL" | jq -e '.check_runnable 
 else bad "(p) P1=$P1 P2=$P2 PL=$PL PR=$PR log=$(cat "$LOG")"; fi
 
 # (q) the store does not take the not-checkable row: no row, and the log says so instead of "marked"
-reset "$(row g-s x src/a.test.ts "$GEN" '["d > old"]')"
+reset "$(row g-s x src/a.test.ts "$GEN" '["d > old","d > red"]')"
 summary "(pass) d > new" > "$FAKE/a.test.ts.out"
 WFAIL=1 close_failing_test_gaps x dddddddddddddddd "$DIR"
 if [ ! -s "$WRITES" ] && grep -q 'the not-checkable row was NOT written' "$LOG" && ! grep -q 'marked not checkable' "$LOG"; then
@@ -347,7 +362,7 @@ if [ "$(jq -r 'select(.gap_id == "g-big") | .status' "$WRITES" 2>/dev/null | tai
 else bad "(r) writes=$(head -c 300 "$WRITES") err=$(head -c 300 "$T/r.err") log=$(head -c 300 "$LOG")"; fi
 
 # (s) the mark keeps every field of the gap's latest row: one row, and the repo carry after it writes nothing
-reset "$(row g-repo x src/a.test.ts "$GEN" '["d > old"]' | jq -c '. + {repo: "x", claim: "The test is right: ..."}')"
+reset "$(row g-repo x src/a.test.ts "$GEN" '["d > old","d > red"]' | jq -c '. + {repo: "x", claim: "The test is right: ..."}')"
 summary "(pass) d > new" > "$FAKE/a.test.ts.out"
 close_failing_test_gaps x 1212121212121212 "$DIR"
 S1="$(wc -l < "$WRITES")"; SL="$(tail -n 1 "$WRITES")"
@@ -357,7 +372,7 @@ if [ "$S1" = 1 ] && [ "$(wc -l < "$WRITES")" = 1 ] && printf '%s' "$SL" | jq -e 
 else bad "(s) S1=$S1 after-carry=$(wc -l < "$WRITES") SL=$SL log=$(cat "$LOG")"; fi
 
 # (t) the person-ruled keep branch writes no claim
-reset "$(row g-t x src/a.test.ts "$GEN" '["d > old"]' | jq -c '. + {repo: "x", claim: "The test is right: ..."} | .check_runnable = false | .meta += {names_absent: ["d > old"], absent_at_head: "0123456789", claim_rejected_by: "person-row", check_runnable: false}')"
+reset "$(row g-t x src/a.test.ts "$GEN" '["d > old","d > red"]' | jq -c '. + {repo: "x", claim: "The test is right: ..."} | .check_runnable = false | .meta += {names_absent: ["d > old"], absent_at_head: "0123456789", claim_rejected_by: "person-row", check_runnable: false}')"
 printf '(fail) d > old\n 0 pass\n 1 fail\n' > "$FAKE/a.test.ts.out"
 close_failing_test_gaps x 1313131313131313 "$DIR"
 T1="$(wc -l < "$WRITES")"; TL="$(tail -n 1 "$WRITES")"; carry_gap_repo
@@ -366,7 +381,7 @@ if [ "$T1" = 1 ] && [ "$(wc -l < "$WRITES")" = 1 ] && printf '%s' "$TL" | jq -e 
 else bad "(t) T1=$T1 after-carry=$(wc -l < "$WRITES") TL=$TL log=$(cat "$LOG")"; fi
 
 # (u) claim, marked absent (claim ended), back and red: the re-arm row has no claim
-reset "$(row g-u2 x src/a.test.ts "$GEN" '["d > old"]' | jq -c '. + {repo: "x", claim: "The test is right: ..."}')"
+reset "$(row g-u2 x src/a.test.ts "$GEN" '["d > old","d > red"]' | jq -c '. + {repo: "x", claim: "The test is right: ..."}')"
 summary "(pass) d > new" > "$FAKE/a.test.ts.out"
 close_failing_test_gaps x 1414141414141414 "$DIR"
 printf '(fail) d > old\n 0 pass\n 1 fail\n' > "$FAKE/a.test.ts.out"
@@ -377,7 +392,7 @@ if [ "$U1" = 1 ] && printf '%s' "$UL" | jq -e '.check_runnable == true and .repo
 else bad "(u) U1=$U1 UL=$UL log=$(cat "$LOG")"; fi
 
 # (v) a held gap is marked with its hold kept
-reset "$(row g-v x src/a.test.ts "$GEN" '["d > old"]' | jq -c '. + {claim: "The test is right: ..."} | .meta += {operator_hold: true, operator_hold_reason: "needs_localization"}')"
+reset "$(row g-v x src/a.test.ts "$GEN" '["d > old","d > red"]' | jq -c '. + {claim: "The test is right: ..."} | .meta += {operator_hold: true, operator_hold_reason: "needs_localization"}')"
 summary "(pass) d > new" > "$FAKE/a.test.ts.out"
 close_failing_test_gaps x 1616161616161616 "$DIR"
 VL="$(tail -n 1 "$WRITES")"
@@ -385,6 +400,46 @@ if [ "$(wc -l < "$WRITES")" = 1 ] && printf '%s' "$VL" | jq -e '.check_runnable 
     and .meta.operator_hold_reason == "needs_localization"' >/dev/null; then ok "(v) a held gap's mark keeps its hold and ends its claim"
 else bad "(v) writes=$(cat "$WRITES") log=$(cat "$LOG")"; fi
 
+unset GC_NAMES
+
+# (ab) every test a gap names is gone: absent by the runner's report, no title in the source. The gap closes at this
+# HEAD as named_tests_absent, whatever its row holds (a hold, a person's ruling against its claim); a gap with only some
+# names gone is marked (above). A close the store did not take is run again at the same HEAD.
+reset "$(row g-ab x src/a.test.ts "$GEN" '["d > old","d > older"]')"
+summary "(pass) d > new" > "$FAKE/a.test.ts.out"
+close_failing_test_gaps x 0123456789abcdef "$DIR"
+AL="$(tail -n 1 "$WRITES")"; A1="$(wc -l < "$WRITES")"
+: > "$WRITES"; close_failing_test_gaps x 0123456789abcdee "$DIR"
+if [ "$A1" = 1 ] && [ ! -s "$WRITES" ] && [ "$(open_ids)" = '[]' ] && grep -q 'closed g-ab (every named test absent from src/a.test.ts at 0123456789)' "$LOG" \
+    && printf '%s' "$AL" | jq -e '.status == "closed" and .closed_reason == "named_tests_absent" and .role == "detector"
+      and .meta.names_absent == ["d > old","d > older"] and .meta.closed_at_head == "0123456789" and .meta.filed_by == "pull-sync failing-test generator"
+      and (.summary | contains("is gone from repos/x/src/a.test.ts at 0123456789")) and (.meta.closer_evidence.names | map(.result) == ["absent","absent"])' >/dev/null; then
+  ok "[MUST-FAIL] (ab) every named test absent by the report, no title in the source: one closed row, named_tests_absent, and no longer open"
+else bad "(ab) A1=$A1 AL=$AL again=$(cat "$WRITES") open=$(open_ids) log=$(cat "$LOG")"; fi
+reset "$(row g-ah x src/a.test.ts "$GEN" '["d > old"]' | jq -c '. + {claim: "The test is right: ..."} | .meta += {operator_hold: true, operator_hold_reason: "needs_localization"}')" \
+  "$(row g-ap x src/a.test.ts "$GEN" '["d > old"]' | jq -c '.check_runnable = false | .meta += {claim_rejected_by: "person-row", check_runnable: false}')" \
+  "$(row g-ar x src/a.test.ts "$GEN" '["d > old"]' | jq -c '.meta += {localized_by: "person-r1", protected_files: ["repos/x/src/a.test.ts"]}')" \
+  "$(row g-as x src/a.test.ts "$GEN" '["d > old"]' | jq -c '.meta += {localized_by: "walk-site", edit_site: "repos/x/src/a.ts"}')" \
+  "$(row g-au x src/gone2.test.ts "$GEN" '["d > old"]' | jq -c '.check_runnable = false | .meta += {claim_rejected_by: "person-row", check_runnable: false}')"
+close_failing_test_gaps x 0123456789abcdef "$DIR" 10
+if [ "$(wc -l < "$WRITES")" = 5 ] && jq -e -s 'map(select(.status == "closed" and .closed_reason == "named_tests_absent") | .gap_id) | sort == ["g-ah","g-as"]' "$WRITES" >/dev/null \
+    && jq -e -s 'map(select(.status == "open" and .check_runnable == false and .meta.names_absent == ["d > old"]) | .gap_id) | sort == ["g-ap","g-ar","g-au"]' "$WRITES" >/dev/null \
+    && jq -e -s 'map(select(.gap_id == "g-au")) | .[0].summary | contains("not tracked")' "$WRITES" >/dev/null; then
+  ok "[MUST-FAIL] (ab) every name gone: the system's hold and the walk's site release close; a gap a person ruled on (r 0, r 1, untracked or not) stays open, marked"
+else bad "(ab) held/ruled: writes=$(jq -c -s "map([.gap_id,.status,.check_runnable,(.summary[0:40])])" "$WRITES") log=$(cat "$LOG")"; fi
+reset "$(row g-ab x src/a.test.ts "$GEN" '["d > old"]')"
+WFAIL=1 close_failing_test_gaps x 0123456789abcdef "$DIR"
+AW1="$(wc -l < "$WRITES")"; grep -q 'the closed row was NOT written' "$LOG"; AWL=$?
+: > "$LOG"; close_failing_test_gaps x 0123456789abcdef "$DIR"
+if [ "$AW1" = 0 ] && [ "$AWL" = 0 ] && [ "$(jq -r .closed_reason "$WRITES")" = named_tests_absent ] && ! grep -q 'NOT written' "$LOG"; then
+  ok "[MUST-FAIL] (ab) a named_tests_absent close the store did not take is said not written and run again at the same HEAD"
+else bad "(ab) retry: AW1=$AW1 AWL=$AWL writes=$(cat "$WRITES") log=$(cat "$LOG")"; fi
+reset "$(row g-ab x src/a.test.ts "$GEN" '["d > old","d > one"]')"
+summary "(pass) d > one" > "$FAKE/a.test.ts.out"
+close_failing_test_gaps x 0123456789abcdef "$DIR"
+if [ "$(wc -l < "$WRITES")" = 1 ] && jq -e '.status == "open" and .check_runnable == false and .meta.names_absent == ["d > old"]' "$WRITES" >/dev/null; then
+  ok "(ab) one name gone and one passing: marked not checkable, not closed"
+else bad "(ab) partial: writes=$(cat "$WRITES") log=$(cat "$LOG")"; fi
 # (w) the evidence on each verdict line: a red run with one name passing, one failing and one the run does not name
 ev() { sed -n "s/^.*$1.* | evidence //p" "$LOG" | tail -n 1; }
 git -C "$DIR" add -A; git -C "$DIR" -c user.name=t -c user.email=t@t commit -qm w
@@ -429,10 +484,10 @@ else bad "(w) 124: ev=$W3 log=$(cat "$LOG")"; fi
 summary "(pass) d > one" > "$FAKE/w.test.ts.out"; rm -f "$FAKE/w.test.ts.rc"
 reset "$(row g-w4 x src/w.test.ts "$GEN" '["d > one"]')" "$(row g-w5 x src/none.test.ts "$GEN" '["d > one"]')"
 close_failing_test_gaps x 2020202020202020 "$DIR"
-W4="$(ev 'closed g-w4')"; W5="$(ev 'g-w5 names')"
+W4="$(ev 'closed g-w4')"; W5="$(ev 'closed g-w5')"
 if printf '%s' "$W4" | jq -e '.rc == "0" and .count == "1 pass, 0 fail" and .names == [{name: "d > one", result: "pass"}]' >/dev/null \
   && printf '%s' "$W5" | jq -e --arg sha "$WSHA" '.ran == false and .node_modules == false and .sha == $sha and (has("rc") | not)' >/dev/null; then
-  ok "(w) a close carries its evidence; an untracked file's line says it was not run"
+  ok "[MUST-FAIL] (w) a close carries its evidence; an untracked file's close line says it was not run"
 else bad "(w) close/untracked: W4=$W4 W5=$W5 log=$(cat "$LOG")"; fi
 
 # a name that is the start of another test's name is that name only: "d > one" is absent from a run that names only
@@ -498,6 +553,26 @@ if [ -f "$RECORDS_DIR/src/fold.ts" ]; then
     ok "(x) across repos: red, a landing, the same red at the landed HEAD, then a closing: records' fold credits nobody"
   else bad "(x) across repos: fold=$XF rows=$XROWS"; fi
 else printf 'SKIP - (x) across repos: no records-vessel checkout at %s\n' "$RECORDS_DIR"; fi
+# (ab) the close read by records' fold: the closer's red row, then its named_tests_absent close with no landing between.
+# Nothing was fixed, so the fold credits no one (no_change).
+if [ -f "$RECORDS_DIR/src/fold.ts" ]; then
+  reset "$(row g-f x src/a.test.ts "$GEN" '["d > old"]')"
+  printf '(fail) d > old\n 0 pass\n 1 fail\n' > "$FAKE/a.test.ts.out"; echo 1 > "$FAKE/a.test.ts.rc"
+  close_failing_test_gaps x 2121212121212121 "$DIR"
+  summary "(pass) d > new" > "$FAKE/a.test.ts.out"; rm -f "$FAKE/a.test.ts.rc"
+  close_failing_test_gaps x 2222222222222222 "$DIR"
+  FROWS="$(jq -c -s '[{shape: "credits", role: "owner", target: "gap", by_call: "git_land"}] + map(. + {role: "detector"})
+    | to_entries | map(.value + {id: ("r" + (.key | tostring)), seq: (.key + 1), t: "", writer: .value.role, input_refs: []})' "$WRITES")"
+  FF="$(cd "$RECORDS_DIR" && printf '%s' "$FROWS" | bun -e '
+    const { gapClosures, gapClosuresScan } = await import(process.cwd() + "/src/fold.ts")
+    const rows = JSON.parse(await Bun.stdin.text())
+    const read = (gs) => gs.map((g) => ({ cells: [...g.cells], refused: g.refused ?? null }))
+    console.log(JSON.stringify([read(gapClosures(rows, 1e9, 1e9)), read(gapClosuresScan(rows, 1e9, 1e9))]))' 2>&1)"
+  if [ "$(printf '%s' "$FROWS" | jq -c 'map([.status, .closed_reason])')" = '[[null,null],["open",null],["closed","named_tests_absent"]]' ] \
+      && [ "$FF" = '[[{"cells":[],"refused":"no_change"}],[{"cells":[],"refused":"no_change"}]]' ]; then
+    ok "[MUST-FAIL] (ab) records' fold reads a red row, then a named_tests_absent close with no landing between: credits no one (no_change)"
+  else bad "(ab) fold: rows=$(printf '%s' "$FROWS" | jq -c 'map([.status, .closed_reason])') fold=$FF"; fi
+else printf 'SKIP - (ab) fold: no records-vessel checkout at %s\n' "$RECORDS_DIR"; fi
 # twelve names, each failing with a long received: the row's metadata stays within gap_resolve's 4096, evidence_resolve
 # whole, at most 8 names, with how many there were
 XN="$(jq -cn '[range(12) | "d > n\(.)"]')"
@@ -529,10 +604,10 @@ if jq -e -s 'length == 1 and .[0].impulse.pointer.gap.id == "g-o" and (.[0].impu
 else bad "(x) closer_fit's answer under the script's log: $(printf '%s' "$XO" | cut -c1-200) | stderr: $(cut -c1-200 "$T/xo.err")"; fi
 # the close and the absent mark carry it as well
 summary "(pass) d > one" > "$FAKE/x.test.ts.out"; rm -f "$FAKE/x.test.ts.rc"
-reset "$(row g-x x src/x.test.ts "$GEN" '["d > one"]')" "$(row g-y x src/x.test.ts "$GEN" '["d > nowhere"]')"
+reset "$(row g-x x src/x.test.ts "$GEN" '["d > one"]')" "$(row g-y x src/x.test.ts "$GEN" '["d > nowhere","d > one"]')"
 close_failing_test_gaps x 3636363636363636 "$DIR"
 if jq -e -s 'map({(.gap_id): .}) | add | .["g-x"].status == "closed" and .["g-x"].meta.closer_evidence.names == [{name: "d > one", result: "pass"}]
-      and .["g-y"].meta.check_runnable == false and .["g-y"].meta.closer_evidence.names == [{name: "d > nowhere", result: "absent"}]' "$WRITES" >/dev/null; then
+      and .["g-y"].meta.check_runnable == false and .["g-y"].meta.closer_evidence.names == [{name: "d > nowhere", result: "absent"}, {name: "d > one", result: "pass"}]' "$WRITES" >/dev/null; then
   ok "(x) a close and an absent mark carry the run's evidence on their rows"
 else bad "(x) close/mark: $(cat "$WRITES")"; fi
 
@@ -723,6 +798,47 @@ if [ "$(jq -r '.gap_id + "/" + .status' "$WRITES" 2>/dev/null)" = "g-a/closed" ]
   ok "[MUST-FAIL] (gc4) the runner's report says every name passed, its output cut before their lines: closed"
 else bad "(gc4) writes=$(cat "$WRITES") log=$(tail -3 "$LOG")"; fi
 : > "$DIR/src/a.test.ts"
+
+# (gc5) absent is the runner's report's word, never the output's: titles built at run time (not in the source as named),
+# the output cut to its end before their lines
+printf 'for (const k of ["one", "two"]) test(`case ${k}`, () => {})\n' > "$DIR/src/r.test.ts"
+RN='["R > case one","R > case two"]'
+printf '(pass) R > zz %s\n' $(seq 1 3) > "$FAKE/r.test.ts.out"; printf ' 41 pass\n 0 fail\n' >> "$FAKE/r.test.ts.out"
+gc5() { reset "$(row g-r x src/r.test.ts "$GEN" "$RN")"; close_failing_test_gaps x "$H40" "$DIR"; }
+absent_marked() { jq -e -s 'any(.[]; .meta.names_absent != null or .meta.check_runnable == false)' "$WRITES" >/dev/null; }
+GC_REPORT=pass GC_TRUNCATED=true gc5
+if [ "$(jq -r '.gap_id + "/" + .status' "$WRITES" 2>/dev/null)" = "g-r/closed" ] && ! absent_marked; then
+  ok "[MUST-FAIL] (gc5) the report says every name passed, the output cut before them and their titles built at run time: closed, not marked absent"
+else bad "(gc5) pass: writes=$(cat "$WRITES") log=$(tail -2 "$LOG")"; fi
+GC_REPORT=absent gc5
+if [ "$(wc -l < "$WRITES")" = 1 ] && jq -e --argjson n "$RN" '.status == "closed" and .closed_reason == "named_tests_absent" and .meta.names_absent == $n' "$WRITES" >/dev/null; then
+  ok "[MUST-FAIL] (gc5) the report says both absent and the source holds neither title: every test gone, so closed"
+else bad "(gc5) absent: writes=$(cat "$WRITES")"; fi
+GC_REPORT=fail gc5
+if ! absent_marked && grep -q 'g-r still red alone' "$LOG"; then ok "[MUST-FAIL] (gc5) the report says both failed, their titles not in the source: red, never absent"
+else bad "(gc5) fail: writes=$(cat "$WRITES") log=$(tail -2 "$LOG")"; fi
+{ printf '(pass) %s\n' "R > case one" "R > case two"; printf ' 2 pass\n 0 fail\n'; } > "$FAKE/r.test.ts.out"
+GC_REPORT=absent gc5
+if [ "$(wc -l < "$WRITES")" = 1 ] && jq -e --argjson n "$RN" '.meta.names_absent == $n' "$WRITES" >/dev/null; then
+  ok "[MUST-FAIL] (gc5) output that shows both names passing, under a report that says both absent: the report's absent stands"
+else bad "(gc5) out pass, report absent: writes=$(cat "$WRITES") log=$(tail -2 "$LOG")"; fi
+printf 'test("case one", () => {})\ntest("case two", () => {})\n' > "$DIR/src/r.test.ts"
+GC_REPORT=absent gc5
+if ! absent_marked && grep -q 'g-r still red alone' "$LOG"; then ok "(gc5) the report says both absent but the source holds both titles: red, never absent"
+else bad "(gc5) in source: writes=$(cat "$WRITES") log=$(tail -2 "$LOG")"; fi
+# the evidence says each name as the report does, the output cut before them
+printf '(pass) R > zz %s\n' $(seq 1 3) > "$FAKE/r.test.ts.out"; printf ' 40 pass\n 1 fail\n' >> "$FAKE/r.test.ts.out"
+GC_NAMES='{"R > case one":"pass","R > case two":"fail"}' GC_TRUNCATED=true gc5
+if [ "$(wc -l < "$WRITES")" = 1 ] && jq -e '.status == "open" and ([.meta.closer_evidence.names[] | .name + "=" + .result] == ["R > case one=pass","R > case two=fail"])' "$WRITES" >/dev/null; then
+  ok "[MUST-FAIL] (gc5) a red row's evidence gives each name the report's result, not absent where the output was cut"
+else bad "(gc5) evidence: $(jq -c '.meta.closer_evidence.names' "$WRITES")"; fi
+# a report that gives no result for a name says nothing of it: not absent, though neither the output nor the source has it
+printf 'for (const k of ["one", "two"]) test(`case ${k}`, () => {})\n' > "$DIR/src/r.test.ts"
+GC_NONAMES=1 GC_TRUNCATED=true gc5
+if ! absent_marked && ! jq -e -s 'any(.[]; .status == "closed")' "$WRITES" >/dev/null; then
+  ok "[MUST-FAIL] (gc5) a report that names none of the gap's tests marks nothing absent, and closes nothing"
+else bad "(gc5) no names: writes=$(cat "$WRITES") log=$(tail -2 "$LOG")"; fi
+rm -f "$DIR/src/r.test.ts" "$FAKE/r.test.ts.out"
 
 # every row this file's legs wrote: none names a test absent that its own evidence reads as passing or failing
 ZC="$(jq -c 'select(.meta.names_absent != null and (.meta.closer_evidence.names | type) == "array")
