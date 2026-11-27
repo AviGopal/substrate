@@ -73,18 +73,19 @@ beforeAll(async () => {
 afterAll(() => rmSync(T, { recursive: true, force: true }))
 
 describe("the seed's rows", () => {
-  test("[MUST-FAIL] git_diff requires a commit or a clean handout naming the clone's newest committed tree: two rows, one group", () => {
+  test("[MUST-FAIL] git_diff requires gitCommitResult in group committed and retires gitWorktree prerequisite", () => {
     const req = seeded.filter((r) => r.shape === "requires" && r.for === "git_diff" && r.group === "committed")
       .map(({ id: _i, seq: _s, role: _r, input_refs: _x, ...rest }) => rest)
     expect(req).toEqual([
       { shape: "requires", for: "git_diff", needs: "gitCommitResult", where: { committed_tree: COMMITTED }, latest_by: "cwd", group: "committed", binds: { cwd: "cwd" } },
-      { shape: "requires", for: "git_diff", needs: "gitWorktree", where: { committed_tree: COMMITTED }, latest_by: "cwd", group: "committed" },
     ])
+    const retired = seeded.find((r) => r.shape === "requires" && r.for === "git_diff" && r.needs === "gitWorktree")
+    expect(retired?.retired).toBe(true)
   })
 
-  test("[MUST-FAIL] the committed tree is read in those two rows only", () => {
+  test("[MUST-FAIL] the committed tree is read in that one active row only", () => {
     const committed = latests(seeded).filter((x) => JSON.stringify(x.value) === JSON.stringify(COMMITTED))
-    expect(committed.map((x) => [x.row.for, x.row.needs])).toEqual([["git_diff", "gitCommitResult"], ["git_diff", "gitWorktree"]])
+    expect(committed.map((x) => [x.row.for, x.row.needs])).toEqual([["git_diff", "gitCommitResult"]])
   })
 
   test("what a landing and its verdict read is left as it was: every other x-latest is the newest-tree value, in as many places as before", () => {
@@ -190,8 +191,8 @@ describe("the walk reading them", () => {
   for (const root of [gap, ask]) {
     const id = root.id
     // the walk's offer only: git_diff itself answers a clone with no commit since it was made with "no change to diff"
-    test(`a clean clone handed out and not edited: the diff is offered as before (${root.shape} root)`, async () => {
-      expect((await run(root, [handout(id, 20, tree(1))])).diff).toBe(true)
+    test(`[MUST-FAIL] a clean clone handed out with no commit waits for gitCommitResult before git_diff (${root.shape} root)`, async () => {
+      expect((await run(root, [handout(id, 20, tree(1))])).diff).toBe(false)
     })
 
     test(`[MUST-FAIL] after an applied edit the diff waits, git_commit is offered, and the step named is a commit (${root.shape} root)`, async () => {
@@ -239,12 +240,13 @@ describe("the walk reading them", () => {
       expect([r.template, r.diff, r.commit]).toEqual([false, false, true])
     })
 
-    test(`a template whose calls include git_diff runs on a clean clone as before (${root.shape} root)`, async () => {
-      expect((await run(root, [handout(id, 20, tree(1)), diffTemplate(21)])).template).toBe(true)
+    test(`a template whose calls include git_diff waits without a commit and runs after one (${root.shape} root)`, async () => {
+      expect((await run(root, [handout(id, 20, tree(1)), diffTemplate(21)])).template).toBe(false)
+      expect((await run(root, [handout(id, 20, tree(1)), commit(id, 25, tree(2)), diffTemplate(26)])).template).toBe(true)
     })
 
-    test(`an edit found already made on a clean clone changes nothing: diffed as before (${root.shape} root)`, async () => {
-      expect((await run(root, [handout(id, 20, tree(1)), already(id, 35)])).diff).toBe(true)
+    test(`an edit found already made after a commit changes nothing: diffed as before (${root.shape} root)`, async () => {
+      expect((await run(root, [handout(id, 20, tree(1)), commit(id, 25, tree(2)), already(id, 35)])).diff).toBe(true)
     })
 
     // every kind of applied edit moves the clone off its commit, not only an edit of a span
@@ -264,18 +266,17 @@ describe("the walk reading them", () => {
       expect((await run(root, [elsewhere(handout(id, 15, tree(8))), handout(id, 20, tree(1)), commit(id, 30, tree(2)), applied(id, 35), elsewhere(commit(id, 40, tree(3)))])).diff).toBe(false)
     })
 
-    test(`[MUST-FAIL] a clean clone handed out, then another root's clone handed out later: this clone's diff is offered (${root.shape} root)`, async () => {
-      expect((await run(root, [handout(id, 20, tree(1)), elsewhere(handout("root-other", 30, tree(9)))])).diff).toBe(true)
+    test(`[MUST-FAIL] a committed clone, then another root's clone handed out later: this clone's diff is offered (${root.shape} root)`, async () => {
+      expect((await run(root, [handout(id, 20, tree(1)), commit(id, 25, tree(2)), elsewhere(handout("root-other", 30, tree(9)))])).diff).toBe(true)
     })
 
     // What ends the wait when the commit has nothing to commit (an edit that put back the committed tree): git_commit,
-    // refused, is not made again until something new comes; a refresh handing the clone out clean names its committed
-    // tree, and the diff runs on it. Until then the refresh stays offered.
-    test(`[MUST-FAIL] an applied edit whose commit was refused: the diff and git_commit wait, git_worktree is offered; a clean refresh after the edit opens the diff (${root.shape} root)`, async () => {
+    // refused, is not made again until something new comes; with gitWorktree retired for git_diff, a clean refresh still requires a commit.
+    test(`[MUST-FAIL] an applied edit whose commit was refused: the diff and git_commit wait, git_worktree is offered; a clean refresh without a commit keeps git_diff gated (${root.shape} root)`, async () => {
       const waiting = [handout(id, 20, tree(1)), applied(id, 30), ...called(id, 40, "git_commit")]
       const r = await run(root, waiting, ["git_worktree"])
       expect([r.diff, r.commit, r.worktree]).toEqual([false, false, true])
-      expect((await run(root, [...waiting, handout(id, 50, tree(1))])).diff).toBe(true)
+      expect((await run(root, [...waiting, handout(id, 50, tree(1))])).diff).toBe(false)
     })
 
   }

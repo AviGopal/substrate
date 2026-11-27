@@ -494,6 +494,7 @@ const SCHEMAS: Row[] = [
       JSON_ONLY,
     schema: {
       type: "object",
+      "x-template-trace": { read: "shapeDescriptions" },
       required: ["sig", "calls"],
       properties: {
         sig: {
@@ -788,19 +789,17 @@ await ensure({ shape: "requires", for: "git_land", needs: "land_verdict", where:
 await ensure({ shape: "requires", for: "git_land", needs: "gitDiff", where: { cwd: { "x-pointer": "cwd" }, tree: NEWEST_TREE }, latest_by: "cwd", group: "diff" },
   { for: "git_land", needs: "gitDiff" }, "requires git_land gitDiff");
 // A diff waits for a commit of the clone's newest edit, since it reads commits only: git_diff is called only once
-// the clone's newest committed tree is known, from a commit newer than every edit there, or a clean clone handed out and
-// not edited since. So after an edit the step named is git_commit, and planning puts the existing commit before the
-// check. Alternatives in their own group (either row meets it), needed besides a wanted change or an open gap; each
-// counts the newest row per clone (latest_by cwd), so another clone's newer row never hides this one's. Nothing about
-// what git_diff answers or how it is graded changes.
+// the clone's newest committed tree is known, from a commit newer than every edit there (never from gitWorktree alone,
+// so clean clones are not redundantly diffed and commits always precede checks). Needed besides a wanted change or an
+// open gap; counts the newest row per clone (latest_by cwd).
 // A commit leads on to its diff (USER ruling 11-23, the walk offers the step a refusal's chain names): when a gated
 // call's chain names git_diff and the root's newest made row is a commit, the walk offers the diff with no request
 // asking for it, its pointer bound from that commit row as binds says (the clone the commit names, cwd). Only the
-// commit's row binds: a clean clone handed out has nothing committed to diff.
+// commit's row binds.
 await ensure({ shape: "requires", for: "git_diff", needs: "gitCommitResult", where: { committed_tree: COMMITTED_TREE }, latest_by: "cwd", group: "committed", binds: { cwd: "cwd" } },
   { for: "git_diff", needs: "gitCommitResult" }, "requires git_diff gitCommitResult");
-await ensure({ shape: "requires", for: "git_diff", needs: "gitWorktree", where: { committed_tree: COMMITTED_TREE }, latest_by: "cwd", group: "committed" },
-  { for: "git_diff", needs: "gitWorktree" }, "requires git_diff gitWorktree");
+await ensure({ shape: "requires", for: "git_diff", needs: "gitWorktree", retired: true },
+  { for: "git_diff", needs: "gitWorktree" }, "requires git_diff gitWorktree retired");
 // A commit is offered only when there is something to commit in its own clone (the clone the commit names, cwd): an
 // answer of a tool that changed a file there (each edit answer names the clone it changed), or the clone handed out by a
 // refresh that carried its uncommitted edits onto the new base. So after an edit the call that consumes it, git_commit,

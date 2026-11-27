@@ -252,6 +252,19 @@ leg(
   "(i) change_wanted ('unscoped') scopes repo: null gaps with repository context/budget/ranking, and request ('', 'gap') includes [MUST-FAIL] guidance",
 );
 
+const tmplTrace = (tmpl?.schema as Row | undefined)?.["x-template-trace"];
+const tmplGapTrace = (tmplGap?.schema as Row | undefined)?.["x-template-trace"];
+const diffWorktreeReq = s1.rows.filter((r) => r.shape === "requires" && r.for === "git_diff" && r.needs === "gitWorktree").at(-1);
+const diffCommitReq = s1.rows.filter((r) => r.shape === "requires" && r.for === "git_diff" && r.needs === "gitCommitResult").at(-1);
+leg(
+  JSON.stringify(tmplTrace) === JSON.stringify({ read: "shapeDescriptions" })
+    && JSON.stringify(tmplGapTrace) === JSON.stringify({ read: "shapeDescriptions" })
+    && diffWorktreeReq?.retired === true
+    && diffCommitReq?.retired !== true
+    && diffCommitReq?.group === "committed",
+  "(j) activity_template ('', 'gap') declare x-template-trace and requires git_diff gitWorktree is retired while gitCommitResult stays active",
+);
+
 process.exit(failed === 0 ? 0 : 1);
 TS
 out="$(cd "$W" && "$BUN" "$W/drive.ts" 2>&1)"; rc=$?
