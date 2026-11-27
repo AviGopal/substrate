@@ -13,7 +13,10 @@
 #       (idempotent on second run), and writes nothing extra when policy has no fallback_order;
 #   (g) credits (target: "gap") declares Law 1 test_categories and test_reasons (including named_tests_pass and named_tests_absent);
 #   (h) requires { for: "git_land", needs: "gitDiff", group: "diff", latest_by: "cwd", where: { cwd: { "x-pointer": "cwd" }, tree: NEWEST_TREE } }
-#       binds git_land to a fresh clone's gitDiff at NEWEST_TREE and rejects stale clones with absent or older gitDiff.
+#       binds git_land to a fresh clone's gitDiff at NEWEST_TREE and rejects stale clones with absent or older gitDiff;
+#   (i) change_wanted ("unscoped") handles open gaps with repo: null using repository context, rank_context: true,
+#       context_budget: 98304, and conditional repo requirement; request ("", "gap") includes [MUST-FAIL] test guidance
+#       for operational gaps naming no test file.
 # Driven against a stand-in discovery (loopback only, no fleet key).
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -225,6 +228,28 @@ leg(
     && !evalLandDiffReq(landDiffReq, { cwd: "/stale-clone" }, poolWithFreshAndStale, newestTreeSha)
     && !evalLandDiffReq(landDiffReq, { cwd: "/missing-clone" }, poolWithFreshAndStale, newestTreeSha),
   "(h) requires git_land gitDiff binds cwd and NEWEST_TREE (fresh clone passes; stale or absent clone is rejected)",
+);
+
+const cwUnscoped = schemaOf(s1.rows, "change_wanted", "unscoped");
+const cwSchema = cwUnscoped?.schema as Row | undefined;
+leg(
+  !!cwUnscoped
+    && JSON.stringify(cwUnscoped.inputs) === JSON.stringify([{ shape: "gap", latest_by: "gap_id", where: { status: "open", repo: null } }])
+    && Array.isArray(cwUnscoped.context)
+    && cwUnscoped.context.some((c: Row) => JSON.stringify(c) === JSON.stringify({ shape: "repository", latest_by: "repo", keep: true }))
+    && cwUnscoped.rank_context === true
+    && cwUnscoped.context_budget === 98304
+    && cwUnscoped.keep_share === 0.25
+    && cwSchema?.if?.properties?.wanted?.const === true
+    && Array.isArray(cwSchema?.then?.required)
+    && cwSchema.then.required.includes("repo")
+    && Array.isArray(cwSchema?.else?.required)
+    && cwSchema.else.required.includes("why")
+    && [req, reqGap].every((r) => {
+      const d = String(r?.description ?? "");
+      return d.includes("[MUST-FAIL]") && d.includes("*.test.*") && d.includes("unscoped");
+    }),
+  "(i) change_wanted ('unscoped') scopes repo: null gaps with repository context/budget/ranking, and request ('', 'gap') includes [MUST-FAIL] guidance",
 );
 
 process.exit(failed === 0 ? 0 : 1);

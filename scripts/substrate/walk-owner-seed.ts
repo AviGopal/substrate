@@ -325,6 +325,11 @@ const SCHEMAS: Row[] = [
       "belongs in. Before non-trivial code edits, call conceptSearch when architectural priors are not yet in view: " +
       "treat docSection, vessel_construction_pattern and impulse_activity_pattern rows as required idioms, and treat " +
       "rejected_approach rows as explicitly forbidden approaches never to repeat; cite relied-on rows in uses. " +
+      "When a gap names no repo (such as walk_failure or self_check), change_wanted (variant unscoped) determines " +
+      "which repository to fix (repo) and unlocks git_worktree. When an operational gap names no test file (not " +
+      "failing_test or typecheck_error, e.g. walk_failure, self_check, resolver_graduation), a fix in a clone must " +
+      "add or update a [MUST-FAIL] *.test.* file alongside non-test source edits (failing on the base and passing on " +
+      "the change). " +
       USES_WORDS + " " + JSON_ONLY,
     context_budget: 98304,
     rank_context: true,
@@ -633,6 +638,46 @@ SCHEMAS.push({
     { shape: "attempt_explanation", keep: true },
     { shape: "failure", where: { refused: "schema" } }],
   keep_share: 0.25,
+});
+// For an open detector gap naming no repository (walk_failure, self_check, etc.): judge from the gap, repository
+// rows, and call answers whether fixing it wants a change to files in a repository (unlocking git_worktree on repo)
+// or no repository change.
+SCHEMAS.push({
+  target: "change_wanted",
+  variant: "unscoped",
+  description: "For an open detector gap that names no repository (such as walk_failure or self_check), judge from " +
+    "the gap row, the repository rows this fleet holds, and any call answers shown whether fixing it wants a change " +
+    "to files in a repository (wanted true, naming repo from the repository rows or super, and what in a few words) " +
+    "or no repository change (wanted false, with why). Never guess a repo that is not in the repository rows or " +
+    "super; a change wanted with no repo opens no clone. " +
+    `why is at most ${WHY_MAX} characters. ${USES_WORDS} ${JSON_ONLY}`,
+  schema: {
+    type: "object",
+    required: ["wanted"],
+    properties: {
+      wanted: { type: "boolean" },
+      what: { type: "string" },
+      repo: { type: ["string", "null"] },
+      why: { type: "string", minLength: 1, maxLength: WHY_MAX },
+      uses: USES,
+    },
+    if: { properties: { wanted: { const: true } }, required: ["wanted"] },
+    then: { required: ["repo"], properties: { repo: { type: "string", minLength: 1 } } },
+    else: { required: ["why"] },
+  },
+  inputs: [{ shape: "gap", latest_by: "gap_id", where: { status: "open", repo: null } }],
+  context: [
+    { shape: "repository", latest_by: "repo", keep: true },
+    { answers_a_call: true, latest_by: "call_id", keep: true },
+    "hop",
+    { shape: "change_wanted", keep: true },
+    { shape: "land_verdict", latest_by: "tree", where: { r: 0, role: "described" }, keep: true },
+    { shape: "attempt_explanation", keep: true },
+    { shape: "failure", where: { refused: "schema" } },
+  ],
+  keep_share: 0.25,
+  rank_context: true,
+  context_budget: 98304,
 });
 // A change made for a gap is judged from the gap row in place of an ask: whether it fixes what the gap's check says is
 // failing. git_land takes a grader's r 1 on a gap's change only when the gap's own check passed on the tree (the
