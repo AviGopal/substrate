@@ -43,7 +43,7 @@ const named = (rows: Row[]): string[] => rows.map((r) => `${r.target}/${r.varian
 describe("an unshown id in uses is left out, not refused, on every shape", () => {
   test("[MUST-FAIL] every schema's uses drops an id naming no row shown", () => {
     const uses = withField("uses")
-    expect(named(uses)).toEqual(["answer/", "attempt_explanation/", "attempt_explanation/gap", "change_wanted/gap", "change_wanted/unscoped", "land_verdict/", "land_verdict/gap", "request/", "request/gap"].sort())
+    expect(named(uses)).toEqual(["answer/", "attempt_explanation/", "attempt_explanation/gap", "change_wanted/gap", "change_wanted/unscoped", "land_verdict/", "land_verdict/gap", "request/", "request/gap", "shape_schema/open"].sort())
     for (const r of uses) expect(r.schema.properties.uses).toEqual({ type: "array", items: { type: "string", "x-shown": "drop" } })
   })
   test("[MUST-FAIL] every schema with uses says which ids are a row's own, and that an unshown one is left out", () => {

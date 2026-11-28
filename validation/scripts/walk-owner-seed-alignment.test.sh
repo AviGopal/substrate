@@ -138,11 +138,11 @@ const tmplGapShapeIn = tmplGap?.schema?.properties?.calls?.items?.properties?.sh
 leg(
   !!tmplGap
     && JSON.stringify(tmplGap.inputs) === JSON.stringify([{ shape: "gap", where: { status: "closed" }, latest_by: "gap_id" }])
-    && JSON.stringify(tmplGap.context) === JSON.stringify(["hop", "gitDiff", "land_verdict"])
+    && JSON.stringify(tmplGap.context) === JSON.stringify(["hop", "gitDiff", "land_verdict", { shape: "request_acts", latest_by: "shape" }])
     && JSON.stringify(tmplGap.reads) === JSON.stringify([{ type: "shapeDescriptions", declared: true }])
     && JSON.stringify(tmplGapShapeIn) === JSON.stringify({ read: "shapeDescriptions", keys_of: "content.shape_descriptions", also: ["activity_template"] })
     && String(tmplGap.description ?? "").includes("template_ref"),
-  "(d) activity_template ('gap') extracts from closed gaps with hop/gitDiff/land_verdict context and also: ['activity_template']",
+  "(d) activity_template ('gap') extracts from closed gaps with hop/gitDiff/land_verdict/request_acts context and also: ['activity_template']",
 );
 
 leg(
@@ -263,6 +263,26 @@ leg(
     && diffCommitReq?.retired !== true
     && diffCommitReq?.group === "committed",
   "(j) activity_template ('', 'gap') declare x-template-trace and requires git_diff gitWorktree is retired while gitCommitResult stays active",
+);
+
+const shapeOpen = schemaOf(s1.rows, "shape_schema", "open");
+const stallRuleRow = s1.rows.filter((r) => r.shape === "stall_rule").at(-1);
+leg(
+  !!cwUnscoped
+    && Array.isArray(cwUnscoped.context)
+    && !cwUnscoped.context.includes("hop")
+    && !cwUnscoped.context.some((c: Row) => typeof c === "object" && c !== null && c.answers_a_call === true)
+    && cwUnscoped.context.some((c: Row) => JSON.stringify(c) === JSON.stringify({ shape: "change_wanted", keep: true }))
+    && cwUnscoped.context.some((c: Row) => JSON.stringify(c) === JSON.stringify({ shape: "attempt_explanation", keep: true }))
+    && !!shapeOpen
+    && shapeOpen.keep_share === 0.25
+    && (shapeOpen.schema as Row | undefined)?.["x-non-constitutional-target"] === true
+    && JSON.stringify(shapeOpen.inputs) === JSON.stringify([{ shape: "gap", latest_by: "gap_id", where: { status: "open", category: "topology_expansion" } }])
+    && stallRuleRow?.slice_hops === 8
+    && stallRuleRow?.ends_after === 3
+    && Array.isArray(tmpl?.context) && tmpl.context.some((c: Row) => c?.shape === "request_acts" && c?.latest_by === "shape")
+    && Array.isArray(tmplGap?.context) && tmplGap.context.some((c: Row) => c?.shape === "request_acts" && c?.latest_by === "shape"),
+  "(k) Wave 10E: change_wanted/unscoped settled context, shape_schema/open non-constitutional governance, stall_rule slice_hops: 8, request_acts context on activity_template",
 );
 
 process.exit(failed === 0 ? 0 : 1);

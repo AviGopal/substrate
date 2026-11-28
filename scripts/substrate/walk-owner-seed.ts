@@ -329,7 +329,9 @@ const SCHEMAS: Row[] = [
       "which repository to fix (repo) and unlocks git_worktree. When an operational gap names no test file (not " +
       "failing_test or typecheck_error, e.g. walk_failure, self_check, resolver_graduation), a fix in a clone must " +
       "add or update a [MUST-FAIL] *.test.* file alongside non-test source edits (failing on the base and passing on " +
-      "the change). " +
+      "the change). When change_wanted (unscoped) answers wanted: false on an operational gap, invoke an operational " +
+      "maintenance tool (such as walk_trees_reclaim) if one resolves the state, or answer none once nothing callable " +
+      "resolves it. " +
       USES_WORDS + " " + JSON_ONLY,
     context_budget: 98304,
     rank_context: true,
@@ -490,7 +492,8 @@ const SCHEMAS: Row[] = [
       "git_worktree, \"{{ calls.0.output.cwd }}\". Write a literal only for what is the same in every run (a tool's " +
       "mode, a fixed flag): a literal copied from the run you saw makes the template fail everywhere else. " +
       "To compose a proven shared activity_template as a step, set shape to \"activity_template\" and pointer to " +
-      "{\"template_ref\": \"<template row id>\"}. " +
+      "{\"template_ref\": \"<template row id>\"}. If request_acts includes trace_projection, prefer adapting its " +
+      "pre-parameterized sig and calls rather than copying literal /walk-trees/ paths. " +
       JSON_ONLY,
     schema: {
       type: "object",
@@ -518,7 +521,7 @@ const SCHEMAS: Row[] = [
     // The newest reached grade only (where r: 1, latest_by shape): inputs are shown whole and never fitted to the
     // prompt budget, and activities are earned only from reached executions (law 4).
     inputs: [{ shape: "outcome", where: { r: 1 }, latest_by: "shape" }],
-    context: ["hop"],
+    context: ["hop", { shape: "request_acts", latest_by: "shape" }],
     // The callable shapes and their inputs, as the request reads them (discovery resolvers.ts, declared: true).
     reads: [{ type: "shapeDescriptions", declared: true }],
   },
@@ -669,8 +672,6 @@ SCHEMAS.push({
   inputs: [{ shape: "gap", latest_by: "gap_id", where: { status: "open", repo: null } }],
   context: [
     { shape: "repository", latest_by: "repo", keep: true },
-    { answers_a_call: true, latest_by: "call_id", keep: true },
-    "hop",
     { shape: "change_wanted", keep: true },
     { shape: "land_verdict", latest_by: "tree", where: { r: 0, role: "described" }, keep: true },
     { shape: "attempt_explanation", keep: true },
@@ -754,10 +755,42 @@ SCHEMAS.push({
     "pointer arguments filling that shape's shape_inputs from reads. Bind per-request values with placeholders " +
     "(\"{{ sig.in[i].field }}\" for template inputs, \"{{ calls.N.output.field }}\" for earlier call outputs) and write " +
     "literals only for run-invariant arguments. To compose a proven shared activity_template as a step, set shape to " +
-    "\"activity_template\" and pointer to {\"template_ref\": \"<template row id>\"}. " +
+    "\"activity_template\" and pointer to {\"template_ref\": \"<template row id>\"}. If request_acts includes " +
+    "trace_projection, prefer adapting its pre-parameterized sig and calls rather than copying literal /walk-trees/ " +
+    "paths. " +
     JSON_ONLY,
   inputs: [{ shape: "gap", where: { status: "closed" }, latest_by: "gap_id" }],
-  context: ["hop", "gitDiff", "land_verdict"],
+  context: ["hop", "gitDiff", "land_verdict", { shape: "request_acts", latest_by: "shape" }],
+  reads: [{ type: "shapeDescriptions", declared: true }],
+});
+SCHEMAS.push({
+  target: "shape_schema",
+  variant: "open",
+  description: "For an open topology_expansion gap, propose a novel non-constitutional intermediate data shape " +
+    "(target, description, valid JSON Schema object in schema, inputs array, optional context) that resolves " +
+    "unserved intermediate shape demand or multi-explanation route-around friction. Never name a constitutional " +
+    `shape and never declare ask: true. ${USES_WORDS} ${JSON_ONLY}`,
+  schema: {
+    type: "object",
+    "x-non-constitutional-target": true,
+    required: ["target", "description", "schema", "inputs"],
+    properties: {
+      target: { type: "string", minLength: 1 },
+      variant: { type: "string" },
+      description: { type: "string", minLength: 1 },
+      schema: { type: "object" },
+      inputs: { type: "array", minItems: 1 },
+      context: { type: "array" },
+      uses: USES,
+    },
+  },
+  inputs: [{ shape: "gap", latest_by: "gap_id", where: { status: "open", category: "topology_expansion" } }],
+  context: [
+    { shape: "shape_schema", latest_by: "target" },
+    { shape: "failure", where: { refused: "schema" } },
+    { shape: "request_acts", latest_by: "shape", keep: true },
+  ],
+  keep_share: 0.25,
   reads: [{ type: "shapeDescriptions", declared: true }],
 });
 for (const s of SCHEMAS) {
@@ -850,8 +883,18 @@ const SWEEP_ROWS = 240;
 // effect: roots ended against roots that moved again after their third say. The owner revises both by writing a row, so a
 // boot writes the rule only when the newest names no ends_after, and then keeps that row's after_rows.
 const stallRule = (await read("stall_rule", {})).at(-1);
-if (typeof stallRule?.ends_after === "number") console.log(`[walk-owner-seed] stall_rule: kept (${stallRule.id})`);
-else await ensure({ shape: "stall_rule", after_rows: stallRule?.after_rows ?? SWEEP_ROWS, ends_after: 3 }, {}, "stall_rule");
+// Keep any owner-revised ends_after (!== 3), or an already-upgraded rule carrying slice_hops; upgrade fresh/default (ends_after: 3 without slice_hops) once.
+if (typeof stallRule?.ends_after === "number" && (stallRule.ends_after !== 3 || typeof stallRule?.slice_hops === "number")) {
+  console.log(`[walk-owner-seed] stall_rule: kept (${stallRule.id})`);
+} else {
+  await ensure({
+    shape: "stall_rule",
+    after_rows: stallRule?.after_rows ?? SWEEP_ROWS,
+    ends_after: typeof stallRule?.ends_after === "number" ? stallRule.ends_after : 3,
+    slice_hops: typeof stallRule?.slice_hops === "number" ? stallRule.slice_hops : 8,
+    ...(typeof stallRule?.no_path_weight === "number" ? { no_path_weight: stallRule.no_path_weight } : {}),
+  }, {}, "stall_rule");
+}
 // The stall clock in time (walk loop.ts stalls): a root with no move is also said once its newest row is every_ms old,
 // and the walk's waits end by then. A count in store rows stops when the walk does: parked on one wait it writes a few
 // rows an hour, so 240 rows left a root with no move unsaid for most of a day. 30 minutes: over two days of open gap
